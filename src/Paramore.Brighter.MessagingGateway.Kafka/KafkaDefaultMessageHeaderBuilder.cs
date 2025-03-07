@@ -55,9 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 headers.Add(HeaderNames.CloudEventsSpecVersion, message.Header.SpecVersion.ToByteArray());
                 headers.Add(HeaderNames.CloudEventsType, message.Header.Type.ToByteArray());
                 headers.Add(HeaderNames.CloudEventsSource, message.Header.Source.ToString().ToByteArray());
-                headers.Add(HeaderNames.CloudEventsTime,
-                    message.Header.TimeStamp.ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", DateTimeFormatInfo.InvariantInfo)
-                        .ToByteArray());
+                headers.Add(HeaderNames.CloudEventsTime, message.Header.TimeStamp.ToRcf3339().ToByteArray());
 
                 if (!string.IsNullOrEmpty(message.Header.Subject))
                 {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -105,6 +107,30 @@ public class SqsMessageSender
         {
             messageAttributes.Add(HeaderNames.CorrelationId,
                 new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
+        }
+        
+        if (message.Header.Bag.TryGetValue(BrighterHeaderNames.UseCloudEvents, out var val) 
+            && val is true)
+        {
+            messageAttributes.Add(HeaderNames.SpecVersion, new MessageAttributeValue { StringValue = message.Header.SpecVersion });
+            messageAttributes.Add(HeaderNames.Type, new MessageAttributeValue { StringValue = message.Header.Type });
+            messageAttributes.Add(HeaderNames.Source, new MessageAttributeValue { StringValue = message.Header.Source.ToString() });
+            messageAttributes.Add(HeaderNames.Time, new MessageAttributeValue { StringValue = message.Header.TimeStamp.ToRcf3339()});
+
+            if (!string.IsNullOrEmpty(message.Header.Subject))
+            {
+                messageAttributes.Add(HeaderNames.Subject, new MessageAttributeValue { StringValue = message.Header.Subject });
+            }
+
+            if (message.Header.DataSchema != null)
+            {
+                messageAttributes.Add(HeaderNames.DataSchema, new MessageAttributeValue { StringValue = message.Header.DataSchema.ToString() });
+            }
+            
+            if (!string.IsNullOrEmpty(message.Header.ContentType))
+            {
+                messageAttributes.Add(HeaderNames.DataContentType, new MessageAttributeValue { StringValue = message.Header.ContentType });
+            }
         }
 
         // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag

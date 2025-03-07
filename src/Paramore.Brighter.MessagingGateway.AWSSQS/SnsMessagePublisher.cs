@@ -25,10 +25,12 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
+using Newtonsoft.Json.Serialization;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -50,11 +52,6 @@ public class SnsMessagePublisher
         var messageString = message.Body.Value;
         var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);
 
-        if (string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            message.Header.CorrelationId = Guid.NewGuid().ToString();
-        }
-
         var messageAttributes = new Dictionary<string, MessageAttributeValue>
         {
             [HeaderNames.Id] =
@@ -75,12 +72,10 @@ public class SnsMessagePublisher
         {
             messageAttributes[HeaderNames.CorrelationId] = new MessageAttributeValue
             {
-                StringValue = Convert.ToString(message.Header.CorrelationId), 
-                DataType = "String"
+                StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String"
             };
         }
-        
-        
+
         if (_snsSqsType == SnsSqsType.Fifo)
         {
             publishRequest.MessageGroupId = message.Header.PartitionKey;
@@ -99,10 +94,34 @@ public class SnsMessagePublisher
                 });
         }
 
+        if (message.Header.Bag.TryGetValue(BrighterHeaderNames.UseCloudEvents, out var val) 
+            && val is true)
+        {
+            messageAttributes.Add(HeaderNames.SpecVersion, new MessageAttributeValue { StringValue = message.Header.SpecVersion });
+            messageAttributes.Add(HeaderNames.Type, new MessageAttributeValue { StringValue = message.Header.Type });
+            messageAttributes.Add(HeaderNames.Source, new MessageAttributeValue { StringValue = message.Header.Source.ToString() });
+            messageAttributes.Add(HeaderNames.Time, new MessageAttributeValue { StringValue = message.Header.TimeStamp.ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", DateTimeFormatInfo.InvariantInfo)});
+
+            if (!string.IsNullOrEmpty(message.Header.Subject))
+            {
+                messageAttributes.Add(HeaderNames.Subject, new MessageAttributeValue { StringValue = message.Header.Subject });
+            }
+
+            if (message.Header.DataSchema != null)
+            {
+                messageAttributes.Add(HeaderNames.DataSchema, new MessageAttributeValue { StringValue = message.Header.DataSchema.ToString() });
+            }
+            
+            if (!string.IsNullOrEmpty(message.Header.ContentType))
+            {
+                messageAttributes.Add(HeaderNames.DataContentType, new MessageAttributeValue { StringValue = message.Header.ContentType });
+            }
+        }
 
         //we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-        messageAttributes[HeaderNames.Bag] = new() { StringValue = Convert.ToString(bagJson), DataType = "String" };
+        messageAttributes[HeaderNames.Bag] =
+            new MessageAttributeValue { StringValue = Convert.ToString(bagJson), DataType = "String" };
         publishRequest.MessageAttributes = messageAttributes;
 
         var response = await _client.PublishAsync(publishRequest);
