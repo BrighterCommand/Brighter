@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Amazon.DynamoDBv2.DataModel;
@@ -161,9 +160,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 replyTo: new RoutingKey(ReplyTo),
                 contentType: ContentType, partitionKey: PartitionKey);
 
-            foreach (var key in bag.Keys)
+            foreach (var keyValue in bag)
             {
-                header.Bag.Add(key, bag[key]);
+                header.Bag.Add(keyValue.Key, keyValue.Value);
             }
 
             var body = new MessageBody(Body, ContentType, characterEncoding);
@@ -183,7 +182,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 Value = body,
                 Type = DynamoDBEntryType.Binary
-                
             };
             
             return entry;
@@ -195,7 +193,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Primitive primitive = entry as Primitive; 
             if (primitive?.Value is byte[] bytes)
                 data = bytes;
-            if (primitive?.Value is string text)    //for historical data that used UTF-8 strings
+            else if (primitive?.Value is string text)    //for historical data that used UTF-8 strings
                 data = Encoding.UTF8.GetBytes(text);
             if (primitive == null || !(primitive.Value is string || primitive.Value is byte[]))
                 throw new ArgumentOutOfRangeException("Expected Dynamo to have stored a byte array");
