@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Tasks;
 /// <summary>
 /// Represents a task queue that allows tasks to be added and consumed in a thread-safe manner.
 /// </summary>
-internal class BrighterTaskQueue : IDisposable
+internal sealed class BrighterTaskQueue : IDisposable
 {
     private readonly BlockingCollection<Tuple<Task, bool>> _queue = new();
 

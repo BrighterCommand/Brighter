@@ -183,7 +183,7 @@ public class BrighterSynchronizationContextsTests
         s_runnerCalled = true;
     }
 
-    internal class EventRunner
+    internal sealed class EventRunner
     {
         public event Action<bool, int> OnMessagePublished;
 

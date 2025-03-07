@@ -22,14 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyEventHandlerAsync : RequestHandlerAsync<MyEvent>
+    internal sealed class MyEventHandlerAsync : RequestHandlerAsync<MyEvent>
     {
         private readonly IDictionary<string, string> _receivedMessages;
 

@@ -98,7 +98,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             CommandProcessor.ClearServiceBus();
         }
 
-        internal class EmptyHandlerFactorySync : IAmAHandlerFactorySync
+        internal sealed class EmptyHandlerFactorySync : IAmAHandlerFactorySync
         {
             public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
             {

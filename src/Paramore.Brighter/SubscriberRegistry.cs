@@ -48,8 +48,7 @@ namespace Paramore.Brighter
         /// <returns>IEnumerable&lt;Type&gt;.</returns>
         public IEnumerable<Type> Get<TRequest>() where TRequest : class, IRequest
         {
-            var observed = _observers.ContainsKey(typeof(TRequest));
-            return observed ? _observers[typeof(TRequest)] : new List<Type>();
+            return _observers.TryGetValue(typeof(TRequest), out var observer) ? observer : [];
         }
 
         /// <summary>
@@ -74,11 +73,10 @@ namespace Paramore.Brighter
 
         public void Add(Type requestType, Type handlerType)
         {
-            var observed = _observers.ContainsKey(requestType);
-            if (!observed)
-                _observers.Add(requestType, new List<Type> { handlerType });
+            if (!_observers.TryGetValue(requestType, out var observer))
+                _observers.Add(requestType, [handlerType]);
             else
-                _observers[requestType].Add(handlerType);
+                observer.Add(handlerType);
         }
 
         /// <summary>

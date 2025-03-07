@@ -4,22 +4,19 @@ using Amazon.DynamoDBv2.DocumentModel;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
-    internal class TimeSinceExpression
+    internal sealed class TimeSinceExpression
     {
-        private Expression _expression;
-
-        public TimeSinceExpression()
+        private readonly Expression _expression = new()
         {
-            _expression = new Expression();
-            _expression.ExpressionStatement = "DeliveryTime >= :v_SinceTime";
-        }
+            ExpressionStatement = "DeliveryTime >= :v_SinceTime"
+        };
 
         public Expression Generate(DateTime sinceTime)
         {
-            var values = new Dictionary<string, DynamoDBEntry>();
-            values.Add(":v_SinceTime", sinceTime.Ticks);
-
-            _expression.ExpressionAttributeValues = values;
+            _expression.ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>(capacity: 1)
+            {
+                { ":v_SinceTime", sinceTime.Ticks }
+            };
 
             return _expression;
         }

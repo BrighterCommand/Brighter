@@ -71,7 +71,6 @@ namespace Paramore.Brighter.Tranformers.AWS
         private string _accountId;
         private string _bucketName;
         private IAmazonS3 _client;
-        private AsyncRetryPolicy _policy;
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<S3LuggageStore>();
         private string _luggagePrefix;
@@ -157,7 +156,6 @@ namespace Paramore.Brighter.Tranformers.AWS
             luggageStore._luggagePrefix = luggagePrefix;
 
             if (policy == null) policy = GetDefaultS3Policy();
-            luggageStore._policy = policy;
 
             if (storeCreation == S3LuggageStoreCreation.CreateIfMissing || storeCreation == S3LuggageStoreCreation.ValidateExists)
             {
@@ -294,7 +292,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             httpClient.BaseAddress = new Uri($"https://{bucketName}.s3.{bucketRegion.Value}.amazonaws.com");
             using var headRequest = new HttpRequestMessage(HttpMethod.Head, @"/");
             headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
-            var response = await httpClient.SendAsync(headRequest);
+            using var response = await httpClient.SendAsync(headRequest);
             //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 
             return (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden);
         }

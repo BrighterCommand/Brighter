@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    internal class SqsMessageCreatorFactory
+    internal sealed class SqsMessageCreatorFactory
     {
         public static ISqsMessageCreator Create(bool rawMessageDelivery)
         {

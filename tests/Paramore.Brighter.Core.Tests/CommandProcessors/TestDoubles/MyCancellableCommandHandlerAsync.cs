@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    class MyCancellableCommandHandlerAsync : RequestHandlerAsync<MyCommand>
+    sealed class MyCancellableCommandHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         private static MyCommand s_command;
 

@@ -45,7 +45,7 @@ public class AsyncMessageWrapCleanupTests
 
     }
     
-    private class MyReleaseTrackingTransformFactoryAsync : IAmAMessageTransformerFactoryAsync
+    private sealed class MyReleaseTrackingTransformFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
         public IAmAMessageTransformAsync Create(Type transformerType)
         {

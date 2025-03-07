@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.MongoDb.Tests.TestDoubles;
 
-internal class MyCommand : Command
+internal sealed class MyCommand : Command
 {
     public MyCommand()
         :base(Guid.NewGuid()) 

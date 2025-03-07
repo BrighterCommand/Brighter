@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyContextAwareEventHandlerAsync : RequestHandlerAsync<MyEvent>
+    internal sealed class MyContextAwareEventHandlerAsync : RequestHandlerAsync<MyEvent>
     {
         public static string TestString { get; set; }
         

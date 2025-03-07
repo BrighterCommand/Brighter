@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             CommandProcessor.ClearServiceBus();
         }
-
-        internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
+        
+        internal sealed class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
             public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
             {

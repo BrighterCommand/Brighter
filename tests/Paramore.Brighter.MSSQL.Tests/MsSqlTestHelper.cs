@@ -1,5 +1,4 @@
 ﻿using System;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MsSql;
@@ -147,7 +146,7 @@ namespace Paramore.Brighter.MSSQL.Tests
         }
     }
 
-    internal class SqlSettings
+    internal sealed class SqlSettings
     {
         public string TestsBrighterConnectionString { get; set; } =
             "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password123!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";

@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyLoggingHandler<TRequest> : RequestHandler<TRequest>, IDisposable where TRequest : class, IRequest
+    internal sealed class MyLoggingHandler<TRequest> : RequestHandler<TRequest>, IDisposable where TRequest : class, IRequest
     {
         private TRequest _command;
         public static bool DisposeWasCalled { get; set; }
