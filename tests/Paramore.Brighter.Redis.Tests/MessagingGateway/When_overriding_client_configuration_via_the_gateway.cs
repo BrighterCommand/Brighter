@@ -23,6 +23,7 @@ public class RedisGatewayConfigurationTests
             DefaultReceiveTimeout = 30,
             DefaultRetryTimeout = 10,
             DefaultSendTimeout = 10,
+            DisableVerboseLogging = false,
             HostLookupTimeoutMs = 400,
             MaxPoolSize = 50,
             MessageTimeToLive = TimeSpan.FromMinutes(30),
