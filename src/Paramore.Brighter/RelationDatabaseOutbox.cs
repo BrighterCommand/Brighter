@@ -11,9 +11,12 @@ using Paramore.Brighter.Observability;
 namespace Paramore.Brighter
 {
     public abstract class RelationDatabaseOutbox(
+        DbSystem dbSystem,
+        string databaseName,
         string outboxTableName,
         IRelationDatabaseOutboxQueries queries,
-        ILogger logger)
+        ILogger logger,
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>
     {
         /// <summary>
@@ -46,13 +49,29 @@ namespace Paramore.Brighter
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider = null)
         {
-            var parameters = InitAddDbParameters(message);
-            WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
+            var dbAttributes = new Dictionary<string, string>()
             {
-                logger.LogWarning(
-                    "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
-                    message.Id);
-            });
+                {"db.operation.parameter.message.id", message.Id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Add, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var parameters = InitAddDbParameters(message);
+                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
+                {
+                    logger.LogWarning(
+                        "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
+                        message.Id);
+                });
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -70,9 +89,25 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider = null
         )
         {
-            WriteToStore(transactionProvider,
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id))}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Add, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                WriteToStore(transactionProvider,
                 connection => InitBulkAddDbCommand(messages.ToList(), connection),
                 () => logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"));
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -91,15 +126,31 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
-            var parameters = InitAddDbParameters(message);
-            return WriteToStoreAsync(transactionProvider,
-                connection => InitAddDbCommand(connection, parameters), () =>
-                {
-                    logger.LogWarning(
-                        "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
-                        message.Id);
-                },
-                cancellationToken);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", message.Id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Add, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var parameters = InitAddDbParameters(message);
+                return WriteToStoreAsync(transactionProvider,
+                    connection => InitAddDbCommand(connection, parameters), () =>
+                    {
+                        logger.LogWarning(
+                            "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
+                            message.Id);
+                    },
+                    cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -118,10 +169,26 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
-            return WriteToStoreAsync(transactionProvider,
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id))}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Add, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                return WriteToStoreAsync(transactionProvider,
                 connection => InitBulkAddDbCommand(messages.ToList(), connection),
                 () => logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"),
                 cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -132,8 +199,24 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
-            if (messageIds.Any())
-                WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds)}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Delete, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                if (messageIds.Any())
+                    WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -149,11 +232,27 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            if (!messageIds.Any())
-                return Task.CompletedTask;
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds)}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Delete, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
 
-            return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null,
-                cancellationToken);
+            try
+            {
+                if (!messageIds.Any())
+                    return Task.CompletedTask;
+
+                return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null,
+                    cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -167,7 +266,7 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>A list of dispatched messages</returns>
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+        public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
             TimeSpan dispatchedSince,
             RequestContext? requestContext,
             int pageSize = 100,
@@ -176,10 +275,25 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            return ReadFromStoreAsync(
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.DispatchedMessages, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = await ReadFromStoreAsync(
                 connection =>
                     CreatePagedDispatchedCommand(connection, dispatchedSince, pageSize, pageNumber, outboxTimeout),
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -222,10 +336,25 @@ namespace Paramore.Brighter
             int outBoxTimeout = 0,
             Dictionary<string, object>? args = null)
         {
-            return ReadFromStore(
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.DispatchedMessages, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = ReadFromStore(
                 connection =>
                     CreatePagedDispatchedCommand(connection, dispatchedSince, pageSize, pageNumber, outBoxTimeout),
                 MapListFunction);
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -246,11 +375,26 @@ namespace Paramore.Brighter
             int outBoxTimeout = 0,
             Dictionary<string, object>? args = null)
         {
-            return ReadFromStore(
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.DispatchedMessages, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = ReadFromStore(
                 connection =>
                     CreatePagedDispatchedCommand(connection, TimeSpan.FromHours(hoursDispatchedSince), pageSize,
                         pageNumber, outBoxTimeout),
                 MapListFunction);
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -265,8 +409,27 @@ namespace Paramore.Brighter
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
-            return ReadFromStore(connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout),
-                MapListFunction);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds)}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = ReadFromStore(connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout),
+                    MapListFunction);
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -280,10 +443,26 @@ namespace Paramore.Brighter
         public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
-            var message = ReadFromStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", messageId}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var message = ReadFromStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
                 MapFunction);
 
-            return message;
+                return message;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -302,11 +481,27 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            var message = await ReadFromStoreAsync(
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", messageId}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var message = await ReadFromStoreAsync(
                 connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
                 dr => MapFunctionAsync(dr, cancellationToken), cancellationToken);
 
-            return message;
+                return message;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -317,16 +512,35 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
         /// <param name="cancellationToken">Cancellation Token.</param>
         /// <returns></returns>
-        public Task<IEnumerable<Message>> GetAsync(
+        public async Task<IEnumerable<Message>> GetAsync(
             IEnumerable<string> messageIds,
             RequestContext requestContext,
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default
         )
         {
-            return ReadFromStoreAsync(
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds)}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = await ReadFromStoreAsync(
                 connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout),
                 async (dr) => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -336,10 +550,25 @@ namespace Paramore.Brighter
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of messages</returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null)
+        public IList<Message> Get(RequestContext? requestContext, int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null)
         {
-            return ReadFromStore(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = ReadFromStore(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
                 MapListFunction).ToList();
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -351,13 +580,29 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Cancellation Token</param>
         /// <returns></returns>
         public async Task<IList<Message>> GetAsync(
+            RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            return (await ReadFromStoreAsync(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = (await ReadFromStoreAsync(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -365,21 +610,44 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="cancellationToken">Cancel the async operation</param>
         /// <returns></returns>
-        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken = default)
+        public async Task<int> GetNumberOfOutstandingMessagesAsync(RequestContext? requestContext, CancellationToken cancellationToken = default)
         {
-            return ReadFromStoreAsync(CreateRemainingOutstandingCommand,
-                dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                return await ReadFromStoreAsync(CreateRemainingOutstandingCommand,
+                    dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
         /// Get the number of messages in the Outbox that are not dispatched
         /// </summary>
         /// <returns></returns>
-        public int GetNumberOfOutstandingMessages()
+        public int GetNumberOfOutstandingMessages(RequestContext? requestContext)
         {
-            return ReadFromStore(CreateRemainingOutstandingCommand, MapOutstandingCount);
-        }
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
 
+            try
+            {
+                return ReadFromStore(CreateRemainingOutstandingCommand, MapOutstandingCount);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
 
         /// <summary>
         /// Update a message to show it is dispatched
@@ -389,16 +657,32 @@ namespace Paramore.Brighter
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Allows additional arguments for specific Outbox Db providers</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(
+        public async Task MarkDispatchedAsync(
             string id,
             RequestContext? requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            return WriteToStoreAsync(null,
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.MarkDispatched, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                await WriteToStoreAsync(null,
                 connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTimeOffset.UtcNow), null,
                 cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -409,16 +693,32 @@ namespace Paramore.Brighter
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Allows additional arguments to be passed for specific Db providers</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(
+        public async Task MarkDispatchedAsync(
             IEnumerable<string> ids,
             RequestContext? requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            return WriteToStoreAsync(null,
-                connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTimeOffset.UtcNow), null,
-                cancellationToken);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.ids", string.Join(",", ids)}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.MarkDispatched, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                await WriteToStoreAsync(null,
+                    connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTimeOffset.UtcNow), null,
+                    cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -431,8 +731,24 @@ namespace Paramore.Brighter
         public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null)
         {
-            WriteToStore(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow),
-                null);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.MarkDispatched, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                WriteToStore(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow),
+                    null);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -451,9 +767,24 @@ namespace Paramore.Brighter
             int pageNumber = 1,
             Dictionary<string, object>? args = null)
         {
-            return ReadFromStore(
-                connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, -1),
-                MapListFunction);
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.OutStandingMessages, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = ReadFromStore(
+                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, -1),
+                    MapListFunction);
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -466,7 +797,7 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
-        public Task<IEnumerable<Message>> OutstandingMessagesAsync(
+        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
             TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
@@ -474,9 +805,24 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            return ReadFromStoreAsync(
-                connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, -1),
-                dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.OutStandingMessages, outboxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var result = await ReadFromStoreAsync(
+                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, -1),
+                    dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         protected abstract void WriteToStore(
