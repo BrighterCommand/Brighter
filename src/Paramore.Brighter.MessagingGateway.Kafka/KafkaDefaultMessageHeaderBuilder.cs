@@ -43,36 +43,36 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var headers = new Headers
             {
-                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
+                // Cloud event
+                new Header(HeaderNames.CLOUD_EVENTS_ID, message.Header.MessageId.ToByteArray()),
+                new Header(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, message.Header.SpecVersion.ToByteArray()),
+                new Header(HeaderNames.CLOUD_EVENTS_TYPE, message.Header.Type.ToByteArray()),
+                new Header(HeaderNames.CLOUD_EVENTS_SOURCE, message.Header.Source.ToString().ToByteArray()),
+                new Header(HeaderNames.CLOUD_EVENTS_TIME, message.Header.TimeStamp.ToRcf3339().ToByteArray()),
+                
+                // Brighter custom headers
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
                 new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()),
-            };
-
-            if (message.Header.Bag.TryGetValue(BrighterHeaderNames.UseCloudEvents, out var val) && val is true)
-            {
-                // We are going to send both id to keep compability between old and new version of Brighter
-                headers.Add(HeaderNames.CloudEventsId, message.Header.MessageId.ToByteArray());
-                headers.Add(HeaderNames.CloudEventsSpecVersion, message.Header.SpecVersion.ToByteArray());
-                headers.Add(HeaderNames.CloudEventsType, message.Header.Type.ToByteArray());
-                headers.Add(HeaderNames.CloudEventsSource, message.Header.Source.ToString().ToByteArray());
-                headers.Add(HeaderNames.CloudEventsTime, message.Header.TimeStamp.ToRcf3339().ToByteArray());
-
-                if (!string.IsNullOrEmpty(message.Header.Subject))
-                {
-                    headers.Add(HeaderNames.CloudEventsSubject, message.Header.Subject.ToByteArray());
-                }
-
-                if (message.Header.DataSchema != null)
-                {
-                    headers.Add(HeaderNames.CloudEventsDataSchema, message.Header.DataSchema.ToString().ToByteArray());
-                }
                 
-                if (!string.IsNullOrEmpty(message.Header.ContentType))
-                {
-                    headers.Add(HeaderNames.CloudEventsContentType, message.Header.ContentType.ToByteArray());
-                }
+                // Backward compatibility with old brighter version
+                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
+            };
+            
+            if (!string.IsNullOrEmpty(message.Header.Subject))
+            {
+                headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject.ToByteArray());
             }
             
+            if (message.Header.DataSchema != null)
+            {
+                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString().ToByteArray());
+            }
+                            
+            if (!string.IsNullOrEmpty(message.Header.ContentType))
+            {
+                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, message.Header.ContentType.ToByteArray());
+            }
+           
             var timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
             if (message.Header.TimeStamp.DateTime != default)
             {

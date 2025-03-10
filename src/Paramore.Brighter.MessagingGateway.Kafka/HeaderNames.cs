@@ -90,41 +90,41 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// The cloud event ID
         /// </summary>
-        public const string CloudEventsId = "ce_id";
+        public const string CLOUD_EVENTS_ID = "ce_id";
 
         /// <summary>
         /// The cloud event spec version
         /// </summary>
-        public const string CloudEventsSpecVersion = "ce_specversion";
+        public const string CLOUD_EVENTS_SPEC_VERSION = "ce_specversion";
 
         /// <summary>
         /// The cloud event type
         /// </summary>
-        public const string CloudEventsType = "ce_type";
+        public const string CLOUD_EVENTS_TYPE = "ce_type";
 
         /// <summary>
         /// The cloud event time
         /// </summary>
-        public const string CloudEventsTime = "ce_time";
+        public const string CLOUD_EVENTS_TIME = "ce_time";
 
         /// <summary>
         /// The cloud event subject
         /// </summary>
-        public const string CloudEventsSubject = "ce_subject";
+        public const string CLOUD_EVENTS_SUBJECT = "ce_subject";
 
         /// <summary>
         /// The cloud event dataschema
         /// </summary>
-        public const string CloudEventsDataSchema = "ce_dataschema";
+        public const string CLOUD_EVENTS_DATA_SCHEMA = "ce_dataschema";
 
         /// <summary>
         /// The cloud event subject
         /// </summary>
-        public const string CloudEventsSource = "ce_source";
+        public const string CLOUD_EVENTS_SOURCE = "ce_source";
         
         /// <summary>
         /// The cloud events for content-type
         /// </summary>
-        public const string CloudEventsContentType  = "content-type";
+        public const string CLOUD_EVENTS_DATA_CONTENT_TYPE  = "content-type";
     }
 }

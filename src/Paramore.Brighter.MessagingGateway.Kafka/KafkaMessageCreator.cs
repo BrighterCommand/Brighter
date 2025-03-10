@@ -124,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private static HeaderResult<string> ReadContentType(Headers headers)
         {
-            var contentType = ReadHeader(headers, HeaderNames.CloudEventsContentType, true);
+            var contentType = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, true);
             return !contentType.Success ? contentType : ReadHeader(headers, HeaderNames.CONTENT_TYPE);
         }
 
@@ -222,7 +222,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
             }
 
-            return ReadHeader(headers, HeaderNames.CloudEventsTime)
+            return ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TIME)
                 .Map(x => DateTimeOffset.TryParse(x, out var timestamp)
                     ? new HeaderResult<DateTimeOffset>(timestamp, true)
                     : new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true));
@@ -252,7 +252,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var newMessageId = Guid.NewGuid().ToString();
 
-            var id = ReadHeader(headers, HeaderNames.CloudEventsId, true)
+            var id = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_ID, true)
                 .Map(messageId =>
                 {
                     if (string.IsNullOrEmpty(messageId))
@@ -299,19 +299,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         private static HeaderResult<string> ReadSubject(Headers headers)
-            => ReadHeader(headers, HeaderNames.CloudEventsSubject);
+            => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_SUBJECT);
 
         private static HeaderResult<string> ReadType(Headers headers)
-            => ReadHeader(headers, HeaderNames.CloudEventsType);
+            => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TYPE);
 
         private static HeaderResult<Uri> ReadDataSchema(Headers headers) =>
-            ReadHeader(headers, HeaderNames.CloudEventsDataSchema, true)
+            ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, true)
                 .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
                     ? new HeaderResult<Uri>(dataSchema, true)
                     : new HeaderResult<Uri>(null, false));
 
         private static HeaderResult<Uri> ReadSource(Headers headers) =>
-            ReadHeader(headers, HeaderNames.CloudEventsSource)
+            ReadHeader(headers, HeaderNames.CLOUD_EVENTS_SOURCE)
                 .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
                     ? new HeaderResult<Uri>(dataSchema, true)
                     : new HeaderResult<Uri>(new Uri("http://goparamore.io"), true));
