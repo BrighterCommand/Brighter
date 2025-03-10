@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Protocol;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
@@ -89,11 +90,31 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private MqttApplicationMessage CreateMqttMessage(Message message)
         {
             string payload = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options);
-            MqttApplicationMessageBuilder outMessage = new MqttApplicationMessageBuilder()
+            var builder = new MqttApplicationMessageBuilder()
                 .WithTopic(_config.TopicPrefix != null ? $"{_config.TopicPrefix}/{message.Header.Topic}" : message.Header.Topic)
                 .WithPayload(payload)
+                .WithContentType(message.Header.ContentType)
                 .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce);
-            return outMessage.Build();
+
+            builder
+                .WithUserProperty(HeaderNames.Id, message.Header.MessageId)
+                .WithUserProperty(HeaderNames.Type, message.Header.Type)
+                .WithUserProperty(HeaderNames.Time, message.Header.TimeStamp.ToRcf3339())
+                .WithUserProperty(HeaderNames.Source, message.Header.Source.ToString())
+                .WithUserProperty(HeaderNames.DataContentType, message.Header.ContentType)
+                .WithUserProperty(HeaderNames.SpecVersion, message.Header.SpecVersion);
+
+            if (message.Header.DataSchema != null)
+            {
+                builder.WithUserProperty(HeaderNames.DataSchema, message.Header.DataSchema.ToString());
+            }
+
+            if (!string.IsNullOrEmpty(message.Header.Subject))
+            {
+                builder.WithUserProperty(HeaderNames.Subject, message.Header.Subject);
+            }
+            
+            return builder.Build();
         }
     }
 }
