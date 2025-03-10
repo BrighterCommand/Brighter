@@ -26,9 +26,8 @@ public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
     {
         _redisFixture.MessageProducer.Send(_message);
         var sentMessage = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
-        var messageBody = sentMessage.Body.Value;
         _redisFixture.MessageConsumer.Acknowledge(sentMessage);
 
-        Assert.Equal(_message.Body.Value, messageBody);
+        Assert.Equal(_message.Body.Value, sentMessage.Body.Value);
     }
 }
