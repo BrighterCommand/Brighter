@@ -117,11 +117,11 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                 try
                 {
                     maxTries++;
-                    messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                    messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     {
-                        await _consumer.AcknowledgeAsync(messages[0]);
+                        _consumer.Acknowledge(messages[0]);
                         return messages[0];
                     }
 
