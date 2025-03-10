@@ -40,11 +40,12 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
             }).Create();
     }
 
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
     [Fact]
     public async Task When_a_message_is_acknowledged_update_offset()
     {
         //Let topic propagate in the broker
-        await Task.Delay(1000);
+        await Task.Delay(10000);
 
         var groupId = Guid.NewGuid().ToString();
         var sentMessages = new Dictionary<string, bool>();
@@ -78,7 +79,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         await Task.Delay(10000);
 
         //check we sent everything
-        Assert.False(sentMessages.Any(dr => dr.Value == false));
+        Assert.DoesNotContain(sentMessages, dr => dr.Value == false);
 
         var consumerOne = CreateConsumer(groupId);
         Message[] messages = await ConsumeMessagesAsync(consumerOne, groupId: groupId, batchLimit: 5);
@@ -145,10 +146,12 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                         return messages[0];
                     }
 
+                    //wait before retry
                     await Task.Delay(1000);
                 }
                 catch (ChannelFailureException cfx)
                 {
+                    //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
             } while (maxTries <= 3);

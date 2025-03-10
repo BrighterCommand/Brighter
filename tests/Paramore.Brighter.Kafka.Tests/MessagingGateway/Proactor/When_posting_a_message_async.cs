@@ -115,7 +115,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
         Assert.Equal(_partitionKey, receivedMessage.Header.PartitionKey);
         Assert.Equal(message.Body.Bytes, receivedMessage.Body.Bytes);
         Assert.Equal(message.Body.Value, receivedMessage.Body.Value);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z"), receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z"));
+        Assert.Equal(message.Header.TimeStamp, receivedMessage.Header.TimeStamp, TimeSpan.FromSeconds(5));
         Assert.Equal(command.Id, receivedCommand.Id);
         Assert.Equal(command.Value, receivedCommand.Value);
     }
