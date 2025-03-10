@@ -34,6 +34,7 @@ using Polly;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Polly.Retry;
 using System.Threading.Tasks;
+using Azure.Messaging;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.Tasks;
 
@@ -247,9 +248,22 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         }
     }
 
-    private ServiceBusMessage ConvertToServiceBusMessage(Message message)
+    private static ServiceBusMessage ConvertToServiceBusMessage(Message message)
     {
-        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
+        var cloudEvent = new CloudEvent(message.Header.Source.ToString(),
+            message.Header.Type,
+            new BinaryData(message.Body.Value))
+        {
+            Id = message.Header.MessageId,
+            DataSchema = message.Header.DataSchema?.ToString(),
+            Subject = message.Header.Subject,
+            Time = message.Header.TimeStamp,
+            DataContentType = message.Header.ContentType
+        };
+        
+        
+        var azureServiceBusMessage = new ServiceBusMessage(new BinaryData(cloudEvent));
+        
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
@@ -259,7 +273,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
             azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
         }
             
-        if(message.Header.CorrelationId is not null)
+        if(!string.IsNullOrEmpty(message.Header.CorrelationId))
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
         azureServiceBusMessage.ContentType = message.Header.ContentType;
         azureServiceBusMessage.MessageId = message.Header.MessageId;
