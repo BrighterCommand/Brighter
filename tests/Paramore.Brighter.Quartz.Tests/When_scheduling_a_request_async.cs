@@ -1,6 +1,5 @@
 ﻿using System.Collections.Specialized;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.MessageScheduler.Quartz;
@@ -116,16 +115,29 @@ public class QuartzSchedulerRequestAsyncTests
         var id = await scheduler.ScheduleAsync(req, RequestSchedulerType.Send,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.Contains(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = _outbox.Get(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Fact]
@@ -135,16 +147,29 @@ public class QuartzSchedulerRequestAsyncTests
         var scheduler = _scheduler.CreateAsync(_processor);
         var id = await scheduler.ScheduleAsync(req, RequestSchedulerType.Send, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.Contains(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = _outbox.Get(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Fact]
@@ -155,16 +180,29 @@ public class QuartzSchedulerRequestAsyncTests
         var id = await scheduler.ScheduleAsync(req, RequestSchedulerType.Publish,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.Contains(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = _outbox.Get(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Fact]
@@ -174,16 +212,29 @@ public class QuartzSchedulerRequestAsyncTests
         var scheduler = _scheduler.CreateAsync(_processor);
         var id = await scheduler.ScheduleAsync(req, RequestSchedulerType.Publish, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.Contains(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = _outbox.Get(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Fact]
@@ -194,16 +245,15 @@ public class QuartzSchedulerRequestAsyncTests
         var id = await scheduler.ScheduleAsync(req, RequestSchedulerType.Post,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
     }
 
     [Fact]
@@ -213,16 +263,15 @@ public class QuartzSchedulerRequestAsyncTests
         var scheduler = _scheduler.CreateAsync(_processor);
         var id = await scheduler.ScheduleAsync(req, RequestSchedulerType.Post, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
     }
 
     #endregion
@@ -238,20 +287,33 @@ public class QuartzSchedulerRequestAsyncTests
         var scheduler = _scheduler.CreateAsync(_processor);
         var id = await scheduler.ScheduleAsync(req, type, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
         await scheduler.ReSchedulerAsync(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await Task.Delay(TimeSpan.FromSeconds(4));
-        _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.Contains(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = _outbox.Get(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Theory]
@@ -263,19 +325,32 @@ public class QuartzSchedulerRequestAsyncTests
         var scheduler = _scheduler.CreateAsync(_processor);
         var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.True((id)?.Any());
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await scheduler.ReSchedulerAsync(id, TimeSpan.FromSeconds(5));
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await Task.Delay(TimeSpan.FromSeconds(4));
-        _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.Contains(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = _outbox.Get(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     #endregion
@@ -293,17 +368,30 @@ public class QuartzSchedulerRequestAsyncTests
         var id = await scheduler.ScheduleAsync(req, type,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await scheduler.CancelAsync(id);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = await _outbox.GetAsync(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Theory]
@@ -316,16 +404,29 @@ public class QuartzSchedulerRequestAsyncTests
         var scheduler = _scheduler.CreateAsync(_processor);
         var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.True((id)?.Any());
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
         await scheduler.CancelAsync(id);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = await _outbox.GetAsync(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     #endregion

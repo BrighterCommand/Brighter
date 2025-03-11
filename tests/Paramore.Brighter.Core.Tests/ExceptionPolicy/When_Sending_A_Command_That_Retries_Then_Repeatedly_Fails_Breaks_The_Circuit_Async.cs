@@ -1,10 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Policies.Handlers;
@@ -45,11 +42,14 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             var retryPolicy = Policy
                 .Handle<DivideByZeroException>()
-                .WaitAndRetryAsync(new[] { 10.Milliseconds(), 20.Milliseconds(), 30.Milliseconds() },
+                .WaitAndRetryAsync([
+                        TimeSpan.FromMilliseconds(10), 
+                        TimeSpan.FromMilliseconds(20), 
+                        TimeSpan.FromMilliseconds(30)
+                    ],
                     (exception, timeSpan) =>
-                    {
-                        _retryCount++;
-                    });
+                        _retryCount++
+                );
 
             var breakerPolicy = Policy.Handle<DivideByZeroException>()
                 .CircuitBreakerAsync(
@@ -74,27 +74,27 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
         [Fact]
         public async Task When_Sending_A_Command_That_Retries_Then_Repeatedly_Fails_Breaks_The_Circuit()
         {
-            //First two should be caught, and increment the count
+            // First two should be caught, and increment the count
             _firstException = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(new MyCommand()));
-            //should have retried three times
-            _retryCount.Should().Be(3);
+            // Should have retried three times
+            Assert.Equal(3, _retryCount);
             _retryCount = 0;
-            _secondException = await Catch.ExceptionAsync(async() => await _commandProcessor.SendAsync(new MyCommand()));
-            //should have retried three times
-            _retryCount.Should().Be(3);
+            _secondException = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(new MyCommand()));
+            // Should have retried three times
+            Assert.Equal(3, _retryCount);
             _retryCount = 0;
 
-            //this one should tell us that the circuit is broken
-            _thirdException = await Catch.ExceptionAsync(async() => await _commandProcessor.SendAsync(new MyCommand()));
-            //should have retried three times
-            _retryCount.Should().Be(0);
+            // This one should tell us that the circuit is broken
+            _thirdException = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(new MyCommand()));
+            // Should not retry
+            Assert.Equal(0, _retryCount);
 
-            //_should bubble up the first_exception
-            _firstException.Should().BeOfType<DivideByZeroException>();
-            //_should bubble up the second exception
-            _secondException.Should().BeOfType<DivideByZeroException>();
-            //_should bubble up the circuit breaker exception
-            _thirdException.Should().BeOfType<BrokenCircuitException>();
+            // Should bubble up the first exception
+            Assert.IsType<DivideByZeroException>(_firstException);
+            // Should bubble up the second exception
+            Assert.IsType<DivideByZeroException>(_secondException);
+            // Should bubble up the circuit breaker exception
+            Assert.IsType<BrokenCircuitException>(_thirdException);
         }
 
         public void Dispose()

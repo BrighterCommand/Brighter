@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Paramore.Brighter.Observability;
+﻿using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Common;
@@ -18,7 +17,7 @@ public class BrighterActivitySourceTests
         var activitySource = new BrighterTracer().ActivitySource;
         
         //assert
-        activitySource.Name.Should().Be(sourceName);
-        activitySource.Version.Should().Be(version);
+        Assert.Equal(sourceName, activitySource.Name);
+        Assert.Equal(version, activitySource.Version);
     }
 }

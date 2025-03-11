@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             
             _bus.Enqueue(message);
 
-            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+            Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
 #pragma warning disable xUnit1031
@@ -69,9 +68,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             
             await _dispatcher.End();
             
-            _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
-            _commandProcessor.Observe<MyEvent>().Should().NotBeNull();
-            _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.PublishAsync);
+            Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
+            Assert.NotNull(_commandProcessor.Observe<MyEvent>());
+            Assert.Contains(CommandType.PublishAsync, _commandProcessor.Commands);
             Assert.Empty(_bus.Stream(_routingKey));
         }
         

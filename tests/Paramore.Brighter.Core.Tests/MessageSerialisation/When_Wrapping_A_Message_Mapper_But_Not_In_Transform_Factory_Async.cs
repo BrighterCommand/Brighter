@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+﻿using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Xunit;
 
@@ -30,8 +29,8 @@ public class AsyncMessageWrapRequestMissingTransformTests
     {
         //act
         var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ConfigurationException);
         
     }
 }

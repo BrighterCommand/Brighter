@@ -8,7 +8,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Tasks;
 using Xunit;
 
@@ -21,7 +20,7 @@ public class BrighterSynchronizationContextsTests
     {
         var testThread = Thread.CurrentThread.ManagedThreadId;
         var contextThread = BrighterAsyncContext.Run(() => Thread.CurrentThread.ManagedThreadId);
-        testThread.Should().Be(contextThread);
+        Assert.Equal(contextThread, testThread);
     }
 
     [Fact]
@@ -34,7 +33,7 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
         }));
 
-        resumed.Should().BeTrue();
+        Assert.True(resumed);
     }
 
     [Fact]
@@ -47,7 +46,7 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
         }));
 
-        resumed.Should().BeTrue();
+        Assert.True(resumed);
     }
 
     [Fact]
@@ -64,8 +63,8 @@ public class BrighterSynchronizationContextsTests
             asyncVoid();
             return 13;
         }));
-        resumed.Should().BeTrue();
-        result.Should().Be(13);
+        Assert.True(resumed);
+        Assert.Equal(13, result);
     }
 
     [Fact]
@@ -77,7 +76,7 @@ public class BrighterSynchronizationContextsTests
             await Task.Yield();
             resumed = true;
         });
-        resumed.Should().BeTrue();
+        Assert.True(resumed);
     }
 
     [Fact]
@@ -90,7 +89,7 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return Task.CompletedTask;
         });
-        resumed.Should().BeTrue();
+        Assert.True(resumed);
     }
 
     [Fact]
@@ -104,8 +103,8 @@ public class BrighterSynchronizationContextsTests
             return 17;
         });
 
-        resumed.Should().BeTrue();
-        result.Should().Be(17);
+        Assert.True(resumed);
+        Assert.Equal(17, result);
     }
 
     [Fact]
@@ -118,8 +117,8 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return 17;
         });
-        resumed.Should().BeTrue();
-        result.Should().Be(17);
+        Assert.True(resumed);
+        Assert.Equal(17, result);
     }
     
     [Fact]
@@ -132,8 +131,8 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return 17;
         });
-        resumed.Should().BeTrue();
-        result.Should().Be(17);
+        Assert.True(resumed);
+        Assert.Equal(17, result);
     }
 
     [Fact]
@@ -146,8 +145,8 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return 17;
         });
-        resumed.Should().BeTrue();
-        result.Should().Be(17);
+        Assert.True(resumed);
+        Assert.Equal(17, result);
     }
 
     static async Task MultiTask()
@@ -171,7 +170,7 @@ public class BrighterSynchronizationContextsTests
         //let callback run on thread pool
         await Task.Delay(1000);
 
-        s_runnerCalled.Should().BeTrue();
+        Assert.True(s_runnerCalled);
 
         runner.OnMessagePublished -= MessagePublishedHandler;
     }
@@ -180,7 +179,7 @@ public class BrighterSynchronizationContextsTests
     
     static void MessagePublishedHandler(bool called, int value)
     {
-        value.Should().Be(17);
+        Assert.Equal(17, value);
         s_runnerCalled = true;
     }
 
@@ -203,7 +202,7 @@ public class BrighterSynchronizationContextsTests
     [Fact]
     public void Current_WithoutAsyncContext_IsNull()
     {
-        BrighterAsyncContext.Current.Should().BeNull();
+        Assert.Null(BrighterAsyncContext.Current);
     }
 
     [Fact]
@@ -220,7 +219,7 @@ public class BrighterSynchronizationContextsTests
 
         helper.Execute(task);
 
-        observedHelper.Should().Be(helper);
+        Assert.Equal(helper, observedHelper);
     }
     
     [Fact]
@@ -238,8 +237,8 @@ public class BrighterSynchronizationContextsTests
 
         var result =await Task.WhenAll(newTask);
 
-        resumed.Should().BeTrue();
-        result[0].Should().Be(17);
+        Assert.True(resumed);
+        Assert.Equal(17, result[0]);
     }
 
     [Fact]                 
@@ -256,7 +255,7 @@ public class BrighterSynchronizationContextsTests
 
         context.Execute(task);
 
-        observedContext.Should().Be(context.SynchronizationContext);
+        Assert.Equal(context.SynchronizationContext, observedContext);
     }
 
     [Fact]
@@ -273,14 +272,14 @@ public class BrighterSynchronizationContextsTests
 
         context.Execute(task);
 
-        observedScheduler.Should().Be(TaskScheduler.Default);
+        Assert.Equal(TaskScheduler.Default, observedScheduler);
     }
 
     [Fact]
     public void TaskScheduler_MaximumConcurrency_IsOne()
     {
         var context = new BrighterAsyncContext();
-        context.TaskScheduler.MaximumConcurrencyLevel.Should().Be(1);
+        Assert.Equal(1, context.TaskScheduler.MaximumConcurrencyLevel);
     }
 
     [Fact]
@@ -296,7 +295,7 @@ public class BrighterSynchronizationContextsTests
             propogatesException = true;
         }
 
-        propogatesException.Should().BeTrue();
+        Assert.True(propogatesException);
     }
 
     [Fact]
@@ -316,7 +315,7 @@ public class BrighterSynchronizationContextsTests
             propogatesException = true;
         }
 
-        propogatesException.Should().BeTrue();
+        Assert.True(propogatesException);
     }
 
     [Fact]
@@ -341,7 +340,7 @@ public class BrighterSynchronizationContextsTests
             propogatesException = true;
         }
 
-        propogatesException.Should().BeTrue();
+        Assert.True(propogatesException);
     }
 
     [Fact]
@@ -364,7 +363,7 @@ public class BrighterSynchronizationContextsTests
             propogatesException = true;
         }
 
-        propogatesException.Should().BeTrue();
+        Assert.True(propogatesException);
     }
 
     [Fact]
@@ -400,8 +399,8 @@ public class BrighterSynchronizationContextsTests
         }
         //there should be no pending work
 
-        value.Should().Be(1);
-        exceptionRan.Should().BeFalse();
+        Assert.Equal(1, value);
+        Assert.False(exceptionRan);
     }
 
     [Fact]
@@ -431,11 +430,11 @@ public class BrighterSynchronizationContextsTests
         }
         catch (Exception e)
         {
-            e.Message.Should().Be("Should run on thread pool");
+            Assert.Equal("Should run on thread pool", e.Message);
             threadPoolExceptionRan = true;
         }
 
-        threadPoolExceptionRan.Should().BeTrue();
+        Assert.True(threadPoolExceptionRan);
     }
     
     [Fact]
@@ -445,15 +444,15 @@ public class BrighterSynchronizationContextsTests
             BrighterAsyncContext.Run(() => System.Threading.SynchronizationContext.Current);
         var synchronizationContext2 = synchronizationContext1.CreateCopy();
 
-        synchronizationContext1.GetHashCode().Should().Be(synchronizationContext2.GetHashCode());
-        synchronizationContext1.Equals(synchronizationContext2).Should().BeTrue();
-        synchronizationContext1.Equals(new System.Threading.SynchronizationContext()).Should().BeFalse();
+        Assert.Equal(synchronizationContext2.GetHashCode(), synchronizationContext1.GetHashCode());
+        Assert.True(synchronizationContext1.Equals(synchronizationContext2));
+        Assert.False(synchronizationContext1.Equals(new System.Threading.SynchronizationContext()));
     }
 
     [Fact]
     public void Id_IsEqualToTaskSchedulerId()
     {
         var context = new BrighterAsyncContext();
-        context.Id.Should().Be(context.TaskScheduler.Id);
+        Assert.Equal(context.TaskScheduler.Id, context.Id);
     }
 }

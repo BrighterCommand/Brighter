@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Xunit;
@@ -74,10 +73,10 @@ public class AsyncRmqMessageConsumerChannelFailureTests : IAsyncDisposable, IDis
         catch (ChannelFailureException cfe)
         {
             exceptionHappened = true;
-            cfe.InnerException.Should().BeOfType<NotSupportedException>();
+            Assert.True((cfe.InnerException) is NotSupportedException);
         }
             
-        exceptionHappened.Should().BeTrue();
+        Assert.True(exceptionHappened);
     }
 
     [Fact]

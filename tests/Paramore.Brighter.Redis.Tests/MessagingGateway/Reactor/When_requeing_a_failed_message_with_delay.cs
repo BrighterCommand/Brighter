@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
@@ -31,15 +30,15 @@ public class RedisRequeueWithDelayTests : IClassFixture<RedisFixture>
         //send & receive a message
         _redisFixture.MessageProducer.Send(_messageOne);
         var message = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
-        message.Header.HandledCount.Should().Be(0);
-        message.Header.Delayed.Should().Be(TimeSpan.Zero);
+        Assert.Equal(0, message.Header.HandledCount);
+        Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
             
         //now requeue with a delay
         _redisFixture.MessageConsumer.Requeue(_messageOne, TimeSpan.FromMilliseconds(1000));
             
         //receive and assert
         message = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
-        message.Header.HandledCount.Should().Be(1);
-        message.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(1000));
+        Assert.Equal(1, message.Header.HandledCount);
+        Assert.Equal(TimeSpan.FromMilliseconds(1000), message.Header.Delayed);
     }
 }

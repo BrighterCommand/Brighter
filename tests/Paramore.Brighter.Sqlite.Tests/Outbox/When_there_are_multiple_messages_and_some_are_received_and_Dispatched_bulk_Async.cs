@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -53,7 +52,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
-            undispatchedMessages.Count().Should().Be(2);
+            Assert.Equal(2, undispatchedMessages.Count());
         }
 
         public async ValueTask DisposeAsync()

@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -38,16 +37,16 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         
         // If no factory we default to just them mapper
-        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper");
+        Assert.Equal("MyTransformableCommandMessageMapper", TraceFilters().ToString());
 
         //wrap should just do message mapper                                          
         var message = _transformPipeline.Wrap(_myCommand,new RequestContext(), _publication);
         
         //assert
-        message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());
+        Assert.Equal(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString(), message.Body.Value);
         
         //we won't run a transform
-        message.Header.Bag.ContainsKey(MySimpleTransformAsync.HEADER_KEY).Should().Be(false);
+        Assert.Equal(false, message.Header.Bag.ContainsKey(MySimpleTransformAsync.HEADER_KEY));
     }
     
     private TransformPipelineTracer TraceFilters()

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.InMemory.Tests.Data;
@@ -49,8 +48,8 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var afterExpiryExists = await inbox.ExistsAsync<SimpleCommand>(command.Id, contextKey);
             
             //Assert
-            foundCommand.Should().NotBeNull();
-            afterExpiryExists.Should().BeFalse();
+            Assert.NotNull(foundCommand);
+            Assert.False(afterExpiryExists);
         }
 
         [Fact]
@@ -90,7 +89,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             await Task.Delay(500); //Give the sweep time to run and clear the old entries
             
             //Assert
-            inbox.EntryCount.Should().Be(3);
+            Assert.Equal(3, inbox.EntryCount);
 
         }
     }
