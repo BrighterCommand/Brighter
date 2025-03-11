@@ -39,8 +39,7 @@ public class RmqMessageProducerSendMessageTests : IDisposable
     public RmqMessageProducerSendMessageTests()
     {
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND, contentType: "text/plain"),  
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
