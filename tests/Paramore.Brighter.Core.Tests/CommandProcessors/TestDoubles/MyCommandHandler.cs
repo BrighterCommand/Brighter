@@ -26,7 +26,7 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommandHandler : RequestHandler<MyCommand>
+    internal sealed class MyCommandHandler : RequestHandler<MyCommand>
     {
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
         private MyCommand? _command;

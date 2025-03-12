@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using FluentAssertions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -54,33 +53,33 @@ public class BrighterTracerSpanTests : IDisposable
        var flushed = _traceProvider.ForceFlush();
 
         //assert
-        flushed.Should().BeTrue();
+        Assert.True(flushed);
 
         //check the created activity
-        childActivity.ParentId.Should().Be(_parentActivity.Id);
-        childActivity.DisplayName.Should().Be($"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}");
-        childActivity.Source.Name.Should().Be(BrighterSemanticConventions.SourceName);
+        Assert.Equal(_parentActivity.Id, childActivity.ParentId);
+        Assert.Equal($"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}", childActivity.DisplayName);
+        Assert.Equal(BrighterSemanticConventions.SourceName, childActivity.Source.Name);
         var tagDictionary = childActivity.Tags.ToDictionary(pair => pair.Key, pair => pair.Value);
-        tagDictionary.Should().ContainKey(BrighterSemanticConventions.RequestId);
-        tagDictionary[BrighterSemanticConventions.RequestId].Should().Be(command.Id.ToString());
-        tagDictionary.Should().ContainKey(BrighterSemanticConventions.RequestType);
-        tagDictionary[BrighterSemanticConventions.RequestType].Should().Be(command.GetType().Name);
-        tagDictionary.Should().ContainKey(BrighterSemanticConventions.RequestBody);
-        tagDictionary[BrighterSemanticConventions.RequestBody].Should().Be(System.Text.Json.JsonSerializer.Serialize(command, JsonSerialisationOptions.Options));
-        tagDictionary.Should().ContainKey(BrighterSemanticConventions.Operation);
-        tagDictionary[BrighterSemanticConventions.Operation].Should().Be(CommandProcessorSpanOperation.Send.ToSpanName());
+        Assert.Contains(BrighterSemanticConventions.RequestId, tagDictionary.Keys);
+        Assert.Equal(command.Id.ToString(), tagDictionary[BrighterSemanticConventions.RequestId]);
+        Assert.Contains(BrighterSemanticConventions.RequestType, tagDictionary.Keys);
+        Assert.Equal(command.GetType().Name, tagDictionary[BrighterSemanticConventions.RequestType]);
+        Assert.Contains(BrighterSemanticConventions.RequestBody, tagDictionary.Keys);
+        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), tagDictionary[BrighterSemanticConventions.RequestBody]);
+        Assert.Contains(BrighterSemanticConventions.Operation, tagDictionary.Keys);
+        Assert.Equal(CommandProcessorSpanOperation.Send.ToSpanName(), tagDictionary[BrighterSemanticConventions.Operation]);
 
 
         //check via the exporter as well
-        _exportedActivities.Count.Should().Be(2);
-        _exportedActivities.Any(a => a.Source.Name == BrighterSemanticConventions.SourceName).Should().BeTrue();
+        Assert.Equal(2, _exportedActivities.Count);
+        Assert.Contains(_exportedActivities, a => a.Source.Name == BrighterSemanticConventions.SourceName);
         var childSpan = _exportedActivities.First(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}"); 
-        childSpan.Should().NotBeNull();
-        childSpan.ParentId.Should().Be(_parentActivity.Id);
-        childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && (string)t.Value == command.Id.ToString()).Should().BeTrue();
-        childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestType && (string)t.Value == command.GetType().Name).Should().BeTrue();
-        childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && (string)t.Value == System.Text.Json.JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)).Should().BeTrue();
-        childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.Operation && (string)t.Value == CommandProcessorSpanOperation.Send.ToSpanName()).Should().BeTrue();
+        Assert.NotNull(childSpan);
+        Assert.Equal(_parentActivity.Id, childSpan.ParentId);
+        Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.RequestId && (string)t.Value == command.Id.ToString());
+        Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.RequestType && (string)t.Value == command.GetType().Name);
+        Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.RequestBody && (string)t.Value == System.Text.Json.JsonSerializer.Serialize(command, JsonSerialisationOptions.Options));
+        Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.Operation && (string)t.Value == CommandProcessorSpanOperation.Send.ToSpanName());
     }
 
     public void Dispose()

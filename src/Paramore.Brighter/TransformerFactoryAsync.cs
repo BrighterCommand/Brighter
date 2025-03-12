@@ -25,7 +25,7 @@ using System;
 
 namespace Paramore.Brighter
 {
-    internal class TransformerFactoryAsync<TRequest> where TRequest: class, IRequest
+    internal sealed class TransformerFactoryAsync<TRequest> where TRequest: class, IRequest
     {
         private readonly TransformAttribute _attribute;
         private readonly IAmAMessageTransformerFactoryAsync _factory;

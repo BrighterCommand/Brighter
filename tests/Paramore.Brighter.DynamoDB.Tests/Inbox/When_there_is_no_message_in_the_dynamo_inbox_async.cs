@@ -24,7 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
+using System.Threading.Tasks;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -43,11 +43,12 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         }
 
         [Fact]
-        public async void When_There_Is_No_Message_In_The_Sql_Inbox()
+        public async Task When_There_Is_No_Message_In_The_Sql_Inbox()
         {
-            var exception =
-                await Catch.ExceptionAsync(() => _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid().ToString(), "some key"));
-            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            var exception = await Catch.ExceptionAsync(() => 
+                _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid().ToString(), "some key")
+            );
+            Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
     }
 }

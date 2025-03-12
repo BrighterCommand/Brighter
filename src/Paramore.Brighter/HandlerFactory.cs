@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter
 {
-    internal class HandlerFactory<TRequest> where TRequest : class, IRequest
+    internal sealed class HandlerFactory<TRequest> where TRequest : class, IRequest
     {
         private readonly RequestHandlerAttribute _attribute;
         private readonly IAmAHandlerFactorySync _factorySync;

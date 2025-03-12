@@ -157,7 +157,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
 
 
-        class PooledConnection
+        sealed class PooledConnection
         {
             public IConnection? Connection { get; set; }
             public EventHandler<ShutdownEventArgs>? ShutdownHandler { get; set; }

@@ -271,7 +271,5 @@ public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsu
         }
     }
 
-    private record LockedMessage(Message Message, DateTimeOffset LockedAt);
-
-
+    private sealed record LockedMessage(Message Message, DateTimeOffset LockedAt);
 }

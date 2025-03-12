@@ -33,7 +33,7 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
 
         public FeatureSwitchStatus StatusOf(Type handler)
         {
-            var configExists = switches.ContainsKey(handler);
+            var configExists = switches.TryGetValue(handler, out var config);
 
             if (!configExists)
             {
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
                 }
             }
 
-            return switches[handler];
+            return config;
         }        
     }
 

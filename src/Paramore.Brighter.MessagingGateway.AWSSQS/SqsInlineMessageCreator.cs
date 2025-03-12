@@ -33,7 +33,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
+internal sealed class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
 

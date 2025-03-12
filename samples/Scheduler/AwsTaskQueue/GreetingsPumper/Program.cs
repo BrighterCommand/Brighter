@@ -11,12 +11,11 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.Scheduler.Events;
 using Serilog;
 
 namespace GreetingsPumper;
 
-class Program
+static class Program
 {
     private static async Task Main(string[] args)
     {
@@ -94,7 +93,7 @@ class Program
         await host.RunAsync();
     }
 
-    internal class RunCommandProcessor(IAmACommandProcessor commandProcessor, ILogger<RunCommandProcessor> logger) : IHostedService
+    internal sealed class RunCommandProcessor(IAmACommandProcessor commandProcessor, ILogger<RunCommandProcessor> logger) : IHostedService
     {
         public async Task StartAsync(CancellationToken cancellationToken)
         {

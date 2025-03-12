@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;
@@ -54,7 +53,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             _exception = Catch.Exception(() => _dynamoDbInbox.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
         }
 
         [Fact]
@@ -65,7 +64,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             var storedCommand = _dynamoDbInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
 
             //_should_read_the_command_from_the__dynamo_db_inbox
-            AssertionExtensions.Should(storedCommand).NotBeNull();
+            Assert.NotNull(storedCommand);
         }
     }
 }

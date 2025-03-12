@@ -48,7 +48,7 @@ internal enum ARNAmazonSNS
     SubscriptionId = 6
 }
 
-internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
+internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageCreator>();
 

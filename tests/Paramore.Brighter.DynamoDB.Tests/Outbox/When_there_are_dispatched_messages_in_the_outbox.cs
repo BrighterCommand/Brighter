@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -38,8 +37,8 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
-        message.Should().NotBeNull();
-        message.Body.Value.Should().Be(_message.Body.Value);
+        Assert.NotNull(message);
+        Assert.Equal(_message.Body.Value, message.Body.Value);
     }
 
     [Fact]
@@ -57,8 +56,8 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
-        message.Should().NotBeNull();
-        message.Body.Value.Should().Be(_message.Body.Value);
+        Assert.NotNull(message);
+        Assert.Equal(_message.Body.Value, message.Body.Value);
     }
 
     [Fact]
@@ -83,9 +82,9 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
-            dispatchedMessage.Should().NotBeNull();
-            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
-            dispatchedMessage.Header.Topic.Should().Be(message.Header.Topic);
+            Assert.NotNull(dispatchedMessage);
+            Assert.Equal(message.Body.Value, dispatchedMessage.Body.Value);
+            Assert.Equal(message.Header.Topic, dispatchedMessage.Header.Topic);
         }
     }
 
@@ -111,9 +110,9 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
-            dispatchedMessage.Should().NotBeNull();
-            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
-            dispatchedMessage.Header.Topic.Should().Be(message.Header.Topic);
+            Assert.NotNull(dispatchedMessage);
+            Assert.Equal(message.Body.Value, dispatchedMessage.Body.Value);
+            Assert.Equal(message.Header.Topic, dispatchedMessage.Header.Topic);
         }
     }
 
@@ -140,7 +139,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 
         // Get the first page
         var dispatchedMessages = (await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 5, 1, args: args)).ToList();
-        dispatchedMessages.Count.Should().Be(5);
+        Assert.Equal(5, dispatchedMessages.Count);
         // Get the remainder
         dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 100, 2, args: args));
 
@@ -148,8 +147,8 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
-            dispatchedMessage.Should().NotBeNull();
-            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
+            Assert.NotNull(dispatchedMessage);
+            Assert.Equal(message.Body.Value, dispatchedMessage.Body.Value);
         }
     }
 
@@ -176,7 +175,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 
         // Get the first page
         var dispatchedMessages = (_dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 5, 1, args: args)).ToList();
-        dispatchedMessages.Count.Should().Be(5);
+        Assert.Equal(5, dispatchedMessages.Count);
         // Get the remainder
         dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 100, 2, args: args));
 
@@ -184,8 +183,8 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
-            dispatchedMessage.Should().NotBeNull();
-            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
+            Assert.NotNull(dispatchedMessage);
+            Assert.Equal(message.Body.Value, dispatchedMessage.Body.Value);
         }
     }
 
@@ -227,9 +226,9 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
-            dispatchedMessage.Should().NotBeNull();
-            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
-            dispatchedMessage.Header.Topic.Should().Be(message.Header.Topic);
+            Assert.NotNull(dispatchedMessage);
+            Assert.Equal(message.Body.Value, dispatchedMessage.Body.Value);
+            Assert.Equal(message.Header.Topic, dispatchedMessage.Header.Topic);
         }
     }
 
@@ -271,9 +270,9 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var dispatchesMessage = dispatchedMessages.Single(m => m.Id == message.Id);
-            dispatchesMessage.Should().NotBeNull();
-            dispatchesMessage.Body.Value.Should().Be(message.Body.Value);
-            dispatchesMessage.Header.Topic.Should().Be(message.Header.Topic);
+            Assert.NotNull(dispatchesMessage);
+            Assert.Equal(message.Body.Value, dispatchesMessage.Body.Value);
+            Assert.Equal(message.Header.Topic, dispatchesMessage.Header.Topic);
         }
     }
 

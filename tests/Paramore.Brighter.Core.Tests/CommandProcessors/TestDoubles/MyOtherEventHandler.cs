@@ -22,12 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyOtherEventHandler(IDictionary<string, string> receivedMessages) : RequestHandler<MyEvent>
+    internal sealed class MyOtherEventHandler(IDictionary<string, string> receivedMessages) : RequestHandler<MyEvent>
     {
         public override MyEvent Handle(MyEvent @event)
         {
