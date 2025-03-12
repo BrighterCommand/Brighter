@@ -40,9 +40,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Get,
+                BoxDbOperation.Get,
                 Configuration.CollectionName),
             null,
             options: Configuration.InstrumentationOptions);
@@ -90,9 +90,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     )
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Get,
+                BoxDbOperation.Get,
                 Configuration.CollectionName),
             null,
             options: Configuration.InstrumentationOptions);
@@ -127,9 +127,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     public async Task<long> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Get,
+                BoxDbOperation.Get,
                 Configuration.CollectionName),
             null,
             options: Configuration.InstrumentationOptions);
@@ -155,9 +155,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Add,
+                BoxDbOperation.Add,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -203,9 +203,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Add,
+                BoxDbOperation.Add,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -240,9 +240,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Delete,
+                BoxDbOperation.Delete,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -266,9 +266,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.DispatchedMessages,
+                BoxDbOperation.DispatchedMessages,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -310,9 +310,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Get,
+                BoxDbOperation.Get,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -340,9 +340,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.MarkDispatched,
+                BoxDbOperation.MarkDispatched,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -371,9 +371,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.MarkDispatched,
+                BoxDbOperation.MarkDispatched,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -402,9 +402,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.OutStandingMessages,
+                BoxDbOperation.OutStandingMessages,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -451,9 +451,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Get,
+                BoxDbOperation.Get,
                 Configuration.CollectionName),
             null,
             options: Configuration.InstrumentationOptions);
@@ -497,9 +497,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     )
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Get,
+                BoxDbOperation.Get,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -531,9 +531,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     public long GetNumberOfOutstandingMessages()
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Get,
+                BoxDbOperation.Get,
                 Configuration.CollectionName),
             null,
             options: Configuration.InstrumentationOptions);
@@ -553,9 +553,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         IAmABoxTransactionProvider<IClientSessionHandle>? transactionProvider = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Add,
+                BoxDbOperation.Add,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -592,9 +592,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         IAmABoxTransactionProvider<IClientSessionHandle>? transactionProvider = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Add,
+                BoxDbOperation.Add,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -621,9 +621,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Delete,
+                BoxDbOperation.Delete,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -644,9 +644,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         int pageNumber = 1, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.DispatchedMessages,
+                BoxDbOperation.DispatchedMessages,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -687,9 +687,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.Get,
+                BoxDbOperation.Get,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -711,9 +711,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.MarkDispatched,
+                BoxDbOperation.MarkDispatched,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -740,9 +740,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         int pageNumber = 1, Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new OutboxSpanInfo(DbSystem.Mongodb,
+            new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                OutboxDbOperation.OutStandingMessages,
+                BoxDbOperation.OutStandingMessages,
                 Configuration.CollectionName),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);

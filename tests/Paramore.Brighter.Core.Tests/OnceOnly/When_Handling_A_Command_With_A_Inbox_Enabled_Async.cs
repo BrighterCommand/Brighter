@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await _commandProcessor.SendAsync(_command);
 
            // should_store_the_command_to_the_inbox
-            Assert.Equal(_command.Value, (await _inbox.GetAsync<MyCommand>(_command.Id, _contextKey)).Value);
+            Assert.Equal(_command.Value, (await _inbox.GetAsync<MyCommand>(_command.Id, _contextKey, null)).Value);
         }
 
         [Fact]
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             string id = Guid.NewGuid().ToString();
             await Catch.ExceptionAsync(async () =>await _commandProcessor.SendAsync(new MyCommandToFail { Id = id }));
 
-            var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
+            var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName, null);
             Assert.False(exists);
         }
 

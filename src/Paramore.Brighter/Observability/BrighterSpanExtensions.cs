@@ -47,16 +47,17 @@ public static class BrighterSpanExtensions
    };
 
    ///<summary>
-   /// Provide a string representation of the outbox operation
+   /// Provide a string representation of the inbox/outbox operation
    /// </summary>   
-   public static string ToSpanName(this OutboxDbOperation span) => span switch
+   public static string ToSpanName(this BoxDbOperation span) => span switch
    {
-       OutboxDbOperation.Add => "add.message",
-       OutboxDbOperation.Delete => "delete.message",
-       OutboxDbOperation.DispatchedMessages => "retrieve.dispatched_messages",
-       OutboxDbOperation.Get => "retrieve.message",
-       OutboxDbOperation.MarkDispatched => "mark_as_dispatched.outstanding_messages",
-       OutboxDbOperation.OutStandingMessages => "retrieve.outstanding_messages",
+       BoxDbOperation.Add => "add.message",
+       BoxDbOperation.Delete => "delete.message",
+       BoxDbOperation.DispatchedMessages => "retrieve.dispatched_messages",
+       BoxDbOperation.Get => "retrieve.message",
+       BoxDbOperation.MarkDispatched => "mark_as_dispatched.outstanding_messages",
+       BoxDbOperation.OutStandingMessages => "retrieve.outstanding_messages",
+       BoxDbOperation.Exists => "message.exists",
        _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
    };
    

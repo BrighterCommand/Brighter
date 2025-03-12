@@ -28,7 +28,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var command = new SimpleCommand();            
             
             //Act
-            await inbox.AddAsync(command, contextKey);
+            await inbox.AddAsync(command, contextKey, null);
             
             timeProvider.Advance(TimeSpan.FromMilliseconds(500));
             
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             SimpleCommand foundCommand = null;
             try
             {
-                foundCommand = inbox.Get<SimpleCommand>(command.Id, contextKey);
+                foundCommand = inbox.Get<SimpleCommand>(command.Id, contextKey, null);
             }
             catch (Exception e) when (e is RequestNotFoundException<SimpleCommand> || e is TypeLoadException)
             {
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
 
             await Task.Delay(500); //Give the sweep time to run
             
-            var afterExpiryExists = await inbox.ExistsAsync<SimpleCommand>(command.Id, contextKey);
+            var afterExpiryExists = await inbox.ExistsAsync<SimpleCommand>(command.Id, contextKey, null);
             
             //Assert
             Assert.NotNull(foundCommand);
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var earlyCommands = new[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};            
             foreach (var command in earlyCommands)
             {
-                await inbox.AddAsync(command, contextKey);
+                await inbox.AddAsync(command, contextKey, null);
             }
             
             //allow any sweeper to expire
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var lateCommands = new[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
             foreach (var command in lateCommands) //This will trigger cleanup
             {
-                await inbox.AddAsync(command, contextKey);
+                await inbox.AddAsync(command, contextKey, null);
             }
             
             await Task.Delay(500); //Give the sweep time to run and clear the old entries

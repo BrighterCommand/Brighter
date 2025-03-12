@@ -22,8 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -38,8 +36,9 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="timeoutInMilliseconds"></param>
-        void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest;
+        void Add<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest;
 
         /// <summary>
         /// Finds the specified identifier.
@@ -47,9 +46,10 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>T.</returns>
-        T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest;
+        T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest;
 
         /// <summary>
         /// Checks whether a command with the specified identifier exists in the store
@@ -57,8 +57,9 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest;
+        bool Exists<T>(string id, string contextKey, RequestContext? requestContextint, int timeoutInMilliseconds = -1) where T : class, IRequest;
     }
 }

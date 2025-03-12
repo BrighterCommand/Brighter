@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,10 +39,11 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="contextKey"></param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest;
+        Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest;
 
         /// <summary>
         /// Awaitably finds the specified identifier.
@@ -51,10 +51,11 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey"></param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task{T}"/>.</returns>
-        Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest;
 
         /// <summary>
@@ -63,10 +64,11 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey"></param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns>True if it exists, False otherwise</returns>
-        Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest;
 
         /// <summary>
