@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Data;
 using Xunit;
@@ -50,8 +49,8 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var storedCommand = inbox.Get<SimpleCommand>(command.Id, contextKey);
 
             //Assert
-            storedCommand.Should().NotBeNull();
-            storedCommand.Id.Should().Be(command.Id);
+            Assert.NotNull(storedCommand);
+            Assert.Equal(command.Id, storedCommand.Id);
 
         }
 
@@ -70,7 +69,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var exists = inbox.Exists<SimpleCommand>(command.Id, contextKey);
 
             //Assert
-            exists.Should().BeTrue();
+            Assert.True(exists);
         }
 
         [Fact]
@@ -86,8 +85,8 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var exists = inbox.Exists<SimpleCommand>(command.Id, contextKey);
 
             //Assert
-            exists.Should().BeFalse();
-             
+            Assert.False(exists);
+
         }
 
         [Fact]
@@ -108,11 +107,11 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
            var lastCommand = inbox.Get<SimpleCommand>(commands[4].Id, contextKey);
 
            //Assert
-           firstCommand.Should().NotBeNull();
-           lastCommand.Should().NotBeNull();
+           Assert.NotNull(firstCommand);
+           Assert.NotNull(lastCommand);
 
-           firstCommand.Id.Should().Be(commands[0].Id, contextKey);
-           lastCommand.Id.Should().Be(commands[4].Id, contextKey);
+           Assert.Equal(commands[0].Id, firstCommand.Id);
+           Assert.Equal(commands[4].Id, lastCommand.Id);
 
         }
 
@@ -134,8 +133,8 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var lastCommandExists = inbox.Exists<SimpleCommand>(commands[4].Id, contextKey);
  
             //Assert
-            firstCommandExists.Should().BeTrue();
-            lastCommandExists.Should().BeTrue();
+            Assert.True(firstCommandExists);
+            Assert.True(lastCommandExists);
 
         }
 
@@ -156,7 +155,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var firstCommandExists = inbox.Exists<SimpleCommand>(Guid.NewGuid().ToString(), contextKey);
  
             //Assert
-            firstCommandExists.Should().BeFalse();
+            Assert.False(firstCommandExists);
              
         }
 

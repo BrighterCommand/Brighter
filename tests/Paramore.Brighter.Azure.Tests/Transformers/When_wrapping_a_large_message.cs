@@ -1,6 +1,5 @@
 ﻿using Azure.Identity;
 using Azure.Storage.Blobs;
-using FluentAssertions;
 using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.Azure;
@@ -56,11 +55,11 @@ public class LargeMessagePayloadWrapTests : IDisposable
         var message = _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication).Result;
 
         //assert
-        message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();
+        Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK));
         _id = (string)message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
-        message.Body.Value.Should().Be($"Claim Check {_id}");
-            
-        (await _luggageStore.HasClaimAsync(_id, CancellationToken.None)).Should().BeTrue();
+        Assert.Equals($"Claim Check {_id}", message.Body.Value);
+
+        Assert.That(await _luggageStore.HasClaimAsync(_id, CancellationToken.None));
     }
     
     public void Dispose()

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
@@ -20,7 +19,7 @@ public class AsyncClaimCheckSmallPayloadTests
         //arrange
         _store = new InMemoryStorageProviderAsync();
         _transformerAsync = new ClaimCheckTransformerAsync(store: _store);
-        
+
         //set the threshold to 5K
         _transformerAsync.InitializeWrapFromAttributeParams(5);
 
@@ -39,6 +38,6 @@ public class AsyncClaimCheckSmallPayloadTests
         //assert
         bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _);
 
-        hasLuggage.Should().BeFalse();
+        Assert.False(hasLuggage);
     }
 }

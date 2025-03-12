@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             _exception = await Catch.ExceptionAsync(() => _dynamoDbInbox.AddAsync(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
         }
     }
 }

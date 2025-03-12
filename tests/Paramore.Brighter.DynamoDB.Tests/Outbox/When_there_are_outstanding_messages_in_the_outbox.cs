@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -37,8 +36,8 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
-        message.Should().NotBeNull();
-        message.Body.Value.Should().Be(_message.Body.Value);
+        Assert.NotNull(message);
+        Assert.Equal(_message.Body.Value, message.Body.Value);
     }
 
     [Fact]
@@ -55,8 +54,8 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
-        message.Should().NotBeNull();
-        message.Body.Value.Should().Be(_message.Body.Value);
+        Assert.NotNull(message);
+        Assert.Equal(_message.Body.Value, message.Body.Value);
     }
 
     [Fact]
@@ -80,9 +79,9 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
-            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+            Assert.NotNull(outstandingMessage);
+            Assert.Equal(message.Body.Value, outstandingMessage.Body.Value);
+            Assert.Equal(message.Header.Topic, outstandingMessage.Header.Topic);
         }
     }
 
@@ -107,9 +106,9 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
-            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+            Assert.NotNull(outstandingMessage);
+            Assert.Equal(message.Body.Value, outstandingMessage.Body.Value);
+            Assert.Equal(message.Header.Topic, outstandingMessage.Header.Topic);
         }
     }
 
@@ -135,7 +134,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         // Get the first page
         var outstandingMessages = (await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 5, 1, args)).ToList();
-        outstandingMessages.Count.Should().Be(5);
+        Assert.Equal(5, outstandingMessages.Count);
         // Get the remainder
         outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 100, 2, args));
 
@@ -143,8 +142,8 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
+            Assert.NotNull(outstandingMessage);
+            Assert.Equal(message.Body.Value, outstandingMessage.Body.Value);
         }
     }
 
@@ -170,7 +169,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         // Get the first page
         var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 5, 1, args).ToList();
-        outstandingMessages.Count.Should().Be(5);
+        Assert.Equal(5, outstandingMessages.Count);
         // Get the remainder
         outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 100, 2, args));
 
@@ -178,8 +177,8 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
+            Assert.NotNull(outstandingMessage);
+            Assert.Equal(message.Body.Value, outstandingMessage.Body.Value);
         }
     }
 
@@ -220,9 +219,9 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
-            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+            Assert.NotNull(outstandingMessage);
+            Assert.Equal(message.Body.Value, outstandingMessage.Body.Value);
+            Assert.Equal(message.Header.Topic, outstandingMessage.Header.Topic);
         }
     }
 
@@ -263,9 +262,9 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
-            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+            Assert.NotNull(outstandingMessage);
+            Assert.Equal(message.Body.Value, outstandingMessage.Body.Value);
+            Assert.Equal(message.Header.Topic, outstandingMessage.Header.Topic);
         }
     }
 
@@ -283,7 +282,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
-        message.Should().NotBeNull();
+        Assert.NotNull(message);
 
         await _dynamoDbOutbox.MarkDispatchedAsync(_message.Id, context);
 
@@ -308,7 +307,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
-        message.Should().NotBeNull();
+        Assert.NotNull(message);
 
         _dynamoDbOutbox.MarkDispatched(_message.Id, context);
 

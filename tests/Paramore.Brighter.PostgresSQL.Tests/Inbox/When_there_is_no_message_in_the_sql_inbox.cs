@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
@@ -56,14 +55,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             string commandId = Guid.NewGuid().ToString();
             var exception = Catch.Exception(() => _storedCommand = _pgSqlInbox.Get<MyCommand>(commandId, _contextKey));
 
-            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Exists()
         {
             string commandId = Guid.NewGuid().ToString();
-            _pgSqlInbox.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
+            Assert.False(_pgSqlInbox.Exists<MyCommand>(commandId, _contextKey));
         }
 
         public void Dispose()

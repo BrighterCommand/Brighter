@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
@@ -57,11 +56,11 @@ public class MongoDbInboxAddMessageTests : IDisposable
         var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
         //_should_read_the_command_from_the__sql_inbox
-        storedCommand.Should().NotBeNull();
+        Assert.NotNull(storedCommand);
         //_should_read_the_command_value
-        storedCommand.Value.Should().Be(_raisedCommand.Value);
+        Assert.Equal(_raisedCommand.Value, storedCommand.Value);
         //_should_read_the_command_id
-        storedCommand.Id.Should().Be(_raisedCommand.Id);
+        Assert.Equal(_raisedCommand.Id, storedCommand.Id);
     }
 
     [Fact]
@@ -69,7 +68,7 @@ public class MongoDbInboxAddMessageTests : IDisposable
     {
         var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(_raisedCommand.Id, null));
         //should_not_read_message
-        exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+        Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
 
     public void Dispose()

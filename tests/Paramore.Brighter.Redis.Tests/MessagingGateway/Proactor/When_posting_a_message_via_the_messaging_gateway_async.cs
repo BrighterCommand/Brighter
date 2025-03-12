@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
@@ -32,6 +31,6 @@ public class RedisMessageProducerSendTestsAsync : IClassFixture<RedisFixture>
         var messageBody = sentMessage.Body.Value;
         await _redisFixture.MessageConsumer.AcknowledgeAsync(sentMessage);
 
-        messageBody.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, messageBody);
     }
 }

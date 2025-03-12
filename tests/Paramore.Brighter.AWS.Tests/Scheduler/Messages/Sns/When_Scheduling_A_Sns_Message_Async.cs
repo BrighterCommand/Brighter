@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Aws;
@@ -78,12 +77,12 @@ public class SnsSchedulingAsyncMessageTest : IAsyncDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
-            messages.Should().ContainSingle();
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                messages[0].Body.Value.Should().Be(message.Body.Value);
-                messages[0].Header.Should().BeEquivalentTo(message.Header, opt => opt.Excluding(x => x.Bag));
+                Assert.Equal(message.Body.Value, messages[0].Body.Value);
+                Assert.Equivalent(message.Header, messages[0].Header);
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }
