@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var timeStamp = ReadTimeStamp(consumeResult.Message.Headers);
                 var messageType = ReadMessageType(consumeResult.Message.Headers);
                 var correlationId = ReadCorrelationId(consumeResult.Message.Headers);
-                var partitionKey = ReadPartitionKey(consumeResult.Message.Headers);
+                var partitionKey = ReadPartitionKey(consumeResult.Message);
                 var replyTo = ReadReplyTo(consumeResult.Message.Headers);
                 var contentType = ReadContentType(consumeResult.Message.Headers);
                 var delay = ReadDelay(consumeResult.Message.Headers);
@@ -250,16 +250,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private static HeaderResult<string> ReadMessageId(Headers headers)
         {
-            var newMessageId = Guid.NewGuid().ToString();
-
             var id = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_ID, true)
                 .Map(messageId =>
                 {
                     if (string.IsNullOrEmpty(messageId))
                     {
-                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}",
-                            newMessageId);
-                        return new HeaderResult<string>(newMessageId, true);
+                        return new HeaderResult<string>(string.Empty, false);
                     }
 
                     return new HeaderResult<string>(messageId, true);
@@ -269,7 +265,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 return id;
             }
 
-            return ReadHeader(headers, HeaderNames.MESSAGE_ID, true)
+            var newMessageId = Guid.NewGuid().ToString();
+            return ReadHeader(headers, HeaderNames.MESSAGE_ID)
                 .Map(messageId =>
                 {
                     if (string.IsNullOrEmpty(messageId))
@@ -283,9 +280,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private static HeaderResult<string> ReadPartitionKey(Headers headers)
+        private static HeaderResult<string> ReadPartitionKey(Message<string, byte[]> message)
         {
-            return ReadHeader(headers, HeaderNames.PARTITIONKEY)
+            if (!string.IsNullOrEmpty(message.Key))
+            {
+                return new HeaderResult<string>(message.Key, true);
+            }
+            
+            return ReadHeader(message.Headers, HeaderNames.PARTITIONKEY)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
