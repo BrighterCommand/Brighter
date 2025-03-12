@@ -44,7 +44,7 @@ public class MySqlFetchOutStandingMessageAsyncTests : IDisposable
         await _sqlOutbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
         await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id, context);
         
-        var total = await _sqlOutbox.GetNumberOfOutstandingMessagesAsync();
+        var total = await _sqlOutbox.GetNumberOfOutstandingMessagesAsync(null);
 
         var allUnDispatched = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
         var messagesOverAnHour = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.FromHours(1), context);

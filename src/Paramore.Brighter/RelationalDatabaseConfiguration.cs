@@ -2,6 +2,7 @@
 {
     public class RelationalDatabaseConfiguration : IAmARelationalDatabaseConfiguration
     {
+        private const string DATABASE_NAME = "Brighter";
         private const string OUTBOX_TABLE_NAME = "Outbox";
         private const string INBOX_TABLE_NAME = "Inbox";
         private const string QUEUE_TABLE_NAME = "Queue";
@@ -16,12 +17,14 @@
         /// <param name="binaryMessagePayload">Is the message payload binary, or a UTF-8 string, default is false or UTF-8</param>
         public RelationalDatabaseConfiguration(
             string connectionString,
+            string? databaseName = null,
             string? outBoxTableName = null,
             string? inboxTableName = null,
             string? queueStoreTable = null,
             bool binaryMessagePayload = false
         )
         {
+            DatabaseName = databaseName ?? DATABASE_NAME;
             OutBoxTableName = outBoxTableName ?? OUTBOX_TABLE_NAME;
             InBoxTableName = inboxTableName ?? INBOX_TABLE_NAME;
             ConnectionString = connectionString;
@@ -39,7 +42,13 @@
         /// </summary>
         /// <value>The connection string.</value>
         public string ConnectionString { get; protected set; }
-        
+
+        /// <summary>
+        /// Gets the name of the database containing the tables.
+        /// </summary>
+        /// <value>The name of the database.</value>
+        public string DatabaseName { get; }
+
         /// <summary>
         /// Gets the name of the inbox table.
         /// </summary>
