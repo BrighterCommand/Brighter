@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -82,7 +81,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             subscriberRegistry: subscriberRegistry,
             handlerFactory: new QuickHandlerFactoryAsync(() => handler),
             requestContextFactory: new InMemoryRequestContextFactory(),
-            policyRegistry: new PolicyRegistry()
+            policyRegistry: new PolicyRegistry(),
+            requestSchedulerFactory: new InMemorySchedulerFactory()
         );
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -135,7 +135,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         Task.Delay(5000).GetAwaiter().GetResult();
 
         var dlqCount = GetDLQCountAsync(_dlqChannelName + ".fifo");
-        dlqCount.Should().Be(1);
+        Assert.Equal(1, dlqCount);
     }
 
     public void Dispose()

@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 
-internal class MyEvent : Event, IEquatable<MyEvent>
+internal sealed class MyEvent : Event, IEquatable<MyEvent>
 {
     public int Data { get; private set; }
 

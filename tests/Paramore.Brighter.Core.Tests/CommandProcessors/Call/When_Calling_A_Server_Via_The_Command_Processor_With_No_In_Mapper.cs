@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -24,12 +23,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
-                if (type == typeof(MyRequestMessageMapper))
                     return new MyRequestMessageMapper();
 
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }), null);
-            
+
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
 
             var subscriberRegistry = new SubscriberRegistry();
@@ -46,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var timeProvider = new FakeTimeProvider();
             var routingKey = new RoutingKey("MyRequest");
-            
+
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
@@ -62,38 +60,39 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             };
 
             var tracer = new BrighterTracer();
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                policyRegistry, 
+                producerRegistry,
+                policyRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new InMemoryOutbox( timeProvider) {Tracer = tracer}
                 );
-        
+
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
-                new InMemoryRequestContextFactory(), 
+                new InMemoryRequestContextFactory(),
                 policyRegistry,
                 bus,
                 replySubscriptions:new List<Subscription>(),
-                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System)
+                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System),
+                requestSchedulerFactory: new InMemorySchedulerFactory()
             );
-            
+
             PipelineBuilder<MyResponse>.ClearPipelineCache();
-        } 
-        
+        }
+
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Out_Mapper()
         {
             var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, new RequestContext(), TimeSpan.FromMilliseconds(500)));
-            
-            //should throw an exception as we require a mapper for the outgoing request 
-            exception.Should().BeOfType<InvalidOperationException>();
+
+            //should throw an exception as we require a mapper for the outgoing request
+            Assert.IsType<InvalidOperationException>(exception);
         }
 
         public void Dispose()

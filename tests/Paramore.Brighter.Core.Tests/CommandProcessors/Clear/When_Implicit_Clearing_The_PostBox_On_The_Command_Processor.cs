@@ -1,35 +1,10 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
@@ -64,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 new MessageHeader(myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
-            
+
             _message2 = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
@@ -92,26 +67,27 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { Topic, producer },
-            }); 
-            
+            });
+
             var tracer = new BrighterTracer();
             _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
-            
+
             _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                policyRegistry, 
+                producerRegistry,
+                policyRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 _outbox
                 );
-        
+
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(), 
+                new InMemoryRequestContextFactory(),
                 policyRegistry,
-                _mediator
+                _mediator,
+                requestSchedulerFactory: new InMemorySchedulerFactory()
             );
         }
 
@@ -123,7 +99,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             _outbox.Add(_message2, context);
 
             await _mediator.ClearOutstandingFromOutboxAsync(1,TimeSpan.Zero, true, context);
-            
+
             var topic = new RoutingKey(Topic);
             for (var i = 1; i <= 10; i++)
             {
@@ -142,19 +118,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             }
 
             //_should_send_a_message_via_the_messaging_gateway
-            _bus.Stream(topic).Any().Should().BeTrue();
+            Assert.True(_bus.Stream(topic).Any());
 
             var sentMessage = _bus.Stream(topic).FirstOrDefault(m => m.Id == _message.Id);
-            sentMessage.Should().NotBeNull();
-            sentMessage?.Id.Should().Be(_message.Id);
-            sentMessage?.Header.Topic.Should().Be(_message.Header.Topic);
-            sentMessage?.Body.Value.Should().Be(_message.Body.Value);
-            
+            Assert.NotNull(sentMessage);
+            Assert.Equal(_message.Id, sentMessage.Id);
+            Assert.Equal(_message.Header.Topic, sentMessage.Header.Topic);
+            Assert.Equal(_message.Body.Value, sentMessage.Body.Value);
+
             var sentMessage2 = _bus.Stream(topic).FirstOrDefault(m => m.Id == _message2.Id);
-            sentMessage2.Should().NotBeNull();
-            sentMessage2?.Id.Should().Be(_message2.Id);
-            sentMessage2?.Header.Topic.Should().Be(_message2.Header.Topic);
-            sentMessage2?.Body.Value.Should().Be(_message2.Body.Value);
+            Assert.NotNull(sentMessage2);
+            Assert.Equal(_message2.Id, sentMessage2.Id);
+            Assert.Equal(_message2.Header.Topic, sentMessage2.Header.Topic);
+            Assert.Equal(_message2.Body.Value, sentMessage2.Body.Value);
         }
 
         public void Dispose()

@@ -1,17 +1,15 @@
-﻿using System.Transactions;
-using Events.Ports.Commands;
+﻿using Events.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Paramore.Brighter.MsSql;
 using Serilog;
 using Serilog.Extensions.Logging;
 
 namespace GreetingsSender
 {
-    class Program
+    static class Program
     {
         static void Main()
         {
@@ -28,7 +26,7 @@ namespace GreetingsSender
 
             var producerRegistry = new MsSqlProducerRegistryFactory(
                     messagingConfiguration,
-                    new Publication[] {new Publication()}
+                    [new Publication()]
                 )
                 .Create();
             

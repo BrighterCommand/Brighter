@@ -6,16 +6,14 @@ using Events.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Paramore.Brighter.MsSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
 
 namespace CompetingReceiverConsole
 {
-    internal class Program
+    internal static class Program
     {
         private static async Task Main()
         {
@@ -60,7 +58,7 @@ namespace CompetingReceiverConsole
         }
     }
 
-    internal class RunStuff : IHostedService
+    internal sealed class RunStuff : IHostedService
     {
         private readonly IAmACommandCounter _commandCounter;
 

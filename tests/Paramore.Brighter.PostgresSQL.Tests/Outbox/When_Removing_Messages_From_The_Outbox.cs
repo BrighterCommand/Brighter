@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -75,15 +74,15 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             var remainingMessages = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
 
             var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
-            msgs.Should().HaveCount(2);
-            msgs.Should().Contain(_secondMessage);
-            msgs.Should().Contain(_thirdMessage);
+            Assert.Equal(2, (msgs)?.Count());
+            Assert.Contains(_secondMessage, msgs);
+            Assert.Contains(_thirdMessage, msgs);
             
             _sqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id}, context);
 
             var messages = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
 
-            messages.Should().HaveCount(0);
+            Assert.Empty(messages ?? []);
         }
 
         private void Release()

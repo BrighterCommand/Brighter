@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -78,7 +79,13 @@ namespace Paramore.Brighter
     ///     </item>
     /// </list> 
     /// </summary>
-    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedInstrumentation, INeedARequestContext, IAmACommandProcessorBuilder
+    public class CommandProcessorBuilder : INeedAHandlers,
+        INeedPolicy,
+        INeedMessaging,
+        INeedInstrumentation,
+        INeedARequestContext,
+        INeedARequestSchedulerFactory,
+        IAmACommandProcessorBuilder
     {
         private IAmARequestContextFactory? _requestContextFactory;
         private IAmASubscriberRegistry? _registry;
@@ -87,12 +94,14 @@ namespace Paramore.Brighter
 
         private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private IAmAnOutboxProducerMediator? _bus;
+        private IAmABoxTransactionProvider? _transactionProvider;
         private bool _useRequestReplyQueues;
         private IAmAChannelFactory? _responseChannelFactory;
         private IEnumerable<Subscription>? _replySubscriptions;
         private InboxConfiguration? _inboxConfiguration;
         private InstrumentationOptions? _instrumetationOptions;
         private IAmABrighterTracer? _tracer;
+        private IAmARequestSchedulerFactory _requestSchedulerFactory = null!;
 
         private CommandProcessorBuilder()
         {
@@ -142,11 +151,13 @@ namespace Paramore.Brighter
         public INeedMessaging Policies(IPolicyRegistry<string> policyRegistry)
         {
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
-                throw new ConfigurationException("The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
-                
+                throw new ConfigurationException(
+                    "The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
+
             if (!policyRegistry.ContainsKey(CommandProcessor.CIRCUITBREAKER))
-                throw new ConfigurationException("The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
-            
+                throw new ConfigurationException(
+                    "The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
+
             _policyRegistry = policyRegistry;
             return this;
         }
@@ -168,29 +179,32 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The service bus that we need to use to send messages externally</param>
+        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
         /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
         /// <returns></returns>
         public INeedInstrumentation ExternalBus(
-            ExternalBusType busType, 
-            IAmAnOutboxProducerMediator bus, 
-            IAmAChannelFactory? responseChannelFactory = null, 
+            ExternalBusType busType,
+            IAmAnOutboxProducerMediator bus,
+            IAmABoxTransactionProvider? transactionProvider = null,
+            IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
-            InboxConfiguration? inboxConfiguration = null
-        )
+            InboxConfiguration? inboxConfiguration = null)
         {
             _inboxConfiguration = inboxConfiguration;
-                    
+
             switch (busType)
             {
                 case ExternalBusType.None:
                     break;
                 case ExternalBusType.FireAndForget:
                     _bus = bus;
+                    _transactionProvider = transactionProvider;
                     break;
                 case ExternalBusType.RPC:
                     _bus = bus;
+                    _transactionProvider = transactionProvider;
                     _useRequestReplyQueues = true;
                     _replySubscriptions = subscriptions;
                     _responseChannelFactory = responseChannelFactory;
@@ -201,7 +215,7 @@ namespace Paramore.Brighter
 
             return this;
         }
-        
+
         /// <summary>
         /// Use to indicate that you are not using Task Queues.
         /// </summary>
@@ -222,13 +236,14 @@ namespace Paramore.Brighter
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> that we will use to instrument the Command Processor</param>
         /// <param name="instrumentationOptions">A <see cref="InstrumentationOptions"/> that tells us how detailed the instrumentation should be</param>
         /// <returns></returns>
-        public INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions)
+        public INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer? tracer,
+            InstrumentationOptions instrumentationOptions)
         {
-            _tracer = tracer; 
-           _instrumetationOptions = instrumentationOptions;
-           return this;
+            _tracer = tracer;
+            _instrumetationOptions = instrumentationOptions;
+            return this;
         }
-        
+
         /// <summary>
         /// We do not intend to instrument the CommandProcessor
         /// </summary>
@@ -245,9 +260,16 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
-        public IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory)
+        public INeedARequestSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory)
         {
             _requestContextFactory = requestContextFactory;
+            return this;
+        }
+
+        /// <inheritdoc />
+        public IAmACommandProcessorBuilder RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory)
+        {
+            _requestSchedulerFactory = messageSchedulerFactory;
             return this;
         }
 
@@ -257,63 +279,72 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
-            if(_registry == null)
+            if (_registry == null)
                 throw new ConfigurationException(
                     "A SubscriberRegistry must be provided to construct a command processor");
-            if(_handlerFactory == null)
+            if (_handlerFactory == null)
                 throw new ConfigurationException(
                     "A HandlerFactory must be provided to construct a command processor");
-            if(_requestContextFactory == null)
+            if (_requestContextFactory == null)
                 throw new ConfigurationException(
                     "A RequestContextFactory must be provided to construct a command processor");
-            if(_policyRegistry == null)
+            if (_policyRegistry == null)
                 throw new ConfigurationException(
                     "A PolicyRegistry must be provided to construct a command processor");
-            if(_instrumetationOptions == null)
+            if (_instrumetationOptions == null)
                 throw new ConfigurationException(
                     "InstrumentationOptions must be provided to construct a command processor");
-            
-            if (_bus == null) 
+
+            if (_bus == null)
             {
-                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory, 
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    featureSwitchRegistry: _featureSwitchRegistry, instrumentationOptions: _instrumetationOptions.Value);
-            }
-            
-            if (!_useRequestReplyQueues)
-                return new CommandProcessor(
-                    subscriberRegistry: _registry, 
+                return new CommandProcessor(subscriberRegistry: _registry, 
                     handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory, 
                     policyRegistry: _policyRegistry,
+                    featureSwitchRegistry: _featureSwitchRegistry,
+                    instrumentationOptions: _instrumetationOptions.Value,
+                    requestSchedulerFactory: _requestSchedulerFactory);
+            }
+
+            if (!_useRequestReplyQueues)
+                return new CommandProcessor(
+                    subscriberRegistry: _registry,
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory,
+                    policyRegistry: _policyRegistry,
                     bus: _bus,
+                    transactionProvider: _transactionProvider,
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
-                    instrumentationOptions: _instrumetationOptions.Value
+                    instrumentationOptions: _instrumetationOptions.Value,
+                    requestSchedulerFactory: _requestSchedulerFactory
                 );
-            
+
             if (_useRequestReplyQueues)
                 return new CommandProcessor(
-                    subscriberRegistry: _registry, 
+                    subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, 
+                    requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     bus: _bus,
+                    transactionProvider: _transactionProvider,
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     replySubscriptions: _replySubscriptions,
                     responseChannelFactory: _responseChannelFactory,
                     tracer: _tracer,
-                    instrumentationOptions: _instrumetationOptions.Value
+                    instrumentationOptions: _instrumetationOptions.Value,
+                    requestSchedulerFactory: _requestSchedulerFactory
                 );
 
             throw new ConfigurationException(
                 "The configuration options chosen cannot be used to construct a command processor");
-            }
+        }
     }
 
     #region Progressive interfaces
+
     /// <summary>
     /// Interface INeedAHandlers
     /// </summary>
@@ -325,7 +356,7 @@ namespace Paramore.Brighter
         /// <param name="theRegistry">The registry.</param>
         /// <returns>INeedPolicy.</returns>
         INeedPolicy Handlers(HandlerConfiguration theRegistry);
-        
+
         /// <summary>
         /// Configure Feature Switches for the Handlers
         /// </summary>
@@ -345,6 +376,7 @@ namespace Paramore.Brighter
         /// <param name="policyRegistry">The policy registry.</param>
         /// <returns>INeedLogging.</returns>
         INeedMessaging Policies(IPolicyRegistry<string> policyRegistry);
+
         /// <summary>
         /// Knows the policy.
         /// </summary>
@@ -352,7 +384,7 @@ namespace Paramore.Brighter
         INeedMessaging DefaultPolicy();
     }
 
-  
+
     /// <summary>
     /// Interface INeedMessaging
     /// Note that a single command builder does not support both task queues and rpc, using the builder
@@ -366,17 +398,18 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
+        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
         /// <param name="inboxConfiguration">What is the inbox configuration</param>
         /// <returns></returns>
         INeedInstrumentation ExternalBus(
-            ExternalBusType busType, 
-            IAmAnOutboxProducerMediator bus, 
-            IAmAChannelFactory? responseChannelFactory = null, 
+            ExternalBusType busType,
+            IAmAnOutboxProducerMediator bus,
+            IAmABoxTransactionProvider? transactionProvider = null,
+            IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
-            InboxConfiguration? inboxConfiguration = null
-            );
+            InboxConfiguration? inboxConfiguration = null);
 
         /// <summary>
         /// We don't send messages out of process
@@ -399,14 +432,16 @@ namespace Paramore.Brighter
         /// InstrumentationOptions.All - all of the above
         /// </param>
         /// <returns>INeedARequestContext</returns>
-        INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions); 
-        
+        INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer? tracer,
+            InstrumentationOptions instrumentationOptions);
+
         /// <summary>
         /// We don't need instrumentation of the CommandProcessor
         /// </summary>
         /// <returns>INeedARequestContext</returns>
         INeedARequestContext NoInstrumentation();
     }
+
 
     /// <summary>
     /// Interface INeedARequestContext
@@ -418,9 +453,20 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
-        IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
+        INeedARequestSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory);
     }
-    
+
+    public interface INeedARequestSchedulerFactory
+    {
+        /// <summary>
+        /// The <see cref="INeedARequestSchedulerFactory"/>.
+        /// </summary>
+        /// <param name="messageSchedulerFactory"></param>
+        /// <returns></returns>
+        IAmACommandProcessorBuilder RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory);
+    }
+
+
     /// <summary>
     /// Interface IAmACommandProcessorBuilder
     /// </summary>
@@ -432,5 +478,6 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         CommandProcessor Build();
     }
+
     #endregion
 }

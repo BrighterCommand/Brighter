@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class FakeRepository<T> : IRepository<T> where T : IAmAnAggregate
+    internal sealed class FakeRepository<T> : IRepository<T> where T : IAmAnAggregate
     {
         private readonly IUnitOfWork _unitOfWork;
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using FluentAssertions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -55,6 +54,7 @@ public class CommandProcessorSendObservabilityTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );
@@ -76,20 +76,20 @@ public class CommandProcessorSendObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert
-        _exportedActivities.Count.Should().Be(2);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}").Should().BeTrue();
-        _exportedActivities.First().ParentId.Should().Be(parentActivity?.Id);
-        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id).Should().BeTrue();
-        _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) }).Should().BeTrue(); 
-        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)).Should().BeTrue();
-        _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "send" }).Should().BeTrue();
+        Assert.Equal(2, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+        Assert.True(_exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}"));
+        Assert.Equal(parentActivity?.Id, _exportedActivities.First().ParentId);
+        Assert.True(_exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id));
+        Assert.True(_exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) })); 
+        Assert.True(_exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
+        Assert.True(_exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "send" }));
         
-        _exportedActivities.First().Events.Count().Should().Be(1);
-        _exportedActivities.First().Events.First().Name.Should().Be(nameof(MyCommandHandler));
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyCommandHandler)).Should().BeTrue();
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
+        Assert.Equal(1, _exportedActivities.First().Events.Count());
+        Assert.Equal(nameof(MyCommandHandler), _exportedActivities.First().Events.First().Name);
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyCommandHandler)));
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync"));
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));
     }
     
     [Fact]
@@ -109,20 +109,20 @@ public class CommandProcessorSendObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert
-        _exportedActivities.Count.Should().Be(2);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}").Should().BeTrue();
-        _exportedActivities.First().ParentId.Should().Be(parentActivity?.Id);
-        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id).Should().BeTrue();
-        _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) }).Should().BeTrue(); 
-        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)).Should().BeTrue();
-        _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "send" }).Should().BeTrue();
+        Assert.Equal(2, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+        Assert.True(_exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}"));
+        Assert.Equal(parentActivity?.Id, _exportedActivities.First().ParentId);
+        Assert.True(_exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id));
+        Assert.True(_exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) })); 
+        Assert.True(_exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
+        Assert.True(_exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "send" }));
         
-        _exportedActivities.First().Events.Count().Should().Be(1);
-        _exportedActivities.First().Events.First().Name.Should().Be(nameof(MyCommandHandler));
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyCommandHandler)).Should().BeTrue();
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
+        Assert.Equal(1, _exportedActivities.First().Events.Count());
+        Assert.Equal(nameof(MyCommandHandler), _exportedActivities.First().Events.First().Name);
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyCommandHandler)));
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync"));
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));
     }
     
     [Fact]
@@ -138,20 +138,19 @@ public class CommandProcessorSendObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert
-        _exportedActivities.Count.Should().Be(1);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}").Should().BeTrue();
-        _exportedActivities.First().ParentId.Should().BeNull();
-        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id).Should().BeTrue();
-        _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) }).Should().BeTrue(); 
-        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)).Should().BeTrue();
-        _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "send" }).Should().BeTrue();
+        Assert.Equal(1, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+        Assert.True(_exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}"));
+        Assert.Null(_exportedActivities.First().ParentId);
+        Assert.True(_exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id));
+        Assert.True(_exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) })); 
+        Assert.True(_exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
+        Assert.True(_exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "send" }));
         
-        _exportedActivities.First().Events.Count().Should().Be(1);
-        _exportedActivities.First().Events.First().Name.Should().Be(nameof(MyCommandHandler));
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyCommandHandler)).Should().BeTrue();
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
-        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
+        Assert.Equal(1, _exportedActivities.First().Events.Count());
+        Assert.Equal(nameof(MyCommandHandler), _exportedActivities.First().Events.First().Name);
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyCommandHandler)));
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync"));
+        Assert.True(_exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));
     }
-    
 }

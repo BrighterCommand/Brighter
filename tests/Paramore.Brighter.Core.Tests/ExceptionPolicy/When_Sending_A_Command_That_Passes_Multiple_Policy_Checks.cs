@@ -1,6 +1,4 @@
 ﻿using System;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
@@ -38,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests
 
             var retryPolicy = Policy
                 .Handle<DivideByZeroException>()
-                .WaitAndRetry(new[] { 1.Seconds(), 2.Seconds(), 3.Seconds() }, (exception, timeSpan) =>
+                .WaitAndRetry([TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3)], (exception, timeSpan) =>
                 {
                     _retryCount++;
                 });
@@ -52,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests
             MyDoesNotFailMultiplePoliciesHandler.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                policyRegistry);
+                policyRegistry, new InMemorySchedulerFactory());
 
         }
 
@@ -61,10 +59,10 @@ namespace Paramore.Brighter.Core.Tests
         {
             _commandProcessor.Send(_myCommand);
 
-            //_should_send_the_command_to_the_command_handler
-            MyDoesNotFailMultiplePoliciesHandler.ShouldReceive(_myCommand).Should().BeTrue();
-            //_should_not_retry
-            _retryCount.Should().Be(0);
+            // Should send the command to the command handler
+            Assert.True(MyDoesNotFailMultiplePoliciesHandler.ShouldReceive(_myCommand));
+            // Should not retry
+            Assert.Equal(0, _retryCount);
         }
 
         public void Dispose()

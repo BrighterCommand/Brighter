@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -87,7 +86,8 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
             subscriberRegistry: subscriberRegistry,
             handlerFactory: new QuickHandlerFactory(() => handler),
             requestContextFactory: new InMemoryRequestContextFactory(),
-            policyRegistry: new PolicyRegistry()
+            policyRegistry: new PolicyRegistry(),
+            requestSchedulerFactory: new InMemorySchedulerFactory()
         );
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
@@ -143,7 +143,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
 
         //assert this is our message
-        dlqMessage.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
 
         _deadLetterConsumer.Acknowledge(dlqMessage);
 

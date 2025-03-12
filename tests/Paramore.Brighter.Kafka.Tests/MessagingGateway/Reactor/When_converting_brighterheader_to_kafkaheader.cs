@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Confluent.Kafka;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
@@ -48,24 +47,23 @@ public class KafkaDefaultMessageHeaderBuilderTests
         //assert
         
         //known properties
-        headers.GetLastBytes(HeaderNames.MESSAGE_TYPE).Should().Equal(message.Header.MessageType.ToString().ToByteArray());
-        headers.GetLastBytes(HeaderNames.MESSAGE_ID).Should().Equal(message.Header.MessageId.ToString().ToByteArray());
-        headers.GetLastBytes(HeaderNames.TOPIC).Should().Equal(message.Header.Topic.Value.ToByteArray());
-        headers.GetLastBytes(HeaderNames.TIMESTAMP).Should().Equal(message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture).ToByteArray());
-        headers.GetLastBytes(HeaderNames.CORRELATION_ID).Should()
-            .Equal(message.Header.CorrelationId.ToString().ToByteArray());
-        headers.GetLastBytes(HeaderNames.PARTITIONKEY).Should().Equal(message.Header.PartitionKey.ToByteArray());
-        headers.GetLastBytes(HeaderNames.CONTENT_TYPE).Should().Equal(message.Header.ContentType.ToByteArray());
-        headers.GetLastBytes(HeaderNames.REPLY_TO).Should().Equal(message.Header.ReplyTo.ToByteArray());
-        headers.GetLastBytes(HeaderNames.DELAYED_MILLISECONDS).Should().Equal(message.Header.Delayed.TotalMilliseconds.ToString().ToByteArray());
-        headers.GetLastBytes(HeaderNames.HANDLED_COUNT).Should()
-            .Equal(message.Header.HandledCount.ToString().ToByteArray());    
+        Assert.Equal(message.Header.MessageType.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.MESSAGE_TYPE));
+        Assert.Equal(message.Header.MessageId.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.MESSAGE_ID));
+        Assert.Equal(message.Header.Topic.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.TOPIC));
+        Assert.Equal(message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture).ToByteArray(), headers.GetLastBytes(HeaderNames.TIMESTAMP));
+        Assert.Equal(message.Header.CorrelationId.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.CORRELATION_ID));
+        Assert.Equal(message.Header.PartitionKey.ToByteArray(), headers.GetLastBytes(HeaderNames.PARTITIONKEY));
+        Assert.Equal(message.Header.ContentType.ToByteArray(), headers.GetLastBytes(HeaderNames.CONTENT_TYPE));
+        Assert.Equal(message.Header.ReplyTo.ToByteArray(), headers.GetLastBytes(HeaderNames.REPLY_TO));
+        Assert.Equal(message.Header.Delayed.TotalMilliseconds.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.DELAYED_MILLISECONDS));
+        Assert.Equal(message.Header.HandledCount.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.HANDLED_COUNT));
 
-        //bag properties    
-        headers.GetLastBytes("myguid").Should().Equal(bag["myguid"].ToString().ToByteArray());
-        headers.GetLastBytes("mystring").Should().Equal(bag["mystring"].ToString().ToByteArray());
-        headers.GetLastBytes("myint").Should().Equal(bag["myint"].ToString().ToByteArray());
-        headers.GetLastBytes("mydouble").Should().Equal(bag["mydouble"].ToString().ToByteArray());
-        headers.GetLastBytes("mydatetime").Should().Equal(myDateTime.ToByteArray());
+        //bag properties
+        Assert.Equal(bag["myguid"].ToString().ToByteArray(), headers.GetLastBytes("myguid"));
+        Assert.Equal(bag["mystring"].ToString().ToByteArray(), headers.GetLastBytes("mystring"));
+        Assert.Equal(bag["myint"].ToString().ToByteArray(), headers.GetLastBytes("myint"));
+        Assert.Equal(bag["mydouble"].ToString().ToByteArray(), headers.GetLastBytes("mydouble"));
+        Assert.Equal(myDateTime.ToByteArray(), headers.GetLastBytes("mydatetime"));
+
     }
 }

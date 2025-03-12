@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -47,7 +46,7 @@ public class RmqMessageProducerSupportsMultipleThreadsTestsAsync : IDisposable, 
         }
 
         //_should_not_throw
-        exceptionHappened.Should().BeFalse();
+        Assert.False(exceptionHappened);
     }
 
     public void Dispose()

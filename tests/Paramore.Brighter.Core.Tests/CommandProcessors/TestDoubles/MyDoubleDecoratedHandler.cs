@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyDoubleDecoratedHandler : RequestHandler<MyCommand>
+    internal sealed class MyDoubleDecoratedHandler : RequestHandler<MyCommand>
     {
         [MyValidationHandler(2)]
         [MyLoggingHandler(1)]

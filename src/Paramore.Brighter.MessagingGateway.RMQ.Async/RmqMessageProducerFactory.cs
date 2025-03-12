@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
@@ -19,6 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System.Collections.Generic;
@@ -37,14 +39,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         : IAmAMessageProducerFactory
     {
         /// <inheritdoc />
-        public Dictionary<RoutingKey,IAmAMessageProducer> Create()
+        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
         {
             var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
             foreach (var publication in publications)
             {
                 if (publication.Topic is null || RoutingKey.IsNullOrEmpty(publication.Topic))
+                {
                     throw new ConfigurationException($"A RabbitMQ publication must have a topic");
-                    
+                }
+
                 producers[publication.Topic] = new RmqMessageProducer(connection, publication);
             }
 

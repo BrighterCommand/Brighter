@@ -30,7 +30,7 @@ using Paramore.Brighter.FeatureSwitch.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles
 {    
-    class MyFeatureSwitchedOnHandler : RequestHandler<MyCommand>
+    sealed class MyFeatureSwitchedOnHandler : RequestHandler<MyCommand>
     {
         public static bool CommandReceived { get; set; }
 
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles
             return CommandReceived;
         }
     }
-    class MyFeatureSwitchedOnHandlerAsync : RequestHandlerAsync<MyCommandAsync>
+    sealed class MyFeatureSwitchedOnHandlerAsync : RequestHandlerAsync<MyCommandAsync>
     {
         public static bool CommandReceived { get; set; }
 

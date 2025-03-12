@@ -4,7 +4,7 @@ using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    internal class BrokeredMessageWrapper : IBrokeredMessageWrapper
+    internal sealed class BrokeredMessageWrapper : IBrokeredMessageWrapper
     {
         private readonly ServiceBusReceivedMessage _brokeredMessage;
 

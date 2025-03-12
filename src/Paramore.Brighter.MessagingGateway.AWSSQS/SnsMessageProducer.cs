@@ -50,6 +50,9 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// </summary>
     public Activity? Span { get; set; }
 
+    /// <inheritdoc />
+    public IAmAMessageScheduler? Scheduler { get; set; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SnsMessageProducer"/> class.
     /// </summary>
@@ -119,38 +122,15 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="cancellationToken">Allows cancellation of the Send operation</param>
-    public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
-    {
-        s_logger.LogDebug(
-            "SNSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
-            message.Header.Topic, message.Id, message.Body);
-
-        await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
-
-        if (string.IsNullOrEmpty(ChannelAddress))
-            throw new InvalidOperationException(
-                $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body} as the topic does not exist");
-
-        using var client = _clientFactory.CreateSnsClient();
-        var publisher = new SnsMessagePublisher(ChannelAddress!, client,
-            _publication.SnsAttributes?.Type ?? SnsSqsType.Standard);
-        var messageId = await publisher.PublishAsync(message);
-
-        if (messageId == null)
-            throw new InvalidOperationException(
-                $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
-
-        s_logger.LogDebug(
-            "SNSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-            message.Header.Topic, message.Id, messageId);
-    }
+    public async Task SendAsync(Message message, CancellationToken cancellationToken = default) 
+        => await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
 
     /// <summary>
     /// Sends the specified message.
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Send(Message message) => BrighterAsyncContext.Run(async () => await SendAsync(message));
+    public void Send(Message message) => SendWithDelay(message, TimeSpan.Zero);
 
     /// <summary>
     /// Sends the specified message, with a delay.
@@ -159,10 +139,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// <param name="delay">The sending delay</param>
     /// <returns>Task.</returns>
     public void SendWithDelay(Message message, TimeSpan? delay = null)
-    {
-        // SNS doesn't support publish with delay
-        Send(message);
-    }
+        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, TimeSpan.Zero, false, CancellationToken.None));
 
     /// <summary>
     /// Sends the specified message, with a delay
@@ -171,10 +148,47 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// <param name="delay">The sending delay</param>
     /// <param name="cancellationToken">Cancels the send operation</param>
     /// <exception cref="NotImplementedException"></exception>
-    public async Task SendWithDelayAsync(Message message, TimeSpan? delay,
-        CancellationToken cancellationToken = default)
-    {
-        // SNS doesn't support publish with delay
-        await SendAsync(message, cancellationToken);
+    public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        => await SendWithDelayAsync(message, delay, true, cancellationToken);
+
+    private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken)
+    { 
+        delay ??= TimeSpan.Zero;
+        if (delay != TimeSpan.Zero)
+        {
+            if (useAsyncScheduler)
+            {
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
+            }
+
+            var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+            schedulerSync.Schedule(message, delay.Value);
+            return;
+        }
+        
+        s_logger.LogDebug(
+            "SNSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
+            message.Header.Topic, message.Id, message.Body);
+        
+        await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
+        
+        if (string.IsNullOrEmpty(ChannelAddress))
+            throw new InvalidOperationException(
+                $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body} as the topic does not exist");
+        
+        using var client = _clientFactory.CreateSnsClient();
+        var publisher = new SnsMessagePublisher(ChannelAddress!, client,
+            _publication.SnsAttributes?.Type ?? SnsSqsType.Standard);
+        var messageId = await publisher.PublishAsync(message);
+        
+        if (messageId == null)
+            throw new InvalidOperationException(
+                $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
+        
+        s_logger.LogDebug(
+            "SNSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+            message.Header.Topic, message.Id, messageId);
     }
 }

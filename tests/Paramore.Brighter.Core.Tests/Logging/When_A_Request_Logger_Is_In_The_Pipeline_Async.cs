@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Logging.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Logging.Handlers;
-using Xunit;
 using Polly.Registry;
 using Serilog;
 using Serilog.Sinks.TestCorrelator;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Logging
@@ -42,13 +42,14 @@ namespace Paramore.Brighter.Core.Tests.Logging
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             var commandProcessor = new CommandProcessor(registry, handlerFactory,
-                new InMemoryRequestContextFactory(), new PolicyRegistry());
+                new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
 
             await commandProcessor.SendAsync(myCommand);
 
-            TestCorrelator.GetLogEventsFromContextId(context.Id)
-                .Should().Contain(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"))
-                .Which.Properties["1"].ToString().Should().Be($"\"{typeof(MyCommand)}\"");
+
+            var logEvents = TestCorrelator.GetLogEventsFromContextId(context.Id);
+            Assert.Contains(logEvents, x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"));
+            Assert.Equal($"\"{typeof(MyCommand)}\"", logEvents.First(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call")).Properties["1"].ToString());
         }
 
         public void Dispose()

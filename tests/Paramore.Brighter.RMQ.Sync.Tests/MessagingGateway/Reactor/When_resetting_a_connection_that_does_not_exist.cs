@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
 using Xunit;
@@ -51,7 +50,7 @@ public class RmqMessageGatewayConnectionPoolResetConnectionDoesNotExist
             resetConnectionExceptionThrown = true;
         }                                
             
-        resetConnectionExceptionThrown.Should().BeFalse();
+        Assert.False(resetConnectionExceptionThrown);
 
     }
 }

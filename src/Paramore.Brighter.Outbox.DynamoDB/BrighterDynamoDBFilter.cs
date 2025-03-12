@@ -3,7 +3,7 @@ using Amazon.DynamoDBv2.DocumentModel;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
-    internal class BrighterDynamoDBFilter
+    internal sealed class BrighterDynamoDBFilter
     {
         public QueryOperator Operator { get; }
         public IEnumerable<string> Values { get; }

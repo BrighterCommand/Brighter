@@ -178,6 +178,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory())
                 .Build();
             
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
@@ -210,7 +211,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
+        private sealed class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
             public IAmABrighterTracer? Tracer { private get; set; } 
             

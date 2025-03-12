@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -50,7 +49,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                 new SubscriberRegistry(),
                 new ServiceProviderHandlerFactory(container.BuildServiceProvider()),
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry());
+                new PolicyRegistry(),
+                new InMemorySchedulerFactory()
+                );
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
@@ -60,10 +61,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
 
             //_should_fail_because_multiple_receivers_found
-            _exception.Should().BeOfType<ArgumentException>();
+            Assert.IsType<ArgumentException>(_exception);
             //_should_have_an_error_message_that_tells_you_why
-            _exception.Should().NotBeNull();
-            _exception.Message.Should().Contain("No command handler was found for the typeof command Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.");
+            Assert.NotNull(_exception);
+            Assert.Contains(
+                "No command handler was found for the typeof command Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.",
+                _exception.Message);
         }
 
         public void Dispose()

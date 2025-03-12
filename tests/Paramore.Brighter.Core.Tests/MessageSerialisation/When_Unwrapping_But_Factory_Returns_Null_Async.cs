@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text.Json;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Xunit;
@@ -43,8 +42,8 @@ public class AsyncMessageUnwrapRequestFailingMapperFactoryTests
     {
         //act
         var exception = Catch.Exception(() => _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>());
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
-        exception.InnerException.Should().BeOfType<InvalidOperationException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ConfigurationException);
+        Assert.True((exception.InnerException) is InvalidOperationException);
     }
 }

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -68,6 +67,7 @@ public class AsyncCommandProcessorPublishObservabilityTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );
@@ -89,44 +89,44 @@ public class AsyncCommandProcessorPublishObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert
-        _exportedActivities.Count.Should().Be(4);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        Assert.Equal(4, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        createActivity.Should().NotBeNull();
-        createActivity.ParentId.Should().Be(parentActivity?.Id);
+        Assert.NotNull(createActivity);
+        Assert.Equal(parentActivity?.Id, createActivity.ParentId);
         
         //parent span and child spans for each publish operation
-        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").Should().Be(2);
+        Assert.Equal(2, _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}"));
         
         var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
         var first = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyEventHandlerAsync)));
-        first.ParentId.Should().Be(createActivity.Id);
-        first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
-        first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue(); 
-        first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)).Should().BeTrue();
-        first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
+        Assert.Equal(createActivity.Id, first.ParentId);
+        Assert.True(first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id));
+        Assert.True(first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) })); 
+        Assert.True(first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+        Assert.True(first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }));
         
-        first.Events.Count().Should().Be(1);
-        first.Events.First().Name.Should().Be(nameof(MyEventHandlerAsync));
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)).Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
+        Assert.Equal(1, first.Events.Count());
+        Assert.Equal(nameof(MyEventHandlerAsync), first.Events.First().Name);
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)));
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async"));
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));       
         
         //--second publish
         var second = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyOtherEventHandlerAsync)));
-        second.ParentId.Should().Be(createActivity.Id);
-        second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
-        second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue();
-        second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)).Should().BeTrue();
-        second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
+        Assert.Equal(createActivity.Id, second.ParentId);
+        Assert.True(second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id));
+        Assert.True(second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }));
+        Assert.True(second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+        Assert.True(second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }));
         
-         second.Events.Count().Should().Be(1);
-         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandlerAsync));
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)).Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
+         Assert.Equal(1, second.Events.Count());
+         Assert.Equal(nameof(MyOtherEventHandlerAsync), second.Events.First().Name);
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)));
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async"));
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));
          
          //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released
          /*
@@ -155,44 +155,44 @@ public class AsyncCommandProcessorPublishObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert
-        _exportedActivities.Count.Should().Be(4);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        Assert.Equal(4, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        createActivity.Should().NotBeNull();
-        createActivity.ParentId.Should().Be(parentActivity?.Id);
+        Assert.NotNull(createActivity);
+        Assert.Equal(parentActivity?.Id, createActivity.ParentId);
         
         //parent span and child spans for each publish operation
-        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").Should().Be(2);
+        Assert.Equal(2, _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}"));
         
         var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
         var first = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyEventHandlerAsync)));
-        first.ParentId.Should().Be(createActivity.Id);
-        first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
-        first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue(); 
-        first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)).Should().BeTrue();
-        first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
+        Assert.Equal(createActivity.Id, first.ParentId);
+        Assert.True(first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id));
+        Assert.True(first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) })); 
+        Assert.True(first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+        Assert.True(first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }));
         
-        first.Events.Count().Should().Be(1);
-        first.Events.First().Name.Should().Be(nameof(MyEventHandlerAsync));
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)).Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
+        Assert.Equal(1, first.Events.Count());
+        Assert.Equal(nameof(MyEventHandlerAsync), first.Events.First().Name);
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)));
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async"));
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));       
         
         //--second publish
         var second = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyOtherEventHandlerAsync)));
-        second.ParentId.Should().Be(createActivity.Id);
-        second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
-        second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue();
-        second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)).Should().BeTrue();
-        second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
+        Assert.Equal(createActivity.Id, second.ParentId);
+        Assert.True(second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id));
+        Assert.True(second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }));
+        Assert.True(second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+        Assert.True(second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }));
         
-         second.Events.Count().Should().Be(1);
-         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandlerAsync));
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)).Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
+         Assert.Equal(1, second.Events.Count());
+         Assert.Equal(nameof(MyOtherEventHandlerAsync), second.Events.First().Name);
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)));
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async"));
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));
          
          //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released
          /*
@@ -217,44 +217,44 @@ public class AsyncCommandProcessorPublishObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert
-        _exportedActivities.Count.Should().Be(3);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        Assert.Equal(3, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        createActivity.Should().NotBeNull();
-        createActivity.ParentId.Should().BeNull();
+        Assert.NotNull(createActivity);
+        Assert.Null(createActivity.ParentId);
         
         //parent span and child spans for each publish operation
-        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").Should().Be(2);
+        Assert.Equal(2, _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}"));
         
         var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
         var first = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyEventHandlerAsync)));
-        first.ParentId.Should().Be(createActivity.Id);
-        first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
-        first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue(); 
-        first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)).Should().BeTrue();
-        first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
+        Assert.Equal(createActivity.Id, first.ParentId);
+        Assert.True(first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id));
+        Assert.True(first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) })); 
+        Assert.True(first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+        Assert.True(first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }));
         
-        first.Events.Count().Should().Be(1);
-        first.Events.First().Name.Should().Be(nameof(MyEventHandlerAsync));
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)).Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
+        Assert.Equal(1, first.Events.Count());
+        Assert.Equal(nameof(MyEventHandlerAsync), first.Events.First().Name);
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)));
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async"));
+        Assert.True(first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));       
         
         //--second publish
         var second = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyOtherEventHandlerAsync)));
-        second.ParentId.Should().Be(createActivity.Id);
-        second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
-        second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue();
-        second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)).Should().BeTrue();
-        second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
+        Assert.Equal(createActivity.Id, second.ParentId);
+        Assert.True(second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id));
+        Assert.True(second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }));
+        Assert.True(second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+        Assert.True(second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }));
         
-         second.Events.Count().Should().Be(1);
-         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandlerAsync));
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)).Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
+         Assert.Equal(1, second.Events.Count());
+         Assert.Equal(nameof(MyOtherEventHandlerAsync), second.Events.First().Name);
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)));
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async"));
+         Assert.True(second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value));
          
          //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released
          /*

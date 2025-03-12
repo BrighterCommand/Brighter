@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -69,22 +68,22 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         _channel.Acknowledge(message);
 
         //should_send_the_message_to_aws_sqs
-        message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
 
-        message.Id.Should().Be(_myCommand.Id);
-        message.Redelivered.Should().BeFalse();
-        message.Header.MessageId.Should().Be(_myCommand.Id);
-        message.Header.Topic.Value.Should().Contain(_topicName);
-        message.Header.CorrelationId.Should().Be(_correlationId);
-        message.Header.ReplyTo.Should().Be(_replyTo);
-        message.Header.ContentType.Should().Be(_contentType);
-        message.Header.HandledCount.Should().Be(0);
-        message.Header.Subject.Should().Be(_message.Header.Subject);
+        Assert.Equal(_myCommand.Id, message.Id);
+        Assert.False(message.Redelivered);
+        Assert.Equal(_myCommand.Id, message.Header.MessageId);
+        Assert.Contains(_topicName, message.Header.Topic.Value);
+        Assert.Equal(_correlationId, message.Header.CorrelationId);
+        Assert.Equal(_replyTo, message.Header.ReplyTo);
+        Assert.Equal(_contentType, message.Header.ContentType);
+        Assert.Equal(0, message.Header.HandledCount);
+        Assert.Equal(_message.Header.Subject, message.Header.Subject);
         //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-        message.Header.TimeStamp.Should().BeAfter(RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-        message.Header.Delayed.Should().Be(TimeSpan.Zero);
+        Assert.True((message.Header.TimeStamp) > (RoundToSeconds(DateTime.UtcNow.AddMinutes(-1))));
+        Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
         //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-        message.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, message.Body.Value);
     }
 
     public void Dispose()

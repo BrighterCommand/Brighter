@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -92,7 +91,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 policyRegistry,
                 bus,
                 replySubscriptions:replySubs,
-                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System)
+                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System),
+                requestSchedulerFactory: new InMemorySchedulerFactory()
             );
            
             PipelineBuilder<MyRequest>.ClearPipelineCache();
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             );
             
             //should throw an exception as we require a timeout to be set
-            exception.Should().BeOfType<InvalidOperationException>();
+            Assert.IsType<InvalidOperationException>(exception);
         }
 
 

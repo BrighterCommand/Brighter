@@ -45,6 +45,7 @@ namespace Paramore.Brighter
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">A cancellation token to end the operation</param>
         Task SendAsync(Message message, CancellationToken cancellationToken = default);
 
         /// <summary>

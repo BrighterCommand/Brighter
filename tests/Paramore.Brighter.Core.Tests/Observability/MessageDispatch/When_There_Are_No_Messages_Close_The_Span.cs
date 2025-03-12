@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -55,6 +54,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
             
@@ -90,8 +90,8 @@ public class MessagePumpEmptyQueueOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        _exportedActivities.Count.Should().Be(3);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue(); 
+        Assert.Equal(3, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
         
         var emptyMessageActivity = _exportedActivities.FirstOrDefault(a => 
             a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}" 
@@ -101,8 +101,8 @@ public class MessagePumpEmptyQueueOberservabilityTests
                 )
             );
         
-        emptyMessageActivity.Should().NotBeNull();
-        emptyMessageActivity!.Status.Should().Be(ActivityStatusCode.Ok);
+        Assert.NotNull(emptyMessageActivity);
+        Assert.Equal(ActivityStatusCode.Ok, emptyMessageActivity!.Status);
         
     }
 }

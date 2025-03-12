@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -16,12 +15,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
     private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
+    private readonly ITestOutputHelper _output;
 
     public KafkaMessageConsumerPreservesOrderAsync(ITestOutputHelper output)
     {
@@ -50,10 +49,10 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
     public async Task When_a_message_is_sent_keep_order()
     {
         //Let topic propagate in the broker
-        await Task.Delay(500); 
-        
+        await Task.Delay(500);
+
         IAmAMessageConsumerAsync consumer = null;
-        
+
         var routingKey = new RoutingKey(_topic);
 
         var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey));
@@ -64,7 +63,7 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
             var msgId2 = await SendMessageAsync(producerAsync, routingKey);
             var msgId3 = await SendMessageAsync(producerAsync, routingKey);
             var msgId4 = await SendMessageAsync(producerAsync, routingKey);
-            
+
             //We should not need to flush, as the async does not queue work  - but in case this changes
             ((KafkaMessageProducer)producerAsync).Flush();
 
@@ -77,24 +76,23 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
 
             var firstMessage = await ConsumeMessagesAsync(consumer);
             var message = firstMessage.First();
-            message.Id.Should().Be(msgId);
+            Assert.Equal(msgId, message.Id);
             await consumer.AcknowledgeAsync(message);
 
             var secondMessage = await ConsumeMessagesAsync(consumer);
             message = secondMessage.First();
-            message.Id.Should().Be(msgId2);
+            Assert.Equal(msgId2, message.Id);
             await consumer.AcknowledgeAsync(message);
 
             var thirdMessages = await ConsumeMessagesAsync(consumer);
             message = thirdMessages.First();
-            message.Id.Should().Be(msgId3);
+            Assert.Equal(msgId3, message.Id);
             await consumer.AcknowledgeAsync(message);
 
             var fourthMessage = await ConsumeMessagesAsync(consumer);
             message = fourthMessage.First();
-            message.Id.Should().Be(msgId4);
+            Assert.Equal(msgId4, message.Id);
             await consumer.AcknowledgeAsync(message);
-
         }
         finally
         {
@@ -136,7 +134,7 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     break;
-                
+
                 //wait before retry
                 await Task.Delay(1000);
             }

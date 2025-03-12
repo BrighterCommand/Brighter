@@ -4,15 +4,12 @@ using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.SecurityToken;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tranformers.AWS;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
@@ -113,8 +110,8 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             //assert
             //contents should be from storage
-            transformedMessage.Value.Should().Be(contents);
-            (await _luggageStore.HasClaimAsync(id)).Should().BeFalse();
+            Assert.Equal(contents, transformedMessage.Value);
+            Assert.False((await _luggageStore.HasClaimAsync(id)));
         }
 
         public void Dispose()

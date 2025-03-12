@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Xunit;
@@ -39,20 +37,20 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             var policy = Policy
                 .Handle<DivideByZeroException>()
-                .WaitAndRetryAsync(new[]
-                {
-                    10.Milliseconds(),
-                    20.Milliseconds(),
-                    30.Milliseconds()
-                }, (exception, timeSpan) =>
-                {
-                    _retryCount++;
-                });
+                .WaitAndRetryAsync([
+                        TimeSpan.FromMilliseconds(10), 
+                        TimeSpan.FromMilliseconds(20), 
+                        TimeSpan.FromMilliseconds(30)
+                    ],
+                    (exception, timeSpan) =>
+                        _retryCount++
+                );
+            
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>().ReceivedCommand = false;
             
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new InMemorySchedulerFactory());
         }
 
         //We have to catch the final exception that bubbles out after retry
@@ -62,9 +60,10 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
 
             //_should_send_the_command_to_the_command_handler
-            _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>().ShouldReceive(_myCommand).Should().BeTrue();
+            var zeroHandlerAsync = _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>();
+            Assert.True(zeroHandlerAsync!.ShouldReceive(_myCommand));
             //_should_retry_three_times
-            _retryCount.Should().Be(3);
+            Assert.Equal(3, _retryCount);
         }
 
         public void Dispose()

@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Monitoring.TestDoubles;
 using Xunit;
@@ -65,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
              
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
 
             _command = new MyCommand();
 
@@ -82,31 +80,31 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
             //_should_have_an_instance_name_before
-            _beforeEvent.InstanceName.Should().Be("UnitTests");
+            Assert.Equal("UnitTests", _beforeEvent.InstanceName);
             //_should_post_the_event_type_to_the_control_bus_before
-            _beforeEvent.EventType.Should().Be(MonitorEventType.EnterHandler);
+            Assert.Equal(MonitorEventType.EnterHandler, _beforeEvent.EventType);
             //_should_post_the_handler_fullname_to_the_control_bus_before
-            _beforeEvent.HandlerFullAssemblyName.Should().Be(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+            Assert.Equal(typeof(MyMonitoredHandler).AssemblyQualifiedName, _beforeEvent.HandlerFullAssemblyName);
             //_should_post_the_handler_name_to_the_control_bus_before
-            _beforeEvent.HandlerName.Should().Be(typeof(MyMonitoredHandler).FullName);
+            Assert.Equal(typeof(MyMonitoredHandler).FullName, _beforeEvent.HandlerName);
             //_should_include_the_underlying_request_details_before
-            _beforeEvent.RequestBody.Should().Be(_originalRequestAsJson);
+            Assert.Equal(_originalRequestAsJson, _beforeEvent.RequestBody);
             //_should_post_the_time_of_the_request_before
-            _beforeEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), TimeSpan.FromSeconds(1));
+            Assert.True((_beforeEvent.EventTime.ToUniversalTime()) >= ((_at.ToUniversalTime()) - (TimeSpan.FromSeconds(1))) && (_beforeEvent.EventTime.ToUniversalTime()) <= ((_at.ToUniversalTime()) + (TimeSpan.FromSeconds(1))));
             //_should_elapsed_before_as_zero
-            _beforeEvent.TimeElapsedMs.Should().Be(0);
+            Assert.Equal(0, _beforeEvent.TimeElapsedMs);
             //_should_have_an_instance_name_after
-            _afterEvent.InstanceName.Should().Be("UnitTests");
+            Assert.Equal("UnitTests", _afterEvent.InstanceName);
             //_should_post_the_handler_fullname_to_the_control_bus_after
-            _afterEvent.EventType.Should().Be(MonitorEventType.ExitHandler);
+            Assert.Equal(MonitorEventType.ExitHandler, _afterEvent.EventType);
             //_should_post_the_handler_fullname_to_the_control_bus_after
-            _afterEvent.HandlerFullAssemblyName.Should().Be(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+            Assert.Equal(typeof(MyMonitoredHandler).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
             //_should_post_the_handler_name_to_the_control_bus_after
-            _afterEvent.HandlerName.Should().Be(typeof(MyMonitoredHandler).FullName);
+            Assert.Equal(typeof(MyMonitoredHandler).FullName, _afterEvent.HandlerName);
             //_should_include_the_underlying_request_details_after
-            _afterEvent.RequestBody.Should().Be(_originalRequestAsJson);
+            Assert.Equal(_originalRequestAsJson, _afterEvent.RequestBody);
             //should_post_the_time_of_the_request_after
-            _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
+            Assert.True((_afterEvent.EventTime.ToUniversalTime()) > (_at.ToUniversalTime()));
         }
 
         public void Dispose()

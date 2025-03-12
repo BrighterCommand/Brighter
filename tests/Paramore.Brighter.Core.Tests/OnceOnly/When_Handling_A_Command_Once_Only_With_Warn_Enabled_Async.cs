@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
@@ -60,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             
             _command = new MyCommand {Value = "My Test String"};
             
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         }
 
         [Fact]
@@ -69,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await _commandProcessor.SendAsync(_command);
             await _commandProcessor.SendAsync(_command);
             
-            MyStoredCommandToWarnHandlerAsync.ReceivedCount.Should().Be(1);
+            Assert.Equal(1, MyStoredCommandToWarnHandlerAsync.ReceivedCount);
         }
 
         public void Dispose()

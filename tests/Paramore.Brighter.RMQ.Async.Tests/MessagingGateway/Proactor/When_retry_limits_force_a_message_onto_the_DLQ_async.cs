@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -86,7 +85,8 @@ public class RMQMessageConsumerRetryDLQTestsAsync : IDisposable
             subscriberRegistry: subscriberRegistry,
             handlerFactory: new QuickHandlerFactoryAsync(() => handler),
             requestContextFactory: new InMemoryRequestContextFactory(),
-            policyRegistry: new PolicyRegistry()
+            policyRegistry: new PolicyRegistry(),
+            requestSchedulerFactory: new InMemorySchedulerFactory()
         );
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
@@ -142,8 +142,8 @@ public class RMQMessageConsumerRetryDLQTestsAsync : IDisposable
         var dlqMessage = (await _deadLetterConsumer.ReceiveAsync(new TimeSpan(10000))).First();
 
         //assert this is our message
-        dlqMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        dlqMessage.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(MessageType.MT_COMMAND, dlqMessage.Header.MessageType);
+        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
 
         await _deadLetterConsumer.AcknowledgeAsync(dlqMessage);
 

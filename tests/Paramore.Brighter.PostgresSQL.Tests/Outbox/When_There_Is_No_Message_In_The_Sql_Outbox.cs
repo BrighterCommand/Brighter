@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _storedMessage = _sqlOutbox.Get(_messageEarliest.Id, new RequestContext());
 
             //should return a empty message
-            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+            Assert.Equal(MessageType.MT_NONE, _storedMessage.Header.MessageType);
         }
 
         public void Dispose()
