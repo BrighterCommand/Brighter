@@ -53,7 +53,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly ChannelName _queueName;
         private readonly RoutingKeys _routingKeys;
         private readonly bool _isDurable;
-        private readonly RmqMessageCreator _messageCreator;
         private readonly Message _noopMessage = new Message();
         private readonly string _consumerTag;
         private readonly OnMissingChannel _makeChannels;
@@ -128,7 +127,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             _routingKeys = routingKeys;
             _isDurable = isDurable;
             _highAvailability = highAvailability;
-            _messageCreator = new RmqMessageCreator();
             _batchSize = Convert.ToUInt16(batchSize);
             _makeChannels = makeChannels;
             _consumerTag = Connection.Name + Guid.NewGuid();
