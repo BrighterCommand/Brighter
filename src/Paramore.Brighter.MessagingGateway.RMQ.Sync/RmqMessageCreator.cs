@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
-            var timeStamp = HeaderResult<DateTime>.Empty();
+            var timeStamp = HeaderResult<DateTimeOffset>.Empty();
             var handledCount = HeaderResult<int>.Empty();
             var delay = HeaderResult<TimeSpan>.Empty();
             var redelivered = HeaderResult<bool>.Empty();
@@ -162,14 +162,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             return new HeaderResult<ulong>(deliveryTag, true);
         }
 
-        private static HeaderResult<DateTime> ReadTimeStamp(IBasicProperties basicProperties)
+        private static HeaderResult<DateTimeOffset> ReadTimeStamp(IBasicProperties basicProperties)
         {
             if (basicProperties.IsTimestampPresent())
             {
-                return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(basicProperties.Timestamp.UnixTime), true);
+                return new HeaderResult<DateTimeOffset>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(basicProperties.Timestamp.UnixTime), true);
+            }
+            
+            if(basicProperties.Headers != null
+                       && basicProperties.Headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TIME, out var val )
+                       && val is byte[] bytes
+                       && DateTimeOffset.TryParse(Encoding.UTF8.GetString(bytes), out var dt))
+            {
+                        return new HeaderResult<DateTimeOffset>(dt, true);
             }
 
-            return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+            return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
         }
 
         private static HeaderResult<MessageType> ReadMessageType(IDictionary<string, object> headers)
@@ -295,62 +303,63 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             return new HeaderResult<string?>(null, true);
         }
         
-        private static HeaderResult<string> ReadSpecVersion(IDictionary<string, object?> headers)
+    private static HeaderResult<string> ReadSpecVersion(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, out var specVersion)
+            && specVersion is byte[] specVersionArray)
         {
-            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, out var specVersion)
-                    && specVersion is string specVersionString)
-            {
-                    return new HeaderResult<string>(specVersionString, true);
-            }
-        
-            return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
+            return new HeaderResult<string>(Encoding.UTF8.GetString(specVersionArray), true);
         }
-        
-        private static HeaderResult<Uri> ReadSource(IDictionary<string, object?> headers)
+
+        return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
+    }
+
+    private static HeaderResult<Uri> ReadSource(IDictionary<string, object?> headers)
+    {
+        if(headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out var source)
+           && source is byte[] val
+           && Uri.TryCreate(Encoding.UTF8.GetString(val), UriKind.RelativeOrAbsolute, out var uri))
         {
-            if(headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out var source)
-               && source is string val
-               && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out var uri))
-            {
-                    return new HeaderResult<Uri>(uri, true);
-            }
-        
-            return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
+            return new HeaderResult<Uri>(uri, true);
         }
-            
-        private static HeaderResult<string> ReadType(IDictionary<string, object?> headers)
+
+        return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
+    }
+    
+    private static HeaderResult<string> ReadType(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out var type)
+            && type is byte[] typeArray)
         {
-            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out var type)
-                && type is string typeString)
-            {
-                    return new HeaderResult<string>(typeString, true);
-            }
-        
-            return new HeaderResult<string>(MessageHeader.DefaultType, true);
+            return new HeaderResult<string>(Encoding.UTF8.GetString(typeArray), true);
         }
-            
-        private static HeaderResult<string?> ReadSubject(IDictionary<string, object?> headers)
+
+        return new HeaderResult<string>(MessageHeader.DefaultType, true);
+    }
+    
+    private static HeaderResult<string?> ReadSubject(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SUBJECT, out var subject)
+            && subject is byte[] subjectArray)
         {
-            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SUBJECT, out var subject)
-                && subject is string subjectString)
-            {
-                return new HeaderResult<string?>(subjectString, true);
-            }
-        
-            return new HeaderResult<string?>(null, true);
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(subjectArray), true);
         }
-            
-       private static HeaderResult<Uri?> ReadDataSchema(IDictionary<string, object?> headers)
-       { 
-           if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out var dataSchema)
-               && dataSchema is string dataSchemaString
-               && Uri.TryCreate(dataSchemaString, UriKind.RelativeOrAbsolute, out var uri))
-           {
-                    return new HeaderResult<Uri?>(uri, true);
-           }
-        
-           return new HeaderResult<Uri?>(null, true);
+
+        return new HeaderResult<string?>(null, true);
+    }
+    
+    private static HeaderResult<Uri?> ReadDataSchema(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out var dataSchema)
+            && dataSchema is byte[] dataSchemaArray
+            && Uri.TryCreate(Encoding.UTF8.GetString(dataSchemaArray), UriKind.RelativeOrAbsolute, out var uri))
+        {
+            return new HeaderResult<Uri?>(uri, true);
         }
+
+        return new HeaderResult<Uri?>(null, true);
+    }
+
 
         private static object ParseHeaderValue(object value)
         {
