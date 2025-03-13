@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,24 +29,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka;
 
 public static class BrighterDefinedHeaders
 {
-    public static readonly HashSet<string> HeadersToReset;
-
-    static BrighterDefinedHeaders()
-    {
-        HeadersToReset =
-        [
-            HeaderNames.MESSAGE_ID,
-            HeaderNames.MESSAGE_TYPE,
-            HeaderNames.TOPIC,
-            HeaderNames.CORRELATION_ID,
-            HeaderNames.TIMESTAMP,
-            HeaderNames.PARTITIONKEY,
-            HeaderNames.CONTENT_TYPE,
-            HeaderNames.REPLY_TO,
-            HeaderNames.DELAYED_MILLISECONDS,
-            HeaderNames.HANDLED_COUNT,
-            Paramore.Brighter.BrighterHeaderNames.UseCloudEvents
-        ];  
-    }
-
+    public static readonly HashSet<string> HeadersToReset =
+    [
+        HeaderNames.MESSAGE_ID,
+        HeaderNames.MESSAGE_TYPE,
+        HeaderNames.TOPIC,
+        HeaderNames.CORRELATION_ID,
+        HeaderNames.TIMESTAMP,
+        HeaderNames.PARTITIONKEY,
+        HeaderNames.CONTENT_TYPE,
+        HeaderNames.REPLY_TO,
+        HeaderNames.DELAYED_MILLISECONDS,
+        HeaderNames.HANDLED_COUNT,
+    ];
 }
