@@ -39,7 +39,7 @@ internal sealed class RmqMessageCreator
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
 
-    public Message CreateMessage(BasicDeliverEventArgs fromQueue)
+    public static Message CreateMessage(BasicDeliverEventArgs fromQueue)
     {
         var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object?>();
         var topic = HeaderResult<RoutingKey>.Empty();
@@ -51,13 +51,18 @@ internal sealed class RmqMessageCreator
         {
             topic = ReadTopic(fromQueue, headers);
             messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
-            HeaderResult<DateTime> timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
-            HeaderResult<int> handledCount = ReadHandledCount(headers);
-            HeaderResult<TimeSpan> delay = ReadDelay(headers);
-            HeaderResult<bool> redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
-            HeaderResult<ulong> deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
-            HeaderResult<MessageType> messageType = ReadMessageType(headers);
-            HeaderResult<string?> replyTo = ReadReplyTo(fromQueue.BasicProperties);
+            var timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
+            var handledCount = ReadHandledCount(headers);
+            var delay = ReadDelay(headers);
+            var redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
+            var deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
+            var messageType = ReadMessageType(headers);
+            var replyTo = ReadReplyTo(fromQueue.BasicProperties);
+            var source = ReadSource(headers);
+            var type = ReadType(headers);
+            var dataSchema = ReadDataSchema(headers);
+            var subject = ReadSubject(headers);
+            var specVersion = ReadSpecVersion(headers);
 
             if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
             {
@@ -65,23 +70,24 @@ internal sealed class RmqMessageCreator
             }
             else
             {
-                //TODO:CLOUD_EVENTS parse from headers
-                    
                 var messageHeader = new MessageHeader(
                     messageId: messageId.Result ?? string.Empty,
                     topic: topic.Result ?? RoutingKey.Empty,
                     messageType.Result,
-                    source: null,
-                    type: "",
+                    source: source.Result,
+                    type: type.Result,
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                    correlationId: "",
+                    correlationId: "", 
                     replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
-                    contentType: "",
+                    contentType: fromQueue.BasicProperties.Type ??  "plain/text",
                     handledCount: handledCount.Result,
-                    dataSchema: null,
-                    subject: null,
+                    dataSchema: dataSchema.Result,
+                    subject: subject.Result,
                     delayed: delay.Result
-                );
+                )
+                {
+                    SpecVersion = specVersion.Result 
+                };
 
                 //this effectively transfers ownership of our buffer 
                 message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type ?? "plain/text"));
@@ -91,8 +97,11 @@ internal sealed class RmqMessageCreator
 
             if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out object? correlationHeader))
             {
-                var bytes = (byte[]?)correlationHeader; 
-                if (bytes != null)
+                if (correlationHeader is string correlationIdString)
+                {
+                    message.Header.CorrelationId = correlationIdString;
+                }
+                else if(correlationHeader is byte[] bytes)
                 {
                     var correlationId = Encoding.UTF8.GetString(bytes);
                     message.Header.CorrelationId = correlationId;
@@ -114,7 +123,7 @@ internal sealed class RmqMessageCreator
     }
 
 
-    private HeaderResult<string?> ReadHeader(IDictionary<string, object?> dict, string key, bool dieOnMissing = false)
+    private static HeaderResult<string?> ReadHeader(IDictionary<string, object?> dict, string key, bool dieOnMissing = false)
     {
         if (false == dict.TryGetValue(key, out object? value))
         {
@@ -140,7 +149,7 @@ internal sealed class RmqMessageCreator
         }
     }
 
-    private Message FailureMessage(HeaderResult<RoutingKey?> topic, HeaderResult<string?> messageId)
+    private static Message FailureMessage(HeaderResult<RoutingKey?> topic, HeaderResult<string?> messageId)
     {
         var header = new MessageHeader(
             messageId.Success ? messageId.Result! : string.Empty,
@@ -155,17 +164,25 @@ internal sealed class RmqMessageCreator
         return new HeaderResult<ulong>(deliveryTag, true);
     }
 
-    private static HeaderResult<DateTime> ReadTimeStamp(IReadOnlyBasicProperties basicProperties)
+    private static HeaderResult<DateTimeOffset> ReadTimeStamp(IReadOnlyBasicProperties basicProperties)
     {
         if (basicProperties.IsTimestampPresent())
         {
-            return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(basicProperties.Timestamp.UnixTime), true);
+            return new HeaderResult<DateTimeOffset>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(basicProperties.Timestamp.UnixTime), true);
         }
+        
+        if(basicProperties.Headers != null
+           && basicProperties.Headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TIME, out var val )
+           && DateTimeOffset.TryParse(val!.ToString(), out var dt))
+        {
+            return new HeaderResult<DateTimeOffset>(dt, true);
+        }
+        
 
-        return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+        return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
     }
 
-    private HeaderResult<MessageType> ReadMessageType(IDictionary<string, object?> headers)
+    private static HeaderResult<MessageType> ReadMessageType(IDictionary<string, object?> headers)
     {
         return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
             .Map(s =>
@@ -180,7 +197,7 @@ internal sealed class RmqMessageCreator
             });
     }
 
-    private HeaderResult<int> ReadHandledCount(IDictionary<string, object?> headers)
+    private static HeaderResult<int> ReadHandledCount(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out object? header) == false)
         {
@@ -251,7 +268,7 @@ internal sealed class RmqMessageCreator
         return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds( delayedMilliseconds), true);
     }
 
-    private HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers)
+    private static HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers)
     {
         return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
         {
@@ -286,6 +303,63 @@ internal sealed class RmqMessageCreator
         }
 
         return new HeaderResult<string?>(null, true);
+    }
+
+    private static HeaderResult<string> ReadSpecVersion(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, out var specVersion)
+            && specVersion is string specVersionString)
+        {
+            return new HeaderResult<string>(specVersionString, true);
+        }
+
+        return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
+    }
+
+    private static HeaderResult<Uri> ReadSource(IDictionary<string, object?> headers)
+    {
+        if(headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out var source)
+           && source is string val
+           && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out var uri))
+        {
+            return new HeaderResult<Uri>(uri, true);
+        }
+
+        return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
+    }
+    
+    private static HeaderResult<string> ReadType(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out var type)
+            && type is string typeString)
+        {
+            return new HeaderResult<string>(typeString, true);
+        }
+
+        return new HeaderResult<string>(MessageHeader.DefaultType, true);
+    }
+    
+    private static HeaderResult<string?> ReadSubject(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SUBJECT, out var subject)
+            && subject is string subjectString)
+        {
+            return new HeaderResult<string?>(subjectString, true);
+        }
+
+        return new HeaderResult<string?>(null, true);
+    }
+    
+    private static HeaderResult<Uri?> ReadDataSchema(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out var dataSchema)
+            && dataSchema is string dataSchemaString
+            && Uri.TryCreate(dataSchemaString, UriKind.RelativeOrAbsolute, out var uri))
+        {
+            return new HeaderResult<Uri?>(uri, true);
+        }
+
+        return new HeaderResult<Uri?>(null, true);
     }
 
     private static object ParseHeaderValue(object? value)

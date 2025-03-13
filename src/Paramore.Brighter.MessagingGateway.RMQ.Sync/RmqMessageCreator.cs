@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
 
-        public Message CreateMessage(BasicDeliverEventArgs fromQueue)
+        public static Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<RoutingKey>.Empty();
@@ -65,6 +65,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
                 messageType = ReadMessageType(headers);
                 replyTo = ReadReplyTo(fromQueue.BasicProperties);
+                var source = ReadSource(headers);
+                var type = ReadType(headers);
+                var dataSchema = ReadDataSchema(headers);
+                var subject = ReadSubject(headers);
+                var specVersion = ReadSpecVersion(headers); 
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
                 {
@@ -72,21 +77,19 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 }
                 else
                 {
-                    //TODO:CLOUD_EVENTS parse from headers
-                    
                     var messageHeader = new MessageHeader(
                         messageId: messageId.Result ?? string.Empty,
                         topic: topic.Result ?? RoutingKey.Empty,
                         messageType.Result,
-                        source: null,
-                        type: "",
+                        source: source.Result,
+                        type: type.Result,
                         timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                         correlationId: "",
                         replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
-                        contentType: "",
+                        contentType: fromQueue.BasicProperties.Type,
                         handledCount: handledCount.Result,
-                        dataSchema: null,
-                        subject: null,
+                        dataSchema: dataSchema.Result,
+                        subject: subject.Result,
                         delayed: delay.Result
                         );
                         
@@ -118,7 +121,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
 
 
-        private HeaderResult<string?> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
+        private static HeaderResult<string?> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
         {
             if (false == dict.TryGetValue(key, out object? value))
             {
@@ -144,7 +147,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
         }
 
-        private Message FailureMessage(HeaderResult<RoutingKey?> topic, HeaderResult<string?> messageId)
+        private static Message FailureMessage(HeaderResult<RoutingKey?> topic, HeaderResult<string?> messageId)
         {
             var header = new MessageHeader(
                 (messageId.Success ? messageId.Result : string.Empty)!,
@@ -154,12 +157,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             return message;
         }
 
-        private HeaderResult<ulong> ReadDeliveryTag(ulong deliveryTag)
+        private static HeaderResult<ulong> ReadDeliveryTag(ulong deliveryTag)
         {
             return new HeaderResult<ulong>(deliveryTag, true);
         }
 
-        private HeaderResult<DateTime> ReadTimeStamp(IBasicProperties basicProperties)
+        private static HeaderResult<DateTime> ReadTimeStamp(IBasicProperties basicProperties)
         {
             if (basicProperties.IsTimestampPresent())
             {
@@ -169,7 +172,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
         }
 
-        private HeaderResult<MessageType> ReadMessageType(IDictionary<string, object> headers)
+        private static HeaderResult<MessageType> ReadMessageType(IDictionary<string, object> headers)
         {
             return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
                 .Map(s =>
@@ -184,7 +187,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 });
         }
 
-        private HeaderResult<int> ReadHandledCount(IDictionary<string, object> headers)
+        private static HeaderResult<int> ReadHandledCount(IDictionary<string, object> headers)
         {
             if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out object? header) == false)
             {
@@ -255,7 +258,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds( delayedMilliseconds), true);
         }
 
-        private HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
+        private static HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
         {
             return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
             {
@@ -264,7 +267,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             });
         }
 
-        private HeaderResult<string?> ReadMessageId(string messageId)
+        private static HeaderResult<string?> ReadMessageId(string messageId)
         {
             var newMessageId = Guid.NewGuid().ToString();
 
@@ -277,12 +280,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             return new HeaderResult<string?>(messageId, true);
         }
 
-        private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
+        private static HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
         {
             return new HeaderResult<bool>(redelivered, true);
         }
 
-        private HeaderResult<string?> ReadReplyTo(IBasicProperties basicProperties)
+        private static HeaderResult<string?> ReadReplyTo(IBasicProperties basicProperties)
         {
             if (basicProperties.IsReplyToPresent())
             {
@@ -290,6 +293,63 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
 
             return new HeaderResult<string?>(null, true);
+        }
+        
+        private static HeaderResult<string> ReadSpecVersion(IDictionary<string, object?> headers)
+        {
+            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, out var specVersion)
+                    && specVersion is string specVersionString)
+            {
+                    return new HeaderResult<string>(specVersionString, true);
+            }
+        
+            return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
+        }
+        
+        private static HeaderResult<Uri> ReadSource(IDictionary<string, object?> headers)
+        {
+            if(headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out var source)
+               && source is string val
+               && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                    return new HeaderResult<Uri>(uri, true);
+            }
+        
+            return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
+        }
+            
+        private static HeaderResult<string> ReadType(IDictionary<string, object?> headers)
+        {
+            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out var type)
+                && type is string typeString)
+            {
+                    return new HeaderResult<string>(typeString, true);
+            }
+        
+            return new HeaderResult<string>(MessageHeader.DefaultType, true);
+        }
+            
+        private static HeaderResult<string?> ReadSubject(IDictionary<string, object?> headers)
+        {
+            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SUBJECT, out var subject)
+                && subject is string subjectString)
+            {
+                return new HeaderResult<string?>(subjectString, true);
+            }
+        
+            return new HeaderResult<string?>(null, true);
+        }
+            
+       private static HeaderResult<Uri?> ReadDataSchema(IDictionary<string, object?> headers)
+       { 
+           if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out var dataSchema)
+               && dataSchema is string dataSchemaString
+               && Uri.TryCreate(dataSchemaString, UriKind.RelativeOrAbsolute, out var uri))
+           {
+                    return new HeaderResult<Uri?>(uri, true);
+           }
+        
+           return new HeaderResult<Uri?>(null, true);
         }
 
         private static object ParseHeaderValue(object value)

@@ -296,7 +296,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     var messages = new Message[resultCount];
                     for (var i = 0; i < resultCount; i++)
                     {
-                        var message = _messageCreator.CreateMessage(results[i]);
+                        var message = RmqMessageCreator.CreateMessage(results[i]);
                         messages[i] = message;
 
                         s_logger.LogInformation(
