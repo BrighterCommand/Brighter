@@ -22,7 +22,10 @@ namespace GreetingsSender
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
 
-            var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
+            var messagingConfiguration = new RelationalDatabaseConfiguration(
+                @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+                databaseName: "BrighterSqlQueue",
+                queueStoreTable: "QueueData");
 
             var producerRegistry = new MsSqlProducerRegistryFactory(
                     messagingConfiguration,
