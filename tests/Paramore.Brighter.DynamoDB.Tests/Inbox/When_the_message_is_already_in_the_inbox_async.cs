@@ -49,9 +49,9 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         [Fact]
         public async Task When_the_message_is_already_in_the_Inbox_async()
         {
-            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
+            _dynamoDbInbox.Add(_raisedCommand, _contextKey, null);
 
-            _exception = await Catch.ExceptionAsync(() => _dynamoDbInbox.AddAsync(_raisedCommand, _contextKey));
+            _exception = await Catch.ExceptionAsync(() => _dynamoDbInbox.AddAsync(_raisedCommand, _contextKey, null));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             Assert.Null(_exception);

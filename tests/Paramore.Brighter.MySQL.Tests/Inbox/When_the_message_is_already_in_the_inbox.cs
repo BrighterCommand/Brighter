@@ -23,25 +23,25 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
             _mysqlInbox = new MySqlInbox(_mysqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "test-context";
-            _mysqlInbox.Add(_raisedCommand, _contextKey);
+            _mysqlInbox.Add(_raisedCommand, _contextKey, null);
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox()
         {
-            _exception = Catch.Exception(() => _mysqlInbox.Add(_raisedCommand, _contextKey));
+            _exception = Catch.Exception(() => _mysqlInbox.Add(_raisedCommand, _contextKey, null));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             Assert.Null(_exception);
-            Assert.True(_mysqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey));
+            Assert.True(_mysqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey, null));
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            _mysqlInbox.Add(_raisedCommand, "some other key");
+            _mysqlInbox.Add(_raisedCommand, "some other key", null);
 
-            _exception = Catch.Exception(() => _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key"));
+            _exception = Catch.Exception(() => _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null));
 
             Assert.IsType<RequestNotFoundException<MyCommand>>(_exception);
         }

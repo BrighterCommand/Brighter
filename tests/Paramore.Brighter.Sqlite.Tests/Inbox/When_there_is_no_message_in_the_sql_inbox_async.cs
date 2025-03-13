@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
         public async Task When_There_Is_No_Message_In_The_Sql_Inbox_Get_Async()
         {
             string commandId = Guid.NewGuid().ToString();
-            var exception = await Catch.ExceptionAsync(() => _sqlInbox.GetAsync<MyCommand>(commandId, _contextKey));
+            var exception = await Catch.ExceptionAsync(() => _sqlInbox.GetAsync<MyCommand>(commandId, _contextKey, null));
             Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
         public async Task When_There_Is_No_Message_In_The_Sql_Inbox_Exists_Async()
         {
             string commandId = Guid.NewGuid().ToString();
-            bool exists = await _sqlInbox.ExistsAsync<MyCommand>(commandId, _contextKey);
+            bool exists = await _sqlInbox.ExistsAsync<MyCommand>(commandId, _contextKey, null);
             Assert.False(exists);
         }
 

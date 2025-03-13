@@ -50,7 +50,7 @@ public class MongoDbInboxEmptyWhenSearchedTests : IDisposable
     public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Get()
     {
         string commandId = Guid.NewGuid().ToString();
-        var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(commandId, _contextKey));
+        var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(commandId, _contextKey, null));
 
         Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
@@ -59,7 +59,7 @@ public class MongoDbInboxEmptyWhenSearchedTests : IDisposable
     public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Exists()
     {
         string commandId = Guid.NewGuid().ToString();
-        Assert.False(_inbox.Exists<MyCommand>(commandId, _contextKey));
+        Assert.False(_inbox.Exists<MyCommand>(commandId, _contextKey, null));
     }
     
     public void Dispose()

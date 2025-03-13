@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.MongoDb;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.MongoDb;
 
@@ -22,7 +23,19 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     public bool ContinueOnCapturedContext { get; set; }
 
     /// <inheritdoc />
-    public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1,
+    public IAmABrighterTracer? Tracer { private get; set; }
+
+    /// <summary>
+    ///   Awaitably adds a command to the store.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="command">The command.</param>
+    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
+    /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+    /// <returns><see cref="Task"/>.</returns>
+    public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
         var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
@@ -44,9 +57,17 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         }
     }
 
-
-    /// <inheritdoc />
-    public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+    /// <summary>
+    ///   Awaitably finds a command with the specified identifier.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="id">The identifier.</param>
+    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
+    /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+    /// <returns><see cref="Task{T}"/>.</returns>
+    public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
         var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
@@ -64,8 +85,17 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         return command.ToCommand<T>();
     }
 
-    /// <inheritdoc />
-    public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+    /// <summary>
+    ///   Awaitable checks whether a command with the specified identifier exists in the store.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="id">The identifier.</param>
+    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
+    /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+    /// <returns><see cref="Task{true}"/> if it exists, otherwise <see cref="Task{false}"/>.</returns>
+    public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
         var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
@@ -75,8 +105,16 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             .ConfigureAwait(ContinueOnCapturedContext);
     }
 
-    /// <inheritdoc />
-    public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+    /// <summary>
+    ///   Adds a command to the store.
+    ///   Will block, and consume another thread for callback on threadpool; use within sync pipeline only.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="command">The command.</param>
+    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
+    public void Add<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
             ExpireAfterSeconds);
@@ -96,8 +134,16 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         }
     }
 
-    /// <inheritdoc />
-    public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+    /// <summary>
+    ///   Finds a command with the specified identifier.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="id">The identifier.</param>
+    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
+    /// <returns><see cref="T"/></returns>
+    public T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
         var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
@@ -111,8 +157,16 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         return command.ToCommand<T>();
     }
 
-    /// <inheritdoc />
-    public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+    /// <summary>
+    ///   Checks whether a command with the specified identifier exists in the store.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="id">The identifier.</param>
+    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
+    /// <returns><see langword="true"/> if it exists, otherwise <see langword="false"/>.</returns>
+    public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
         var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);

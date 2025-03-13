@@ -52,22 +52,22 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
         {
-            await _sqlInbox.AddAsync(_raisedCommand, _contextKey);
+            await _sqlInbox.AddAsync(_raisedCommand, _contextKey, null);
 
-            _exception = await Catch.ExceptionAsync(() => _sqlInbox.AddAsync(_raisedCommand, _contextKey));
+            _exception = await Catch.ExceptionAsync(() => _sqlInbox.AddAsync(_raisedCommand, _contextKey, null));
 
            //_should_succeed_even_if_the_message_is_a_duplicate
             Assert.Null(_exception);
-            var exists = await _sqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+            var exists = await _sqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
             Assert.True(exists);
         }
 
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            await _sqlInbox.AddAsync(_raisedCommand, "some other key");
+            await _sqlInbox.AddAsync(_raisedCommand, "some other key", null);
 
-            var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
+            var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null);
 
             //should read the command from the dynamo db inbox
             Assert.NotNull(storedCommand);

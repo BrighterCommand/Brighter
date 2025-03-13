@@ -108,30 +108,20 @@ namespace Paramore.Brighter
         private readonly TimeProvider _timeProvider = timeProvider;
         private readonly InstrumentationOptions _instrumentationOptions = instrumentationOptions;
 
-        /// <summary>
-        /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
-        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        /// or access the Result or otherwise block. You may need the originating synchronization context if you need to access thread specific storage
-        /// such as HTTPContext
-        /// </summary>
-        /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
+        /// <inheritdoc />
         public bool ContinueOnCapturedContext { get; set; }
 
-        /// <summary>
-        /// The Tracer that we want to use to capture telemetry
-        /// We inject this so that we can use the same tracer as the calling application
-        /// You do not need to set this property as we will set it when setting up the Service Activator
-        /// </summary>
+        /// <inheritdoc />
         public IAmABrighterTracer? Tracer { private get; set; }
 
         /// <summary>
-        /// Adds the specified identifier.
+        ///   Adds a command to the in-memory store.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="contextKey"></param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeoutInMilliseconds">Ignored as commands are stored in-memory</param>
         public void Add<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) 
             where T : class, IRequest
         {
@@ -162,16 +152,15 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Awaitably adds the specified identifier.
+        ///   Awaitably adds a command to the store.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="contextKey"></param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <param name="timeoutInMilliseconds">Ignored as commands are stored in-memory</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+        /// <returns><see cref="Task"/>.</returns>
         public Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, 
             int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) 
             where T : class, IRequest
@@ -192,15 +181,14 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Finds the command with the specified identifier.
+        ///   Finds a command with the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
-        /// <param name="contextKey"></param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <returns>ICommand.</returns>
-        /// <exception cref="System.TypeLoadException"></exception>
+        /// <param name="timeoutInMilliseconds">Ignored as commands are stored in-memory</param>
+        /// <returns><see cref="T"/></returns>
         public T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) 
             where T : class, IRequest
         {
@@ -230,14 +218,14 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
+        ///   Checks whether a command with the specified identifier exists in the store.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <returns>True if it exists, False otherwise</returns>
+        /// <param name="timeoutInMilliseconds">Ignored as commands are stored in-memory</param>
+        /// <returns><see langword="true"/> if it exists, otherwise <see langword="false"/>.</returns>
         public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var span = Tracer?.CreateDbSpan(
@@ -257,15 +245,15 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
+        ///   Awaitable checks whether a command with the specified identifier exists in the store.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
-        /// <param name="contextKey"></param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>True if it exists, False otherwise</returns>
+        /// <param name="timeoutInMilliseconds">Ignored as commands are stored in-memory</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+        /// <returns><see cref="Task{true}"/> if it exists, otherwise <see cref="Task{false}"/>.</returns>
         public Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
@@ -285,17 +273,15 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Awaitably finds the specified identifier.
+        ///   Awaitably finds a command with the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
-        /// <param name="contextKey"></param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns><see cref="Task{T}" />.</returns>
-        /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <param name="timeoutInMilliseconds">Ignored as commands are stored in-memory</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+        /// <returns><see cref="Task{T}"/>.</returns>
         public Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
