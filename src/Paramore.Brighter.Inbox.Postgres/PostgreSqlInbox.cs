@@ -34,33 +34,29 @@ using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.PostgreSql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
     public class PostgreSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private readonly IAmARelationalDatabaseConfiguration _configuration;
-        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlInbox>();
-        /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
-        /// </summary>
+
+        /// <inheritdoc />
         public bool ContinueOnCapturedContext { get; set; }
 
-        public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider = null)
+        /// <inheritdoc />
+        public IAmABrighterTracer Tracer { private get; set; }
+
+        public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration)
         {
             _configuration = configuration;
-            _connectionProvider = connectionProvider;
             ContinueOnCapturedContext = false;
         }
 
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public void Add<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
             var connection = GetConnection(); 
@@ -86,7 +82,8 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
         }
 
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public T Get<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
             var parameters = new[]
@@ -98,7 +95,8 @@ namespace Paramore.Brighter.Inbox.Postgres
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
         }
 
-        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public bool Exists<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
             var parameters = new[]
@@ -110,7 +108,8 @@ namespace Paramore.Brighter.Inbox.Postgres
             return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds, parameters);
         }
 
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc />
+        public async Task AddAsync<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
@@ -139,7 +138,8 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
         }
 
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc />
+        public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
@@ -159,7 +159,8 @@ namespace Paramore.Brighter.Inbox.Postgres
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc />
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
@@ -186,16 +187,6 @@ namespace Paramore.Brighter.Inbox.Postgres
         {
             var connection = new NpgsqlConnection(_configuration.ConnectionString);
             connection.Open();
-            return connection;
-        }
-
-        private async Task<DbConnection> GetOpenConnectionAsync(IAmARelationalDbConnectionProvider connectionProvider, CancellationToken cancellationToken = default)
-        {
-            DbConnection connection = await connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
             return connection;
         }
 

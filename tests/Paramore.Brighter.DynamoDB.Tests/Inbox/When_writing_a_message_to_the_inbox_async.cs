@@ -19,13 +19,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
-            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
+            _dynamoDbInbox.Add(_raisedCommand, _contextKey, null);
         }
 
         [Fact]
         public async Task When_writing_a_message_to_the_inbox()
         {
-            _storedCommand = await _dynamoDbInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+            _storedCommand = await _dynamoDbInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
 
             //Should read the command from the dynamo_db inbox
             Assert.NotNull(_storedCommand);

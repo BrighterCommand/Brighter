@@ -144,7 +144,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         var events = clearActivity.Events.ToList();
         var messages = _internalBus.Stream(new RoutingKey(_topic)).ToArray();
         
-        var depositEvents = events.Where(e => e.Name == OutboxDbOperation.OutStandingMessages.ToSpanName()).ToArray();
+        var depositEvents = events.Where(e => e.Name == BoxDbOperation.OutStandingMessages.ToSpanName()).ToArray();
         Assert.Equal(messages.Length, depositEvents.Length);
         
         foreach (var message in messages)
@@ -163,12 +163,12 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         //there should be a span in the Db for retrieving the message
         var outBoxActivity = _exportedActivities
             .Single(a =>
-                a.DisplayName == $"{OutboxDbOperation.OutStandingMessages.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}"
+                a.DisplayName == $"{BoxDbOperation.OutStandingMessages.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}"
             );
-        Assert.True(outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.OutStandingMessages.ToSpanName()));
+        Assert.True(outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.OutStandingMessages.ToSpanName()));
         Assert.True(outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable));
         Assert.True(outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()));
-        Assert.True(outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName));
+        Assert.True(outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName));
 
         //there should be a span for publishing the message via the producer
         var producerActivity = _exportedActivities

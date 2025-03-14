@@ -33,6 +33,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.Sqlite
 {
@@ -46,6 +47,9 @@ namespace Paramore.Brighter.Inbox.Sqlite
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
 
+        /// <inheritdoc/>
+        public IAmABrighterTracer Tracer { private get; set; }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="SqliteInbox" /> class.
         /// </summary>
@@ -56,7 +60,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
             ContinueOnCapturedContext = false;
         }
 
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public void Add<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
@@ -86,7 +91,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
                    sqlException.SqliteErrorCode == SqliteUniqueKeyError;
         }
 
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public T Get<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"select * from {this.OutboxTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
@@ -98,15 +104,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
         }
 
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public bool Exists<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT CommandId FROM {OutboxTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
             var parameters = new[]
@@ -119,16 +118,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 parameters);
         }
 
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the Inbox
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey"></param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc />
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT CommandId FROM {OutboxTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
@@ -151,7 +142,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        /// <inheritdoc />
+        public async Task AddAsync<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
@@ -173,7 +165,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
             }
         }
 
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc />
+        public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"select * from {OutboxTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
@@ -196,14 +189,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
-        /// </summary>
+        /// <inheritdoc/>
         public bool ContinueOnCapturedContext { get; set; }
 
         public IAmARelationalDatabaseConfiguration Configuration { get; }

@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             firstHandler.Handle(myCommmand);
 
             //assert
-            var exists = _inbox.Exists<MyCommand>(myCommmand.Id, CONTEXT_KEY, 500);
+            var exists = _inbox.Exists<MyCommand>(myCommmand.Id, CONTEXT_KEY, null, 500);
             Assert.True(exists);
         }
 

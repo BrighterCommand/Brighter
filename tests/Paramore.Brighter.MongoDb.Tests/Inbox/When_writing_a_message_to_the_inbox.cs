@@ -47,13 +47,13 @@ public class MongoDbInboxAddMessageTests : IDisposable
 
         _raisedCommand = new MyCommand { Value = "Test" };
         _contextKey = "context-key";
-        _inbox.Add(_raisedCommand, _contextKey);
+        _inbox.Add(_raisedCommand, _contextKey, null);
     }
 
     [Fact]
     public void When_Writing_A_Message_To_The_Inbox()
     {
-        var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
+        var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null);
 
         //_should_read_the_command_from_the__sql_inbox
         Assert.NotNull(storedCommand);
@@ -66,7 +66,7 @@ public class MongoDbInboxAddMessageTests : IDisposable
     [Fact]
     public void When_Reading_A_Message_From_The_Inbox_And_ContextKey_IsNull()
     {
-        var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(_raisedCommand.Id, null));
+        var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(_raisedCommand.Id, null, null));
         //should_not_read_message
         Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }

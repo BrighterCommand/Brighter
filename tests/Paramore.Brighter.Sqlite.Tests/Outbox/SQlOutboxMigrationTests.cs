@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutbox  = new SqliteOutbox(new RelationalDatabaseConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.OutboxTableName));
+            _sqlOutbox  = new SqliteOutbox(new RelationalDatabaseConfiguration(_sqliteTestHelper.ConnectionString, outBoxTableName: _sqliteTestHelper.OutboxTableName));
 
             _message = new Message(new MessageHeader(
                 Guid.NewGuid().ToString(), 

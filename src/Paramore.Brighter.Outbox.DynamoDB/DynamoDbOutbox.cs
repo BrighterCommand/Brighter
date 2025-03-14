@@ -181,7 +181,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 {"db.operation.parameter.message.id", message.Id}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Add, _configuration.TableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Add, _configuration.TableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
@@ -306,7 +306,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CancellationToken cancellationToken = default)
         {
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.DispatchedMessages, _configuration.TableName),
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.DispatchedMessages, _configuration.TableName),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
@@ -384,7 +384,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 {"db.operation.parameter.message.id", messageId}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Get, _configuration.TableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Get, _configuration.TableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
@@ -420,7 +420,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 {"db.operation.parameter.message.id", id}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.MarkDispatched, _configuration.TableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.MarkDispatched, _configuration.TableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
@@ -528,7 +528,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CancellationToken cancellationToken = default)
         {
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.OutStandingMessages, _configuration.TableName),
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.OutStandingMessages, _configuration.TableName),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
@@ -563,7 +563,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 {"db.operation.parameter.message.id", messageId}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Delete, _configuration.TableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Delete, _configuration.TableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 

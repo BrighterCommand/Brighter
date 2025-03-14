@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command);
 
             //should_store_the_command_to_the_inbox
-            Assert.Equal(_command.Value, _inbox.Get<MyCommand>(_command.Id, _contextKey).Value);
+            Assert.Equal(_command.Value, _inbox.Get<MyCommand>(_command.Id, _contextKey, null).Value);
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             Assert.Throws<NotImplementedException>(() => _commandProcessor.Send(new MyCommandToFail { Id = id}));
 
-            Assert.False(_inbox.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName));
+            Assert.False(_inbox.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName, null));
         }
 
         public void Dispose()

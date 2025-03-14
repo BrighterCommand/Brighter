@@ -20,13 +20,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
             _dynamoDbInbox = new DynamoDbInbox(Client, new DynamoDbInboxConfiguration());
 
-            _dynamoDbInbox.Add(_command, _contextKey);
+            _dynamoDbInbox.Add(_command, _contextKey, null);
         }
 
         [Fact]
         public async Task When_checking_a_command_exist()
         {
-            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, _contextKey);
+            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, _contextKey, null);
 
             Assert.True(commandExists);
         }
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         [Fact]
         public async Task When_checking_a_command_exist_for_a_different_context()
         {
-            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, "some other context");
+            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, "some other context", null);
 
             Assert.False(commandExists);
         }
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         [Fact]
         public async Task When_checking_a_command_does_not_exist()
         {
-            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(Guid.NewGuid().ToString(), _contextKey);
+            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(Guid.NewGuid().ToString(), _contextKey, null);
 
             Assert.False(commandExists);
         }

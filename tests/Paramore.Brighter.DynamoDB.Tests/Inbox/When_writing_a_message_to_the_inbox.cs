@@ -43,13 +43,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
             _raisedCommand = new MyCommand {Value = "Test"};
             _contextKey = "context-key";
-            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
+            _dynamoDbInbox.Add(_raisedCommand, _contextKey, null);
         }
 
         [Fact]
         public void When_writing_a_message_to_the_inbox()
         {
-            _storedCommand = _dynamoDbInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
+            _storedCommand = _dynamoDbInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null);
 
             //_should_read_the_command_from_the__dynamo_db_inbox
             Assert.NotNull(_storedCommand);
