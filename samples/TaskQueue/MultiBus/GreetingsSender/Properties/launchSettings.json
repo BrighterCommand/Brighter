@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GreetingsSender": {
+      "commandName": "Project",
+      "commandLineArgs": "--bootstrap-server localhost:9092"
+    }
+  }
+}
