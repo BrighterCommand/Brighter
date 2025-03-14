@@ -62,14 +62,13 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         for (int i = 0; i < 10; i++)
         {
             var msgId = Guid.NewGuid().ToString();
-
+            sentMessages.Add(msgId, false);
             await producerAsync.SendAsync(
                 new Message(
                     new MessageHeader(msgId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
                     new MessageBody($"test content [{_queueName}]")
                 )
             );
-            sentMessages.Add(msgId, false);
         }
 
         //We should not need to flush, as the async does not queue work  - but in case this changes

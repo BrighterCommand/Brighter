@@ -1,7 +1,7 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,23 +23,16 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
+namespace Paramore.Brighter.MessagingGateway.MQTT;
 
-namespace Paramore.Brighter.MessagingGateway.Kafka;
-
-public static class BrighterDefinedHeaders
+public static class HeaderNames
 {
-    public static readonly HashSet<string> HeadersToReset =
-    [
-        HeaderNames.MESSAGE_ID,
-        HeaderNames.MESSAGE_TYPE,
-        HeaderNames.TOPIC,
-        HeaderNames.CORRELATION_ID,
-        HeaderNames.TIMESTAMP,
-        HeaderNames.PARTITIONKEY,
-        HeaderNames.CONTENT_TYPE,
-        HeaderNames.REPLY_TO,
-        HeaderNames.DELAYED_MILLISECONDS,
-        HeaderNames.HANDLED_COUNT,
-    ];
+    public const string Id = "id";
+    public const string Type = "type";
+    public const string SpecVersion = "specversion";
+    public const string Source = "souce";
+    public const string Subject = "souce";
+    public const string Time = "time";
+    public const string DataContentType = "datacontenttype";
+    public const string DataSchema = "dataschema";
 }

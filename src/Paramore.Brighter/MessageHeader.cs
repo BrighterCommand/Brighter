@@ -74,6 +74,21 @@ namespace Paramore.Brighter
     public class MessageHeader : IEquatable<MessageHeader>
     {
         /// <summary>
+        /// The default Brighter SpecVersion
+        /// </summary>
+        public const string DefaultSpecVersion = "1.0";
+
+        /// <summary>
+        /// The default Brighter type
+        /// </summary>
+        public const string DefaultType = "goparamore.io.Paramore.Brighter.Message";
+
+        /// <summary>
+        /// The default Brighter source
+        /// </summary>
+        public const string DefaultSource = "http://goparamore.io";
+            
+        /// <summary>
         /// A property bag that can be used for extended header attributes.
         /// Use camelCase for the key names if you intend to read it yourself, as when converted to and from Json serializers will tend convert the property
         /// name from UpperCase to camelCase
@@ -178,7 +193,7 @@ namespace Paramore.Brighter
         /// The version of the CloudEvents specification which the event uses. This enables the interpretation of the context.
         /// Defaults tp 1.0
         /// </summary>
-        public string SpecVersion { get; set; } = "1.0";
+        public string SpecVersion { get; set; } = DefaultSpecVersion;
         
         /// <summary>
         /// REQUIRED
@@ -189,7 +204,7 @@ namespace Paramore.Brighter
         /// Producers MUST ensure that source + id is unique for each distinct event.
         /// Default: "http://goparamore.io" for backward compatibility as required
         /// </summary>
-        public Uri Source { get; set; } = new Uri("http://goparamore.io");
+        public Uri Source { get; set; } = new Uri(DefaultSource);
 
         /// <summary>
         /// REQUIRED for sending. OPTIONAL for receiving
@@ -197,7 +212,7 @@ namespace Paramore.Brighter
         /// used internally when we send the message to its destination
         /// </summary>
         /// <value>The topic.</value>
-        public RoutingKey Topic { get; init; } = new RoutingKey(string.Empty);
+        public RoutingKey Topic { get; init; } = RoutingKey.Empty;
 
         /// <summary>
         /// REQUIRED
@@ -238,7 +253,7 @@ namespace Paramore.Brighter
         /// SHOULD be prefixed with a reverse-DNS name. The prefixed domain dictates the organization which defines the semantics of this event type.
         /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
         /// </summary>
-        public string Type { get; set; } = "goparamore.io.Paramore.Brighter.Message";
+        public string Type { get; set; } = DefaultType;
 
         /// <summary>
         /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'

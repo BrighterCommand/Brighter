@@ -77,11 +77,11 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// [0] - an integer representing the size of the threshold to convert to a string in Kb i.e. 5 would be 5Kb
         /// </summary>
         /// <param name="initializerList">The initialization for a claim check</param>
-        public void InitializeWrapFromAttributeParams(params object[] initializerList)
+        public void InitializeWrapFromAttributeParams(params object?[] initializerList)
         {
             if (initializerList.Length != 1) throw new ArgumentException("Missing parameter for threshold size", "initializerList");
 
-            _thresholdInBytes = (int)initializerList[0] * 1024;
+            _thresholdInBytes = (int)initializerList[0]! * 1024;
         }
 
         /// <summary>
@@ -89,11 +89,11 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// [0] -a bool, true if we should keep the message contents in storage, false if we should delete it
         /// </summary>
         /// <param name="initializerList"></param>
-        public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
+        public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
         {
             if (initializerList.Length != 1) throw new ArgumentException("Missing parameter for luggage retention", "initializerList");
 
-            _retainLuggage = (bool)initializerList[0];
+            _retainLuggage = (bool)initializerList[0]!;
         }
 
         /// <summary>

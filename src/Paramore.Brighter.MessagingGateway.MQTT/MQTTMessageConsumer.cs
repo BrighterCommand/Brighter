@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
@@ -55,13 +56,46 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             //This is slated for post V10, for now, we just want to upgrade this support the V10 release
             _mqttClient = new MqttClientFactory().CreateMqttClient();
 
-            _mqttClient.ApplicationMessageReceivedAsync += new (e =>
+            _mqttClient.ApplicationMessageReceivedAsync += e =>
             {
                 s_logger.LogInformation("MQTTMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
-                string message = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
-                _messageQueue.Enqueue(JsonSerializer.Deserialize<Message>(message, JsonSerialisationOptions.Options));
+                var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.Payload.ToArray(), JsonSerialisationOptions.Options);
+                foreach (MqttUserProperty property in e.ApplicationMessage.UserProperties)
+                {
+                    if (property.Name == HeaderNames.Type)
+                    {
+                        message.Header.Type = property.Value;
+                    }
+                    else if (property.Name == HeaderNames.SpecVersion)
+                    {
+                        message.Header.SpecVersion = property.Value;
+                    }
+                    else if (property.Name == HeaderNames.Source)
+                    {
+                        if (Uri.TryCreate(property.Value, UriKind.RelativeOrAbsolute, out var source))
+                        {
+                            message.Header.Source = source;
+                        }
+                    }
+                    else if (property.Name == HeaderNames.Subject)
+                    {
+                        message.Header.Subject = property.Value;
+                    }
+                    else if (property.Name == HeaderNames.DataContentType)
+                    {
+                        message.Header.ContentType = property.Value;
+                    }
+                    else if (property.Name == HeaderNames.DataSchema)
+                    {
+                        if (Uri.TryCreate(property.Value, UriKind.RelativeOrAbsolute, out var dataSchema))
+                        {
+                            message.Header.DataSchema = dataSchema;
+                        }
+                    }
+                }
+                _messageQueue.Enqueue(message);
                 return Task.CompletedTask;
-            });
+            };
 
             Task connectTask = Connect(configuration.ConnectionAttempts);
             connectTask

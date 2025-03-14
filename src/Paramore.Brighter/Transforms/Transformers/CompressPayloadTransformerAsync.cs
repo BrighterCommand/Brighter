@@ -66,11 +66,11 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Used to pass the compression algorithm to the transformer and the size over which to compress
         /// </summary>
         /// <param name="initializerList"></param>
-        public void InitializeWrapFromAttributeParams(params object[] initializerList)
+        public void InitializeWrapFromAttributeParams(params object?[] initializerList)
         {
-            _compressionMethod = (CompressionMethod)initializerList[0];
-            _compressionLevel = (CompressionLevel)initializerList[1];
-            _thresholdInBytes = (int)initializerList[2] * 1024;
+            _compressionMethod = (CompressionMethod)initializerList[0]!;
+            _compressionLevel = (CompressionLevel)initializerList[1]!;
+            _thresholdInBytes = (int)initializerList[2]! * 1024;
 
         }
 
@@ -79,9 +79,9 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Used to pass the decompression algorithm to the transformer 
         /// </summary>
         /// <param name="initializerList"></param>
-        public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
+        public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
         {
-            _compressionMethod = (CompressionMethod)initializerList[0];
+            _compressionMethod = (CompressionMethod)initializerList[0]!;
         }
 
         /// <summary>
