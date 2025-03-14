@@ -39,7 +39,10 @@ namespace CompetingSender
                 .ConfigureServices((hostContext, services) =>
                 {
                     //create the gateway
-                    var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
+                    var messagingConfiguration = new RelationalDatabaseConfiguration(
+                        @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+                        databaseName: "BrighterSqlQueue",
+                        queueStoreTable: "QueueData");
 
                     var producerRegistry = new MsSqlProducerRegistryFactory(
                             messagingConfiguration,

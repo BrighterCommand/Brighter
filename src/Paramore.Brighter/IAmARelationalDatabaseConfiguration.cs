@@ -14,6 +14,12 @@
         string ConnectionString { get; }
 
         /// <summary>
+        /// Gets the name of the database containing the tables.
+        /// </summary>
+        /// <value>The name of the database.</value>
+        string DatabaseName { get; }
+
+        /// <summary>
         /// Gets the name of the inbox table.
         /// </summary>
         /// <value>The name of the inbox table.</value>
