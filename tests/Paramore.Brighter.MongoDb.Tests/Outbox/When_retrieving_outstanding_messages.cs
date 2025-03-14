@@ -1,5 +1,5 @@
 ﻿using System;
-using FluentAssertions;
+using System.Linq;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
@@ -48,10 +48,10 @@ public class MongoDbFetchOutStandingMessageTests : IDisposable
         var messagesOver4Hours = _outbox.OutstandingMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        total.Should().Be(2);
-        allUnDispatched.Should().HaveCount(2);
-        messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
+        Assert.Equal(2, total);
+        Assert.Equal(2, allUnDispatched.Count());
+        Assert.Single(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
     
     public void Dispose()

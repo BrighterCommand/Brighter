@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
@@ -74,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command);
 
             //should_store_the_command_to_the_inbox
-            _inbox.Get<MyCommand>(_command.Id, _contextKey).Value.Should().Be(_command.Value);
+            Assert.Equal(_command.Value, _inbox.Get<MyCommand>(_command.Id, _contextKey, null).Value);
         }
 
         [Fact]
@@ -84,7 +83,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             Assert.Throws<NotImplementedException>(() => _commandProcessor.Send(new MyCommandToFail { Id = id}));
 
-            _inbox.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName).Should().BeFalse();
+            Assert.False(_inbox.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName, null));
         }
 
         public void Dispose()

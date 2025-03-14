@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -40,8 +39,7 @@ public class RmqMessageProducerSendMessageTests : IDisposable
     public RmqMessageProducerSendMessageTests()
     {
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND, contentType: "text/plain"),  
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -68,7 +66,7 @@ public class RmqMessageProducerSendMessageTests : IDisposable
 
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
 
-        result.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, result.Body.Value);
     }
 
     public void Dispose()

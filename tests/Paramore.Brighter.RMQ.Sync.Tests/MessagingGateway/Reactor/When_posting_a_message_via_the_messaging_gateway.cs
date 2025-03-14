@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Tests.MessagingGateway;
 using Xunit;
@@ -66,7 +65,7 @@ public class RmqMessageProducerSendMessageTests : IDisposable
 
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
 
-        result.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, result.Body.Value);
     }
 
     public void Dispose()

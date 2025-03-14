@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
@@ -48,28 +47,25 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
             _sqlInbox = new MsSqlInbox(_msSqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
-            _sqlInbox.Add(_raisedCommand, _contextKey);
+            _sqlInbox.Add(_raisedCommand, _contextKey, null);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Inbox()
         {
-            _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
+            _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null);
 
-            //_should_read_the_command_from_the__sql_inbox
-            AssertionExtensions.Should(_storedCommand).NotBeNull();
-            //_should_read_the_command_value
-            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
-            //_should_read_the_command_id
-            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
+            Assert.NotNull(_storedCommand);
+            Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
+            Assert.Equal(_raisedCommand.Id, _storedCommand.Id);
         }
 
         [Fact]
         public void When_Reading_A_Message_From_The_Inbox_And_ContextKey_IsNull()
         {
-            var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, null));
+            var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, null, null));
             //should_not_read_message
-            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
 

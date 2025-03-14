@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -107,12 +106,12 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
     {
         var exception = await Catch.ExceptionAsync(() =>
             _commandProcessor.SendAsync(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
 
         exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(TimeSpan.FromMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
     }
 
     [Fact]
@@ -120,23 +119,23 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
     {
         var exception = await Catch.ExceptionAsync(() =>
             _commandProcessor.PublishAsync(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
 
         exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(TimeSpan.FromMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
     }
     
     [Fact]
     public async Task When_Scheduling_Post_With_Invalid_Parameter()
     {
         var exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
 
         exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(TimeSpan.FromMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
     }
 }

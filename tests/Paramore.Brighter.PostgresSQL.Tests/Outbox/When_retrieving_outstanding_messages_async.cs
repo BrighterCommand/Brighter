@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -44,17 +44,17 @@ public class PostgresSqlFetchOutStandingMessageAsyncTests : IDisposable
         await _sqlOutbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
         await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id, context);
         
-        var total = await _sqlOutbox.GetNumberOfOutstandingMessagesAsync();
+        var total = await _sqlOutbox.GetNumberOfOutstandingMessagesAsync(null);
 
         var allUnDispatched = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
         var messagesOverAnHour = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.FromHours(1), context);
         var messagesOver4Hours = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.FromHours(4), context);
 
         //Assert
-        total.Should().Be(2);
-        allUnDispatched.Should().HaveCount(2);
-        messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
+        Assert.Equal(2, total);
+        Assert.Equal(2, allUnDispatched.Count());
+        Assert.Single(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
 
     public void Dispose()

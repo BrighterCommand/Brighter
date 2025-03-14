@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
@@ -24,22 +23,21 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             //Arrange
             var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
-
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
             var routingKey = new RoutingKey(MyTopic);
-            
+
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { 
+                {
                     routingKey, new InMemoryProducer(internalBus, timeProvider)
                     {
                         Publication =
                         {
-                            RequestType = typeof(MyEvent), 
+                            RequestType = typeof(MyEvent),
                             Topic = routingKey
                         }
                     }
@@ -50,9 +48,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
             );
-            
+
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
+
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
@@ -61,8 +59,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 outbox
-            ); 
-            
+            );
+
             CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
@@ -71,14 +69,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 mediator,
                 new InMemorySchedulerFactory());
 
-
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var events = new[]
             {
                 new MyEvent{Value = "one"}, new MyEvent{Value = "two"}, new MyEvent{Value = "three"}
             };
-            
+
             foreach (var e in events)
             {
                 commandProcessor.Post(e);
@@ -92,8 +89,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            internalBus.Stream(routingKey).Count().Should().Be(3);
-            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(0);
+            Assert.Equal(3, internalBus.Stream(routingKey).Count());
+            Assert.Empty(await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext()));
         }
 
         [Fact]
@@ -103,24 +100,24 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
             var timeProvider = new FakeTimeProvider();
-            
+
             var tracer = new BrighterTracer(timeProvider);
             var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
             var routingKey = new RoutingKey(MyTopic);
-            
+
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { 
+                {
                     routingKey, new InMemoryProducer(internalBus, timeProvider)
                     {
                         Publication =
                         {
-                            RequestType = typeof(MyEvent), 
+                            RequestType = typeof(MyEvent),
                             Topic = routingKey
                         }
-                    } 
+                    }
                 }
             });
 
@@ -128,9 +125,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
             );
-            
-            mapperRegistry.Register<MyEvent, MyEventMessageMapper>();            
-            
+
+            mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
@@ -139,8 +136,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 outbox
-            ); 
-            
+            );
+
             CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
@@ -155,7 +152,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             {
                 new MyEvent{Value = "one"}, new MyEvent{Value = "two"}, new MyEvent{Value = "three"}
             };
-            
+
             foreach (var e in events)
             {
                 commandProcessor.Post(e);
@@ -169,8 +166,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            internalBus.Stream(routingKey).Count().Should().Be(3);
-            (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())).Count().Should().Be(0);
+            Assert.Equal(3, internalBus.Stream(routingKey).Count());
+            Assert.Empty((await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())));
         }
 
         [Fact]
@@ -185,26 +182,26 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
             var routingKey = new RoutingKey(MyTopic);
-            
+
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { 
+                {
                     routingKey, new InMemoryProducer(internalBus, timeProvider)
                     {
                         Publication =
                         {
-                            RequestType = typeof(MyEvent), 
+                            RequestType = typeof(MyEvent),
                             Topic = routingKey
-                        } 
-                    } 
+                        }
+                    }
                 }
             });
-            
+
             var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
             );
-            
+
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
@@ -215,8 +212,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 outbox
-            ); 
-            
+            );
+
             CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
@@ -226,35 +223,35 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new InMemorySchedulerFactory());
             
             var sweeper = new OutboxSweeper(
-                timeSinceSent, 
-                mediator, 
+                timeSinceSent,
+                mediator,
                 new InMemoryRequestContextFactory());
 
             var oldEvent = new MyEvent{Value = "old"};
             commandProcessor.DepositPost(oldEvent);
-            
-            //delay so the previous message is old enough to sweep 
-            timeProvider.Advance(timeSinceSent); 
+
+            //delay so the previous message is old enough to sweep
+            timeProvider.Advance(timeSinceSent);
 
             var events = new[]
             {
                 new MyEvent{Value = "one"}, new MyEvent{Value = "two"}, new MyEvent{Value = "three"}
             };
-            
+
             foreach (var e in events)
             {
                 commandProcessor.DepositPost(e);
             }
 
             //Act
-            
+
             await sweeper.SweepAsync();
 
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            internalBus.Stream(routingKey).Count().Should().Be(1);
-            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(3);
+            Assert.Single(internalBus.Stream(routingKey));
+            Assert.Equal(3, outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count());
         }
 
         [Fact]
@@ -264,32 +261,32 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
             var timeProvider = new FakeTimeProvider();
-            
+
             var tracer = new BrighterTracer(timeProvider);
             var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
             var routingKey = new RoutingKey(MyTopic);
-            
+
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { 
+                {
                     routingKey, new InMemoryProducer(internalBus, timeProvider)
                     {
                         Publication =
                         {
-                            RequestType = typeof(MyEvent), 
+                            RequestType = typeof(MyEvent),
                             Topic = routingKey
                         }
-                    } 
+                    }
                 }
             });
-            
+
             var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
             );
-            
+
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
@@ -300,8 +297,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 outbox
-            ); 
-            
+            );
+
             CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
@@ -316,13 +313,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             commandProcessor.DepositPost(oldEvent);
 
             //-- allow the messages to be old enough to sweep
-            timeProvider.Advance(timeSinceSent); 
+            timeProvider.Advance(timeSinceSent);
 
             var events = new[]
             {
                 new MyEvent{Value = "one"}, new MyEvent{Value = "two"}, new MyEvent{Value = "three"}
             };
-            
+
             foreach (var e in events)
             {
                 commandProcessor.DepositPost(e);
@@ -334,8 +331,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            internalBus.Stream(routingKey).Count().Should().Be(1);
-            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(3);
+            Assert.Single(internalBus.Stream(routingKey));
+            Assert.Equal(3, (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())).Count());
         }
     }
 }
