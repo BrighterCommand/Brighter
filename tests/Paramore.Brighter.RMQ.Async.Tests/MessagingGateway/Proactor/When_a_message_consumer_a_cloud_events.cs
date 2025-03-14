@@ -32,7 +32,7 @@ public class RMQBufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
     }
 
     [Fact]
-    public async Task When_a_message_consumer_a_cloud_events_async()
+    public async Task When_uses_cloud_events_async()
     {
         //Post one more than batch size messages
         var messageOne = new Message(
