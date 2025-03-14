@@ -41,7 +41,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             sqsType: SnsSqsType.Fifo,
             contentBasedDeduplication: true,
             deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: 1,
+            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId,
             channelType: ChannelType.PointToPoint
         ));
 
