@@ -13,6 +13,10 @@
     <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
     <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
     <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj"/>
+    <ProjectReference Include="..\WebAPI_EFCore.ServiceDefaults\WebAPI_EFCore.ServiceDefaults.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Aspire.MySqlConnector" />
+  </ItemGroup>
 </Project>

@@ -4,6 +4,8 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Aspire.Hosting.Orchestration.osx-arm64" Version="9.1.0" />
+    <PackageVersion Include="Aspire.MySqlConnector" Version="9.1.0" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.407.23, 4)" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.406.11, 4)" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400, 4)" />
