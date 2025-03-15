@@ -2,6 +2,7 @@
 using System.IO;
 using Confluent.SchemaRegistry;
 using DbMaker;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,11 +18,18 @@ using SalutationApp.Policies;
 using SalutationApp.Requests;
 using TransportMaker;
 
-var host = CreateHostBuilder(args).Build();
-host.CheckDbIsUp(ApplicationType.Greetings);
-host.MigrateDatabase();
-host.CreateInbox();
-host.CreateOutbox(ApplicationType.Greetings, HasBinaryMessagePayload());
+
+//var builder = CreateHostBuilder(args);
+
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.AddMySqlDataSource(connectionName: "greetings");
+builder.AddServiceDefaults();
+var host = builder.Build();
+// host.CheckDbIsUp(ApplicationType.Greetings);
+// host.MigrateDatabase();
+// host.CreateInbox();
+// host.CreateOutbox(ApplicationType.Greetings, HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -34,30 +42,30 @@ static void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTranspo
     services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 }
 
-static IHostBuilder CreateHostBuilder(string[] args) =>
-    Host.CreateDefaultBuilder(args)
-        .ConfigureHostConfiguration(configurationBuilder =>
-        {
-            configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
-            configurationBuilder.AddJsonFile("appsettings.json", optional: true);
-            configurationBuilder.AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
-            configurationBuilder
-                .AddEnvironmentVariables(
-                    prefix: "ASPNETCORE_"); //NOTE: Although not web, we use this to grab the environment
-            configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
-            configurationBuilder.AddCommandLine(args);
-        })
-        .ConfigureLogging((_, builder) =>
-        {
-            builder.AddConsole();
-            builder.AddDebug();
-        })
-        .ConfigureServices((hostContext, services) =>
-        {
-            ConfigureEFCore(hostContext, services);
-            ConfigureBrighter(hostContext, services);
-        })
-        .UseConsoleLifetime();
+// static IHostBuilder CreateHostBuilder(string[] args) =>
+//     Host.CreateDefaultBuilder(args)
+//         .ConfigureHostConfiguration(configurationBuilder =>
+//         {
+//             configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
+//             configurationBuilder.AddJsonFile("appsettings.json", optional: true);
+//             configurationBuilder.AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
+//             configurationBuilder
+//                 .AddEnvironmentVariables(
+//                     prefix: "ASPNETCORE_"); //NOTE: Although not web, we use this to grab the environment
+//             configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
+//             configurationBuilder.AddCommandLine(args);
+//         })
+//         .ConfigureLogging((_, builder) =>
+//         {
+//             builder.AddConsole();
+//             builder.AddDebug();
+//         })
+//         .ConfigureServices((hostContext, services) =>
+//         {
+//             ConfigureEFCore(hostContext, services);
+//             ConfigureBrighter(hostContext, services);
+//         })
+//         .UseConsoleLifetime();
 
 static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
 {

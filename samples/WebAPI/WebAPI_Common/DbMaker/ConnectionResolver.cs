@@ -32,7 +32,7 @@ public static class ConnectionResolver
         Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
         string? connectionString = rdbms switch
         {
-            Rdbms.MySql => configuration.GetConnectionString("MySqlDb"),
+            Rdbms.MySql => configuration.GetConnectionString("Greetings"),
             Rdbms.MsSql => configuration.GetConnectionString("MsSqlDb"),
             Rdbms.Postgres => configuration.GetConnectionString("PostgreSqlDb"),
             Rdbms.Sqlite => configuration.GetConnectionString(applicationType == ApplicationType.Greetings ? "GreetingsSqlite" : "SalutationsSqlite"), 
@@ -69,14 +69,19 @@ public static class ConnectionResolver
     
     private static string? GreetingsDbConnectionString(IConfiguration configuration, Rdbms rdbms)
     {
-        return rdbms switch
+        switch (rdbms)
         {
-            Rdbms.MySql => configuration.GetConnectionString("GreetingsMySql"),
-            Rdbms.MsSql => configuration.GetConnectionString("GreetingsMsSql"),
-            Rdbms.Postgres => configuration.GetConnectionString("GreetingsPostgreSql"),
-            Rdbms.Sqlite => configuration.GetConnectionString("GreetingsSqlite"), 
-            _ => throw new InvalidOperationException("Could not determine the database type")
-        };
+            case Rdbms.MySql:
+                return configuration.GetConnectionString("Greetings");
+            case Rdbms.MsSql:
+                return configuration.GetConnectionString("GreetingsMsSql");
+            case Rdbms.Postgres:
+                return configuration.GetConnectionString("GreetingsPostgreSql");
+            case Rdbms.Sqlite:
+                return configuration.GetConnectionString("GreetingsSqlite");
+            default:
+                throw new InvalidOperationException("Could not determine the database type");
+        }
     }
 
     private static string? GetSalutationsDbConnectionString(IConfiguration config, Rdbms rdbms)

@@ -1,12 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
 
     <ItemGroup>
+    <PackageReference Include="Aspire.MySqlConnector" />
         <PackageReference Include="Paramore.Darker.AspNetCore" />
-        <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     </ItemGroup>
 
@@ -20,31 +23,7 @@
       <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
       <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
       <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Compile Remove="out\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <EmbeddedResource Remove="out\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Remove="out\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Content Remove="out\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <_ContentIncludedByDefault Remove="out\web.config" />
-      <_ContentIncludedByDefault Remove="out\appsettings.Development.json" />
-      <_ContentIncludedByDefault Remove="out\appsettings.json" />
-      <_ContentIncludedByDefault Remove="out\appsettings.Production.json" />
-      <_ContentIncludedByDefault Remove="out\GreetingsAdapters.deps.json" />
-      <_ContentIncludedByDefault Remove="out\GreetingsAdapters.runtimeconfig.json" />
+    <ProjectReference Include="..\WebAPI_EFCore.ServiceDefaults\WebAPI_EFCore.ServiceDefaults.csproj" />
     </ItemGroup>
 
 </Project>

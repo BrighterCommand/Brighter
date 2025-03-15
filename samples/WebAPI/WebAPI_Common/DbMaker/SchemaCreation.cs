@@ -35,14 +35,19 @@ public static class SchemaCreation
         IConfiguration? config = services.GetService<IConfiguration>();
         if (config == null)
             throw new InvalidOperationException("Could not resolve IConfiguration");
+        CheckDbIsUp(applicationType, config);
+
+        return webHost;
+    }
+
+    public static void CheckDbIsUp(ApplicationType applicationType, IConfiguration config)
+    {
         (Rdbms dbType, string? connectionString) = ConnectionResolver.ServerConnectionString(config, applicationType);
         if (connectionString == null)
             throw new InvalidOperationException("Could not resolve connection string; did you set a DbType?");
 
         WaitToConnect(dbType, connectionString);
-        CreateDatabaseIfNotExists(dbType, DbConnectionFactory.GetConnection(dbType, connectionString));
-
-        return webHost;
+        CreateDatabaseIfNotExists(dbType, DbConnectionFactory.GetServerConnection(dbType, connectionString));
     }
 
     public static IHost CreateInbox(this IHost host)
@@ -77,6 +82,13 @@ public static class SchemaCreation
         using IServiceScope scope = webHost.Services.CreateScope();
         IServiceProvider services = scope.ServiceProvider;
 
+        MigrateDatabase(services);
+
+        return webHost;
+    }
+
+    public static void MigrateDatabase(IServiceProvider services)
+    {
         try
         {
             IMigrationRunner runner = services.GetRequiredService<IMigrationRunner>();
@@ -89,14 +101,14 @@ public static class SchemaCreation
             logger.LogError(ex, "An error occurred while migrating the database");
             throw;
         }
-
-        return webHost;
     }
 
-    private static void CreateDatabaseIfNotExists(Rdbms rdbms, DbConnection conn)
+    public static void CreateDatabaseIfNotExists(Rdbms rdbms, DbConnection conn)
     {
         CreateGreetingsIfNotExists(rdbms, conn);
         CreateSalutationsIfNotExists(rdbms, conn);
+        
+        conn.Dispose();
     }
 
     private static void CreateGreetingsIfNotExists(Rdbms rdbms, DbConnection conn)
@@ -106,7 +118,7 @@ public static class SchemaCreation
             return;
         
         //The migration does not create the Db, so we need to create it sot that it will add it
-        conn.Open();
+        if(conn.State != ConnectionState.Open) conn.Open();
         using DbCommand command = conn.CreateCommand();
 
         command.CommandText = rdbms switch
@@ -143,7 +155,7 @@ public static class SchemaCreation
             return;
         
         //The migration does not create the Db, so we need to create it sot that it will add it
-        conn.Open();
+        if(conn.State != ConnectionState.Open) conn.Open();
         using DbCommand command = conn.CreateCommand();
 
         command.CommandText = rdbms switch
@@ -280,13 +292,12 @@ public static class SchemaCreation
 
         if (exists) return;
 
-
         using NpgsqlCommand command = sqlConnection.CreateCommand();
         command.CommandText = PostgreSqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
         command.ExecuteScalar();
     }
 
-    private static void CreateOutbox(IConfiguration config, bool hasBinaryPayload, ApplicationType applicationType)
+    public static void CreateOutbox(IConfiguration config, bool hasBinaryPayload, ApplicationType applicationType)
     {
         string? dbType = config[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (dbType == null)
@@ -427,7 +438,7 @@ public static class SchemaCreation
 
         policy.Execute(() =>
         {
-            using DbConnection conn = DbConnectionFactory.GetConnection(db, connectionString);
+            using DbConnection conn = DbConnectionFactory.GetServerConnection(db, connectionString);
             conn.Open();
         });
     }

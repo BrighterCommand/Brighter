@@ -28,7 +28,7 @@ The assemblies migrations: **Greetings_MySqlMigrations** and **Greetings_SqliteM
 
 This listens for a GreetingMade message and stores it. It demonstrates listening to a queue. It also demonstrates the use of scopes provided by Brighter's ServiceActivator. These support writing to an Outbox when this component raises a message in turn.
 
-We follow a _ports and adapters_ architectural style, dividing the app into the following modules:
+We follow a _ports and adapters_ architectural style, dividing the app into the following mod§ules:
 
 * **SalutationAnalytics**: The adapters' module, handles the primary adapter of HTTP requests and responses to the app
 
