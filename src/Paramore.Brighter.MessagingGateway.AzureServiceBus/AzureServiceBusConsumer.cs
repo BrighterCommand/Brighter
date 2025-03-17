@@ -349,7 +349,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
                 {
                     dataSchema = tmp;
                 }
-
+                
                 body = cloudEvents.Data!.ToArray();
             }
             else
@@ -357,8 +357,9 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
                 body = azureServiceBusMessage.MessageBodyValue!;
             }
         }
-        catch (Exception)
+        catch (ArgumentException) 
         {
+            // Case it wasn't send using cloud event we are going to get ArgumentException 
             body = azureServiceBusMessage.MessageBodyValue!;
             var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? []);
 
