@@ -36,12 +36,4 @@ public class AzureServiceBusPublication : Publication
     /// Use a Service Bus Queue instead of a Topic
     /// </summary>
     public bool UseServiceBusQueue = false;
-    
-    /// <summary>
-    /// Enable use cloud events
-    /// </summary>
-    /// <remarks>
-    /// When this flag is true, it can break the compatibility with old Brighter version
-    /// </remarks>
-    public bool UseCloudEvents { get; set; }
 }

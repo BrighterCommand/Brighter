@@ -250,38 +250,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
 
     private static ServiceBusMessage ConvertToServiceBusMessage(Message message, AzureServiceBusPublication publication)
     {
-        BinaryData payload;
-        if (publication.UseCloudEvents)
-        {
-            var dataFormat = CloudEventDataFormat.Binary;
-            if (!string.IsNullOrEmpty(message.Header.ContentType) &&
-                (message.Header.ContentType!.StartsWith("application/cloudevents+json") ||
-                 message.Header.ContentType!.StartsWith("application/json")))
-            {
-                dataFormat = CloudEventDataFormat.Json;
-            }
-            
-            var cloudEvent = new CloudEvent(message.Header.Source.ToString(),
-                message.Header.Type,
-                new BinaryData(message.Body.Value),
-                message.Header.ContentType,
-                dataFormat)
-            {
-                Id = message.Header.MessageId,
-                DataSchema = message.Header.DataSchema?.ToString(),
-                Subject = message.Header.Subject,
-                Time = message.Header.TimeStamp,
-                DataContentType = message.Header.ContentType
-            };
-
-            payload = new BinaryData(cloudEvent);
-        }
-        else
-        {
-            payload = new BinaryData(message.Body.Value);
-        }
-
-        var azureServiceBusMessage = new ServiceBusMessage(payload);
+        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Value);
         
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);

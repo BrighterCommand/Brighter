@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Messaging;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -316,81 +315,42 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
                 "Null message body received from topic {Topic} via subscription {ChannelName}",
                 Topic, SubscriptionName);
         }
-        
-        var messageType = GetMessageType(azureServiceBusMessage);
+
+        var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
+            
+        Logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}",
+            Topic, SubscriptionName, messageBody);
+            
+        MessageType messageType = GetMessageType(azureServiceBusMessage);
         var replyAddress = GetReplyAddress(azureServiceBusMessage);
         var handledCount = GetHandledCount(azureServiceBusMessage);
-        var id = azureServiceBusMessage.Id;
-        var contentType = azureServiceBusMessage.ContentType;
-        var source = new Uri(MessageHeader.DefaultSource);
-        var type = MessageHeader.DefaultType;
-        var timestamp = DateTimeOffset.UtcNow;
-        string? subject = null;
-        Uri? dataSchema = null;
-        byte[] body;
-        
-        try
-        {
-            var cloudEvents = CloudEvent.Parse(new BinaryData(azureServiceBusMessage.MessageBodyValue!));
-            if (cloudEvents != null)
-            {
-                id = cloudEvents.Id;
-                type = cloudEvents.Type;
-                subject = cloudEvents.Subject;
-                contentType = cloudEvents.DataContentType;
-                timestamp = cloudEvents.Time ?? DateTimeOffset.UtcNow;
             
-                if (Uri.TryCreate(cloudEvents.Source, UriKind.RelativeOrAbsolute, out var tmp))
-                {
-                    source = tmp;
-                }
-
-                if (Uri.TryCreate(cloudEvents.DataSchema, UriKind.RelativeOrAbsolute, out tmp))
-                {
-                    dataSchema = tmp;
-                }
-                
-                body = cloudEvents.Data!.ToArray();
-            }
-            else
-            {
-                body = azureServiceBusMessage.MessageBodyValue!;
-            }
-        }
-        catch (ArgumentException) 
-        {
-            // Case it wasn't send using cloud event we are going to get ArgumentException 
-            body = azureServiceBusMessage.MessageBodyValue!;
-            var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? []);
-
-            Logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}",
-                Topic, SubscriptionName, messageBody);
-        }
-        
+        //TODO:CLOUD_EVENTS parse from headers
+            
         var headers = new MessageHeader(
-            messageId: id,
-            topic: new RoutingKey(Topic),
-            messageType: messageType,
-            source: source,
-            type: type,
-            timeStamp: timestamp,
+            messageId: azureServiceBusMessage.Id, 
+            topic: new RoutingKey(Topic), 
+            messageType: messageType, 
+            source: null,
+            type: "",
+            timeStamp: DateTime.UtcNow,
             correlationId: azureServiceBusMessage.CorrelationId,
-            replyTo: replyAddress,
-            contentType: contentType!,
-            handledCount: handledCount,
-            dataSchema: dataSchema,
-            subject: subject,
+            replyTo: new RoutingKey(replyAddress),
+            contentType: azureServiceBusMessage.ContentType,
+            handledCount:handledCount, 
+            dataSchema: null,
+            subject: null,
             delayed: TimeSpan.Zero
         );
-        
+
         headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
-        
+            
         foreach (var property in azureServiceBusMessage.ApplicationProperties)
         {
             headers.Bag.Add(property.Key, property.Value);
         }
-        
-        var message = new Message(headers, new MessageBody(body));
+            
+        var message = new Message(headers, new MessageBody(messageBody));
         return message;
     }
 
@@ -403,17 +363,17 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         return Enum.TryParse(property.ToString(), true, out MessageType messageType) ? messageType : MessageType.MT_EVENT;
     }
 
-    private static RoutingKey GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
+    private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey,
                 out object? property))
         {
-            return RoutingKey.Empty;
+            return string.Empty;
         }
 
         var replyAddress = property.ToString();
 
-        return new RoutingKey(replyAddress ?? string.Empty);
+        return replyAddress ?? string.Empty;
     }
 
     private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
