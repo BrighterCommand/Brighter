@@ -86,7 +86,6 @@ namespace GreetingsSender
                 
                 Console.WriteLine($"Sending Event to SNS topic {topic} ");
 
-                //var largeString = "hello world";
                 commandProcessor.Post(new GreetingEvent("Hi Ian"));
                 
                 Console.WriteLine($"Sent Event to SNS topic {topic} ");

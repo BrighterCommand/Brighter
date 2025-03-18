@@ -22,13 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.IO.Compression;
 using System.Text.Json;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
-using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Transforms.Attributes;
-using Paramore.Brighter.Transforms.Transformers;
 
 namespace Greetings.Ports.Mappers
 {
@@ -36,9 +33,6 @@ namespace Greetings.Ports.Mappers
     {
         public IRequestContext Context { get; set; }
         
-        //Although SNS allows 256K, we have to use UTF8 strings, which is not the format of a compressed message
-        //so we have to convert the bytes to base64 and then use that as the message body
-        //this inflates the byte count, see https://stackoverflow.com/questions/54224029/aws-sns-publising-compressed-payload
         [CloudEvents(0, DataSchema = "/test", Source = "com.brighter", Subject = "cloud-events", Type = "some-type")]
         public Message MapToMessage(GreetingEvent request, Publication publication)
         {
