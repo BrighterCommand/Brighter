@@ -56,7 +56,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.AddCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Add, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Add, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -98,7 +98,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.BulkAddCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Add, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Add, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -137,7 +137,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.AddCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Add, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Add, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -182,7 +182,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.BulkAddCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Add, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Add, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -214,7 +214,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.DeleteMessagesCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Delete, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Delete, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -249,7 +249,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.DeleteMessagesCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Delete, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Delete, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -293,7 +293,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.PagedDispatchedCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.DispatchedMessages, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.DispatchedMessages, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -359,7 +359,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.PagedDispatchedCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.DispatchedMessages, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.DispatchedMessages, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -403,7 +403,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.PagedDispatchedCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.DispatchedMessages, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.DispatchedMessages, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -443,7 +443,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.GetMessagesCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -479,7 +479,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.GetMessageCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -519,7 +519,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.GetMessageCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -559,7 +559,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.GetMessagesCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -593,7 +593,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.PagedReadCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -632,7 +632,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.PagedReadCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -663,7 +663,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.GetNumberOfOutstandingMessagesCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -690,7 +690,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.GetNumberOfOutstandingMessagesCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -726,7 +726,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.MarkDispatchedCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.MarkDispatched, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.MarkDispatched, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -764,7 +764,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.MarkMultipleDispatchedCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.MarkDispatched, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.MarkDispatched, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -797,7 +797,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.MarkDispatchedCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.MarkDispatched, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.MarkDispatched, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -834,7 +834,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.PagedOutstandingCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.OutStandingMessages, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.OutStandingMessages, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -877,7 +877,7 @@ namespace Paramore.Brighter
                 {"db.query.text", queries.PagedOutstandingCommand}
             };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(dbSystem, databaseName, OutboxDbOperation.OutStandingMessages, outboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.OutStandingMessages, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 

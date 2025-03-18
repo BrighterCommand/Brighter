@@ -51,22 +51,22 @@ public class MongoDbInboxDuplicateMessageAsyncTests : IDisposable
     [Fact]
     public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
     {
-        await _inbox.AddAsync(_raisedCommand, _contextKey);
+        await _inbox.AddAsync(_raisedCommand, _contextKey, null);
 
-        var exception = await Catch.ExceptionAsync(() => _inbox.AddAsync(_raisedCommand, _contextKey));
+        var exception = await Catch.ExceptionAsync(() => _inbox.AddAsync(_raisedCommand, _contextKey, null));
 
         //_should_succeed_even_if_the_message_is_a_duplicate
         Assert.Null(exception);
-        var exists = await _inbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+        var exists = await _inbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
         Assert.True(exists);
     }
 
     [Fact]
     public async Task When_The_Message_Is_Already_In_The_Inbox_Different_Context()
     {
-        await _inbox.AddAsync(_raisedCommand, "some other key");
+        await _inbox.AddAsync(_raisedCommand, "some other key", null);
 
-        var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
+        var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null);
 
         //_should_read_the_command_from_the__dynamo_db_inbox
         Assert.NotNull(storedCommand);

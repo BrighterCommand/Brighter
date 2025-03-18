@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.MsSql
 {
@@ -48,6 +49,9 @@ namespace Paramore.Brighter.Inbox.MsSql
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
+
+        /// <inheritdoc />
+        public IAmABrighterTracer Tracer { private get; set; }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
@@ -70,15 +74,8 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
         }
 
-        /// <summary>
-        ///     Adds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns>Task.</returns>
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc/>
+        public void Add<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
@@ -102,15 +99,8 @@ namespace Paramore.Brighter.Inbox.MsSql
             }
         }
 
-        /// <summary>
-        ///     Finds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns>T.</returns>
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc/>
+        public T Get<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId AND ContextKey = @contextKey";
             var parameters = new[]
@@ -122,15 +112,8 @@ namespace Paramore.Brighter.Inbox.MsSql
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
         }
 
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc/>
+        public bool Exists<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT TOP 1 CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId AND ContextKey = @contextKey";
             var parameters = new[]
@@ -142,16 +125,8 @@ namespace Paramore.Brighter.Inbox.MsSql
             return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds, parameters);
         }
 
-        /// <summary>
-        ///     Awaitably adds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
-        /// <returns><see cref="Task" />.</returns>
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task AddAsync<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
@@ -177,16 +152,8 @@ namespace Paramore.Brighter.Inbox.MsSql
         }
 
 
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc/>
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT TOP 1 CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId AND ContextKey = @contextKey";
@@ -209,26 +176,11 @@ namespace Paramore.Brighter.Inbox.MsSql
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
-        /// </summary>
+        /// <inheritdoc/>
         public bool ContinueOnCapturedContext { get; set; }
 
-        /// <summary>
-        ///     Awaitably finds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allow the sender to cancel the request</param>
-        /// <returns><see cref="Task{T}" />.</returns>
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc/>
+        public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default)
             where T : class, IRequest
         {

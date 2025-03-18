@@ -33,6 +33,7 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.MySql
 {
@@ -46,6 +47,9 @@ namespace Paramore.Brighter.Inbox.MySql
         private const int MySqlDuplicateKeyError = 1062;
         private readonly IAmARelationalDatabaseConfiguration _configuration;
 
+        /// <inheritdoc />
+        public IAmABrighterTracer Tracer { private get; set; }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="MySqlInbox" /> class.
         /// </summary>
@@ -56,15 +60,8 @@ namespace Paramore.Brighter.Inbox.MySql
             ContinueOnCapturedContext = false;
         }
 
-        /// <summary>
-        ///     Adds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns>Task.</returns>
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public void Add<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
@@ -89,15 +86,8 @@ namespace Paramore.Brighter.Inbox.MySql
             }
         }
 
-        /// <summary>
-        ///     Finds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns>T.</returns>
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public T Get<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId and ContextKey = @contextKey";
             var parameters = new[]
@@ -110,15 +100,8 @@ namespace Paramore.Brighter.Inbox.MySql
                 parameters);
         }
 
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <inheritdoc />
+        public bool Exists<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId and ContextKey = @contextKey LIMIT 1";
             var parameters = new[]
@@ -131,16 +114,8 @@ namespace Paramore.Brighter.Inbox.MySql
                 parameters);
         }
 
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc />
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId and ContextKey = @contextKey LIMIT 1";
@@ -163,16 +138,8 @@ namespace Paramore.Brighter.Inbox.MySql
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        /// <summary>
-        ///     Awaitably adds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
-        /// <returns><see cref="Task" />.</returns>
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+        /// <inheritdoc />
+        public async Task AddAsync<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
@@ -198,26 +165,11 @@ namespace Paramore.Brighter.Inbox.MySql
             }
         }
 
-        /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
-        /// </summary>
+        /// <inheritdoc />
         public bool ContinueOnCapturedContext { get; set; }
 
-        /// <summary>
-        ///     Awaitably finds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allow the sender to cancel the request</param>
-        /// <returns><see cref="Task{T}" />.</returns>
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <inheritdoc />
+        public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default)
             where T : class, IRequest
         {

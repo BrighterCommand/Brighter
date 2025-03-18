@@ -120,7 +120,7 @@ namespace Paramore.Brighter
         )
         {
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.Add, InMemoryAttributes.DbTable),
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.Add, InMemoryAttributes.DbTable),
                 requestContext?.Span,
                 options: _instrumentationOptions
             );
@@ -286,7 +286,7 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.DispatchedMessages, InMemoryAttributes.DbTable),
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.DispatchedMessages, InMemoryAttributes.DbTable),
                 requestContext?.Span,
                 options: _instrumentationOptions
             );
@@ -345,7 +345,7 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.Get, InMemoryAttributes.DbTable),
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.Get, InMemoryAttributes.DbTable),
                 requestContext?.Span,
                 options: _instrumentationOptions
             );
@@ -459,7 +459,7 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.MarkDispatched, InMemoryAttributes.DbTable),
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.MarkDispatched, InMemoryAttributes.DbTable),
                 requestContext?.Span,
                 options: _instrumentationOptions
             );
@@ -497,7 +497,7 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
 
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.OutStandingMessages,
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.OutStandingMessages,
                     InMemoryAttributes.DbTable),
                 requestContext?.Span,
                 options: _instrumentationOptions);
@@ -548,7 +548,7 @@ namespace Paramore.Brighter
         private void Delete(string messageId, RequestContext? requestContext = null)
         {
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.Delete, InMemoryAttributes.DbTable),
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.Delete, InMemoryAttributes.DbTable),
                 requestContext?.Span,
                 options: _instrumentationOptions
             );

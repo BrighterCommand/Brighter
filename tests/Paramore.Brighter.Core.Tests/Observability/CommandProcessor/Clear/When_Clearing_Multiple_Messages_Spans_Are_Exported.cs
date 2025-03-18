@@ -137,7 +137,7 @@ public class CommandProcessorMultipleClearObservabilityTests
         Assert.Equal(3, clearActivity.Count());
 
         //there should be a span in the Db for retrieving the message
-        var outBoxActivity = _exportedActivities.Where(a => a.DisplayName == $"{OutboxDbOperation.Get.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
+        var outBoxActivity = _exportedActivities.Where(a => a.DisplayName == $"{BoxDbOperation.Get.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
         Assert.Equal(3, outBoxActivity.Count());
 
         //there should be a span for publishing the message via the producer

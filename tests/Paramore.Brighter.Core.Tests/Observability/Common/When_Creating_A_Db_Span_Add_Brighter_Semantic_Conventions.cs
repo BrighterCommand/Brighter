@@ -45,10 +45,10 @@ public class BrighterSemanticConventionsDbSpanTests
         //act
         var dbInstanceId = Guid.NewGuid().ToString();
         var childActivity = _tracer.CreateDbSpan(
-            new OutboxSpanInfo(
+            new BoxSpanInfo(
                 dbSystem: DbSystem.MySql, 
-                dbName: InMemoryAttributes.DbName, 
-                dbOperation: OutboxDbOperation.Add, 
+                dbName: InMemoryAttributes.OutboxDbName, 
+                dbOperation: BoxDbOperation.Add, 
                 dbTable: InMemoryAttributes.DbTable, 
                 serverPort:3306,
                 dbInstanceId: dbInstanceId,
@@ -73,10 +73,10 @@ public class BrighterSemanticConventionsDbSpanTests
 
         //check the created activity
         Assert.Equal(_parentActivity.Id, childActivity.ParentId);
-        Assert.Equal($"{OutboxDbOperation.Add.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}", childActivity.DisplayName);
+        Assert.Equal($"{BoxDbOperation.Add.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}", childActivity.DisplayName);
         Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbInstanceId && t.Value == dbInstanceId);
-        Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName);
-        Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.Add.ToSpanName());
+        Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName);
+        Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.Add.ToSpanName());
         Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
         Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.MySql.ToDbName());
         Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);
@@ -89,10 +89,10 @@ public class BrighterSemanticConventionsDbSpanTests
         //check via the exporter as well
         Assert.Equal(2, _exportedActivities.Count);
         Assert.Contains(_exportedActivities, a => a.Source.Name == BrighterSemanticConventions.SourceName);
-        var childSpan = _exportedActivities.First(a => a.DisplayName == $"{OutboxDbOperation.Add.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
+        var childSpan = _exportedActivities.First(a => a.DisplayName == $"{BoxDbOperation.Add.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
         Assert.NotNull(childSpan);
         Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbInstanceId && t.Value == dbInstanceId);
-        Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.Add.ToSpanName());
+        Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.Add.ToSpanName());
         Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
         Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.MySql.ToDbName());
         Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);

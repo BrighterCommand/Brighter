@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -35,46 +34,50 @@ namespace Paramore.Brighter
     public interface IAmAnInboxAsync : IAmAnInbox
     {
         /// <summary>
-        /// Awaitably adds the specified identifier.
+        ///   Awaitably adds a command to the store.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="contextKey"></param>
-        /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest;
+        Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest;
 
         /// <summary>
-        /// Awaitably finds the specified identifier.
+        ///   Awaitably finds a command with the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
-        /// <param name="contextKey"></param>
-        /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task{T}"/>.</returns>
-        Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest;
 
         /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
+        ///   Awaitable checks whether a command with the specified identifier exists in the store.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
-        /// <param name="contextKey"></param>
-        /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
-        /// <returns>True if it exists, False otherwise</returns>
-        Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+        /// <returns><see cref="Task{true}"/> if it exists, otherwise <see cref="Task{false}"/>.</returns>
+        Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest;
 
         /// <summary>
-        /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
-        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
-        /// or access the Result or otherwise block. You may need the originating synchronization context if you need to access thread specific storage
-        /// such as HTTPContext 
+        ///   If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
+        ///   Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
+        ///   or access the Result or otherwise block. You may need the originating synchronization context if you need to access thread specific storage
+        ///   such as HTTPContext.
         /// </summary>
+        /// <value><see langword="true"/> if [continue on captured context]; otherwise, <see langword="false"/>.</value>
         bool ContinueOnCapturedContext { get; set; }
     }
 }
