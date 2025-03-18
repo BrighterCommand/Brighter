@@ -325,7 +325,9 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         var replyAddress = GetReplyAddress(azureServiceBusMessage);
         var handledCount = GetHandledCount(azureServiceBusMessage);
             
-        //TODO:CLOUD_EVENTS parse from headers
+        // Azure is using the cloud event payload, so the user should read that info from the payload
+        // https://learn.microsoft.com/en-us/azure/event-grid/cloud-event-schema
+        // https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/servicebus/Azure.Messaging.ServiceBus/samples/Sample11_CloudEvents.md
             
         var headers = new MessageHeader(
             messageId: azureServiceBusMessage.Id, 
