@@ -42,15 +42,14 @@ public class SnsAttributes
     public string? Policy { get; set; } = null;
         
     /// <summary>
-    /// A list of resource tags to use when creating the publication
-    /// Ignored if TopicARN is set
+    /// A list of resource tags to use when creating the publication  Ignored if TopicARN is set
     /// </summary>
     public List<Tag> Tags => [];
 
     /// <summary>
-    /// The <see cref="SnsSqsType"/>.
+    /// The <see cref="SqsType"/>.
     /// </summary>
-    public SnsSqsType Type { get; set; } = SnsSqsType.Standard;
+    public SqsType Type { get; set; } = SqsType.Standard;
 
     /// <summary>
     /// Enable content based deduplication for Fifo Topics

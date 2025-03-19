@@ -41,6 +41,16 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="RoutingKey"/> class from a <see cref="ChannelName"/>
+        /// </summary>
+        /// <remarks>Use this constructor in point-to-point scenarios where you are sending directly to a queue, not via a topic</remarks>
+        /// <param name="channelName">The channel that we intend to route messages to</param>
+        public RoutingKey(ChannelName channelName)
+        {
+            Value = channelName.Value;
+        }
+
+        /// <summary>
         /// Create a null object or Empty routing key
         /// </summary>
         /// <value></value>
@@ -132,7 +142,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator !=(RoutingKey left, RoutingKey right)
+        public static bool operator !=(RoutingKey? left, RoutingKey? right)
         {
             return !Equals(left, right);
         }

@@ -59,7 +59,7 @@ static class Program
                                 {
                                     Topic = new RoutingKey(
                                         typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                                    SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo },
+                                    TopicAttributes = new SnsAttributes { Type = SqsType.Fifo },
                                     RequestType = typeof(FarewellEvent)
                                 },
                                 new SnsPublication

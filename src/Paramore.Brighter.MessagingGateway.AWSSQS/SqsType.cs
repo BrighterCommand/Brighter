@@ -5,7 +5,7 @@
 /// For more information see
 /// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-queue-types.html
 /// </summary>
-public enum SnsSqsType
+public enum SqsType
 {
     /// <summary>
     /// Standard queues support a very high, nearly unlimited number of API calls per second per

@@ -52,10 +52,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
                 name: new SubscriptionName(channelName),
                 channelName: channel.Name,
                 routingKey: routingKey,
-                findTopicBy: TopicFindBy.Name,
                 messagePumpType: MessagePumpType.Proactor,
-                makeChannels: OnMissingChannel.Validate
-            );
+                findTopicBy: TopicFindBy.Name, makeChannels: OnMissingChannel.Validate);
 
             _messageProducer = new SnsMessageProducer(
                 awsConnection,

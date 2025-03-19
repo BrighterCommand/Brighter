@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private readonly RegionEndpoint _region;
         private readonly AmazonSecurityTokenServiceClient _stsClient;
-        private readonly SnsSqsType _type;
+        private readonly SqsType _type;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ValidateTopicByArnConvention"/> class.
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="credentials">The AWS credentials.</param>
         /// <param name="region">The AWS region.</param>
         /// <param name="clientConfigAction">An optional action to configure the client.</param>
-        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null, SnsSqsType type = SnsSqsType.Standard) 
+        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null, SqsType type = SqsType.Standard) 
             : base(credentials, region, clientConfigAction)
         {
             _region = region;
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account");
 
-            topicName = topicName.ToValidSNSTopicName(_type == SnsSqsType.Fifo);
+            topicName = topicName.ToValidSNSTopicName(_type == SqsType.Fifo);
 
             return new Arn
             {

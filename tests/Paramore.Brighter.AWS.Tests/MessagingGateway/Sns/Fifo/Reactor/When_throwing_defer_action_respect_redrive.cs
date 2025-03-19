@@ -48,8 +48,10 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Reactor,
             //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
-            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
-            sqsType: SnsSqsType.Fifo);
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2),
+                type: SqsType.Fifo)
+            );
 
         //what do we send
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
@@ -70,7 +72,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
                 Topic = routingKey,
                 RequestType = typeof(MyDeferredCommand),
                 MakeChannels = OnMissingChannel.Create,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             }
         );
 

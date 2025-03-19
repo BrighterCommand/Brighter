@@ -35,21 +35,28 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_queueName);
-
+        var sqsAttributes = new SqsAttributes(
+            messageRetentionPeriod: TimeSpan.FromMinutes(1),
+            lockTimeout: TimeSpan.FromSeconds(30),
+            timeOut: TimeSpan.FromSeconds(30),
+            delaySeconds: TimeSpan.Zero
+        );
+        
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(_queueName),
-            routingKey: routingKey,
-            bufferSize: BufferSize,
-            makeChannels: OnMissingChannel.Create,
-            channelType: ChannelType.PointToPoint
-        )).GetAwaiter().GetResult();
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey, bufferSize: BufferSize, queueAttributes: sqsAttributes, makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication { MakeChannels = OnMissingChannel.Create });
+        
+        //in principle, for point-to-point, we don't need both sides to create the queue;  whoever does not own the API can just validate
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(queueAttributes: sqsAttributes,  makeChannels: OnMissingChannel.Create)
+            );
 
         _scheduler = new AWSClientFactory(awsConnection).CreateSchedulerClient();
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")

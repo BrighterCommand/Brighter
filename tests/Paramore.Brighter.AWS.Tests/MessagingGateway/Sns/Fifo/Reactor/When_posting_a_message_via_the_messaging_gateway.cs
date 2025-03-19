@@ -38,10 +38,13 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            rawMessageDelivery: false,
-            sqsType: SnsSqsType.Fifo
+            queueAttributes: new SqsAttributes(
+                rawMessageDelivery: false,
+                type: SqsType.Fifo
+            )
         );
 
         _message = new Message(
@@ -63,7 +66,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
             {
                 Topic = new RoutingKey(_topicName),
                 MakeChannels = OnMissingChannel.Create,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
     }
 

@@ -38,7 +38,9 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
+            )
         );
 
         _message = new Message(
@@ -50,7 +52,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SnsMessageProducer(_awsConnection,  new SnsPublication { MakeChannels = OnMissingChannel.Create });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
 

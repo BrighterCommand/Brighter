@@ -25,19 +25,22 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         const string replyTo = "http:\\queueUrl";
         const string contentType = "text\\plain";
         var correlationId = Guid.NewGuid().ToString();
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
 
+        var channelName = new ChannelName($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
+
+        var queueAttributes = new SqsAttributes(
+            type: SqsType.Fifo
+        );
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            name: new SubscriptionName(channelName!),
+            channelName: channelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -55,22 +58,19 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
 
         //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
         subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
+            name: new SubscriptionName(channelName!),
+            channelName: channelName,
             routingKey: routingKey,
-            findTopicBy: TopicFindBy.Convention,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo
-        );
+            findTopicBy: TopicFindBy.Convention,
+            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Validate);
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
-            new SnsPublication
+            new SnsPublication(topicAttributes:new SnsAttributes { Type = SqsType.Fifo } )
             {
                 FindTopicBy = TopicFindBy.Convention,
                 MakeChannels = OnMissingChannel.Validate,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
             }
         );
 

@@ -84,8 +84,15 @@ namespace Paramore.Brighter
         public string? Subject { get; set; }
         
         /// <summary>
-        /// The topic this publication is for
+        /// The topic this publication is for defined by a <see cref="RoutingKey"/>
         /// </summary>
+        /// <remarks>
+        /// In a pub-sub scenario there is typically a topic, to which we publish and then a subscriber creates its own
+        /// queue which the broker delivers messages to. Typically, the <see cref="ChannelName"/> on the Subscription
+        /// will be used as that queue name.
+        /// For point-to-point scenarios, implementers will need to add a <see cref="ChannelName"/> to their derived <see cref="Publication"/>
+        /// to hold the name of the queue being used for message exchange, or  a platform dependent proxy for that (for example a URI)
+        /// </remarks>
         public RoutingKey? Topic { get; set; }
 
         /// <summary>

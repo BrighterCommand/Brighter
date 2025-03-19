@@ -52,10 +52,8 @@ public class AWSValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
             name: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKey,
-            findTopicBy: TopicFindBy.Convention,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Validate
-        );
+            findTopicBy: TopicFindBy.Convention, makeChannels: OnMissingChannel.Validate);
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

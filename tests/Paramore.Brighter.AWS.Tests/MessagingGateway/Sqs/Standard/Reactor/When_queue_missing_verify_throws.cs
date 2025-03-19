@@ -23,14 +23,15 @@ public class AWSValidateMissingTopicTests
     }
 
     [Fact]
-    public void When_topic_missing_verify_throws()
+    public void When_queue_missing_verify_throws()
     {
         //arrange
-        var producer = new SqsMessageProducer(_awsConnection,
+        var producer = new SqsMessageProducer(
+            _awsConnection,
             new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Validate,
-            });
+            (
+                makeChannels:  OnMissingChannel.Validate
+            ));
 
         //act && assert
         Assert.Throws<QueueDoesNotExistException>(() => producer.Send(new Message(

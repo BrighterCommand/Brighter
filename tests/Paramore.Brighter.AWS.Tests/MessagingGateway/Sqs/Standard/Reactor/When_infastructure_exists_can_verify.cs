@@ -33,11 +33,7 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            channelType: ChannelType.PointToPoint
-        );
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -57,21 +53,17 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
         subscription = new(
             name: new SubscriptionName(subscriptionName),
             channelName: channel.Name,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
-            findTopicBy: TopicFindBy.Name,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate,
-            channelType: ChannelType.PointToPoint
-        );
+            findTopicBy: TopicFindBy.Name, makeChannels: OnMissingChannel.Validate);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication
-            {
-                FindQueueBy = QueueFindBy.Name,
-                MakeChannels = OnMissingChannel.Validate,
-                Topic = new RoutingKey(queueName)
-            }
+            new SqsPublication(
+                channelName:channel.Name,
+                makeChannels: OnMissingChannel.Validate
+                )  
         );
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);

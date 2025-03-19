@@ -34,11 +34,7 @@ public class SqsSchedulingMessageTest : IDisposable
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(_queueName),
-            routingKey: routingKey,
-            bufferSize: BufferSize,
-            makeChannels: OnMissingChannel.Create,
-            channelType: ChannelType.PointToPoint
-        ));
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, bufferSize: BufferSize, makeChannels: OnMissingChannel.Create));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties

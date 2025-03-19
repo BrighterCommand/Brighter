@@ -20,7 +20,7 @@ public class SqsMessageSender
     private static readonly TimeSpan s_maxDelay = TimeSpan.FromSeconds(900);
     
     private readonly string _queueUrl;
-    private readonly SnsSqsType _queueType;
+    private readonly SqsType _queueType;
     private readonly AmazonSQSClient _client;
 
     /// <summary>
@@ -29,7 +29,7 @@ public class SqsMessageSender
     /// <param name="queueUrl">The queue ARN</param>
     /// <param name="queueType">The queue type</param>
     /// <param name="client">The SQS Client</param>
-    public SqsMessageSender(string queueUrl, SnsSqsType queueType, AmazonSQSClient client)
+    public SqsMessageSender(string queueUrl, SqsType queueType, AmazonSQSClient client)
     {
         _queueUrl = queueUrl;
         _queueType = queueType;
@@ -64,7 +64,7 @@ public class SqsMessageSender
             request.DelaySeconds = (int)delay.Value.TotalSeconds;
         }
 
-        if (_queueType == SnsSqsType.Fifo)
+        if (_queueType == SqsType.Fifo)
         {
             request.MessageGroupId = message.Header.PartitionKey;
             if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))

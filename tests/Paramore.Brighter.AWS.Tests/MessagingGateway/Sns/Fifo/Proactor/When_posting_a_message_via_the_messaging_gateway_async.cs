@@ -39,10 +39,8 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            rawMessageDelivery: false,
-            sqsType: SnsSqsType.Fifo
-        );
+            bufferSize: false,
+            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
@@ -63,7 +61,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
             {
                 Topic = new RoutingKey(_topicName),
                 MakeChannels = OnMissingChannel.Create,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
     }
 

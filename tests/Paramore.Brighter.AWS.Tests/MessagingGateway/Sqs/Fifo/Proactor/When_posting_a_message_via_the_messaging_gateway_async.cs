@@ -34,15 +34,15 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_queueName);
 
+        var queueAttributes = new SqsAttributes(
+            rawMessageDelivery: true,
+            type: SqsType.Fifo);
+        var channelName = new ChannelName(_queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(_queueName),
-            channelName: new ChannelName(_queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            rawMessageDelivery: true,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
@@ -58,13 +58,9 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                Topic = new RoutingKey(_queueName),
-                MakeChannels = OnMissingChannel.Create,
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(channelName: new ChannelName(_queueName), queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
     }
 
     [Fact]

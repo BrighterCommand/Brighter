@@ -39,7 +39,9 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
+            )
         );
 
         _message = new Message(
@@ -50,7 +52,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SnsMessageProducer(_awsConnection,  new SnsPublication { Topic = routingKey, MakeChannels = OnMissingChannel.Create });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
 

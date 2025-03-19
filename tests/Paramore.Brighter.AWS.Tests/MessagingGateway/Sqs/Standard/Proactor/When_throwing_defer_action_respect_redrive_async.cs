@@ -37,16 +37,22 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         var subscriptionName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
+        
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
+            type: SqsType.Fifo
+        );
 
         _subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             requeueCount: -1,
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
-            channelType: ChannelType.PointToPoint
+           queueAttributes: queueAttributes 
         );
 
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
@@ -60,12 +66,11 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _sender = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication
-            {
-                Topic = routingKey,
-                RequestType = typeof(MyDeferredCommand),
-                MakeChannels = OnMissingChannel.Create
-            }
+            new SqsPublication(
+                channelName: channelName, 
+                queueAttributes: queueAttributes,
+                makeChannels: OnMissingChannel.Create
+            )
         );
 
         _channelFactory = new ChannelFactory(_awsConnection);
