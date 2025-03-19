@@ -30,10 +30,12 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var routingKey = new RoutingKey($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Reactor, makeChannels: OnMissingChannel.Create);
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            messagePumpType: MessagePumpType.Reactor, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -50,10 +52,12 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var routingKeyArn = new RoutingKey(topicArn);
 
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKeyArn,
-            noOfPerformers: SqsType.Fifo, findTopicBy: TopicFindBy.Arn, makeChannels: OnMissingChannel.Validate);
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            findTopicBy: TopicFindBy.Arn, 
+            makeChannels: OnMissingChannel.Validate);
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

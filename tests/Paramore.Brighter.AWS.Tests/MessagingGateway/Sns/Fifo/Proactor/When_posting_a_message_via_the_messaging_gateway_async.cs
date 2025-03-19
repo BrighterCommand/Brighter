@@ -36,11 +36,11 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         var routingKey = new RoutingKey(_topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            bufferSize: false,
-            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor);
+            queueAttributes: new SqsAttributes(rawMessageDelivery:false, type: SqsType.Fifo) ,
+             messagePumpType: MessagePumpType.Proactor);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
