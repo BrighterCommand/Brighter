@@ -2,8 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Runtime;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -32,7 +30,7 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(queueName);
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
             channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, makeChannels: OnMissingChannel.Create);
 
@@ -53,11 +51,11 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         var queueUrl = FindQueueUrl(awsConnection, routingKey.Value);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            name: new SubscriptionName(subscriptionName),
+        subscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channel.Name,
             routingKey: routingKey,
-            routingKey: QueueFindBy.Url,
+            findQueueBy: QueueFindBy.Url,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Validate
         );

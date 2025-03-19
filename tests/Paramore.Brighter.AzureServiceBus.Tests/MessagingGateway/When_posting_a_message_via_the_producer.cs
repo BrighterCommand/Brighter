@@ -36,7 +36,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             var routingKey = new RoutingKey(_topicName);
 
             AzureServiceBusSubscription<ASBTestCommand> subscription = new(
-                name: new SubscriptionName(channelName),
+                subscriptionName: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
             );
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             var queueRoutingKey = new RoutingKey(_queueName);
 
             AzureServiceBusSubscription<ASBTestCommand> queueSubscription = new(
-                name: new SubscriptionName(queueChannelName),
+                subscriptionName: new SubscriptionName(queueChannelName),
                 channelName: new ChannelName(queueChannelName),
                 routingKey: queueRoutingKey,
                 subscriptionConfiguration : new AzureServiceBusSubscriptionConfiguration()

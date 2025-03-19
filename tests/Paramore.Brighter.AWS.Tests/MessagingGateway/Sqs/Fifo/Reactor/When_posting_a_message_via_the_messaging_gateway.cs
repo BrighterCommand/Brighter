@@ -38,7 +38,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         var queueAttributes = new SqsAttributes(type:SqsType.Fifo, rawMessageDelivery: true);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(_queueName),
+            subscriptionName: new SubscriptionName(_queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes);

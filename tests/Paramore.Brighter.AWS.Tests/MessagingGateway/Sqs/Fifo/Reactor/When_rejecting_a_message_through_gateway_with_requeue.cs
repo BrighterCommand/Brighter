@@ -32,7 +32,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         var channelName = new ChannelName(queueName);
         
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);

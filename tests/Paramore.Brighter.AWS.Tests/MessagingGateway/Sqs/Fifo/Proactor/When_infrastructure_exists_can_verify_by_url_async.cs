@@ -33,7 +33,7 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
         var queueAttributes = new SqsAttributes(type: SqsType.Fifo);
         
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
 
@@ -51,7 +51,7 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
         var queueUrl = FindQueueUrl(awsConnection, routingKey.ToValidSQSQueueName(true)).Result;
 
         subscription = new(
-            name: new SubscriptionName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             routingKey: routingKey,
             queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Validate,

@@ -36,11 +36,12 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            bufferSize: new RedrivePolicy(_dlqChannelName, 2),
-            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor);
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)));
+        
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

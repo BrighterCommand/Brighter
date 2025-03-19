@@ -36,7 +36,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
         var routingKey = new RoutingKey(_queueName);
 
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(_queueName),
             channelType: ChannelType.PointToPoint, routingKey: routingKey, bufferSize: BufferSize, makeChannels: OnMissingChannel.Create));
 

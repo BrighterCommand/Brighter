@@ -40,7 +40,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
         //how are we consuming
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
             channelType: ChannelType.PointToPoint,
             //don't block the redrive policy from owning retry management

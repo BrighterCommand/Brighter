@@ -57,7 +57,7 @@ public class Program
                 var subscriptions = new Subscription[]
                 {
                     new SqsSubscription<FireAwsScheduler>(
-                        name: new SubscriptionName("paramore.example.scheduler-message"),
+                        subscriptionName: new SubscriptionName("paramore.example.scheduler-message"),
                         channelName: new ChannelName("message-scheduler-channel"),
                         channelType: ChannelType.PubSub,
                         routingKey: new RoutingKey("message-scheduler-topic"),
@@ -67,7 +67,7 @@ public class Program
                         lockTimeout: TimeSpan.FromSeconds(30)
                         )),
                     new SqsSubscription<GreetingEvent>(
-                        name: new SubscriptionName("paramore.example.greeting"),
+                        subscriptionName: new SubscriptionName("paramore.example.greeting"),
                         channelName: new ChannelName(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                         routingKey: new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                         bufferSize: 10,
@@ -77,7 +77,7 @@ public class Program
                         lockTimeout:TimeSpan.FromSeconds(30)
                         )),
                     new SqsSubscription<FarewellEvent>(
-                        name: new SubscriptionName("paramore.example.farewell"),
+                        subscriptionName: new SubscriptionName("paramore.example.farewell"),
                         channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
                         routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
                         bufferSize: 10,

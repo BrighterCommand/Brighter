@@ -43,7 +43,7 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
         );
         
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(_queueName),
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey, bufferSize: BufferSize, queueAttributes: sqsAttributes, makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();

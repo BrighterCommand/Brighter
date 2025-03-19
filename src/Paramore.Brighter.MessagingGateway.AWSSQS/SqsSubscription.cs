@@ -70,7 +70,7 @@ public class SqsSubscription : Subscription
     /// Initializes a new instance of the <see cref="Subscription"/> class.
     /// </summary>
     /// <param name="dataType">Type of the data.</param>
-    /// <param name="name">The name. Defaults to the data type's full name.</param>
+    /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="channelType">Specifies the routing key type</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
@@ -85,10 +85,12 @@ public class SqsSubscription : Subscription
     /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     /// <param name="findTopicBy">Is the Topic an Arn, should be treated as an Arn by convention, or a name</param>
-    /// <param name="queueAttributes">What are the details of the <see cref="QueueAttributes"/> that exchanges requests</param>
+    /// <param name="findQueueBy">Is the ChannelName is a queue url, or a name</param>
+    /// <param name="queueAttributes">What are the <see cref="SqsAttributes"/> of the Sqs queue we use to receive messages</param>
+    /// <param name="topicAttributes">What are the <see cref="SnsAttributes"/>  of the topic to which are queue subscribes, if we are <see cref="ChannelType.PubSub"/> </param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
     protected SqsSubscription(Type dataType,
-        SubscriptionName? name = null,
+        SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
         ChannelType channelType = ChannelType.PubSub,
         RoutingKey? routingKey = null,
@@ -103,9 +105,11 @@ public class SqsSubscription : Subscription
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null,
         TopicFindBy findTopicBy = TopicFindBy.Convention,
+        QueueFindBy findQueueBy = QueueFindBy.Name,
         SqsAttributes? queueAttributes = null,
+        SnsAttributes? topicAttributes = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
-        : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
+        : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
             requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
             channelFailureDelay)
     {
@@ -115,10 +119,15 @@ public class SqsSubscription : Subscription
         if (ChannelType == ChannelType.PointToPoint && channelName is null)
             throw new ArgumentNullException(nameof(channelName), "Channel Name is required for PointToPoint channels");
         
-        QueueAttributes = queueAttributes ?? throw new ArgumentNullException(nameof(queueAttributes), "Queue Attributes are required");;
+        QueueAttributes = queueAttributes ?? throw new ArgumentNullException(nameof(queueAttributes), "Queue Attributes are required");
+        
+        if (ChannelType == ChannelType.PubSub && topicAttributes is null)
+            throw new ArgumentNullException(nameof(topicAttributes), "Topic Attributes are required for PubSub channels");
+        TopicAttributes = topicAttributes;
         
         ChannelType = channelType;
         FindTopicBy = findTopicBy;
+        FindQueueBy = findQueueBy;
     }
 }
 
@@ -134,7 +143,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscription"/> class.
     /// </summary>
-    /// <param name="name">The name. Defaults to the data type's full name.</param>
+    /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="channelType">Specifies the routing key type</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
@@ -148,10 +157,13 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
     /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
     /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-    /// <param name="findTopicBy">Is the Topic an Arn, should be treated as an Arn by convention, or a name</param>
+    /// <param name="findTopicBy">Is the Topic an Arn, should be treated as an Arn by convention, or a name. Default is convention</param>
+    /// <param name="findQueueBy">Is the ChannelName is a queue url, or a name. Default is by name</param>
     /// <param name="queueAttributes">What are the details of the <see cref="SqsAttributes"/> that exchanges requests</param>
+    /// <param name="topicAttributes">What are the <see cref="SnsAttributes"/>  of the topic to which are queue subscribes, if we are <see cref="ChannelType.PubSub"/> </param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-    public SqsSubscription(SubscriptionName? name = null,
+    public SqsSubscription(
+        SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
         ChannelType channelType = ChannelType.PubSub,
         RoutingKey? routingKey = null,
@@ -166,9 +178,11 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null,
         TopicFindBy findTopicBy = TopicFindBy.Convention,
+        QueueFindBy findQueueBy = QueueFindBy.Name,
         SqsAttributes? queueAttributes = null,
+        SnsAttributes? topicAttributes = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
-        : base(typeof(T), name, channelName, channelType, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
+        : base(typeof(T), subscriptionName, channelName, channelType, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
             requeueDelay,  unacceptableMessageLimit, messagePumpType, channelFactory,  emptyChannelDelay,  
-            channelFailureDelay, findTopicBy, queueAttributes, makeChannels) { }
+            channelFailureDelay, findTopicBy, findQueueBy, queueAttributes, topicAttributes, makeChannels) { }
 }

@@ -40,7 +40,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         var channelName = new ChannelName(queueName);
         
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,

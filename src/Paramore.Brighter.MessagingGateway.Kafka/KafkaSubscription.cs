@@ -107,7 +107,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="groupId">What is the id of the consumer group that this consumer belongs to; will not process the same partition as others in group</param>
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         public KafkaSubscription (
             Type dataType, 
-            SubscriptionName name = null, 
+            SubscriptionName subscriptionName = null, 
             ChannelName channelName = null, 
             RoutingKey routingKey = null,
             string groupId = null,
@@ -156,7 +156,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
+            : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
@@ -181,7 +181,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="groupId">What is the id of the consumer group that this consumer belongs to; will not process the same partition as others in group</param>
@@ -206,7 +206,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         public KafkaSubscription(
-            SubscriptionName name = null, 
+            SubscriptionName subscriptionName = null, 
             ChannelName channelName = null, 
             RoutingKey routingKey = null, 
             string groupId = null,
@@ -230,7 +230,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
-            : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeOut, 
+            : base(typeof(T), subscriptionName, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeOut, 
                 requeueCount, requeueDelay, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
                 sessionTimeout, maxPollInterval, sweepUncommittedOffsetsInterval, isolationLevel, messagePumpType, 
                 numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay,

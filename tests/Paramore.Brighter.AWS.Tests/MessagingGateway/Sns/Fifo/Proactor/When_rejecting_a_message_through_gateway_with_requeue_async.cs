@@ -30,10 +30,12 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Create);
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -49,7 +51,9 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, 
+                Topic = routingKey, 
+                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
     }
 

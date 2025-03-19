@@ -34,7 +34,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         var channelName = new ChannelName(queueName);
         
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: _routingKey,

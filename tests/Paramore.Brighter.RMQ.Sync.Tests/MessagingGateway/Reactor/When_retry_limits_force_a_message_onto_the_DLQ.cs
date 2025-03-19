@@ -43,7 +43,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
 
         _subscription = new RmqSubscription<MyCommand>(
-            name: new SubscriptionName("DLQ Test Subscription"),
+            subscriptionName: new SubscriptionName("DLQ Test Subscription"),
             channelName: channelName,
             routingKey: routingKey,
             //after 0 retries fail and move to the DLQ

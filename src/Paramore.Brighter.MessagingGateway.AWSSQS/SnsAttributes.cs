@@ -26,13 +26,36 @@ using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
+/// <summary>
+/// The attributes we use to confgure an SNS Topic
+/// </summary>
 public class SnsAttributes
 {
+    /// <summary>
+    /// Creates a new instance of a type used to configure an SNS Topic
+    /// </summary>
+    /// <param name="deliveryPolicy">Determines how AWS retries failed deliveries to HTTP/S subscribers to the topic. Default is null.</param>
+    /// <param name="policy">The JSON serialization of the topic's access control policy. Default is null.</param>
+    /// <param name="type">The <see cref="SqsType"/>The <see cref="SqsType"/> which lets you set FIFO or Standard. Default is <see cref="SqsType.Standard"/></param>
+    /// <param name="contentBasedDeduplication">For a FIFO queue, do we deduplicate messages based on content. Default is true</param>
+    public SnsAttributes(string? deliveryPolicy = null, string? policy = null, SqsType type = default, bool contentBasedDeduplication = true)
+    {
+        DeliveryPolicy = deliveryPolicy;
+        Policy = policy;
+        Type = type;
+        ContentBasedDeduplication = contentBasedDeduplication;
+    }
+
     /// <summary>
     /// The policy that defines how Amazon SNS retries failed deliveries to HTTP/S endpoints
     /// Ignored if TopicARN is set
     /// </summary>
     public string? DeliveryPolicy { get; set; } = null;
+    
+    /// <summary>
+    /// Creates a new instance of the <see cref="SnsAttributes"/> class. All attributes will be default values.
+    /// </summary>
+    public static SnsAttributes Empty { get; } = new();
 
     /// <summary>
     /// The JSON serialization of the topic's access control policy.

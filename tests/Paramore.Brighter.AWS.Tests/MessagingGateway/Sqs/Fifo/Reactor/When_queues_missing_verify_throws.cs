@@ -25,7 +25,7 @@ public class AWSValidateQueuesTests : IAsyncDisposable
         var channelName = new ChannelName(queueName);
 
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Validate);

@@ -157,7 +157,7 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
                     BootStrapServers = new[] { "localhost:9092" }
                 })
             .CreateAsync(new KafkaSubscription<MyCommand>(
-                name: new SubscriptionName("Paramore.Brighter.Tests"),
+                subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),
                 channelName: new ChannelName(_queueName),
                 routingKey: new RoutingKey(_topic),
                 groupId: _kafkaGroupId,

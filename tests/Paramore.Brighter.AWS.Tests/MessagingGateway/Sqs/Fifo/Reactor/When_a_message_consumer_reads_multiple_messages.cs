@@ -40,7 +40,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
         );
 
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,

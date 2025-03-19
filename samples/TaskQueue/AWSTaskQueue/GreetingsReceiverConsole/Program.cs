@@ -55,7 +55,7 @@ namespace GreetingsReceiverConsole
                     var subscriptions = new Subscription[]
                     {
                          new SqsSubscription<GreetingEvent>(
-                            name: new SubscriptionName("paramore.example.greeting"),
+                            subscriptionName: new SubscriptionName("paramore.example.greeting"),
                             channelName: new ChannelName(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                             channelType: ChannelType.PubSub,
                             routingKey: new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
@@ -63,7 +63,7 @@ namespace GreetingsReceiverConsole
                             timeOut: TimeSpan.FromMilliseconds(20),
                             queueAttributes: new SqsAttributes(lockTimeout: TimeSpan.FromSeconds(30))),
                         new SqsSubscription<FarewellEvent>(
-                            name: new SubscriptionName("paramore.example.farewell"),
+                            subscriptionName: new SubscriptionName("paramore.example.farewell"),
                             channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
                             channelType: ChannelType.PubSub,
                             routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),

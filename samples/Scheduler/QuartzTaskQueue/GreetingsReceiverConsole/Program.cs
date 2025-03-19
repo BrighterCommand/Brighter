@@ -55,7 +55,7 @@ public class Program
                 var subscriptions = new Subscription[]
                 {
                     new SqsSubscription<GreetingEvent>(
-                        name: new SubscriptionName("paramore.example.greeting"),
+                        subscriptionName: new SubscriptionName("paramore.example.greeting"),
                         channelName: new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                         routingKey:new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                         channelType: ChannelType.PubSub,
@@ -66,7 +66,7 @@ public class Program
                             lockTimeout: TimeSpan.FromSeconds(30)
                             )),
                     new SqsSubscription<FarewellEvent>(
-                        name:new SubscriptionName("paramore.example.farewell"),
+                        subscriptionName:new SubscriptionName("paramore.example.farewell"),
                         channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
                         routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
                         channelType: ChannelType.PubSub,

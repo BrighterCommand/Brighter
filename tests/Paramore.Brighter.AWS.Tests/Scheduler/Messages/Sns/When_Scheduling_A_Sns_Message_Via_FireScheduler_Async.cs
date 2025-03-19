@@ -33,7 +33,7 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
         var routingKey = new RoutingKey(_topicName);
 
         var channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<FireSchedulerMessage>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             bufferSize: BufferSize,

@@ -54,7 +54,7 @@ namespace GreetingsReceiverConsole
                     var subscriptions = new Subscription[]
                     {
                         new SqsSubscription<GreetingEvent>(
-                            name: new SubscriptionName("paramore.example.greeting"),
+                            subscriptionName: new SubscriptionName("paramore.example.greeting"),
                             channelName: new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             routingKey: new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             bufferSize: 10,

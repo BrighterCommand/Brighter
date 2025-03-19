@@ -30,7 +30,7 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(queueName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
             routingKey: routingKey
         );
