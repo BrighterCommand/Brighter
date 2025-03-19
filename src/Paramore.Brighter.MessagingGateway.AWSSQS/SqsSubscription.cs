@@ -121,6 +121,9 @@ public class SqsSubscription : Subscription
     /// This configuration is used for high throughput for FIFO queues configuration
     /// </summary>
     public int? FifoThroughputLimit { get; }
+    
+    /// <inheritdoc />
+    public override Type ChannelFactoryType => typeof(ChannelFactory); 
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscription"/> class.

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,51 +14,37 @@ public class CombinedChannelFactory(IEnumerable<IAmAChannelFactory> factories) :
     /// <inheritdoc />
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
-        foreach (var factory in factories)
+        var factory = factories.FirstOrDefault(f => f.GetType() == subscription.ChannelFactoryType);
+        if (factory == null)
         {
-            try
-            {
-                return factory.CreateSyncChannel(subscription);
-            }
-            catch (ConfigurationException)
-            {
-            }
+            throw new ConfigurationException($"No channel factory found for subscription {subscription.Name}");
         }
 
-        throw new ConfigurationException($"No channel factory found for subscription {subscription.Name}");
+        return factory.CreateSyncChannel(subscription);
     }
 
     /// <inheritdoc />
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
     {
-        foreach (var factory in factories)
+        var factory = factories.FirstOrDefault(f => f.GetType() == subscription.ChannelFactoryType);
+        if (factory == null)
         {
-            try
-            {
-                return factory.CreateAsyncChannel(subscription);
-            }
-            catch (ConfigurationException)
-            {
-            }
+            throw new ConfigurationException($"No channel factory found for subscription {subscription.Name}");
         }
 
-        throw new ConfigurationException($"No channel factory found for subscription {subscription.Name}");
+        return factory.CreateAsyncChannel(subscription);
     }
 
     /// <inheritdoc />
-    public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
+    public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,
+        CancellationToken ct = default)
     {
-        foreach (var factory in factories)
+        var factory = factories.FirstOrDefault(f => f.GetType() == subscription.ChannelFactoryType);
+        if (factory == null)
         {
-            try
-            {
-                return await factory.CreateAsyncChannelAsync(subscription, ct);
-            }
-            catch (ConfigurationException)
-            {
-            }
+            throw new ConfigurationException($"No channel factory found for subscription {subscription.Name}");
         }
 
-        throw new ConfigurationException($"No channel factory found for subscription {subscription.Name}");
+        return await factory.CreateAsyncChannelAsync(subscription, ct);
     }
 }

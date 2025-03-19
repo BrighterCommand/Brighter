@@ -125,6 +125,15 @@ namespace Paramore.Brighter
         public int UnacceptableMessageLimit { get; }
 
         /// <summary>
+        /// Internal use only
+        /// The factory type for this subscription
+        /// </summary>
+        /// <remarks>
+        /// It'll be used by the <see cref="CombinedChannelFactory"/>
+        /// </remarks>
+        public virtual Type ChannelFactoryType => typeof(InMemoryChannelFactory); 
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
