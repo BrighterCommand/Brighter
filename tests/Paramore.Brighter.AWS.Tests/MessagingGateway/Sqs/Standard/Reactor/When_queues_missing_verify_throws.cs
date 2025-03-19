@@ -22,7 +22,7 @@ public class AWSValidateQueuesTests  : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(queueName);
             
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
             channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, makeChannels: OnMissingChannel.Validate);
             

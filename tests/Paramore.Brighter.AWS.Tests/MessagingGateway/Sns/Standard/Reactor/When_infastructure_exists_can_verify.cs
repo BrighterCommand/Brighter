@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerSync _consumer;
@@ -19,7 +19,7 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureTests()
+    public AwsValidateInfrastructureTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -30,7 +30,7 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
@@ -53,7 +53,7 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
 
         //Now change the subscription to validate, just check what we made
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,

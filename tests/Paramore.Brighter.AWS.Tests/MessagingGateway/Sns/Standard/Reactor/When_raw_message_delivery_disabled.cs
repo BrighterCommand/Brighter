@@ -29,7 +29,7 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 
         //Set rawMessageDelivery to false
         _channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: _routingKey,

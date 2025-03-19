@@ -31,7 +31,7 @@ public class AWSValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
@@ -52,7 +52,7 @@ public class AWSValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             channelType: ChannelType.PubSub,
             routingKey: routingKey,

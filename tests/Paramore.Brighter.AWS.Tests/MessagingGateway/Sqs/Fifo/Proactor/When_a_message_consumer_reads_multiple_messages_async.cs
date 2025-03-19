@@ -39,7 +39,7 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         var channelName = new ChannelName(_queueName);
         
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(_queueName),
+            subscriptionName: new SubscriptionName(_queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,

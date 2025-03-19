@@ -36,7 +36,7 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         );
         
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName!),
+            subscriptionName: new SubscriptionName(channelName!),
             channelName: channelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
@@ -58,7 +58,7 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
 
         //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
         subscription = new(
-            name: new SubscriptionName(channelName!),
+            subscriptionName: new SubscriptionName(channelName!),
             channelName: channelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,

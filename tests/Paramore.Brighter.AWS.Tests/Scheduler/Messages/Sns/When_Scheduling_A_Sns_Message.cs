@@ -31,7 +31,7 @@ public class SnsSchedulingMessageTest : IDisposable
         var routingKey = new RoutingKey(_topicName);
 
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             bufferSize: BufferSize,

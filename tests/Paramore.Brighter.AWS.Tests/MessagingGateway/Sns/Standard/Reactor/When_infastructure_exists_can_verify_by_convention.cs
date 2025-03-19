@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerSync _consumer;
@@ -19,7 +19,7 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByConventionTests()
+    public AwsValidateInfrastructureByConventionTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -30,7 +30,7 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         var routingKey = new RoutingKey(topicName);
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
@@ -53,7 +53,7 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
 
         //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,

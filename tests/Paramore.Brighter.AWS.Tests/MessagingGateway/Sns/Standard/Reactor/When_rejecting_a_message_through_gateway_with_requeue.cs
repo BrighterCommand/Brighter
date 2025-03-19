@@ -29,7 +29,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         var routingKey = new RoutingKey(topicName);
             
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey, messagePumpType: MessagePumpType.Reactor);
             
