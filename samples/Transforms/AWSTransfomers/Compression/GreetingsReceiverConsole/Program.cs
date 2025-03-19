@@ -54,14 +54,15 @@ namespace GreetingsReceiverConsole
                     var subscriptions = new Subscription[]
                     {
                         new SqsSubscription<GreetingEvent>(
-                            new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            name: new SubscriptionName("paramore.example.greeting"),
+                            channelName: new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            routingKey: new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             bufferSize: 10,
                             timeOut: TimeSpan.FromMilliseconds(20), 
-                            lockTimeout: 30,
                             findTopicBy: TopicFindBy.Convention,
-                            makeChannels: OnMissingChannel.Create)
+                            queueAttributes: new SqsAttributes(
+                                lockTimeout: TimeSpan.FromSeconds(30)
+                            ), makeChannels: OnMissingChannel.Create)
                     };
 
                     //create the gateway

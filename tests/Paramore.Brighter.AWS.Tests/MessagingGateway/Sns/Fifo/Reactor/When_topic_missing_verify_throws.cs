@@ -29,7 +29,7 @@ public class AWSValidateMissingTopicTests
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
 
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";

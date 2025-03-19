@@ -34,13 +34,17 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
 
+        var queueAttributes = new SqsAttributes(
+            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
+            type: SqsType.Fifo
+            );
+
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
-            sqsType: SnsSqsType.Fifo
-        );
+           queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -54,7 +58,9 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         _sender = new SnsMessageProducer(_awsConnection, 
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, 
+                Topic = routingKey, 
+                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo } 
             });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();

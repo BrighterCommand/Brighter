@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly SqsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -21,7 +21,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTestsAsync()
+    public SqsBufferedConsumerTestsAsync()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
@@ -31,26 +31,26 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_queueName);
 
+        var queueAttributes = new SqsAttributes(
+            type: SqsType.Fifo,
+            messageRetentionPeriod: TimeSpan.FromSeconds(3600),
+            deduplicationScope: DeduplicationScope.MessageGroup,
+            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId);
+        var channelName = new ChannelName(_queueName);
+        
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(_queueName),
-            channelName: new ChannelName(_queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             bufferSize: BufferSize,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId,
-            channelType: ChannelType.PointToPoint
-        )).GetAwaiter().GetResult();
+            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true), BufferSize);
         _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
     }
 
     [Fact]

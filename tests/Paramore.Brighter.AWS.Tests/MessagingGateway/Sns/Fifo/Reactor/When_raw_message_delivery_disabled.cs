@@ -31,17 +31,18 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
         _channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            makeChannels: OnMissingChannel.Create,
             messagePumpType: MessagePumpType.Reactor,
-            rawMessageDelivery: false,
-            sqsType: SnsSqsType.Fifo));
+            queueAttributes: new SqsAttributes(
+                rawMessageDelivery: false,
+                type: SqsType.Fifo), makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
     }
 

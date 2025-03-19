@@ -56,12 +56,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="awsConnection">The awsConnection details used to connect to the SQS queue.</param>
         /// <param name="queueName">The name of the SQS Queue</param>
         /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
-        /// <param name="hasDLQ">Do we have a DLQ attached to this queue?</param>
+        /// <param name="hasDlq">Do we have a DLQ attached to this queue?</param>
         /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
         public SqsMessageConsumer(AWSMessagingGatewayConnection awsConnection,
             string? queueName,
             int batchSize = 1,
-            bool hasDLQ = false,
+            bool hasDlq = false,
             bool rawMessageDelivery = true)
         {
             if (string.IsNullOrEmpty(queueName))
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _clientFactory = new AWSClientFactory(awsConnection);
             _queueName = queueName!;
             _batchSize = batchSize;
-            _hasDlq = hasDLQ;
+            _hasDlq = hasDlq;
             _rawMessageDelivery = rawMessageDelivery;
         }
 
@@ -86,8 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cancellationToken">Cancels the ackowledge operation</param>
-        public async Task AcknowledgeAsync(Message message,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
                 return;

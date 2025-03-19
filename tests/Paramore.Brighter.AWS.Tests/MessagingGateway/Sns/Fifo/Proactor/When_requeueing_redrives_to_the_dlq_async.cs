@@ -39,10 +39,8 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
-            sqsType: SnsSqsType.Fifo
-        );
+            bufferSize: new RedrivePolicy(_dlqChannelName, 2),
+            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -55,7 +53,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         _sender = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();

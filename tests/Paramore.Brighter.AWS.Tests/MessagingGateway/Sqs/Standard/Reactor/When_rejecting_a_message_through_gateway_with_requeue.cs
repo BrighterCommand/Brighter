@@ -31,10 +31,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
-            messagePumpType: MessagePumpType.Reactor,
-            routingKey: routingKey,
-            channelType: ChannelType.PointToPoint
-        );
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

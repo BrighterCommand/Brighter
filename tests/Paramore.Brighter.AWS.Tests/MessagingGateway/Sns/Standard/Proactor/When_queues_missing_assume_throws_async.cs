@@ -24,9 +24,7 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            makeChannels: OnMissingChannel.Assume,
-            messagePumpType: MessagePumpType.Proactor
-        );
+            messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Assume);
 
         var awsConnection = GatewayFactory.CreateFactory();
 

@@ -23,11 +23,7 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            makeChannels: OnMissingChannel.Assume,
-            messagePumpType: MessagePumpType.Proactor,
-            channelType: ChannelType.PointToPoint
-        );
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Assume);
 
         var awsConnection = GatewayFactory.CreateFactory();
 

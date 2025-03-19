@@ -62,10 +62,8 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
             name: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKeyArn,
-            findTopicBy: TopicFindBy.Arn,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate
-        );
+            findTopicBy: TopicFindBy.Arn, makeChannels: OnMissingChannel.Validate);
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

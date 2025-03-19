@@ -29,15 +29,13 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
 
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(type: SqsType.Fifo);
+        
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(queueName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -54,23 +52,18 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
 
         subscription = new(
             name: new SubscriptionName(queueName),
-            channelName: channel.Name,
+            channelName: channelName,
             routingKey: routingKey,
-            findQueueBy: QueueFindBy.Url,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
+            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Validate,
+             channelType: ChannelType.PointToPoint
         );
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Validate)
             {
-                Topic = routingKey,
                 QueueUrl = queueUrl,
                 FindQueueBy = QueueFindBy.Url,
-                MakeChannels = OnMissingChannel.Validate,
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
             });
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);

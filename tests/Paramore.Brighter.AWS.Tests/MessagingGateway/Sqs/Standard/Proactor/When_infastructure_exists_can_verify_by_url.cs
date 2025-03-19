@@ -34,11 +34,7 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         SqsSubscription<MyCommand> subscription = new(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            channelType: ChannelType.PointToPoint
-        );
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -61,7 +57,7 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
             name: new SubscriptionName(subscriptionName),
             channelName: channel.Name,
             routingKey: routingKey,
-            findQueueBy: QueueFindBy.Url,
+            routingKey: QueueFindBy.Url,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Validate
         );

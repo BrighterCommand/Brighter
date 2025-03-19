@@ -48,9 +48,11 @@ namespace Paramore.Brighter
         public IAmAChannelFactory? ChannelFactory { get; set; }
 
         /// <summary>
-        /// Gets the name we use for this channel. In platforms where queues have names, will be used as the name of the queue
-        /// Note that this is not the logical endpoint that the channel consumes from, that is the RoutingKey
+        /// Gets the <see cref="ChannelName"/> we use for this channel. In platforms where queues have names, will be used as the name of the queue
         /// </summary>
+        /// <remarks>
+        /// Note that this is not the logical endpoint, the topic, that the channel consumes from for pub-sub, that is the <see cref="RoutingKey"/>
+        /// </remarks>
         /// <value>The name.</value>
         public ChannelName ChannelName { get; set; }
 
@@ -101,6 +103,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets or sets the routing key or topic that this channel subscribes to on the broker.
         /// </summary>
+        /// <remarks>
+        ///  In many platforms, a queue subscribes to the topic. In that case the <see cref="ChannelName"/> gives the queue name
+        /// whilst this is the topic to which that queue subscribes.
+        /// </remarks>
         /// <value>The name.</value>
         public RoutingKey RoutingKey { get; set; }
 

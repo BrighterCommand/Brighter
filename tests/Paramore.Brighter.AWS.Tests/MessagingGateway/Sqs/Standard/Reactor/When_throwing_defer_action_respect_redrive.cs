@@ -42,18 +42,23 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         _subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
-            routingKey: routingKey,
             channelType: ChannelType.PointToPoint,
             //don't block the redrive policy from owning retry management
-            requeueCount: -1,
+            routingKey: routingKey,
             //delay before requeuing
+            requeueCount: -1,
             requeueDelay: TimeSpan.FromMilliseconds(50),
-            messagePumpType: MessagePumpType.Reactor,
-            //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
-            redrivePolicy: new RedrivePolicy
-            (
-                deadLetterQueueName: new ChannelName(_dlqChannelName),
-                maxReceiveCount: 2
+           messagePumpType: MessagePumpType.Reactor, queueAttributes: new SqsAttributes(
+                messageRetentionPeriod: TimeSpan.FromMinutes(10),
+                lockTimeout: TimeSpan.FromSeconds(30),
+                timeOut: TimeSpan.FromSeconds(30),
+                delaySeconds: TimeSpan.Zero,
+                //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
+                redrivePolicy: new RedrivePolicy
+                (
+                    deadLetterQueueName: new ChannelName(_dlqChannelName)!,
+                    maxReceiveCount: 2
+                )
             ));
 
         //what do we send

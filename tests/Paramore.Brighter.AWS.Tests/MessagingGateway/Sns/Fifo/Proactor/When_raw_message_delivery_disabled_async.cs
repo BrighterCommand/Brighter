@@ -33,14 +33,13 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             channelName: new ChannelName(channelName),
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            makeChannels: OnMissingChannel.Create,
-            rawMessageDelivery: false,
-            sqsType: SnsSqsType.Fifo));
+            noOfPerformers: false,
+            timeOut: SqsType.Fifo, makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
     }
 

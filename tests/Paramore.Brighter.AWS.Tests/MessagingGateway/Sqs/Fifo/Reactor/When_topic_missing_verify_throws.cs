@@ -23,15 +23,16 @@ public class AWSValidateMissingTopicTests
     }
 
     [Fact]
-    public void When_topic_missing_verify_throws()
+    public void When_channel_missing_verify_throws()
     {
         // arrange
         var producer = new SqsMessageProducer(_awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Validate,
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+            new SqsPublication(
+                channelName: new ChannelName(Guid.NewGuid().ToString()), 
+                queueAttributes: new SqsAttributes (type:SqsType.Fifo ),
+                makeChannels: OnMissingChannel.Validate
+                )
+            );
 
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
 

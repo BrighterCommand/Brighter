@@ -23,25 +23,41 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-public class SnsPublication : Publication
+/// <summary>
+/// Creates a publication for an SNS Topic
+/// </summary>
+/// <remarks>
+///  You should provide either the Arn, for a topic created in advance, or the attributes to create a topic
+/// or find it from a name. 
+/// </remarks>
+/// <param name="topicAttributes">Optional: The attributes that describe the topic</param>
+public class SnsPublication(SnsAttributes? topicAttributes = null) : Publication
 {
     /// <summary>
-    /// Indicates how we should treat the routing key
-    /// TopicFindBy.Arn -> the routing key is an Arn
-    /// TopicFindBy.Convention -> The routing key is a name, but use convention to make an Arn for this account
-    /// TopicFindBy.Name -> Treat the routing key as a name & use ListTopics to find it (rate limited 30/s)
+    /// The routing key type.
     /// </summary>
-    public TopicFindBy FindTopicBy { get; set; } = TopicFindBy.Convention;
-        
+    public ChannelType ChannelType { get; } = ChannelType.PubSub;
+
+    /// <summary>
+    /// Indicates how we should treat the routing key. If you want to use an Arn you should set <see cref="SnsPublication.TopicArn"/>.
+    /// <see cref="TopicFindBy.Arn"/>: the routing key is an Arn
+    /// <see cref="TopicFindBy.Convention"/>: the routing key is a name, so use convention to turn it an Arn under this account
+    /// <see cref="TopicFindBy.Name"/>: treat the routing key as a name; use ListTopics to find it (rate limited 30/s)
+    /// </summary>
+    public TopicFindBy FindTopicBy { get; set; } = TopicFindBy.Convention;        
+    
     /// <summary>
     /// The attributes of the topic. If TopicARNs is set we will always assume that we do not
     /// need to create or validate the SNS Topic
     /// </summary>
-    public SnsAttributes? SnsAttributes { get; set; }
+    public SnsAttributes? TopicAttributes { get; set; } = topicAttributes;
 
     /// <summary>
-    /// If we want to use topic Arns and not topics you need to supply  the Arn to use for any message that you send to us,
-    /// as we use the topic from the header to dispatch to  an Arn.
+    /// The topic arn as provided by AWS
     /// </summary>
-    public string? TopicArn { get; set; }
+    /// <remarks>
+    /// If we want to supply the topic Arn and not use the <see cref="Publication.Topic"/> which is  a <see cref="RoutingKey"/>
+    /// (which we will treat as a name and lookup), then you need to supply  the Arn. 
+    /// </remarks>
+   public string? TopicArn { get; set; } 
 }

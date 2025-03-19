@@ -24,11 +24,7 @@ public class AWSValidateQueuesTests  : IDisposable, IAsyncDisposable
         _subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate,
-            channelType: ChannelType.PointToPoint
-        );
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, makeChannels: OnMissingChannel.Validate);
             
         _awsConnection = GatewayFactory.CreateFactory();
     }

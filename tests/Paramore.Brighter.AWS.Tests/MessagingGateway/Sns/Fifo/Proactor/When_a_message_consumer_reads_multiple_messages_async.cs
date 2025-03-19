@@ -35,13 +35,13 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             bufferSize: BufferSize,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId
-        )).GetAwaiter().GetResult();
+            queueAttributes: new SqsAttributes(
+                type: SqsType.Fifo,
+                deduplicationScope: DeduplicationScope.MessageGroup,
+                fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId), makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
@@ -49,7 +49,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
     }
 

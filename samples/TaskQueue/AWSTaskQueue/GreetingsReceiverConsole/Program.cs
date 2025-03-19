@@ -54,24 +54,26 @@ namespace GreetingsReceiverConsole
                 {
                     var subscriptions = new Subscription[]
                     {
-                        new SqsSubscription<GreetingEvent>(
-                            new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                         new SqsSubscription<GreetingEvent>(
+                            name: new SubscriptionName("paramore.example.greeting"),
+                            channelName: new ChannelName(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
+                            channelType: ChannelType.PubSub,
+                            routingKey: new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                             bufferSize: 10,
                             timeOut: TimeSpan.FromMilliseconds(20),
-                            lockTimeout: 30),
-                        new SqsSubscription<FarewellEvent>(new SubscriptionName("paramore.example.farewell"),
-                            new ChannelName(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                            new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                            queueAttributes: new SqsAttributes(lockTimeout: TimeSpan.FromSeconds(30))),
+                        new SqsSubscription<FarewellEvent>(
+                            name: new SubscriptionName("paramore.example.farewell"),
+                            channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                            channelType: ChannelType.PubSub,
+                            routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
                             bufferSize: 10,
                             timeOut: TimeSpan.FromMilliseconds(20),
-                            lockTimeout: 30,
-                            sqsType: SnsSqsType.Fifo,
-                            snsAttributes: new SnsAttributes
-                            {
-                                Type = SnsSqsType.Fifo
-                            })
+                            queueAttributes: new SqsAttributes(
+                                lockTimeout: TimeSpan.FromSeconds(30),
+                                type: SqsType.Fifo  
+                            )
+                            )
                     };
 
                     //create the gateway

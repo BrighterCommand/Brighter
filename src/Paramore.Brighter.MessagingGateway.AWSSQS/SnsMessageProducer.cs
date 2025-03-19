@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// Class SnsMessageProducer.
 /// </summary>
-public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync
+public class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync
 {
     private readonly SnsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
@@ -110,7 +110,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
         var topicArn = await EnsureTopicAsync(
             routingKey,
             _publication.FindTopicBy,
-            _publication.SnsAttributes,
+            _publication.TopicAttributes,
             _publication.MakeChannels,
             cancellationToken);
 
@@ -180,7 +180,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
         
         using var client = _clientFactory.CreateSnsClient();
         var publisher = new SnsMessagePublisher(ChannelAddress!, client,
-            _publication.SnsAttributes?.Type ?? SnsSqsType.Standard);
+            _publication.TopicAttributes?.Type ?? SqsType.Standard);
         var messageId = await publisher.PublishAsync(message);
         
         if (messageId == null)

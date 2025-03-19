@@ -47,7 +47,7 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
         _sender = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
 
         //We need to do this manually in a test - will create the channel from subscriber parameters

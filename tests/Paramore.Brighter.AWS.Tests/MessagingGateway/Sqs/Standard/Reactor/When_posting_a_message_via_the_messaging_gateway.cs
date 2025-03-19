@@ -35,10 +35,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(_queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            channelType: ChannelType.PointToPoint
-        );
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor);
             
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,

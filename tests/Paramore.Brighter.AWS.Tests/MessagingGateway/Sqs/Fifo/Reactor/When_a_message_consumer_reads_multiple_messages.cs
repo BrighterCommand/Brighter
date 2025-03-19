@@ -31,29 +31,31 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_queueName);
+        var channelName = new ChannelName(_queueName);
+        var queueAttributes = new SqsAttributes(
+            type: SqsType.Fifo,
+            contentBasedDeduplication: true,
+            deduplicationScope: DeduplicationScope.MessageGroup,
+            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId
+        );
 
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(_queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             bufferSize: BufferSize,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            contentBasedDeduplication: true,
-            deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId,
-            channelType: ChannelType.PointToPoint
-        ));
+            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true), BufferSize);
         _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Create,
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+            new SqsPublication(
+                channelName: channelName,
+                queueAttributes: queueAttributes,
+                makeChannels: OnMissingChannel.Create
+            ));
     }
 
     [Fact]

@@ -34,10 +34,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo
-        );
+            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Reactor, makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -61,11 +58,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
             name: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKeyArn,
-            findTopicBy: TopicFindBy.Arn,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo
-        );
+            timeOut: SqsType.Fifo, messagePumpType: MessagePumpType.Reactor, findTopicBy: TopicFindBy.Arn, makeChannels: OnMissingChannel.Validate);
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -75,7 +68,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
                 TopicArn = topicArn,
                 FindTopicBy = TopicFindBy.Arn,
                 MakeChannels = OnMissingChannel.Validate,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             });
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);

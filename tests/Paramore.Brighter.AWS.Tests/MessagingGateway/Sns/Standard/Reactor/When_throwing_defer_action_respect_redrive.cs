@@ -48,11 +48,13 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Reactor,
             //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
-            redrivePolicy: new RedrivePolicy
-            (
-                deadLetterQueueName: new ChannelName(_dlqChannelName),
-                maxReceiveCount: 2
-            ));
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy
+                (
+                    deadLetterQueueName: new ChannelName(_dlqChannelName)!,
+                    maxReceiveCount: 2
+                ))
+            );
 
         //what do we send
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
@@ -102,7 +104,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
         _messagePump = new Reactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry,
-            null, new InMemoryRequestContextFactory(), _channel)
+            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };
