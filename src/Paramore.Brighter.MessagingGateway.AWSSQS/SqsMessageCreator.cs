@@ -57,8 +57,6 @@ internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCrea
         var topic = HeaderResult<RoutingKey>.Empty();
         var messageId = HeaderResult<string?>.Empty();
 
-        //TODO:CLOUD_EVENTS parse from headers
-
         Message message;
         try
         {
@@ -74,25 +72,32 @@ internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCrea
             var partitionKey = ReadPartitionKey(sqsMessage);
             var deduplicationId = ReadDeduplicationId(sqsMessage);
             var subject = ReadSubject(sqsMessage);
+            var specVersion = ReadSpecVersion(sqsMessage);
+            var type = ReadType(sqsMessage);
+            var source = ReadSource(sqsMessage);
+            var dataSchema = ReadDataSchema(sqsMessage);
 
-            var bodyType = (contentType.Success ? contentType.Result : "plain/text");
+            var bodyType = contentType.Success ? contentType.Result : "plain/text";
 
             var messageHeader = new MessageHeader(
                 messageId: messageId.Result ?? string.Empty,
                 topic: topic.Result ?? RoutingKey.Empty,
                 messageType.Result,
-                source: null,
-                type: string.Empty,
-                timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                source: source.Result,
+                type: type.Result,
+                timeStamp: timeStamp.Success ? timeStamp.Result : DateTimeOffset.UtcNow,
                 correlationId: correlationId.Success ? correlationId.Result : string.Empty,
-                replyTo: replyTo.Success ? new RoutingKey(replyTo.Result!) : RoutingKey.Empty,
+                replyTo: replyTo.Result,
                 contentType: bodyType!,
                 handledCount: handledCount.Result,
-                dataSchema: null,
+                dataSchema: dataSchema.Result,
                 subject: subject.Success ? subject.Result : string.Empty,
                 delayed: TimeSpan.Zero,
                 partitionKey: partitionKey.Success ? partitionKey.Result : string.Empty
-            );
+            )
+            {
+                 SpecVersion = specVersion.Result!
+            };
 
             message = new Message(messageHeader, ReadMessageBody(sqsMessage, bodyType!));
 
@@ -152,27 +157,31 @@ internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCrea
         return new Dictionary<string, object>();
     }
 
-    private static HeaderResult<string> ReadReplyTo(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<RoutingKey> ReadReplyTo(Amazon.SQS.Model.Message sqsMessage)
     {
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ReplyTo, out MessageAttributeValue? value))
         {
-            return new HeaderResult<string>(value.StringValue, true);
+            return new HeaderResult<RoutingKey>(new RoutingKey(value.StringValue), true);
         }
 
-        return new HeaderResult<string>(string.Empty, true);
+        return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
     }
 
-    private static HeaderResult<DateTime> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<DateTimeOffset> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out MessageAttributeValue? value))
+        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Time, out var value)
+            && DateTimeOffset.TryParse(value.StringValue, out var timestamp))
         {
-            if (DateTime.TryParse(value.StringValue, out DateTime timestamp))
-            {
-                return new HeaderResult<DateTime>(timestamp, true);
-            }
+            return new HeaderResult<DateTimeOffset>(timestamp, true);
+        }
+        
+        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out value)
+            && DateTimeOffset.TryParse(value.StringValue, out timestamp))
+        {
+            return new HeaderResult<DateTimeOffset>(timestamp, true);
         }
 
-        return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+        return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
     }
 
     private static HeaderResult<MessageType> ReadMessageType(Amazon.SQS.Model.Message sqsMessage)
@@ -214,7 +223,12 @@ internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCrea
 
     private static HeaderResult<string> ReadContentType(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ContentType, out MessageAttributeValue? value))
+        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.DataContentType, out var value))
+        {
+            return new HeaderResult<string>(value.StringValue, true);
+        }
+        
+        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ContentType, out value))
         {
             return new HeaderResult<string>(value.StringValue, true);
         }
@@ -278,16 +292,56 @@ internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCrea
 
         return new HeaderResult<string>(null, false);
     }
-
+    
     private static HeaderResult<string> ReadSubject(Amazon.SQS.Model.Message sqsMessage)
     {
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Subject, out var value))
         {
-            //we have an arn, and we want the topic
-            var subject = value.StringValue;
-            return new HeaderResult<string>(subject, true);
+            return new HeaderResult<string>(value.StringValue, true);
         }
 
         return new HeaderResult<string>(null, false);
     }
+    
+    private static HeaderResult<string> ReadSpecVersion(Amazon.SQS.Model.Message sqsMessage)
+    {
+        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.SpecVersion, out var value))
+        {
+            return new HeaderResult<string>(value.StringValue, true);
+        }
+    
+        return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
+    }
+    
+     private static HeaderResult<string> ReadType(Amazon.SQS.Model.Message sqsMessage)
+     {
+         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Type, out var value))
+         {
+             return new HeaderResult<string>(value.StringValue, true);
+         }
+        
+         return new HeaderResult<string>(MessageHeader.DefaultType, true);
+     }
+     
+     private static HeaderResult<Uri> ReadSource(Amazon.SQS.Model.Message sqsMessage)
+     {
+         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Source, out var value)
+             && Uri.TryCreate(value.StringValue, UriKind.RelativeOrAbsolute, out var source ))
+         {
+             return new HeaderResult<Uri>(source, true);
+         }
+        
+         return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
+     }
+     
+     private static HeaderResult<Uri?> ReadDataSchema(Amazon.SQS.Model.Message sqsMessage)
+     {
+         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.DataSchema, out var value)
+             && Uri.TryCreate(value.StringValue, UriKind.RelativeOrAbsolute, out var dataSchema))
+         {
+             return new HeaderResult<Uri?>(dataSchema, true);
+         }
+        
+         return new HeaderResult<Uri?>(null, true);
+     }
 }
