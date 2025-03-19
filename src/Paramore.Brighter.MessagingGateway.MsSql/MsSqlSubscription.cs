@@ -28,6 +28,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 {
     public class MsSqlSubscription : Subscription
     {
+        /// <inheritdoc />
+        public override Type ChannelFactoryType => typeof(ChannelFactory); 
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
