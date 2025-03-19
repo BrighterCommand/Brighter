@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -74,19 +76,23 @@ public class SqsMessageSender
         }
 
         var messageAttributes = new Dictionary<string, MessageAttributeValue>
-        {
-            [HeaderNames.Id] =
-                new() { StringValue = message.Header.MessageId, DataType = "String" },
-            [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
-            [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.HandledCount] =
-                new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
-            [HeaderNames.MessageType] =
-                new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new()
-            {
-                StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
-            }
+        { 
+            // Cloud event
+            [HeaderNames.Id] = new() { StringValue = Convert.ToString(message.Header.MessageId), DataType = "String" },
+            [HeaderNames.DataContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
+            [HeaderNames.SpecVersion] = new() { StringValue = message.Header.SpecVersion, DataType = "String" },
+            [HeaderNames.Type] = new() { StringValue = message.Header.Type, DataType = "String" },
+            [HeaderNames.Source] = new() { StringValue = message.Header.Source.ToString(), DataType = "String" },
+            [HeaderNames.Time] = new() { StringValue = message.Header.TimeStamp.ToRcf3339(), DataType = "String" },
+                        
+             // Brighter custom headers
+             [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
+             [HeaderNames.HandledCount] = new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
+             [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+                        
+             // Backward compatibility with old brighter version
+             [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
+             [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String" }
         };
 
         if (!string.IsNullOrEmpty(message.Header.ReplyTo))
@@ -100,13 +106,18 @@ public class SqsMessageSender
             messageAttributes.Add(HeaderNames.Subject,
                 new MessageAttributeValue { StringValue = message.Header.Subject, DataType = "String" });
         }
-        
+
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
         {
             messageAttributes.Add(HeaderNames.CorrelationId,
                 new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
         }
-
+        
+        if (message.Header.DataSchema != null)
+        {
+            messageAttributes.Add(HeaderNames.DataSchema, new MessageAttributeValue { StringValue = message.Header.DataSchema.ToString() });
+        }
+        
         // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };

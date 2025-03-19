@@ -10,7 +10,5 @@
 
         public static readonly string[] ReservedHeaders =
             new[] {LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey, ReplyToHeaderBagKey, SessionIdKey };
-
-        
     }
 }

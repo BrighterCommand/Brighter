@@ -24,6 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 
+using Azure.Messaging;
+
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
 public class AzureServiceBusPublication : Publication
