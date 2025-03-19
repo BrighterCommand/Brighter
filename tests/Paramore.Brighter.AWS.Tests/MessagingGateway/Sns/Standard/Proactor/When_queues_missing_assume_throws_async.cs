@@ -21,7 +21,7 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Assume);

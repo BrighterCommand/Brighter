@@ -31,7 +31,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var routingKey = new RoutingKey($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
@@ -54,7 +54,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var routingKeyArn = new RoutingKey(topicArn);
 
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKeyArn,
             findTopicBy: TopicFindBy.Arn,

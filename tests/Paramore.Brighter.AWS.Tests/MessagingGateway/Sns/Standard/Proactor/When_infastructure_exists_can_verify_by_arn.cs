@@ -31,7 +31,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
@@ -59,7 +59,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
 
         //Now change the subscription to validate, just check what we made
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKeyArn,
             messagePumpType: MessagePumpType.Reactor,

@@ -29,7 +29,7 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
             
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
@@ -52,7 +52,7 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
             
         //Now change the subscription to validate, just check what we made
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,

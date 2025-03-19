@@ -37,7 +37,7 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         );
         
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
@@ -60,7 +60,7 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 
         //Now change the subscription to validate, just check what we made
         subscription = new(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channel.Name,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,

@@ -36,7 +36,7 @@ public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
         var routingKey = new RoutingKey(topicName);
 
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<FireSchedulerMessage>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             bufferSize: BufferSize,

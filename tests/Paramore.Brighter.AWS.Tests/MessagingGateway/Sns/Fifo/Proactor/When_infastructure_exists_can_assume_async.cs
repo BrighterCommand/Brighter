@@ -31,10 +31,12 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Create);
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo),
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -52,16 +54,15 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 
         //Now change the subscription to validate, just check what we made
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKey,
-            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Assume);
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo),
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume);
 
         _messageProducer = new SnsMessageProducer(awsConnection,
-            new SnsPublication
-            {
-                MakeChannels = OnMissingChannel.Assume, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
-            });
+            new SnsPublication { MakeChannels = OnMissingChannel.Assume, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo } });
 
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true));
     }

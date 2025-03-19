@@ -32,7 +32,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         var routingKey = new RoutingKey(_topicName);
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,

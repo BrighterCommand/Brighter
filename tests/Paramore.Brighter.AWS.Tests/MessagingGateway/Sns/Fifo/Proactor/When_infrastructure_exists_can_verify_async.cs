@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -19,7 +19,7 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureTestsAsync()
+    public AwsValidateInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -31,10 +31,12 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            noOfPerformers: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Create);
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -48,10 +50,14 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: channel.Name,
             routingKey: routingKey,
-            timeOut: SqsType.Fifo, messagePumpType: MessagePumpType.Proactor, findTopicBy: TopicFindBy.Name, makeChannels: OnMissingChannel.Validate);
+            queueAttributes: new SqsAttributes(type:SqsType.Fifo), 
+            messagePumpType: MessagePumpType.Proactor, 
+            findTopicBy: TopicFindBy.Name, 
+            makeChannels: OnMissingChannel.Validate
+            );
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

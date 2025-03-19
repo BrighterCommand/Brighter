@@ -33,7 +33,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(_topicName);
 
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,

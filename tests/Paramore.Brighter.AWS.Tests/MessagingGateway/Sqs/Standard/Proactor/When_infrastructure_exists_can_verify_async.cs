@@ -30,7 +30,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
             var routingKey = new RoutingKey(queueName);
 
             var subscription = new SqsSubscription<MyCommand>(
-                name: new SubscriptionName(subscriptionName),
+                subscriptionName: new SubscriptionName(subscriptionName),
                 channelName: new ChannelName(queueName),
                 channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Create);
 
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
             var channel = _channelFactory.CreateAsyncChannel(subscription);
 
             subscription = new(
-                name: new SubscriptionName(subscriptionName),
+                subscriptionName: new SubscriptionName(subscriptionName),
                 channelName: channel.Name,
                 channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, findTopicBy: TopicFindBy.Name, makeChannels: OnMissingChannel.Validate);
 
