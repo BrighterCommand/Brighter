@@ -13,12 +13,11 @@ public class SqsAttributes
     /// Creates a new instance of the <see cref="SqsAttributes"/> class.
     /// </summary>
     /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
-    /// <param name="timeOut">The timeout that infers nothing could be read from the queue.</param>
+    /// <param name="timeOut">The ReceiveMessageWaitTimeout.  How long to wait if nothing can be read from the queue. Default is 0, short polling. Range is 0-20s.</param>
     /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
     /// <param name="messageRetentionPeriod">The length of time, in seconds, for which Amazon SQS retains a message</param>
     /// <param name="iamPolicy">The queue's policy. A valid AWS policy.</param>
     /// <param name="redrivePolicy">The policy that controls when and where requeued messages are sent to the DLQ</param>
-    /// <param name="snsAttributes">The attributes of the Topic, either ARN if created, or attributes for creation</param>
     /// <param name="tags">Resource tags to be added to the queue</param>
     /// <param name="rawMessageDelivery">The indication of Raw Message Delivery setting is enabled or disabled</param>
     /// <param name="type">The SQS Type</param>
@@ -41,7 +40,8 @@ public class SqsAttributes
         FifoThroughputLimit? fifoThroughputLimit = null
         )
     {
-        LockTimeout = ValidateTimeSpan(lockTimeout, 0, 43200, 30); // Default: 30 seconds
+        TimeOut = ValidateTimeSpan(timeOut, 0, 20, 0);
+        LockTimeout = ValidateTimeSpan(lockTimeout, Convert.ToInt32(TimeOut.Value.TotalSeconds), 43200, 30); // Default: 30 seconds
         DelaySeconds = ValidateTimeSpan(delaySeconds, 0, 900, 0); // Default: 0 seconds
         MessageRetentionPeriod = ValidateTimeSpan(messageRetentionPeriod, 0, 1209600, 345600); // Default: 4 days
 
@@ -53,7 +53,6 @@ public class SqsAttributes
         RedrivePolicy = redrivePolicy;
         Type = type;
         Tags = tags;
-        TimeOut = timeOut ?? TimeSpan.FromMilliseconds(300);
     }
 
     /// <summary>
@@ -131,13 +130,17 @@ public class SqsAttributes
     {
         int actualSeconds = 0;
         if (span is null)
+        {
             actualSeconds = defaultValue;
-        
-        int requestedSeconds = Convert.ToInt32(span!.Value.TotalSeconds);
-        
-        if (requestedSeconds < min || requestedSeconds > max)
-            actualSeconds = defaultValue;
-        
+        }
+        else
+        {
+            int requestedSeconds = Convert.ToInt32(span!.Value.TotalSeconds);
+
+            if (requestedSeconds < min || requestedSeconds > max)
+                actualSeconds = defaultValue;
+        }
+
         return TimeSpan.FromSeconds(actualSeconds);
     }
 }

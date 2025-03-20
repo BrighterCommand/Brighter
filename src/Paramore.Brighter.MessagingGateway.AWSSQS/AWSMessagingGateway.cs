@@ -320,12 +320,12 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
                 JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
         }
 
-        attributes.Add(QueueAttributeName.DelaySeconds, Convert.ToString(sqsAttributes.DelaySeconds));
-        attributes.Add(QueueAttributeName.MessageRetentionPeriod, Convert.ToString(sqsAttributes.MessageRetentionPeriod));
+        attributes.Add(QueueAttributeName.DelaySeconds, Convert.ToString(Convert.ToInt32(sqsAttributes.DelaySeconds.TotalSeconds)));
+        attributes.Add(QueueAttributeName.MessageRetentionPeriod, Convert.ToString(Convert.ToInt32(sqsAttributes.MessageRetentionPeriod.TotalSeconds)));
         if (sqsAttributes.TimeOut != null)
             attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds,
-                Convert.ToString(sqsAttributes.TimeOut.Value.TotalSeconds, CultureInfo.InvariantCulture));
-        attributes.Add(QueueAttributeName.VisibilityTimeout, Convert.ToString(sqsAttributes.LockTimeout));
+                Convert.ToString(Convert.ToInt32(sqsAttributes.TimeOut.Value.TotalSeconds), CultureInfo.InvariantCulture));
+        attributes.Add(QueueAttributeName.VisibilityTimeout, Convert.ToString(Convert.ToInt32(sqsAttributes.LockTimeout.TotalSeconds), CultureInfo.InvariantCulture));
 
         if (sqsAttributes.IamPolicy != null)
         {

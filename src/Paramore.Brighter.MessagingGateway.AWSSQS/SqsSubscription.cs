@@ -89,7 +89,8 @@ public class SqsSubscription : Subscription
     /// <param name="queueAttributes">What are the <see cref="SqsAttributes"/> of the Sqs queue we use to receive messages</param>
     /// <param name="topicAttributes">What are the <see cref="SnsAttributes"/>  of the topic to which are queue subscribes, if we are <see cref="ChannelType.PubSub"/> </param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-    protected SqsSubscription(Type dataType,
+    protected SqsSubscription(
+        Type dataType,
         SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
         ChannelType channelType = ChannelType.PubSub,
@@ -118,12 +119,9 @@ public class SqsSubscription : Subscription
         
         if (ChannelType == ChannelType.PointToPoint && channelName is null)
             throw new ArgumentNullException(nameof(channelName), "Channel Name is required for PointToPoint channels");
-        
-        QueueAttributes = queueAttributes ?? throw new ArgumentNullException(nameof(queueAttributes), "Queue Attributes are required");
-        
-        if (ChannelType == ChannelType.PubSub && topicAttributes is null)
-            throw new ArgumentNullException(nameof(topicAttributes), "Topic Attributes are required for PubSub channels");
-        TopicAttributes = topicAttributes;
+
+        QueueAttributes = queueAttributes ?? SqsAttributes.Empty;
+        TopicAttributes = topicAttributes ?? SnsAttributes.Empty;
         
         ChannelType = channelType;
         FindTopicBy = findTopicBy;
