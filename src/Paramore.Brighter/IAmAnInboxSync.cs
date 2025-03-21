@@ -61,6 +61,6 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <returns><see langword="true"/> if it exists, otherwise <see langword="false"/>.</returns>
-        bool Exists<T>(string id, string contextKey, RequestContext? requestContextint, int timeoutInMilliseconds = -1) where T : class, IRequest;
+        bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest;
     }
 }
