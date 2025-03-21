@@ -24,13 +24,15 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
         string contentType = "text\\plain";
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
-            
+
+        var channelName = new ChannelName(queueName);
+        
         SqsSubscription<MyCommand> subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
@@ -50,16 +52,19 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
             
-        //Now change the subscription to validate, just check what we made
+        //Now change the subscription to assume that it exists 
         subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Assume
         );
             
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Assume});
+        _messageProducer = new SnsMessageProducer(
+            awsConnection, 
+            new SnsPublication{Topic = routingKey, MakeChannels = OnMissingChannel.Assume}
+            );
 
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
     }

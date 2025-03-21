@@ -10,15 +10,20 @@ public class SqsPublication : Publication
     /// </summary>
     /// <param name="channelName">The <see cref="ChannelName"/> of the queue that we want to send messages to</param>
     /// <param name="queueAttributes">The <see cref="SqsAttributes"/> for the queue</param>
-    /// <param name="queueUrl">The Url for the queue if it was created outside Brighter</param>
+    /// <param name="findQueueBy">How should we look for the queue. If you set the "queueUrl" you MUST set this to <see cref="QueueFindBy.Url"/></param>
+    /// <param name="queueUrl">The Url for the queue if it was created outside Brighter. If you set this, set findQueueBy to <see cref="QueueFindBy.Url"/> you must set this</param>
     /// <param name="makeChannels">A <see cref="OnMissingChannel"/> value: Whether wwe should create the queue, if missing or just validate it</param>
-    public SqsPublication(ChannelName? channelName = null,  SqsAttributes? queueAttributes = null, string? queueUrl = null, OnMissingChannel makeChannels = OnMissingChannel.Create)
+    public SqsPublication(ChannelName? channelName = null,  SqsAttributes? queueAttributes = null, QueueFindBy findQueueBy = QueueFindBy.Name,  string? queueUrl = null, OnMissingChannel makeChannels = OnMissingChannel.Create)
     {
         ChannelName = channelName;
         ChannelType = ChannelType.PointToPoint;
+        FindQueueBy = findQueueBy;
         MakeChannels = makeChannels;
         QueueUrl = queueUrl;
-        QueueAttributes = queueAttributes;
+        QueueAttributes = queueAttributes ?? SqsAttributes.Empty;
+        
+        if (findQueueBy == QueueFindBy.Url && queueUrl is null)
+            throw new ConfigurationException("If you use QueueFindBy.Url, you must supply the QueueUrl on the Publication");
     }
     
     /// <summary>
