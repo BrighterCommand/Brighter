@@ -53,7 +53,9 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
             
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
+        _messageProducer = new SnsMessageProducer(
+            awsConnection, 
+            new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
     }
 
     [Fact]

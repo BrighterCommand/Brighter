@@ -210,13 +210,11 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                 var snsAttributes = _subscription.TopicAttributes ?? new SnsAttributes();
                 snsAttributes.Type = _subscription.QueueAttributes.Type;
 
-                await EnsureTopicAsync(
-                    _subscription.RoutingKey,
+                routingKey = await EnsureTopicAsync(
+                    _subscription.RoutingKey.ToValidSNSTopicName(isFifo),
                     _subscription.FindTopicBy,
                     snsAttributes,
                     _subscription.MakeChannels);
-
-                routingKey = _subscription.RoutingKey.ToValidSNSTopicName(isFifo);
             }
 
             await EnsureQueueAsync(
@@ -228,7 +226,7 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
 
             return new Channel(
                 subscription.ChannelName.ToValidSQSQueueName(isFifo),
-                new RoutingKey(routingKey),
+                new RoutingKey(routingKey ?? RoutingKey.Empty),
                 _messageConsumerFactory.Create(subscription),
                 subscription.BufferSize
             );
