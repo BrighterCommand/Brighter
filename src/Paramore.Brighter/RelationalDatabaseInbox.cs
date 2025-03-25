@@ -1,4 +1,29 @@
-﻿using System;
+﻿#region Licence
+
+/* The MIT License (MIT)
+Copyright © 2025 Dominic Hickie <dominichickie@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
@@ -26,7 +51,7 @@ namespace Paramore.Brighter
         {
             var parameters = CreateAddParameters(command, contextKey);
             WriteToStore(
-                connection => CreateAddCommand(connection, parameters),
+                connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
                 () =>
                 {
                     logger.LogWarning("Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
@@ -40,7 +65,8 @@ namespace Paramore.Brighter
             var parameters = CreateGetParameters(id, contextKey);
             return ReadFromStore(
                 connection => CreateGetCommand(connection, timeoutInMilliseconds, parameters), 
-                MapFunction<T>);
+                MapFunction<T>,
+                id);
         }
 
         public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
@@ -49,7 +75,8 @@ namespace Paramore.Brighter
             var parameters = CreateExistsParameters(id, contextKey);
             return ReadFromStore(
                 connection => CreateExistsCommand(connection, timeoutInMilliseconds, parameters),
-                MapBoolFunction);
+                MapBoolFunction,
+                id);
         }
 
         public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
@@ -57,7 +84,7 @@ namespace Paramore.Brighter
         {
             var parameters = CreateAddParameters(command, contextKey);
             await WriteToStoreAsync(
-                connection => CreateAddCommand(connection, parameters),
+                connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
                 () =>
                 {
                     logger.LogWarning("Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
@@ -73,6 +100,7 @@ namespace Paramore.Brighter
             return await ReadFromStoreAsync(
                 connection => CreateGetCommand(connection, timeoutInMilliseconds, parameters),
                 MapFunctionAsync<T>,
+                id,
                 cancellationToken);
         }
 
@@ -83,6 +111,7 @@ namespace Paramore.Brighter
             return await ReadFromStoreAsync(
                 connection => CreateExistsCommand(connection, timeoutInMilliseconds, parameters),
                 MapBoolFunctionAsync,
+                id,
                 cancellationToken);
         }
 
@@ -99,12 +128,14 @@ namespace Paramore.Brighter
 
         protected abstract T ReadFromStore<T>(
             Func<DbConnection, DbCommand> commandFunc,
-            Func<DbDataReader, T> resultFunc
+            Func<DbDataReader, string, T> resultFunc,
+            string commandId
         );
 
         protected abstract Task<T> ReadFromStoreAsync<T>(
             Func<DbConnection, DbCommand> commandFunc,
-            Func<DbDataReader, CancellationToken, Task<T>> resultFunc,
+            Func<DbDataReader, string, CancellationToken, Task<T>> resultFunc,
+            string commandId,
             CancellationToken cancellationToken
         );
 
@@ -134,8 +165,8 @@ namespace Paramore.Brighter
             connection.Close();
         }
 
-        private DbCommand CreateAddCommand(DbConnection connection, IDbDataParameter[] parameters)
-            => CreateCommand(connection, GenerateSqlText(queries.AddCommand), 0, parameters);
+        private DbCommand CreateAddCommand(DbConnection connection, int inboxTimeout, IDbDataParameter[] parameters)
+            => CreateCommand(connection, GenerateSqlText(queries.AddCommand), inboxTimeout, parameters);
 
         private DbCommand CreateExistsCommand(DbConnection connection, int inboxTimeout, IDbDataParameter[] parameters)
             => CreateCommand(connection, GenerateSqlText(queries.ExistsCommand), inboxTimeout, parameters);
@@ -155,12 +186,12 @@ namespace Paramore.Brighter
 
         protected abstract IDbDataParameter[] CreateGetParameters(string commandId, string contextKey);
 
-        protected abstract T MapFunction<T>(DbDataReader dr) where T : class, IRequest;
+        protected abstract T MapFunction<T>(DbDataReader dr, string commandId) where T : class, IRequest;
 
-        protected abstract Task<T> MapFunctionAsync<T>(DbDataReader dr, CancellationToken cancellationToken) where T : class, IRequest;
+        protected abstract Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId, CancellationToken cancellationToken) where T : class, IRequest;
 
-        protected abstract bool MapBoolFunction(DbDataReader dr);
+        protected abstract bool MapBoolFunction(DbDataReader dr, string commandId);
 
-        protected abstract Task<bool> MapBoolFunctionAsync(DbDataReader dr, CancellationToken cancellationToken);
+        protected abstract Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId, CancellationToken cancellationToken);
     }
 }
