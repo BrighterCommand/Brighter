@@ -275,7 +275,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
             queueName = queueName.ToValidSQSQueueName(true);
         }
 
-        Dictionary<string, string?> attributes = CreateQueueAttributes(sqsAttributes);
+        Dictionary<string, string?> attributes = CreateQueueAttributes(sqsAttributes, true);
         Dictionary<string, string> tags = CreateQueueTags(sqsAttributes);
 
         string queueUrl;
@@ -308,11 +308,11 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         return attributesResponse.QueueARN;
     }
 
-    private Dictionary<string, string?> CreateQueueAttributes(SqsAttributes sqsAttributes)
+    private Dictionary<string, string?> CreateQueueAttributes(SqsAttributes sqsAttributes, bool isDLQ = false)
     {
         var attributes = new Dictionary<string, string?>();
 
-        if (sqsAttributes.RedrivePolicy != null)
+        if (!isDLQ && sqsAttributes.RedrivePolicy != null)
         {
             var policy = new { maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount, deadLetterTargetArn = ChannelDeadLetterQueueArn };
 
