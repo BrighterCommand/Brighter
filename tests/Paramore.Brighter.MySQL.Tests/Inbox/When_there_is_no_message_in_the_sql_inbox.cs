@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         public void When_There_Is_No_Message_In_The_Sql_Inbox_Get()
         {
             string commandId = Guid.NewGuid().ToString();
-            var exception = Catch.Exception(() => _mysqlInBox.Get<MyCommand>(commandId, _contextKey, null));
+            var exception = Catch.Exception(() => _mysqlInBox.Get<MyCommand>(commandId, _contextKey, null, -1));
             Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         public void When_There_Is_No_Message_In_The_Sql_Inbox_Exists()
         {
             string commandId = Guid.NewGuid().ToString();
-            Assert.False(_mysqlInBox.Exists<MyCommand>(commandId, _contextKey, null));
+            Assert.False(_mysqlInBox.Exists<MyCommand>(commandId, _contextKey, null, -1));
         }
 
         public void Dispose()

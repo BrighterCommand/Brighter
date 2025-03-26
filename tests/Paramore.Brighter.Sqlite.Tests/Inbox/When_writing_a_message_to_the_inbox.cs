@@ -23,13 +23,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             _sqlInbox = new SqliteInbox(_sqliteTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand {Value = "Test"};
             _contextKey = "context-key";
-            _sqlInbox.Add(_raisedCommand, _contextKey, null);
+            _sqlInbox.Add(_raisedCommand, _contextKey, null, -1);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Inbox()
         {
-            _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null);
+            _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null, -1);
 
             //_should_read_the_command_from_the__sql_inbox
             Assert.NotNull(_storedCommand);

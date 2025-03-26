@@ -28,13 +28,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
         {
-            await _sqlInbox.AddAsync(_raisedCommand, _contextKey, null);
+            await _sqlInbox.AddAsync(_raisedCommand, _contextKey, null, -1, default);
 
-            _exception = await Catch.ExceptionAsync(() => _sqlInbox.AddAsync(_raisedCommand, _contextKey, null));
+            _exception = await Catch.ExceptionAsync(() => _sqlInbox.AddAsync(_raisedCommand, _contextKey, null, -1, default));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             Assert.Null(_exception);
-            var exists = await _sqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
+            var exists = await _sqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey, null, -1, default);
             Assert.True(exists);
         }
 

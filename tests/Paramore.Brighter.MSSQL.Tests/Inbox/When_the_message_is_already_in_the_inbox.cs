@@ -46,25 +46,25 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
             _sqlInbox = new MsSqlInbox(_msSqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
-            _sqlInbox.Add(_raisedCommand, _contextKey, null);
+            _sqlInbox.Add(_raisedCommand, _contextKey, null, -1);
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox()
         {
-            _exception = Catch.Exception(() => _sqlInbox.Add(_raisedCommand, _contextKey, null));
+            _exception = Catch.Exception(() => _sqlInbox.Add(_raisedCommand, _contextKey, null, -1));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             Assert.Null(_exception);
-            Assert.True(_sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey, null));
+            Assert.True(_sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey, null, -1));
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            _sqlInbox.Add(_raisedCommand, "some other key", null);
+            _sqlInbox.Add(_raisedCommand, "some other key", null, -1);
 
-            var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null);
+            var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null, -1);
 
             //should read the command from the dynamo db inbox
             Assert.NotNull(storedCommand);
