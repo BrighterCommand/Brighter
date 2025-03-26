@@ -46,6 +46,7 @@ namespace Paramore.Brighter
         /// <inheritdoc/>
         public IAmABrighterTracer? Tracer { private get; set; }
 
+        /// <inheritdoc/>
         public void Add<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
             where T : class, IRequest
         {
@@ -59,6 +60,7 @@ namespace Paramore.Brighter
                 });
         }
 
+        /// <inheritdoc/>
         public T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
             where T : class, IRequest
         {
@@ -69,6 +71,7 @@ namespace Paramore.Brighter
                 id);
         }
 
+        /// <inheritdoc/>
         public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
             where T : class, IRequest
         {
@@ -79,6 +82,7 @@ namespace Paramore.Brighter
                 id);
         }
 
+        /// <inheritdoc/>
         public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
@@ -93,6 +97,7 @@ namespace Paramore.Brighter
                 cancellationToken);
         }
 
+        /// <inheritdoc/>
         public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
@@ -104,6 +109,7 @@ namespace Paramore.Brighter
                 cancellationToken);
         }
 
+        /// <inheritdoc/>
         public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
