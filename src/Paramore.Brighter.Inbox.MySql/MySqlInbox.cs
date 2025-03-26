@@ -100,11 +100,12 @@ namespace Paramore.Brighter.Inbox.MySql
         protected override async Task WriteToStoreAsync(Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction, CancellationToken cancellationToken)
         {
-            using var connection = await GetOpenConnectionAsync(_connectionProvider, cancellationToken);
+            using var connection = await GetOpenConnectionAsync(_connectionProvider, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                await command.ExecuteNonQueryAsync(cancellationToken);
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             catch (MySqlException ex)
             {
@@ -132,10 +133,11 @@ namespace Paramore.Brighter.Inbox.MySql
             string commandId,
             CancellationToken cancellationToken)
         {
-            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
             using var command = commandFunc.Invoke(connection);
 
-            var result = await command.ExecuteReaderAsync(cancellationToken);
+            var result = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             return await resultFunc.Invoke(result, commandId, cancellationToken);
         }
 
@@ -205,7 +207,7 @@ namespace Paramore.Brighter.Inbox.MySql
         {
             try
             {
-                if (await dr.ReadAsync())
+                if (await dr.ReadAsync().ConfigureAwait(ContinueOnCapturedContext))
                 {
                     var body = dr.GetString(dr.GetOrdinal("CommandBody"));
                     return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
@@ -216,7 +218,7 @@ namespace Paramore.Brighter.Inbox.MySql
 #if NETSTANDARD2_0
                 dr.Close();
 #else
-                await dr.CloseAsync();
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
 #endif
             }
 
