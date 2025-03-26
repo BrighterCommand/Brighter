@@ -27,10 +27,10 @@ namespace Paramore.Brighter.Inbox.MySql
 {
     public class MySqlQueries : IRelationalDatabaseInboxQueries
     {
-        public string AddCommand { get; } = "INSERT INTO {0} ([CommandID], [CommandType], [CommandBody], [Timestamp], [ContextKey]) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
+        public string AddCommand { get; } = "INSERT INTO {0} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
 
-        public string ExistsCommand { get; } = "SELECT [CommandID] FROM {0} WHERE [CommandID] = @CommandID AND [ContextKey] = @ContextKey LIMIT 1";
+        public string ExistsCommand { get; } = "SELECT CommandID FROM {0} WHERE CommandID = @CommandID AND ContextKey = @ContextKey LIMIT 1";
 
-        public string GetCommand { get; } = "SELECT * FROM {0} where [CommandID] = @CommandID AND [ContextKey] = @ContextKey";
+        public string GetCommand { get; } = "SELECT * FROM {0} where CommandID = @CommandID AND ContextKey = @ContextKey";
     }
 }
