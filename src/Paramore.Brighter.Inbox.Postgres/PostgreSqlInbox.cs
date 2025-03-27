@@ -33,6 +33,7 @@ using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.Postgres
@@ -43,7 +44,8 @@ namespace Paramore.Brighter.Inbox.Postgres
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         public PostgreSqlInbox(IAmARelationalDbConnectionProvider connectionProvider, IAmARelationalDatabaseConfiguration configuration)
-            : base(configuration.InBoxTableName, new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlInbox>())
+            : base(DbSystem.Postgresql, configuration.DatabaseName, configuration.InBoxTableName, 
+                  new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlInbox>())
         {
             _connectionProvider = connectionProvider;
             _configuration = configuration;

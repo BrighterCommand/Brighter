@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Sqlite;
 
 namespace Paramore.Brighter.Inbox.Sqlite
@@ -51,7 +52,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
         /// <param name="connectionProvider">The connection provider for the database.</param>
         /// <param name="configuration">The configuration for the database.</param>
         public SqliteInbox(IAmARelationalDbConnectionProvider connectionProvider, IAmARelationalDatabaseConfiguration configuration)
-            : base(configuration.InBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteInbox>())
+            : base(DbSystem.Sqlite, configuration.DatabaseName, configuration.InBoxTableName, 
+                  new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteInbox>())
         {
             _connectionProvider = connectionProvider;
             ContinueOnCapturedContext = false;
