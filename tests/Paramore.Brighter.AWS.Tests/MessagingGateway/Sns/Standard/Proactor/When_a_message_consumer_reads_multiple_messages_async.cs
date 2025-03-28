@@ -37,6 +37,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             bufferSize: BufferSize,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
         )).GetAwaiter().GetResult();
 

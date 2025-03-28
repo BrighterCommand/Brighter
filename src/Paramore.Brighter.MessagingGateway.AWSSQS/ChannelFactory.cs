@@ -104,6 +104,15 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             var isFifo = _subscription.QueueAttributes.Type == SqsType.Fifo;
             var queueName = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
             
+            //on assume, don't try to create the queue or topic, just return a channel
+            if (_subscription.MakeChannels == OnMissingChannel.Assume)
+                return new ChannelAsync(
+                    new ChannelName(queueName),
+                    new RoutingKey(_subscription.RoutingKey),
+                    _messageConsumerFactory.CreateAsync(subscription),
+                    subscription.BufferSize
+                ); 
+            
             var queueUrl =await EnsureQueueAsync(
                 queueName,
                 _subscription.ChannelType,
@@ -112,6 +121,10 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                 _subscription.MakeChannels,
                 ct);
             
+            //TODO: In principle we could alter the subscription to QueueFindBy.Url and pass the URL in the subscription
+            //This would prevent the need to look up the queue again
+            
+            //Either we found it, or we made it, so we should have a queueUrl
             if (queueUrl is null)
                 throw new InvalidOperationException($"ChannelFactory.CreateAsyncChannelAsync: Could not create queue {queueName}");
             

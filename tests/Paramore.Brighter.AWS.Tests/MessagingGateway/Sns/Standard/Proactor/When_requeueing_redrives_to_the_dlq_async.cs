@@ -39,6 +39,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(

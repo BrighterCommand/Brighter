@@ -24,7 +24,8 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Assume);
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Assume);
 
         var awsConnection = GatewayFactory.CreateFactory();
 
@@ -37,11 +38,15 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
             });
 
         producer.ConfirmTopicExistsAsync(topicName).Wait();
+        
+        //TODO: Assume will fail here, as so we have no Arn for the topic
 
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
+        
+        
+        //TODO: for assume, does this call need to be before create channel? Or after?
 
-        //We need to create the topic at least, to check the queues
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
 

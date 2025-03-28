@@ -31,6 +31,7 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         SqsSubscription<MyCommand> subscription = new(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create

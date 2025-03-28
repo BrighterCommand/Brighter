@@ -47,8 +47,8 @@ public class SqsSubscription : Subscription
     /// TopicFindBy.Convention -> The routing key is a name, but use convention to make an Arn for this account
     /// TopicFindBy.Name -> Treat the routing key as a name & use ListTopics to find it (rate limited 30/s)
     /// </summary>
-    public TopicFindBy FindTopicBy { get; }
-    
+    public TopicFindBy FindTopicBy { get; set; }
+
     /// <summary>
     /// Indicates how we should treat the  <see cref="ChannelName"/>
     /// QueueFindBy.Url -> The Channel Name contains the Url for a queue; assumes that you know it exists and provide it

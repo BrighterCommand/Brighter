@@ -40,6 +40,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             requeueCount: -1,
             requeueDelay: TimeSpan.FromMilliseconds(50),

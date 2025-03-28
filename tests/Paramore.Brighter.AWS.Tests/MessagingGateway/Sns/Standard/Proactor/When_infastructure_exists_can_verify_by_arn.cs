@@ -16,7 +16,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
-    private readonly IAmAMessageConsumerSync _consumer;
+    private readonly IAmAMessageConsumerAsync _consumer;
     private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
@@ -33,8 +33,9 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         SqsSubscription<MyCommand> subscription = new(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
         );
 
@@ -52,18 +53,15 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
         _channelFactory = new ChannelFactory(awsConnection);
-        var channel = _channelFactory.CreateSyncChannel(subscription);
+        var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         var topicArn = FindTopicArn(awsConnection, routingKey.Value);
         var routingKeyArn = new RoutingKey(topicArn);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKeyArn,
-            messagePumpType: MessagePumpType.Reactor,
-            findTopicBy: TopicFindBy.Arn, makeChannels: OnMissingChannel.Validate);
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.RoutingKey = routingKeyArn;
+        subscription.FindTopicBy = TopicFindBy.Arn;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -75,25 +73,26 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
                 MakeChannels = OnMissingChannel.Validate
             });
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
 
     [Fact]
     public async Task When_infrastructure_exists_can_verify()
     {
         //arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
         await Task.Delay(1000);
 
-        var messages = _consumer.Receive(TimeSpan.FromMilliseconds(5000));
+        var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         //Assert
         var message = messages.First();
+        Assert.NotEqual(MessageType.MT_NONE, message.Header.MessageType);
         Assert.Equal(_myCommand.Id, message.Id);
 
         //clear the queue
-        _consumer.Acknowledge(message);
+        await _consumer.AcknowledgeAsync(message);
     }
 
     public void Dispose()
@@ -101,7 +100,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         //Clean up resources that we have created
         _channelFactory.DeleteTopicAsync().Wait();
         _channelFactory.DeleteQueueAsync().Wait();
-        _consumer.Dispose();
+        ((IAmAMessageConsumerSync)_consumer).Dispose();
         _messageProducer.Dispose();
     }
 
@@ -109,7 +108,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
     {
         await _channelFactory.DeleteTopicAsync();
         await _channelFactory.DeleteQueueAsync();
-        await ((IAmAMessageConsumerAsync)_consumer).DisposeAsync();
+        await _consumer.DisposeAsync();
         await _messageProducer.DisposeAsync();
     }
 

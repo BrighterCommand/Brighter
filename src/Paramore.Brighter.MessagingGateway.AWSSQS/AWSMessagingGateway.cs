@@ -88,7 +88,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
             OnMissingChannel.Assume or OnMissingChannel.Validate => 
                 await ValidateQueueAsync(queue, findQueueBy, sqsAttributes.Type, makeChannel, cancellationToken),
             OnMissingChannel.Create => 
-                await CreateQueueAsync(queue, channelType, sqsAttributes, makeChannel, cancellationToken),
+                await CreateQueueAsync(queue, sqsAttributes, cancellationToken),
             _ => ChannelQueueUrl
         };
 
@@ -185,29 +185,18 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
     private async Task<string> CreateTopicAsync(RoutingKey topic, SnsAttributes? snsAttributes)
     {
+        snsAttributes ??= SnsAttributes.Empty;
+        
         using var snsClient = _awsClientFactory.CreateSnsClient();
 
-
         var topicName = topic.Value;
-        var attributes = new Dictionary<string, string?>();
-        if (snsAttributes != null)
+        
+        if (snsAttributes.Type == SqsType.Fifo)
         {
-            if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy))
-                attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
-
-            if (!string.IsNullOrEmpty(snsAttributes.Policy))
-                attributes.Add("Policy", snsAttributes.Policy);
-
-            if (snsAttributes.Type == SqsType.Fifo)
-            {
-                topicName = topic.ToValidSNSTopicName(true);
-                attributes.Add("FifoTopic", "true");
-                if (snsAttributes.ContentBasedDeduplication)
-                {
-                    attributes.Add("ContentBasedDeduplication", "true");
-                }
-            }
+            topicName = topic.ToValidSNSTopicName(true);
         }
+
+        Dictionary<string, string?> attributes = CreateTopicAttributes(snsAttributes);
 
         var createTopicRequest = new CreateTopicRequest(topicName) { Attributes = attributes, Tags = [new Tag { Key = "Source", Value = "Brighter" }] };
 
@@ -219,22 +208,20 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         throw new InvalidOperationException(
             $"Could not create Topic topic: {topic} on {AwsConnection.Region}");
     }
-    
+
     private async Task<string> CreateQueueAsync(
         string queueName,
-        ChannelType channelType,
         SqsAttributes? sqsAttributes,
-        OnMissingChannel makeChannel,
         CancellationToken cancellationToken)
     {
         sqsAttributes ??= SqsAttributes.Empty;
 
-        if (sqsAttributes?.RedrivePolicy != null)
+        if (sqsAttributes.RedrivePolicy != null)
             ChannelDeadLetterQueueArn = await CreateDeadLetterQueueAsync(sqsAttributes, cancellationToken);
 
         using var sqsClient = _awsClientFactory.CreateSqsClient();
 
-        if (sqsAttributes!.Type == SqsType.Fifo)
+        if (sqsAttributes.Type == SqsType.Fifo)
             queueName = queueName.ToValidSQSQueueName(true);
 
         Dictionary<string, string?> attributes = CreateQueueAttributes(sqsAttributes);
@@ -270,7 +257,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         var queueName = sqsAttributes.RedrivePolicy!.DeadlLetterQueueName;
 
-        if (sqsAttributes!.Type == SqsType.Fifo)
+        if (sqsAttributes.Type == SqsType.Fifo)
         {
             queueName = queueName.ToValidSQSQueueName(true);
         }
@@ -312,6 +299,36 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
     {
         var attributes = new Dictionary<string, string?>();
 
+        CreateCommonQueueAttributes(sqsAttributes, isDLQ, attributes);
+
+        if (sqsAttributes.Type != SqsType.Fifo) return attributes;
+
+        CreateFifoQueueAttributes(sqsAttributes, attributes);
+
+        return attributes;
+    }
+
+    private static void CreateFifoQueueAttributes(SqsAttributes sqsAttributes, Dictionary<string, string?> attributes)
+    {
+        attributes.Add(QueueAttributeName.FifoQueue, "true");
+        if (sqsAttributes.ContentBasedDeduplication)
+        {
+            attributes.Add(QueueAttributeName.ContentBasedDeduplication, "true");
+        }
+
+        if (sqsAttributes.DeduplicationScope == null || sqsAttributes.FifoThroughputLimit == null)
+            return ;
+     
+        attributes.Add(QueueAttributeName.FifoThroughputLimit, Convert.ToString(sqsAttributes.FifoThroughputLimit.Value.AsString()));
+        attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
+        {
+            DeduplicationScope.MessageGroup => "messageGroup",
+            _ => "queue"
+        });
+    }
+
+    private void CreateCommonQueueAttributes(SqsAttributes sqsAttributes, bool isDLQ, Dictionary<string, string?> attributes)
+    {
         if (!isDLQ && sqsAttributes.RedrivePolicy != null)
         {
             var policy = new { maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount, deadLetterTargetArn = ChannelDeadLetterQueueArn };
@@ -331,41 +348,39 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         {
             attributes.Add(QueueAttributeName.Policy, sqsAttributes.IamPolicy);
         }
-
-        if (sqsAttributes.Type == SqsType.Fifo)
-        {
-            attributes.Add(QueueAttributeName.FifoQueue, "true");
-            if (sqsAttributes.ContentBasedDeduplication)
-            {
-                attributes.Add(QueueAttributeName.ContentBasedDeduplication, "true");
-            }
-
-            if (sqsAttributes.DeduplicationScope != null && sqsAttributes.FifoThroughputLimit != null)
-            {
-                attributes.Add(QueueAttributeName.FifoThroughputLimit, Convert.ToString(sqsAttributes.FifoThroughputLimit.Value.AsString()));
-                attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
-                {
-                    DeduplicationScope.MessageGroup => "messageGroup",
-                    _ => "queue"
-                });
-            }
-        }
-
-        return attributes;
     }
 
     private Dictionary<string, string> CreateQueueTags(SqsAttributes? sqsAttributes)
     {
         var tags = new Dictionary<string, string> { { "Source", "Brighter" } };
-        if (sqsAttributes?.Tags != null)
+        if (sqsAttributes?.Tags == null) return tags;
+        
+        foreach (var tag in sqsAttributes.Tags)
         {
-            foreach (var tag in sqsAttributes.Tags)
-            {
-                tags.Add(tag.Key, tag.Value);
-            }
+            tags.Add(tag.Key, tag.Value);
         }
 
         return tags;
+    }
+    
+    private static Dictionary<string, string?> CreateTopicAttributes(SnsAttributes snsAttributes)
+    {
+        var attributes = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy))
+            attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
+
+        if (!string.IsNullOrEmpty(snsAttributes.Policy))
+            attributes.Add("Policy", snsAttributes.Policy);
+
+        if (snsAttributes.Type != SqsType.Fifo) return attributes;
+        
+        attributes.Add("FifoTopic", "true");
+        if (snsAttributes.ContentBasedDeduplication)
+        {
+            attributes.Add("ContentBasedDeduplication", "true");
+        }
+
+        return attributes;
     }
 
     private static async Task<string?> GetQueueArnForChannelAsync(string queueUrl, AmazonSQSClient sqsClient)
@@ -449,18 +464,14 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         OnMissingChannel makeChannel,
         CancellationToken cancellationToken)
     {
+        if (makeChannel == OnMissingChannel.Assume)
+            return null;
+        
         var validationStrategy = GetQueueValidationStrategy(findBy, type);
         var (exists, queueUrl) = await validationStrategy.ValidateAsync(queueName, cancellationToken);
 
         if (exists)
-        {
             return queueUrl;
-        }
-
-        if (makeChannel == OnMissingChannel.Assume)
-        {
-            return null;
-        }
 
         throw new QueueDoesNotExistException(
             $"Queue validation error: could not find queue {queueName}. Did you want Brighter to create infrastructure?");

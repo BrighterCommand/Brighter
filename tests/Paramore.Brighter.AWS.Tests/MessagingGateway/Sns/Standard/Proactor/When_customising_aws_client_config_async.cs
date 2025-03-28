@@ -29,7 +29,9 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            routingKey: routingKey, messagePumpType: MessagePumpType.Proactor);
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Proactor);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

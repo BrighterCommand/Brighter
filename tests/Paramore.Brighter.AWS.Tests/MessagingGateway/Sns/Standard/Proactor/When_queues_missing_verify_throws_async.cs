@@ -24,7 +24,9 @@ public class AwsValidateQueuesTestsAsync : IAsyncDisposable
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Validate
         );
 

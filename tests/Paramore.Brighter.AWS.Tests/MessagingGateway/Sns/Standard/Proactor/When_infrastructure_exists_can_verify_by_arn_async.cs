@@ -33,8 +33,9 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         SqsSubscription<MyCommand> subscription = new(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
         );
 
@@ -52,14 +53,10 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
 
         var topicArn = FindTopicArn(awsConnection, routingKey.Value).Result;
         var routingKeyArn = new RoutingKey(topicArn);
-
-        subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKeyArn,
-            findTopicBy: TopicFindBy.Arn,
-            makeChannels: OnMissingChannel.Validate
-        );
+        
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.RoutingKey = routingKeyArn;
+        subscription.FindTopicBy = TopicFindBy.Arn;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

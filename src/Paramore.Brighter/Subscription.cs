@@ -75,7 +75,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
         /// </summary>
-        public OnMissingChannel MakeChannels { get; }
+        public OnMissingChannel MakeChannels { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the subscription, for identification.

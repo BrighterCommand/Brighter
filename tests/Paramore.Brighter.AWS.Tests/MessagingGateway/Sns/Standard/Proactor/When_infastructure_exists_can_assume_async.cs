@@ -33,6 +33,7 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
         SqsSubscription<MyCommand> subscription = new(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
@@ -53,13 +54,7 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateAsyncChannel(subscription);
             
         //Now change the subscription to assume that it exists 
-        subscription = new(
-            subscriptionName: new SubscriptionName(queueName),
-            channelName: channelName,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Assume
-        );
+        subscription.MakeChannels = OnMissingChannel.Assume;
             
         _messageProducer = new SnsMessageProducer(
             awsConnection, 
