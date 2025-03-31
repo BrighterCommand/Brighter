@@ -38,6 +38,7 @@ using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AWSSQS.Extensions;
+using Paramore.Brighter.Tasks;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -94,8 +95,19 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         return ChannelQueueUrl;
     }
+    
+    protected RoutingKey EnsureSubscription(
+        bool isFifo,
+        string queueUrl,
+        RoutingKey routingKey,
+        TopicFindBy findTopicBy,
+        SnsAttributes? snsAttributes,
+        SqsAttributes? sqsAttributes,
+        OnMissingChannel makeChannels = OnMissingChannel.Create)
+    => BrighterAsyncContext.Run(async () => await EnsureSubscriptionAsync(isFifo, queueUrl, routingKey, findTopicBy, snsAttributes, sqsAttributes, makeChannels));
+    
 
-    protected async Task<RoutingKey> EnsureSubscription(
+    protected async Task<RoutingKey> EnsureSubscriptionAsync(
         bool isFifo,
         string queueUrl,
         RoutingKey routingKey,
