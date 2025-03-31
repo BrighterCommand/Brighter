@@ -28,13 +28,16 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
-            messagePumpType: MessagePumpType.Reactor, 
+            topicAttributes: topicAttributes,
+            messagePumpType: MessagePumpType.Proactor, 
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -51,13 +54,9 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var topicArn = FindTopicArn(awsConnection, routingKey.ToValidSNSTopicName(true)).Result;
         var routingKeyArn = new RoutingKey(topicArn);
 
-        subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKeyArn,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
-            findTopicBy: TopicFindBy.Arn, 
-            makeChannels: OnMissingChannel.Validate);
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.RoutingKey = routingKeyArn;
+        subscription.FindTopicBy = TopicFindBy.Arn;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -67,7 +66,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
                 TopicArn = topicArn,
                 FindTopicBy = TopicFindBy.Arn,
                 MakeChannels = OnMissingChannel.Validate,
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                TopicAttributes = topicAttributes
             });
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);

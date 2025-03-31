@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -21,13 +21,14 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTestsAsync()
+    public SqsBufferedConsumerTestsAsync()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
         _channelFactory = new ChannelFactory(awsConnection);
         var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_topicName);
@@ -38,10 +39,13 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
             bufferSize: BufferSize,
+            messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(
                 type: SqsType.Fifo,
                 deduplicationScope: DeduplicationScope.MessageGroup,
-                fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId), makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();
+                fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId), 
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
@@ -49,7 +53,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = topicAttributes
             });
     }
 

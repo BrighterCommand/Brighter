@@ -29,12 +29,15 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            topicAttributes: topicAttributes,
             messagePumpType: MessagePumpType.Proactor, 
             makeChannels: OnMissingChannel.Create);
 
@@ -49,15 +52,8 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type:SqsType.Fifo), 
-            messagePumpType: MessagePumpType.Proactor, 
-            findTopicBy: TopicFindBy.Name, 
-            makeChannels: OnMissingChannel.Validate
-            );
+        //Now change the subscription to validate, just check what we made
+        subscription.MakeChannels = OnMissingChannel.Validate;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -66,7 +62,7 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
                 FindTopicBy = TopicFindBy.Name,
                 MakeChannels = OnMissingChannel.Validate,
                 Topic = new RoutingKey(topicName),
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                TopicAttributes = topicAttributes
             }
         );
 

@@ -24,6 +24,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         const int bufferSize = 10;
 
@@ -31,9 +32,11 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: _routingKey,
             bufferSize: bufferSize,
             queueAttributes:new SqsAttributes(rawMessageDelivery: false, type: SqsType.Fifo), 
+            topicAttributes: topicAttributes,
             makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
@@ -41,7 +44,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             {
                 MakeChannels = OnMissingChannel.Create, 
                 Topic = _routingKey, 
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                TopicAttributes = topicAttributes
             });
     }
 

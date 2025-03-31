@@ -7,12 +7,12 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-public class AWSValidateMissingTopicTestsAsync 
+public class AwsValidateMissingTopicTestsAsync 
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly RoutingKey _routingKey;
 
-    public AWSValidateMissingTopicTestsAsync()
+    public AwsValidateMissingTopicTestsAsync()
     {
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey(topicName);

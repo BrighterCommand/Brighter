@@ -148,9 +148,10 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         ChannelTopicArn = makeTopic switch
         {
             //on validate or assume, turn a routing key into a topicARN
-            OnMissingChannel.Assume or OnMissingChannel.Validate => await ValidateTopicAsync(topic, topicFindBy, type,
-                cancellationToken),
-            OnMissingChannel.Create => await CreateTopicAsync(topic, attributes),
+            OnMissingChannel.Assume or OnMissingChannel.Validate => 
+                await ValidateTopicAsync(topic, topicFindBy, type, cancellationToken),
+            OnMissingChannel.Create =>
+                await CreateTopicAsync(topic, attributes),
             _ => ChannelAddress
         };
 

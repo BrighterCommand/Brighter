@@ -23,6 +23,7 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor, 
             makeChannels: OnMissingChannel.Assume);
@@ -39,14 +40,10 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
 
         producer.ConfirmTopicExistsAsync(topicName).Wait();
         
-        //TODO: Assume will fail here, as so we have no Arn for the topic
-
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
         
-        
-        //TODO: for assume, does this call need to be before create channel? Or after?
-
+        //We need to create the topic at least, to check the queues
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
 
@@ -54,7 +51,8 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
     public async Task When_queues_missing_assume_throws_async()
     {
         //we will try to get the queue url, and fail because it does not exist
-        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
+        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => 
+            await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
     }
         
     public void Dispose()

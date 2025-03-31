@@ -121,9 +121,6 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                 _subscription.MakeChannels,
                 ct);
             
-            //TODO: In principle we could alter the subscription to QueueFindBy.Url and pass the URL in the subscription
-            //This would prevent the need to look up the queue again
-            
             //Either we found it, or we made it, so we should have a queueUrl
             if (queueUrl is null)
                 throw new InvalidOperationException($"ChannelFactory.CreateAsyncChannelAsync: Could not create queue {queueName}");
@@ -231,9 +228,6 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                 _subscription.FindQueueBy,
                 _subscription.QueueAttributes,
                 _subscription.MakeChannels);
-            
-            //TODO: In principle we could alter the subscription to QueueFindBy.Url and pass the URL in the subscription
-            //This would prevent the need to look up the queue again
             
             //Either we found it, or we made it, so we should have a queueUrl
             if (queueUrl is null)

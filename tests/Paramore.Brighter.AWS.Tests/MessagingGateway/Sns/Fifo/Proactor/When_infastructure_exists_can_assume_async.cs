@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class AwsAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
@@ -19,7 +19,7 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTestsAsync()
+    public AwsAssumeInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -29,12 +29,14 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             queueAttributes: new SqsAttributes(type: SqsType.Fifo),
+            topicAttributes: topicAttributes,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
@@ -52,17 +54,11 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo),
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Assume);
+        //Now change the subscription to assume that it exists 
+        subscription.MakeChannels = OnMissingChannel.Assume;
 
         _messageProducer = new SnsMessageProducer(awsConnection,
-            new SnsPublication { MakeChannels = OnMissingChannel.Assume, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo } });
+            new SnsPublication { MakeChannels = OnMissingChannel.Assume, TopicAttributes = topicAttributes });
 
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true));
     }

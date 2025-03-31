@@ -7,12 +7,12 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-public class AWSValidateMissingTopicTestsAsync
+public class AwsValidateMissingTopicTestsAsync
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly RoutingKey _routingKey;
 
-    public AWSValidateMissingTopicTestsAsync()
+    public AwsValidateMissingTopicTestsAsync()
     {
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey(topicName);
@@ -26,7 +26,8 @@ public class AWSValidateMissingTopicTestsAsync
     public async Task When_topic_missing_verify_throws_async()
     {
         // arrange
-        var producer = new SnsMessageProducer(_awsConnection,
+        var producer = new SnsMessageProducer(
+            _awsConnection,
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate,

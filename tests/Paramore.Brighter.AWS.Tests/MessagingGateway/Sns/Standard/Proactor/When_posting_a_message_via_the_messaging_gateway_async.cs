@@ -53,7 +53,11 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
 
         _messageProducer = new SnsMessageProducer(
             awsConnection, 
-            new SnsPublication { Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create });
+            new SnsPublication
+            {
+                Topic = new RoutingKey(_topicName), 
+                MakeChannels = OnMissingChannel.Create
+            });
     }
 
     [Fact]
