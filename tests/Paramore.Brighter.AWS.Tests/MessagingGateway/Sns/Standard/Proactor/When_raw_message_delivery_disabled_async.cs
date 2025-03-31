@@ -34,8 +34,10 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             channelType: ChannelType.PubSub,
             routingKey: _routingKey,
             bufferSize: bufferSize,
+            messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(
-                rawMessageDelivery: false), makeChannels: OnMissingChannel.Create));
+                rawMessageDelivery: false), 
+            makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication

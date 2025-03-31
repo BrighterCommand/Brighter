@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -21,7 +21,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTestsAsync()
+    public SqsBufferedConsumerTestsAsync()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 

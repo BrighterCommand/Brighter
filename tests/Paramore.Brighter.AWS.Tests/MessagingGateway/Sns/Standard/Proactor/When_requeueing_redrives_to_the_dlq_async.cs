@@ -44,7 +44,8 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
             messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(
                 redrivePolicy: new RedrivePolicy(_deadLetterChannel!, 2)
-            )
+            ),
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(

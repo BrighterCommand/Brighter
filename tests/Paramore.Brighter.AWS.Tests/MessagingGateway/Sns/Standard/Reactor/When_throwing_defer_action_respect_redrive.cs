@@ -41,6 +41,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             //don't block the redrive policy from owning retry management
             requeueCount: -1,

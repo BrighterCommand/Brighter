@@ -32,6 +32,7 @@ public class AwsValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         SqsSubscription<MyCommand> subscription = new(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create
@@ -52,12 +53,9 @@ public class AwsValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
-        subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            findTopicBy: TopicFindBy.Convention, makeChannels: OnMissingChannel.Validate);
+        subscription.FindQueueBy = QueueFindBy.Name;
+        subscription.FindTopicBy = TopicFindBy.Convention;
+        subscription.MakeChannels =  OnMissingChannel.Validate;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

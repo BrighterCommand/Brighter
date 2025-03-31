@@ -37,10 +37,13 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             queueAttributes: new SqsAttributes(
                 redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
-            )
+            ),
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(

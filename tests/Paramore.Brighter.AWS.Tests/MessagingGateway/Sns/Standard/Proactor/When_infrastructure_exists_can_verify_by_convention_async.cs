@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByConventionTestsAsync : IAsyncDisposable, IDisposable
+public class AwsValidateInfrastructureByConventionTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -19,7 +19,7 @@ public class AWSValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByConventionTestsAsync()
+    public AwsValidateInfrastructureByConventionTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -48,12 +48,10 @@ public class AWSValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            findTopicBy: TopicFindBy.Convention, makeChannels: OnMissingChannel.Validate);
+        //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
+        subscription.FindQueueBy = QueueFindBy.Name;
+        subscription.FindTopicBy = TopicFindBy.Convention;
+        subscription.MakeChannels =  OnMissingChannel.Validate;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

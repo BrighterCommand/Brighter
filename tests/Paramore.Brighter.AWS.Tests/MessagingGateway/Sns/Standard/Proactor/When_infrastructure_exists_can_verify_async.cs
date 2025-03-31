@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+    public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     {
         private readonly Message _message;
         private readonly IAmAMessageConsumerAsync _consumer;
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
-        public AWSValidateInfrastructureTestsAsync()
+        public AwsValidateInfrastructureTestsAsync()
         {
             _myCommand = new MyCommand { Value = "Test" };
             string correlationId = Guid.NewGuid().ToString();
@@ -49,6 +49,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateAsyncChannel(subscription);
 
+            //Now change the subscription to validate, just check what we made
             subscription.MakeChannels = OnMissingChannel.Validate; 
 
             _messageProducer = new SnsMessageProducer(

@@ -42,9 +42,12 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
+            //don't block the redrive policy from owning retry management
             requeueCount: -1,
+            //delay before requeuing
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Proactor,
+            //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
             queueAttributes: new SqsAttributes(
                 redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
             )

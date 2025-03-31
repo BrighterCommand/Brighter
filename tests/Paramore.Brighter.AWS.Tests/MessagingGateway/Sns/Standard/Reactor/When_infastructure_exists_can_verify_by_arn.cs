@@ -13,7 +13,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -21,7 +21,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByArnTests()
+    public AwsValidateInfrastructureByArnTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -44,7 +44,6 @@ public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
             new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
-
 
         (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
         var awsConnection = GatewayFactory.CreateFactory(credentials, region);

@@ -52,12 +52,7 @@ public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            findTopicBy: TopicFindBy.Name, makeChannels: OnMissingChannel.Validate);
+        subscription.MakeChannels = OnMissingChannel.Validate; 
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

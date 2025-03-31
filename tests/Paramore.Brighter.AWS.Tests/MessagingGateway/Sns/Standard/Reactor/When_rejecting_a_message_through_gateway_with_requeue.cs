@@ -31,7 +31,10 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         SqsSubscription<MyCommand> subscription = new(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            routingKey: routingKey, messagePumpType: MessagePumpType.Reactor);
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create);
             
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

@@ -11,14 +11,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
+public class AwsAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
 {     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
     private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTestsAsync()
+    public AwsAssumeInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand{Value = "Test"};
         string correlationId = Guid.NewGuid().ToString();
