@@ -29,56 +29,67 @@ using System.Data.Common;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.Observability;
+using Paramore.Brighter.MySql;
 
 namespace Paramore.Brighter.Inbox.MySql
 {
     /// <summary>
     ///     Class MySqlInbox.
     /// </summary>
-    public class MySqlInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public class MySqlInbox : RelationalDatabaseInbox
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlInbox>();
-
         private const int MySqlDuplicateKeyError = 1062;
-        private readonly IAmARelationalDatabaseConfiguration _configuration;
-
-        /// <inheritdoc />
-        public IAmABrighterTracer Tracer { private get; set; }
+        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MySqlInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MySqlInbox(IAmARelationalDatabaseConfiguration configuration)
+        /// <param name="connectionProvider">The Connection Provider.</param>
+        public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
+            : base(configuration.InBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlInbox>())
         {
-            _configuration = configuration;
             ContinueOnCapturedContext = false;
+            _connectionProvider = connectionProvider;
         }
 
-        /// <inheritdoc />
-        public void Add<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="MySqlInbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        public MySqlInbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
+            new MySqlConnectionProvider(configuration))
         {
-            var parameters = InitAddDbParameters(command, contextKey);
+        }
 
-            using var connection = GetConnection();
-            connection.Open();
-            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+        protected override DbCommand CreateCommand(
+            DbConnection connection, string sqlText, int outBoxTimeout, params IDbDataParameter[] parameters)
+        {
+            var command = connection.CreateCommand();
+
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
+            command.CommandText = sqlText;
+            command.Parameters.AddRange(parameters);
+
+            return command;
+        }
+
+        protected override void WriteToStore(Func<DbConnection, DbCommand> commandFunc, Action loggingAction)
+        {
+            using var connection = GetOpenConnection(_connectionProvider);
+            using var command = commandFunc.Invoke(connection);
             try
             {
-                sqlcmd.ExecuteNonQuery();
+                command.ExecuteNonQuery();
             }
-            catch (MySqlException sqlException)
+            catch (MySqlException ex)
             {
-                if (sqlException.Number == MySqlDuplicateKeyError)
+                if (ex.Number == MySqlDuplicateKeyError)
                 {
-                    s_logger.LogWarning(
-                        "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    loggingAction.Invoke();
                     return;
                 }
 
@@ -86,78 +97,21 @@ namespace Paramore.Brighter.Inbox.MySql
             }
         }
 
-        /// <inheritdoc />
-        public T Get<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
+        protected override async Task WriteToStoreAsync(Func<DbConnection, DbCommand> commandFunc,
+            Action loggingAction, CancellationToken cancellationToken)
         {
-            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId and ContextKey = @contextKey";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds,
-                parameters);
-        }
-
-        /// <inheritdoc />
-        public bool Exists<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {
-            var sql = $"SELECT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId and ContextKey = @contextKey LIMIT 1";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds,
-                parameters);
-        }
-
-        /// <inheritdoc />
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var sql = $"SELECT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId and ContextKey = @contextKey LIMIT 1";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return await ExecuteCommandAsync<bool>(
-                    async command =>
-                    {
-                        var reader = await command.ExecuteReaderAsync(cancellationToken);
-                        return reader.HasRows;
-                    },
-                    sql,
-                    timeoutInMilliseconds,
-                    cancellationToken,
-                    parameters)
+            using var connection = await GetOpenConnectionAsync(_connectionProvider, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
-        }
-
-        /// <inheritdoc />
-        public async Task AddAsync<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
-            where T : class, IRequest
-        {
-            var parameters = InitAddDbParameters(command, contextKey);
-
-            using var connection = GetConnection();
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+            using var command = commandFunc.Invoke(connection);
             try
             {
-                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
-            catch (MySqlException sqlException)
+            catch (MySqlException ex)
             {
-                if (sqlException.Number == MySqlDuplicateKeyError)
+                if (ex.Number == MySqlDuplicateKeyError)
                 {
-                    s_logger.LogWarning(
-                        "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    loggingAction.Invoke();
                     return;
                 }
 
@@ -165,29 +119,60 @@ namespace Paramore.Brighter.Inbox.MySql
             }
         }
 
-        /// <inheritdoc />
-        public bool ContinueOnCapturedContext { get; set; }
-
-        /// <inheritdoc />
-        public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default)
-            where T : class, IRequest
+        protected override T ReadFromStore<T>(Func<DbConnection, DbCommand> commandFunc, Func<DbDataReader, string, T> resultFunc, string commandId)
         {
-            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId and ContextKey = @contextKey";
+            using var connection = _connectionProvider.GetConnection();
+            using var command = commandFunc.Invoke(connection);
 
+            var result = command.ExecuteReader();
+            return resultFunc.Invoke(result, commandId);
+        }
+
+        protected override async Task<T> ReadFromStoreAsync<T>(Func<DbConnection, DbCommand> commandFunc,
+            Func<DbDataReader, string, CancellationToken, Task<T>> resultFunc,
+            string commandId,
+            CancellationToken cancellationToken)
+        {
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            using var command = commandFunc.Invoke(connection);
+
+            var result = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await resultFunc.Invoke(result, commandId, cancellationToken);
+        }
+
+        protected override IDbDataParameter[] CreateAddParameters<T>(T command, string contextKey)
+        {
+            var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", id),
+                CreateSqlParameter("CommandID", command.Id),
+                CreateSqlParameter("CommandType", typeof (T).Name),
+                CreateSqlParameter("CommandBody", commandJson),
+                CreateSqlParameter("Timestamp", DateTime.UtcNow),
                 CreateSqlParameter("ContextKey", contextKey)
             };
+            return parameters;
+        }
 
-            return await ExecuteCommandAsync(
-                async command => ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext), id),
-                sql,
-                timeoutInMilliseconds,
-                cancellationToken,
-                parameters)
-                .ConfigureAwait(ContinueOnCapturedContext);
+        protected override IDbDataParameter[] CreateGetParameters(string commandId, string contextKey)
+        {
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandID", commandId),
+                CreateSqlParameter("ContextKey", contextKey)
+            };
+            return parameters;
+        }
+
+        protected override IDbDataParameter[] CreateExistsParameters(string commandId, string contextKey)
+        {
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandID", commandId),
+                CreateSqlParameter("ContextKey", contextKey)
+            };
+            return parameters;
         }
 
         private DbParameter CreateSqlParameter(string parameterName, object value)
@@ -199,79 +184,70 @@ namespace Paramore.Brighter.Inbox.MySql
             };
         }
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
-            params DbParameter[] parameters)
+        protected override T MapFunction<T>(DbDataReader dr, string commandId)
         {
-            using var connection = GetConnection();
-            using var command = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-
-            connection.Open();
-            var item = execute(command);
-            return item;
-        }
-
-        private async Task<T> ExecuteCommandAsync<T>(
-            Func<DbCommand, Task<T>> execute,
-            string sql,
-            int timeoutInMilliseconds,
-            CancellationToken cancellationToken = default,
-            params DbParameter[] parameters)
-        {
-            using var connection = GetConnection();
-            using var command = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-            return item;
-        }
-
-        private DbConnection GetConnection()
-        {
-            return new MySqlConnection(_configuration.ConnectionString);
-        }
-
-        private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters, int timeoutInMilliseconds)
-        {
-            var sqlAdd =
-                $"insert into {_configuration.InBoxTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
-
-            var sqlcmd = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
-
-            sqlcmd.CommandText = sqlAdd;
-            sqlcmd.Parameters.AddRange(parameters);
-            return sqlcmd;
-        }
-
-        private DbParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
-        {
-            var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
-            var parameters = new[]
+            try
             {
-                CreateSqlParameter("CommandID", command.Id),
-                CreateSqlParameter("CommandType", typeof (T).Name),
-                CreateSqlParameter("CommandBody", commandJson),
-                CreateSqlParameter("Timestamp", DateTime.UtcNow),
-                CreateSqlParameter("ContextKey", contextKey),
-            };
-            return parameters;
-        }
-
-        private TResult ReadCommand<TResult>(IDataReader dr, string id) where TResult : class, IRequest
-        {
-            if (dr.Read())
+                if (dr.Read())
+                {
+                    var body = dr.GetString(dr.GetOrdinal("CommandBody"));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                }
+            }
+            finally
             {
-                var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-                return JsonSerializer.Deserialize<TResult>(body, JsonSerialisationOptions.Options);
+                dr.Close();
             }
 
-            throw new RequestNotFoundException<TResult>(id);
+            throw new RequestNotFoundException<T>(commandId);
+        }
+
+        protected override async Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (await dr.ReadAsync().ConfigureAwait(ContinueOnCapturedContext))
+                {
+                    var body = dr.GetString(dr.GetOrdinal("CommandBody"));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                }
+            }
+            finally
+            {
+#if NETSTANDARD2_0
+                dr.Close();
+#else
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+#endif
+            }
+
+            throw new RequestNotFoundException<T>(commandId);
+        }
+
+        protected override bool MapBoolFunction(DbDataReader dr, string commandId)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+
+        protected override Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Task.FromResult(dr.HasRows);
+            }
+            finally
+            {
+                dr.Close();
+            }
         }
     }
 }

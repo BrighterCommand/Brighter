@@ -52,22 +52,22 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
         {
-            await _mysqlInbox.AddAsync(_raisedCommand, _contextKey, null);
+            await _mysqlInbox.AddAsync(_raisedCommand, _contextKey, null, -1, default);
 
-            _exception = await Catch.ExceptionAsync(() => _mysqlInbox.AddAsync(_raisedCommand, _contextKey, null));
+            _exception = await Catch.ExceptionAsync(() => _mysqlInbox.AddAsync(_raisedCommand, _contextKey, null, -1, default));
 
            //_should_succeed_even_if_the_message_is_a_duplicate
             Assert.Null(_exception);
-            var exists = await _mysqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
+            var exists = await _mysqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey, null, -1, default);
             Assert.True(exists);
         }
 
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            await _mysqlInbox.AddAsync(_raisedCommand, "some other key", null);
+            await _mysqlInbox.AddAsync(_raisedCommand, "some other key", null, -1, default);
 
-            var storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null);
+            var storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null, -1);
 
             //_should_read_the_command_from_the__dynamo_db_inbox
             Assert.NotNull(storedCommand);

@@ -49,13 +49,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             _pgSqlInbox = new PostgreSqlInbox(_pgTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
-            _pgSqlInbox.Add(_raisedCommand, _contextKey, null);
+            _pgSqlInbox.Add(_raisedCommand, _contextKey, null, -1);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Inbox()
         {
-            _storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null);
+            _storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null, -1);
 
             //Should read the command from the sql inbox
             Assert.NotNull(_storedCommand);
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         [Fact]
         public void When_Reading_A_Message_From_The_Inbox_And_ContextKey_IsNull()
         {
-            var exception = Catch.Exception(() => _storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, null, null));
+            var exception = Catch.Exception(() => _storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, null, null, -1));
             //should_not_read_message
             Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }

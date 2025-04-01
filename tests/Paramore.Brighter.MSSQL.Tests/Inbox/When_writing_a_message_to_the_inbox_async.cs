@@ -52,9 +52,9 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Inbox_Async()
         {
-            await _sqlInbox.AddAsync(_raisedCommand, _contextKey, null);
+            await _sqlInbox.AddAsync(_raisedCommand, _contextKey, null, -1, default);
 
-            _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
+            _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null, -1, default);
 
             Assert.NotNull(_storedCommand);
             Assert.Equal(_raisedCommand.Value, _storedCommand.Value);

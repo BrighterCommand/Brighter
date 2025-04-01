@@ -54,9 +54,9 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Inbox_Async()
         {
-            await _pgSqlInbox.AddAsync(_raisedCommand, _contextKey, null);
+            await _pgSqlInbox.AddAsync(_raisedCommand, _contextKey, null, -1, default);
 
-            _storedCommand = await _pgSqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
+            _storedCommand = await _pgSqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null, -1, default);
 
             //Should read the command from the sql inbox
             Assert.NotNull(_storedCommand);
