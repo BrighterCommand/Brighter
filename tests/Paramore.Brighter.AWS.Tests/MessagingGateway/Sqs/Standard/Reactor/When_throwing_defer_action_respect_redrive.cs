@@ -37,29 +37,31 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         var subscriptionName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
+        var channelName = new ChannelName(queueName);
 
         //how are we consuming
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
+            channelName: channelName,
             channelType: ChannelType.PointToPoint,
             //don't block the redrive policy from owning retry management
             routingKey: routingKey,
             //delay before requeuing
             requeueCount: -1,
             requeueDelay: TimeSpan.FromMilliseconds(50),
-           messagePumpType: MessagePumpType.Reactor, queueAttributes: new SqsAttributes(
+            messagePumpType: MessagePumpType.Reactor, queueAttributes: new SqsAttributes(
                 messageRetentionPeriod: TimeSpan.FromMinutes(10),
                 lockTimeout: TimeSpan.FromSeconds(30),
                 timeOut: TimeSpan.FromSeconds(30),
                 delaySeconds: TimeSpan.Zero,
                 //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
-                redrivePolicy: new RedrivePolicy
-                (
+                redrivePolicy: new RedrivePolicy(
                     deadLetterQueueName: new ChannelName(_dlqChannelName)!,
                     maxReceiveCount: 2
-                )
-            ));
+                    )
+                ),
+            makeChannels: OnMissingChannel.Create
+            );
 
         //what do we send
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
@@ -75,10 +77,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         //how do we send to the queue
         _sender = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication
-            {
-                Topic = routingKey, RequestType = typeof(MyDeferredCommand), MakeChannels = OnMissingChannel.Create
-            }
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create)
         );
 
         //We need to do this manually in a test - will create the channel from subscriber parameters

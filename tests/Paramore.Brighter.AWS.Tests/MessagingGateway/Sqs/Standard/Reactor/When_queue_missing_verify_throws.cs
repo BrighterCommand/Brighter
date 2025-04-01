@@ -7,12 +7,12 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-public class AWSValidateMissingTopicTests
+public class AwsValidateMissingTopicTests
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly RoutingKey _routingKey;
 
-    public AWSValidateMissingTopicTests()
+    public AwsValidateMissingTopicTests()
     {
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey(topicName);
@@ -28,10 +28,7 @@ public class AWSValidateMissingTopicTests
         //arrange
         var producer = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication
-            (
-                makeChannels:  OnMissingChannel.Validate
-            ));
+            new SqsPublication(channelName: new ChannelName(_routingKey), makeChannels: OnMissingChannel.Validate));
 
         //act && assert
         Assert.Throws<QueueDoesNotExistException>(() => producer.Send(new Message(

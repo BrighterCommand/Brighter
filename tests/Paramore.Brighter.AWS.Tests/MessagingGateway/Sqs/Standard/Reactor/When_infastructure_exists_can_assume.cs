@@ -55,15 +55,11 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(subscriptionName),
-            channelName: channelName,
-            channelType: ChannelType.PointToPoint,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor, 
-            makeChannels: OnMissingChannel.Assume);
+        subscription.MakeChannels = OnMissingChannel.Assume;
 
-        _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication { ChannelName = channelName, MakeChannels = OnMissingChannel.Assume });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection, 
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Assume));
 
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
     }
