@@ -31,17 +31,23 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_queueName);
-
+        var channelName = new ChannelName(_queueName);
+        
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(_queueName),
-            channelType: ChannelType.PointToPoint, routingKey: routingKey, bufferSize: BufferSize, makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, 
+            routingKey: routingKey, 
+            bufferSize: BufferSize, makeChannels: 
+            OnMissingChannel.Create)).GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication { MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create)
+            );
     }
 
     [Fact]

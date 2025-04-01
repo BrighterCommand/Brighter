@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.MessagingGateway.AWSSQS;
+﻿using System;
+
+namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
 /// <summary>
 /// The SQS Message publication
@@ -15,15 +17,18 @@ public class SqsPublication : Publication
     /// <param name="makeChannels">A <see cref="OnMissingChannel"/> value: Whether wwe should create the queue, if missing or just validate it</param>
     public SqsPublication(ChannelName? channelName = null,  SqsAttributes? queueAttributes = null, QueueFindBy findQueueBy = QueueFindBy.Name,  string? queueUrl = null, OnMissingChannel makeChannels = OnMissingChannel.Create)
     {
+        if (findQueueBy == QueueFindBy.Name && ChannelName.IsNullOrEmpty(channelName))
+            throw new ArgumentException("If you use QueueFindBy.Name, you must supply a channel name", nameof(channelName));
+
+        if (findQueueBy == QueueFindBy.Url && string.IsNullOrEmpty(queueUrl))
+            throw new ArgumentException("If you use QueueFindBy.Url, you must supply a url for the queue", nameof(queueUrl));
+        
         ChannelName = channelName;
         ChannelType = ChannelType.PointToPoint;
         FindQueueBy = findQueueBy;
         MakeChannels = makeChannels;
         QueueUrl = queueUrl;
         QueueAttributes = queueAttributes ?? SqsAttributes.Empty;
-        
-        if (findQueueBy == QueueFindBy.Url && queueUrl is null)
-            throw new ConfigurationException("If you use QueueFindBy.Url, you must supply the QueueUrl on the Publication");
     }
     
     /// <summary>

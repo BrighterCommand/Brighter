@@ -114,16 +114,16 @@ public class SqsSubscription : Subscription
             requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
             channelFailureDelay)
     {
-        if (ChannelType == ChannelType.PubSub && routingKey is null)
+        if (channelType == ChannelType.PubSub && routingKey is null)
             throw new ArgumentNullException(nameof(routingKey), "Routing Key is required for PubSub channels");
         
-        if (ChannelType == ChannelType.PointToPoint && channelName is null)
+        if (channelType == ChannelType.PointToPoint && channelName is null)
             throw new ArgumentNullException(nameof(channelName), "Channel Name is required for PointToPoint channels");
 
         QueueAttributes = queueAttributes ?? SqsAttributes.Empty;
         TopicAttributes = topicAttributes ?? SnsAttributes.Empty;
         
-        if (ChannelType == ChannelType.PubSub && QueueAttributes.Type !=  TopicAttributes.Type)
+        if (channelType == ChannelType.PubSub && QueueAttributes.Type !=  TopicAttributes.Type)
                 throw new InvalidOperationException(" For PubSub channels, you must set both queue and topic attribute to the same Type (default Standard)");
         
         ChannelType = channelType;
