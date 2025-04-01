@@ -28,11 +28,15 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
         var subscriptionName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
-
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(
@@ -46,7 +50,10 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SqsMessageProducer(
+            awsConnection, 
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create)
+            );
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(awsConnection);
