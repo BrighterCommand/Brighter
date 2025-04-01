@@ -32,12 +32,15 @@ public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
 
         var channelName = new ChannelName(queueName);
         var queueAttributes = new SqsAttributes(type: SqsType.Fifo);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
         
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             queueAttributes: queueAttributes, 
+            topicAttributes: topicAttributes,
             messagePumpType: MessagePumpType.Reactor, 
             makeChannels: OnMissingChannel.Create);
 
@@ -61,6 +64,7 @@ public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
             channelName: channelName,
             routingKey: routingKey,
             queueAttributes: queueAttributes, 
+            topicAttributes: topicAttributes,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume);
 
@@ -69,7 +73,7 @@ public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
             {
                 MakeChannels = OnMissingChannel.Assume, 
                 Topic = routingKey,
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                TopicAttributes = topicAttributes
             });
 
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true));

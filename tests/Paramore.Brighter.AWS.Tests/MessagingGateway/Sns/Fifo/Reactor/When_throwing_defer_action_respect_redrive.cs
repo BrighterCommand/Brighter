@@ -36,6 +36,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         var topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         //how are we consuming
         _subscription = new SqsSubscription<MyCommand>(
@@ -50,7 +51,9 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
             queueAttributes: new SqsAttributes(
                 redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2),
-                type: SqsType.Fifo)
+                type: SqsType.Fifo),
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create
             );
 
         //what do we send
@@ -72,7 +75,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
                 Topic = routingKey,
                 RequestType = typeof(MyDeferredCommand),
                 MakeChannels = OnMissingChannel.Create,
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                TopicAttributes = topicAttributes
             }
         );
 

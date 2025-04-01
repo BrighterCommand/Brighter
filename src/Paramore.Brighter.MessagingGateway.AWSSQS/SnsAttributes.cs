@@ -38,7 +38,7 @@ public class SnsAttributes
     /// <param name="policy">The JSON serialization of the topic's access control policy. Default is null.</param>
     /// <param name="type">The <see cref="SqsType"/>The <see cref="SqsType"/> which lets you set FIFO or Standard. Default is <see cref="SqsType.Standard"/></param>
     /// <param name="contentBasedDeduplication">For a FIFO queue, do we deduplicate messages based on content. Default is true</param>
-    public SnsAttributes(string? deliveryPolicy = null, string? policy = null, SqsType type = default, bool contentBasedDeduplication = true)
+    public SnsAttributes(string? deliveryPolicy = null, string? policy = null, SqsType type = SqsType.Standard, bool contentBasedDeduplication = true)
     {
         DeliveryPolicy = deliveryPolicy;
         Policy = policy;
@@ -50,7 +50,7 @@ public class SnsAttributes
     /// The policy that defines how Amazon SNS retries failed deliveries to HTTP/S endpoints
     /// Ignored if TopicARN is set
     /// </summary>
-    public string? DeliveryPolicy { get; set; } = null;
+    public string? DeliveryPolicy { get; }
     
     /// <summary>
     /// Creates a new instance of the <see cref="SnsAttributes"/> class. All attributes will be default values.
@@ -62,7 +62,7 @@ public class SnsAttributes
     /// The policy that defines who can access your topic. By default, only the topic owner can publish or subscribe to the topic.
     /// Ignored if TopicARN is set
     /// </summary>
-    public string? Policy { get; set; } = null;
+    public string? Policy { get; }
         
     /// <summary>
     /// A list of resource tags to use when creating the publication  Ignored if TopicARN is set
@@ -72,10 +72,10 @@ public class SnsAttributes
     /// <summary>
     /// The <see cref="SqsType"/>.
     /// </summary>
-    public SqsType Type { get; set; } = SqsType.Standard;
+    public SqsType Type { get; set; }
 
     /// <summary>
     /// Enable content based deduplication for Fifo Topics
     /// </summary>
-    public bool ContentBasedDeduplication { get; set; } = true;
+    public bool ContentBasedDeduplication { get; }
 }

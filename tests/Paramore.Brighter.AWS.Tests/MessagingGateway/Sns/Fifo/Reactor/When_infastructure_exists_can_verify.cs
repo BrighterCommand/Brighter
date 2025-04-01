@@ -32,12 +32,15 @@ public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
 
         var channelName = new ChannelName(queueName);
         var queueAttributes = new SqsAttributes(type: SqsType.Fifo);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
         
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             queueAttributes: queueAttributes, 
+            topicAttributes: topicAttributes,
             messagePumpType: MessagePumpType.Reactor, 
             makeChannels: OnMissingChannel.Create);
 
@@ -56,14 +59,8 @@ public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(queueName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            queueAttributes: queueAttributes, 
-            messagePumpType: MessagePumpType.Reactor, 
-            findTopicBy: TopicFindBy.Name, 
-            makeChannels: OnMissingChannel.Validate);
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.FindTopicBy = TopicFindBy.Name;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -72,7 +69,7 @@ public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
                 FindTopicBy = TopicFindBy.Name,
                 MakeChannels = OnMissingChannel.Validate,
                 Topic = new RoutingKey(topicName),
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                TopicAttributes = topicAttributes
             }
         );
 

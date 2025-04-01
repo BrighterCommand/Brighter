@@ -34,6 +34,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         _deduplicationId = $"DeduplicationId{Guid.NewGuid():N}";
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
@@ -44,7 +45,9 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
             queueAttributes: new SqsAttributes(
                 rawMessageDelivery: false,
                 type: SqsType.Fifo
-            )
+            ),
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(
@@ -66,7 +69,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
             {
                 Topic = new RoutingKey(_topicName),
                 MakeChannels = OnMissingChannel.Create,
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                TopicAttributes = topicAttributes
             });
     }
 

@@ -20,13 +20,17 @@ public class AWSValidateQueuesTests : IDisposable, IAsyncDisposable
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
-            messagePumpType: MessagePumpType.Reactor, makeChannels: OnMissingChannel.Validate);
+            topicAttributes: topicAttributes,
+            messagePumpType: MessagePumpType.Reactor, 
+            makeChannels: OnMissingChannel.Validate);
 
         _awsConnection = GatewayFactory.CreateFactory();
 
@@ -34,7 +38,7 @@ public class AWSValidateQueuesTests : IDisposable, IAsyncDisposable
         var producer = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = topicAttributes
             });
         producer.ConfirmTopicExistsAsync(topicName).Wait();
     }

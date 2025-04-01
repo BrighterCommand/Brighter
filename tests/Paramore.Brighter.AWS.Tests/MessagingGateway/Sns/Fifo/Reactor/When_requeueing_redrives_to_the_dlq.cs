@@ -33,6 +33,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var queueAttributes = new SqsAttributes(
             redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
@@ -44,7 +45,10 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-           queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
+            messagePumpType: MessagePumpType.Reactor,
+            queueAttributes: queueAttributes, 
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -60,7 +64,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
             {
                 MakeChannels = OnMissingChannel.Create, 
                 Topic = routingKey, 
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo } 
+                TopicAttributes = topicAttributes 
             });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();

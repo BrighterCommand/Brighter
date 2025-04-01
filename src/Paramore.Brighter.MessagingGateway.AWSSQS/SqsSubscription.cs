@@ -123,6 +123,9 @@ public class SqsSubscription : Subscription
         QueueAttributes = queueAttributes ?? SqsAttributes.Empty;
         TopicAttributes = topicAttributes ?? SnsAttributes.Empty;
         
+        if (ChannelType == ChannelType.PubSub && QueueAttributes.Type !=  TopicAttributes.Type)
+                throw new InvalidOperationException(" For PubSub channels, you must set both queue and topic attribute to the same Type (default Standard)");
+        
         ChannelType = channelType;
         FindTopicBy = findTopicBy;
         FindQueueBy = findQueueBy;
