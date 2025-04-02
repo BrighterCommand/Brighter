@@ -51,7 +51,7 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.3.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion  Include="MongoDB.Driver" Version="3.3.0" />
     <PackageVersion Include="MQTTnet" Version="5.0.1.1416" />
