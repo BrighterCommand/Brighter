@@ -32,16 +32,6 @@ public class AWSAssumeQueuesTests : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        //create the topic, we want the queue to be the issue
-        //We need to create the topic at least, to check the queues
-        var producer = new SnsMessageProducer(awsConnection,
-            new SnsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
-            });
-
-        producer.ConfirmTopicExistsAsync(topicName).Wait();
-
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 

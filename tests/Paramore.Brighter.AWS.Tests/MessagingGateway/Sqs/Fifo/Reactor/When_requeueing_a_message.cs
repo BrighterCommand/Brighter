@@ -36,7 +36,10 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
-            routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor, 
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

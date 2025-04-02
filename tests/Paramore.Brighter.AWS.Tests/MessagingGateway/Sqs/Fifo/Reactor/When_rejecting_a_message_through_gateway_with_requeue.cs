@@ -35,7 +35,10 @@ public class SqsMessageConsumerRequeueTests : IDisposable
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
-            routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor, 
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -49,8 +52,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-                (channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes)
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes)
             );
     }
 

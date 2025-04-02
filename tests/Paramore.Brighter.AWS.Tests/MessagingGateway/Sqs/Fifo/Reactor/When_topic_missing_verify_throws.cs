@@ -26,7 +26,8 @@ public class AWSValidateMissingTopicTests
     public void When_channel_missing_verify_throws()
     {
         // arrange
-        var producer = new SqsMessageProducer(_awsConnection,
+        var producer = new SqsMessageProducer(
+            _awsConnection,
             new SqsPublication(
                 channelName: new ChannelName(Guid.NewGuid().ToString()), 
                 queueAttributes: new SqsAttributes (type:SqsType.Fifo ),

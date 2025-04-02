@@ -41,7 +41,11 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
             subscriptionName: new SubscriptionName(_queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
-            routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes);
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor, 
+            queueAttributes: queueAttributes,
+            makeChannels: OnMissingChannel.Create
+            );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
@@ -57,11 +61,10 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
-        _messageProducer = new SqsMessageProducer(awsConnection,
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
             new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes)
-            {
-                Topic = new RoutingKey(_queueName),
-            });
+        );
     }
 
     [Fact]

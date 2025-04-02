@@ -41,7 +41,8 @@ public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -58,13 +59,9 @@ public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(subscriptionName),
-            channelName: channelName,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            findTopicBy: TopicFindBy.Name,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Validate);
+        
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.FindQueueBy = QueueFindBy.Name;
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,

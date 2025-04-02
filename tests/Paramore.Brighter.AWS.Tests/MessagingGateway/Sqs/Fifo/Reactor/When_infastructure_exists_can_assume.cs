@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
+public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
@@ -19,7 +19,7 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTests()
+    public AwsAssumeInfrastructureTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -39,8 +39,9 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
+            messagePumpType: MessagePumpType.Reactor,
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -57,11 +58,7 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(queueName),
-            channelName: channelName,
-            channelType: ChannelType.PointToPoint,
-            routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Assume);
+        subscription.MakeChannels = OnMissingChannel.Assume;
 
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Assume));

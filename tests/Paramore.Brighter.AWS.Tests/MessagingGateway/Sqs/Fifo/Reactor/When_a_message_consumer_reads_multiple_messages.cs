@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 {
     private readonly SqsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -21,7 +21,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTests()
+    public SqsBufferedConsumerTests()
     {
         var awsConnection = GatewayFactory.CreateFactory();
         _channelFactory = new ChannelFactory(awsConnection);
@@ -45,12 +45,15 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             bufferSize: BufferSize,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
+            queueAttributes: queueAttributes,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true), BufferSize);
-        _messageProducer = new SqsMessageProducer(awsConnection,
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
             new SqsPublication(
                 channelName: channelName,
                 queueAttributes: queueAttributes,

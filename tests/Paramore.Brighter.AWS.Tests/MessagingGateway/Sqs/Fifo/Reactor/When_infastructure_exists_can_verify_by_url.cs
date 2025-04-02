@@ -40,7 +40,10 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
-            routingKey: routingKey, messagePumpType: MessagePumpType.Reactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor, 
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -59,18 +62,13 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         var queueUrl = FindQueueUrl(awsConnection, routingKey.ToValidSQSQueueName(true));
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(subscriptionName),
-            channelName: channel.Name,
-            channelType: ChannelType.PointToPoint,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            findTopicBy: TopicFindBy.Arn,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Validate);
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.FindQueueBy = QueueFindBy.Url;
+        subscription.ChannelName = new ChannelName(queueUrl);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication (channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Validate)
+            new SqsPublication (channelName: new ChannelName(queueUrl), queueAttributes: queueAttributes, findQueueBy: QueueFindBy.Url, makeChannels: OnMissingChannel.Validate)
             {
                 Topic = routingKey,
                 QueueUrl = queueUrl,

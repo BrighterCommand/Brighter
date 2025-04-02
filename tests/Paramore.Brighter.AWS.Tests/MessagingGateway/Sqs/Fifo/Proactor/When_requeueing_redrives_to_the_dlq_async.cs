@@ -56,8 +56,10 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(_awsConnection,
-            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
+        _sender = new SqsMessageProducer(
+            _awsConnection,
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)
+            );
 
         _channelFactory = new ChannelFactory(_awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);

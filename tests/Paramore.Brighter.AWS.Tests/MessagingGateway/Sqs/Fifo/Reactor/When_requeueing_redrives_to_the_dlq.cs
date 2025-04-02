@@ -15,7 +15,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 [Trait("Fragile", "CI")]
 public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
 {
-    private readonly SnsMessageProducer _sender;
+    private readonly SqsMessageProducer _sender;
     private readonly IAmAChannelSync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
@@ -29,10 +29,11 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         const string contentType = "text\\plain";
         _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
-        var channelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var channelName = new ChannelName(queueName);
 
         var queueAttributes = new SqsAttributes(
             redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
@@ -40,10 +41,12 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         );
 
         var subscription = new SqsSubscription<MyCommand>(
-            subscriptionName: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
-            queueAttributes: queueAttributes 
+            queueAttributes: queueAttributes,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(
@@ -55,13 +58,10 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection, 
-            new SnsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
-            });
-
-        _sender.ConfirmTopicExistsAsync(topicName).Wait();
+        _sender = new SqsMessageProducer(
+            _awsConnection,
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)
+            );
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);
