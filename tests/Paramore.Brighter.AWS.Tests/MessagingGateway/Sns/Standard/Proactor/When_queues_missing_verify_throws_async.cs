@@ -13,7 +13,7 @@ public class AwsValidateQueuesTestsAsync : IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
-    private ChannelFactory _channelFactory;
+    private ChannelFactory? _channelFactory;
 
     public AwsValidateQueuesTestsAsync()
     {
@@ -53,6 +53,7 @@ public class AwsValidateQueuesTestsAsync : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync();
+        if (_channelFactory != null)
+         await _channelFactory.DeleteTopicAsync();
     }
 }

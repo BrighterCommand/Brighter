@@ -6,12 +6,12 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-public class AWSValidateMissingTopicTests
+public class AwsValidateMissingTopicTests
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly RoutingKey _routingKey;
 
-    public AWSValidateMissingTopicTests()
+    public AwsValidateMissingTopicTests()
     {
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey(topicName);

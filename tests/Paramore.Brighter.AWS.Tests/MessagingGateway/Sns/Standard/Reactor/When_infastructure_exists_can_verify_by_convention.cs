@@ -10,7 +10,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class AwsValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;

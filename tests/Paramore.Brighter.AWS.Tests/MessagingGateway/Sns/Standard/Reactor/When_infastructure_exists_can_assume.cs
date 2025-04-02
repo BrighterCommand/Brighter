@@ -10,8 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
+public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
@@ -19,7 +18,7 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTests()
+    public AwsAssumeInfrastructureTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";

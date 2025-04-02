@@ -10,8 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDisposable
+public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -19,7 +18,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByArnTestsAsync()
+    public AwsValidateInfrastructureByArnTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";

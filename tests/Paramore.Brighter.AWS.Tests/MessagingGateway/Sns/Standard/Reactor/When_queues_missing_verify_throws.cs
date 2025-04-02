@@ -9,13 +9,13 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")] 
-public class AWSValidateQueuesTests  : IDisposable, IAsyncDisposable
+public class AwsValidateQueuesTests  : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
-    private ChannelFactory _channelFactory;
+    private ChannelFactory? _channelFactory;
 
-    public AWSValidateQueuesTests()
+    public AwsValidateQueuesTests()
     {
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -53,11 +53,13 @@ public class AWSValidateQueuesTests  : IDisposable, IAsyncDisposable
  
     public void Dispose()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
+        if (_channelFactory != null)
+            _channelFactory.DeleteTopicAsync().Wait(); 
     }
         
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync(); 
+        if (_channelFactory != null)
+            await _channelFactory.DeleteTopicAsync(); 
     }
 }

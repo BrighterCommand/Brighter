@@ -9,7 +9,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")] 
-[Trait("Fragile", "CI")]
 public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;

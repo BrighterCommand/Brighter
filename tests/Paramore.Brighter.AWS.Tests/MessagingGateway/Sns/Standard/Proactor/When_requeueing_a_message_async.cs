@@ -13,8 +13,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _sender;
-    private Message _requeuedMessage;
-    private Message _receivedMessage;
+    private Message? _requeuedMessage;
+    private Message? _receivedMessage;
     private readonly IAmAChannelAsync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
