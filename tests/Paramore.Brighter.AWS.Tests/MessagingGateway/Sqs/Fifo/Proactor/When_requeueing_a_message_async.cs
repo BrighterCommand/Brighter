@@ -13,7 +13,7 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _sender;
     private Message? _requeuedMessage;
-    private Message _receivedMessage;
+    private Message? _receivedMessage;
     private readonly IAmAChannelAsync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
@@ -39,7 +39,8 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

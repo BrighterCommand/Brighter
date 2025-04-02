@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -19,7 +19,7 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureTestsAsync()
+    public AwsValidateInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -50,22 +50,15 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        subscription = new(
-            subscriptionName: new SubscriptionName(queueName),
-            channelName: channel.Name,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
-            messagePumpType: MessagePumpType.Proactor, 
-            findQueueBy: QueueFindBy.Name,
-            makeChannels: OnMissingChannel.Validate);
+        subscription.MakeChannels = OnMissingChannel.Validate;
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication()
-            {
-                FindQueueBy= QueueFindBy.Name,
-                MakeChannels = OnMissingChannel.Validate,
-                Topic = new RoutingKey(queueName),
-            }
+            new SqsPublication(
+                channelName: channelName, 
+                queueAttributes: queueAttributes, 
+                findQueueBy: QueueFindBy.Name, 
+                makeChannels: OnMissingChannel.Validate)
         );
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);

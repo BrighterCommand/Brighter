@@ -8,13 +8,13 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-public class AWSValidateMissingTopicTestsAsync
+public class AwsValidateMissingTopicTestsAsync
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly RoutingKey _routingKey;
     private readonly ChannelName _channelName;
 
-    public AWSValidateMissingTopicTestsAsync()
+    public AwsValidateMissingTopicTestsAsync()
     { 
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _channelName = new ChannelName(queueName);

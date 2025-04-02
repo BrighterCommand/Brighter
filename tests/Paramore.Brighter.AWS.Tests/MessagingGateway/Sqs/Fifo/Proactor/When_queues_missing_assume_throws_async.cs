@@ -9,12 +9,12 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
+public class AwsAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly ChannelFactory _channelFactory;
     private readonly IAmAMessageConsumerAsync _consumer;
 
-    public AWSAssumeQueuesTestsAsync()
+    public AwsAssumeQueuesTestsAsync()
     {
         var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

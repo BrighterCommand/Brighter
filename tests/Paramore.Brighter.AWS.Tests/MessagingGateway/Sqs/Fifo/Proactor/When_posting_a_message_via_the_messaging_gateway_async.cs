@@ -42,7 +42,11 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(_queueName),
             channelName: channelName,
-            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes);
+            channelType: ChannelType.PointToPoint, 
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Proactor, 
+            queueAttributes: queueAttributes
+            );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
@@ -60,7 +64,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: new ChannelName(_queueName), queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
     }
 
     [Fact]

@@ -44,12 +44,16 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             bufferSize: BufferSize,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();
+            queueAttributes: queueAttributes,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Create))
+            .GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true), BufferSize);
-        _messageProducer = new SqsMessageProducer(awsConnection,
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
             new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
     }
 

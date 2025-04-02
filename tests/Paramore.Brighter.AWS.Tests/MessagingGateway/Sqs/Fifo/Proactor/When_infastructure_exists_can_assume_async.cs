@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class AwsAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
@@ -19,7 +19,7 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTestsAsync()
+    public AwsAssumeInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -40,7 +40,8 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create);
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -57,11 +58,7 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            subscriptionName: new SubscriptionName(queueName),
-            channelName: channel.Name,
-            channelType: ChannelType.PointToPoint,
-            routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Assume);
+        subscription.MakeChannels = OnMissingChannel.Assume;
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,

@@ -39,12 +39,18 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             channelType: ChannelType.PointToPoint,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create)
         );
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes));
+            new SqsPublication(
+                channelName: channelName, 
+                queueAttributes: queueAttributes,  
+                makeChannels: OnMissingChannel.Create)
+            );
     }
 
     [Fact]
