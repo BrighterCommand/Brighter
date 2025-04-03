@@ -234,8 +234,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         using var sqsClient = _awsClientFactory.CreateSqsClient();
 
-        if (sqsAttributes.Type == SqsType.Fifo)
-            queueName = queueName.ToValidSQSQueueName(true);
+        queueName = queueName.ToValidSQSQueueName(sqsAttributes.Type == SqsType.Fifo);
 
         Dictionary<string, string?> attributes = CreateQueueAttributes(sqsAttributes);
         Dictionary<string, string> tags = CreateQueueTags(sqsAttributes);
@@ -477,9 +476,6 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         OnMissingChannel makeChannel,
         CancellationToken cancellationToken)
     {
-        if (makeChannel == OnMissingChannel.Assume)
-            return null;
-        
         var validationStrategy = GetQueueValidationStrategy(findBy, type);
         var (exists, queueUrl) = await validationStrategy.ValidateAsync(queueName, cancellationToken);
 

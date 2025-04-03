@@ -56,12 +56,13 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
 
         //Now change the subscription to validate, just check what we made
         subscription.MakeChannels = OnMissingChannel.Assume;
+        subscription.ChannelName = channel.Name;
 
         _messageProducer = new SqsMessageProducer(
             awsConnection, 
             new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Assume));
 
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name);
     }
 
     [Fact]

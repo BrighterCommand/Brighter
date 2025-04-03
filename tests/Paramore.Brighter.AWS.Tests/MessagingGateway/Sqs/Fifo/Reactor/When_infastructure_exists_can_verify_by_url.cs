@@ -68,11 +68,12 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication (channelName: new ChannelName(queueUrl), queueAttributes: queueAttributes, findQueueBy: QueueFindBy.Url, makeChannels: OnMissingChannel.Validate)
-            {
-                Topic = routingKey,
-                QueueUrl = queueUrl,
-            });
+            new SqsPublication (
+                channelName: new ChannelName(queueUrl), 
+                queueAttributes: queueAttributes, 
+                findQueueBy: QueueFindBy.Url, 
+                makeChannels: OnMissingChannel.Validate)
+            );
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
     }

@@ -23,7 +23,7 @@ public class AWSAssumeQueuesTests : IDisposable, IAsyncDisposable
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            channelType: ChannelType.PubSub,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             queueAttributes: new SqsAttributes(
