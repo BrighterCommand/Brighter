@@ -38,11 +38,23 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
-        var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
-            ExpireAfterSeconds);
+        var dbAttributes = new Dictionary<string, string>()
+        {
+            {"db.operation.parameter.command.id", command.Id}
+        };
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                BoxDbOperation.Add,
+                Configuration.CollectionName,
+                dbAttributes: dbAttributes),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
 
         try
         {
+            var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
+                ExpireAfterSeconds);
             await Collection.InsertOneAsync(message, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
@@ -54,6 +66,10 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             }
 
             throw;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
         }
     }
 
@@ -70,19 +86,39 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
-        var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
-        var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
-
-        var command = await Collection.Find(filter)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(ContinueOnCapturedContext);
-
-        if (command == null)
+        var dbAttributes = new Dictionary<string, string>()
         {
-            throw new RequestNotFoundException<T>(id);
-        }
+            {"db.operation.parameter.command.id", id}
+        };
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                BoxDbOperation.Get,
+                Configuration.CollectionName,
+                dbAttributes: dbAttributes),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
 
-        return command.ToCommand<T>();
+        try
+        {
+            var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
+            var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
+
+            var command = await Collection.Find(filter)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+
+            if (command == null)
+            {
+                throw new RequestNotFoundException<T>(id);
+            }
+
+            return command.ToCommand<T>();
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
     }
 
     /// <summary>
@@ -98,11 +134,31 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
-        var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
-        var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);
-        return await Collection.Find(filter)
-            .AnyAsync(cancellationToken: cancellationToken)
-            .ConfigureAwait(ContinueOnCapturedContext);
+        var dbAttributes = new Dictionary<string, string>()
+        {
+            {"db.operation.parameter.command.id", id}
+        };
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                BoxDbOperation.Exists,
+                Configuration.CollectionName,
+                dbAttributes: dbAttributes),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
+
+        try
+        {
+            var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
+            var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);
+            return await Collection.Find(filter)
+                .AnyAsync(cancellationToken: cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
     }
 
     /// <summary>
@@ -116,11 +172,23 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
     public void Add<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
-        var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
-            ExpireAfterSeconds);
+        var dbAttributes = new Dictionary<string, string>()
+        {
+            {"db.operation.parameter.command.id", command.Id}
+        };
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                BoxDbOperation.Add,
+                Configuration.CollectionName,
+                dbAttributes: dbAttributes),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
 
         try
         {
+            var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
+                ExpireAfterSeconds);
             Collection.InsertOne(message);
         }
         catch (MongoWriteException e)
@@ -131,6 +199,10 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             }
 
             throw;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
         }
     }
 
@@ -145,16 +217,36 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     /// <returns><see cref="T"/></returns>
     public T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
-        var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
-        var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
-
-        var command = Collection.Find(filter).FirstOrDefault();
-        if (command == null)
+        var dbAttributes = new Dictionary<string, string>()
         {
-            throw new RequestNotFoundException<T>(id);
-        }
+            {"db.operation.parameter.command.id", id}
+        };
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                BoxDbOperation.Get,
+                Configuration.CollectionName,
+                dbAttributes: dbAttributes),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
 
-        return command.ToCommand<T>();
+        try
+        {
+            var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
+            var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
+
+            var command = Collection.Find(filter).FirstOrDefault();
+            if (command == null)
+            {
+                throw new RequestNotFoundException<T>(id);
+            }
+
+            return command.ToCommand<T>();
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
     }
 
     /// <summary>
@@ -168,9 +260,29 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     /// <returns><see langword="true"/> if it exists, otherwise <see langword="false"/>.</returns>
     public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
-        var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
-        var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);
-        return Collection.Find(filter)
-            .Any();
+        var dbAttributes = new Dictionary<string, string>()
+        {
+            {"db.operation.parameter.command.id", id}
+        };
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                BoxDbOperation.Exists,
+                Configuration.CollectionName,
+                dbAttributes: dbAttributes),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
+
+        try
+        {
+            var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
+            var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);
+            return Collection.Find(filter)
+                .Any();
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
     }
 }

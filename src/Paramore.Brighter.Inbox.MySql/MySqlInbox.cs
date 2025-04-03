@@ -33,6 +33,7 @@ using MySqlConnector;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.MySql
 {
@@ -50,7 +51,8 @@ namespace Paramore.Brighter.Inbox.MySql
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The Connection Provider.</param>
         public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
-            : base(configuration.InBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlInbox>())
+            : base(DbSystem.MySql, configuration.DatabaseName, configuration.InBoxTableName, 
+                  new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlInbox>())
         {
             ContinueOnCapturedContext = false;
             _connectionProvider = connectionProvider;

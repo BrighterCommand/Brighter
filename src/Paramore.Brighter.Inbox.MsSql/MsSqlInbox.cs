@@ -33,6 +33,7 @@ using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.MsSql
 {
@@ -51,7 +52,8 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The Connection Provider.</param>
         public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
-            : base(configuration.InBoxTableName, new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlInbox>())
+            : base(DbSystem.MsSql, configuration.DatabaseName, configuration.InBoxTableName, 
+                  new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlInbox>())
         {
             ContinueOnCapturedContext = false;
             _connectionProvider = connectionProvider;

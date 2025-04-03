@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
@@ -35,9 +36,12 @@ using Paramore.Brighter.Observability;
 namespace Paramore.Brighter
 {
     public abstract class RelationalDatabaseInbox(
-        string outboxTableName,
+        DbSystem dbSystem,
+        string databaseName,
+        string inboxTableName,
         IRelationalDatabaseInboxQueries queries,
-        ILogger logger)
+        ILogger logger,
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         : IAmAnInboxSync, IAmAnInboxAsync
     {
         /// <inheritdoc/>
@@ -50,75 +54,183 @@ namespace Paramore.Brighter
         public void Add<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
             where T : class, IRequest
         {
-            var parameters = CreateAddParameters(command, contextKey);
-            WriteToStore(
-                connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
-                () =>
-                {
-                    logger.LogWarning("Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
-                        command.Id);
-                });
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", command.Id},
+                {"db.operation.name", ExtractSqlOperationName(queries.AddCommand)},
+                {"db.query.text", queries.AddCommand}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Add, inboxTableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var parameters = CreateAddParameters(command, contextKey);
+                WriteToStore(
+                    connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
+                    () =>
+                    {
+                        logger.LogWarning("Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
+                            command.Id);
+                    });
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc/>
         public T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
             where T : class, IRequest
         {
-            var parameters = CreateGetParameters(id, contextKey);
-            return ReadFromStore(
-                connection => CreateGetCommand(connection, timeoutInMilliseconds, parameters), 
-                MapFunction<T>,
-                id);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", id},
+                {"db.operation.name", ExtractSqlOperationName(queries.GetCommand)},
+                {"db.query.text", queries.GetCommand}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, inboxTableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var parameters = CreateGetParameters(id, contextKey);
+                return ReadFromStore(
+                    connection => CreateGetCommand(connection, timeoutInMilliseconds, parameters),
+                    MapFunction<T>,
+                    id);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc/>
         public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
             where T : class, IRequest
         {
-            var parameters = CreateExistsParameters(id, contextKey);
-            return ReadFromStore(
-                connection => CreateExistsCommand(connection, timeoutInMilliseconds, parameters),
-                MapBoolFunction,
-                id);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", id},
+                {"db.operation.name", ExtractSqlOperationName(queries.ExistsCommand)},
+                {"db.query.text", queries.ExistsCommand}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Exists, inboxTableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var parameters = CreateExistsParameters(id, contextKey);
+                return ReadFromStore(
+                    connection => CreateExistsCommand(connection, timeoutInMilliseconds, parameters),
+                    MapBoolFunction,
+                    id);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc/>
         public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
-            var parameters = CreateAddParameters(command, contextKey);
-            await WriteToStoreAsync(
-                connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
-                () =>
-                {
-                    logger.LogWarning("Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
-                        command.Id);
-                },
-                cancellationToken);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", command.Id},
+                {"db.operation.name", ExtractSqlOperationName(queries.AddCommand)},
+                {"db.query.text", queries.AddCommand}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Add, inboxTableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var parameters = CreateAddParameters(command, contextKey);
+                await WriteToStoreAsync(
+                    connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
+                    () =>
+                    {
+                        logger.LogWarning("Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
+                            command.Id);
+                    },
+                    cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc/>
         public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
-            var parameters = CreateGetParameters(id, contextKey);
-            return await ReadFromStoreAsync(
-                connection => CreateGetCommand(connection, timeoutInMilliseconds, parameters),
-                MapFunctionAsync<T>,
-                id,
-                cancellationToken);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", id},
+                {"db.operation.name", ExtractSqlOperationName(queries.GetCommand)},
+                {"db.query.text", queries.GetCommand}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, inboxTableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var parameters = CreateGetParameters(id, contextKey);
+                return await ReadFromStoreAsync(
+                    connection => CreateGetCommand(connection, timeoutInMilliseconds, parameters),
+                    MapFunctionAsync<T>,
+                    id,
+                    cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc/>
         public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
-            var parameters = CreateExistsParameters(id, contextKey);
-            return await ReadFromStoreAsync(
-                connection => CreateExistsCommand(connection, timeoutInMilliseconds, parameters),
-                MapBoolFunctionAsync,
-                id,
-                cancellationToken);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", id},
+                {"db.operation.name", ExtractSqlOperationName(queries.ExistsCommand)},
+                {"db.query.text", queries.ExistsCommand}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Exists, inboxTableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var parameters = CreateExistsParameters(id, contextKey);
+                return await ReadFromStoreAsync(
+                    connection => CreateExistsCommand(connection, timeoutInMilliseconds, parameters),
+                    MapBoolFunctionAsync,
+                    id,
+                    cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         protected abstract void WriteToStore(
@@ -181,7 +293,7 @@ namespace Paramore.Brighter
             => CreateCommand(connection, GenerateSqlText(queries.GetCommand), inboxTimeout, parameters);
 
         private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
-            => string.Format(sqlFormat, orderedParams.Prepend(outboxTableName).ToArray());
+            => string.Format(sqlFormat, orderedParams.Prepend(inboxTableName).ToArray());
 
         protected abstract DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
             params IDbDataParameter[] parameters);
@@ -199,5 +311,10 @@ namespace Paramore.Brighter
         protected abstract bool MapBoolFunction(DbDataReader dr, string commandId);
 
         protected abstract Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId, CancellationToken cancellationToken);
+
+        private static string ExtractSqlOperationName(string queryText)
+        {
+            return queryText.Split(' ')[0];
+        }
     }
 }
