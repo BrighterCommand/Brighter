@@ -122,7 +122,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact(Skip = "Failing async tests caused by task scheduler issues")]
+    [Fact]
     public void When_throwing_defer_action_respect_redrive_async()
     {
         _sender.Send(_message);
