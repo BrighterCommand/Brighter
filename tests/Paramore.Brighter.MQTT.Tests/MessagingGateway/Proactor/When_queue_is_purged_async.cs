@@ -28,14 +28,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
                     new MessageBody($"test message")
                 );
 
-                await MessageProducer.SendAsync(message);
+                await MessageProducerAsync.SendAsync(message);
             }
 
             await Task.Delay(100);
 
-            await MessageConsumer.PurgeAsync();
+            await MessageConsumerAsync.PurgeAsync();
 
-            Message[] receivedMessages = await MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
             Assert.NotEmpty(receivedMessages);
             Assert.Single(receivedMessages);

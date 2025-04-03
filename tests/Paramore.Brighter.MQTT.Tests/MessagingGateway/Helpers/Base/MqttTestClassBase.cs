@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
             };
 
             MqttMessagePublisher mqttMessagePublisher = new(mqttProducerConfig);
-            MessageProducer = new MQTTMessageProducer(mqttMessagePublisher);
+            MessageProducerAsync = new MqttMessageProducer(mqttMessagePublisher);
 
             MqttMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
             {
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
                 ClientID = clientID
             };
 
-            MessageConsumer = new MqttMessageConsumer(mqttConsumerConfig);
+            MessageConsumerAsync = new MqttMessageConsumer(mqttConsumerConfig);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
         /// <value>
         /// An instance of <see cref="IAmAMessageProducerAsync"/> for sending messages asynchronously.
         /// </value>
-        protected IAmAMessageProducerAsync MessageProducer { get; }
+        protected IAmAMessageProducerAsync MessageProducerAsync { get; }
 
         /// <summary>
         /// Gets the asynchronous message consumer used for receiving and managing messages
@@ -103,7 +103,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
         /// <value>
         /// An instance of <see cref="IAmAMessageConsumerAsync"/> representing the message consumer.
         /// </value>
-        protected IAmAMessageConsumerAsync MessageConsumer { get; }
+        protected IAmAMessageConsumerAsync MessageConsumerAsync { get; }
 
         /// <summary>
         /// Releases the resources used by the <see cref="MqttTestClassBase{T}"/> instance.
@@ -123,8 +123,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
         {
             if (disposing)
             {
-                ((IAmAMessageProducerSync)MessageProducer).Dispose();
-                ((IAmAMessageConsumerSync)MessageConsumer).Dispose();
+                ((IAmAMessageProducerSync)MessageProducerAsync).Dispose();
+                ((IAmAMessageConsumerSync)MessageConsumerAsync).Dispose();
                 MqttTestServer?.Dispose();
             }
 

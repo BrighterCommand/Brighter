@@ -43,8 +43,36 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
         {
         }
 
+        /// <summary>
+        /// Gets the synchronous message producer instance derived from the asynchronous message producer.
+        /// </summary>
+        /// <remarks>
+        /// This property casts the asynchronous message producer (<see cref="IAmAMessageProducerAsync"/>) 
+        /// to a synchronous message producer (<see cref="IAmAMessageProducerSync"/>). 
+        /// It is used to send messages synchronously in the test scenarios.
+        /// </remarks>
+        /// <value>
+        /// An instance of <see cref="IAmAMessageProducerSync"/> representing the synchronous message producer.
+        /// </value>
+        protected IAmAMessageProducerSync MessageProducerSync => (MessageProducerAsync as IAmAMessageProducerSync)!;
+
+        /// <summary>
+        /// Gets the synchronous message consumer used for receiving messages from the messaging gateway.
+        /// </summary>
+        /// <remarks>
+        /// This property casts the asynchronous message consumer to its synchronous counterpart.
+        /// It is used in scenarios where synchronous message consumption is required.
+        /// </remarks>
+        /// <value>
+        /// An instance of <see cref="IAmAMessageConsumerSync"/> representing the synchronous message consumer.
+        /// </value>
+        /// <exception cref="InvalidCastException">
+        /// Thrown if the asynchronous message consumer cannot be cast to <see cref="IAmAMessageConsumerSync"/>.
+        /// </exception>
+        protected IAmAMessageConsumerSync MessageConsumerSync => (MessageConsumerAsync as IAmAMessageConsumerSync)!;
+
         [Fact]
-        public async Task When_purging_the_queue_on_the_messaging_gateway()
+        public void When_purging_the_queue_on_the_messaging_gateway()
         {
             for (int i = 0; i < 5; i++)
             {
@@ -53,14 +81,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
                     new MessageBody($"test message")
                 );
 
-                await MessageProducer.SendAsync(message);
+                MessageProducerSync.Send(message);
             }
 
             Thread.Sleep(100);
 
-            await MessageConsumer.PurgeAsync();
+            MessageConsumerSync.Purge();
 
-            Message[] receivedMessages = await MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = MessageConsumerSync.Receive(TimeSpan.FromMilliseconds(100));
 
             Assert.NotEmpty(receivedMessages);
             Assert.Single(receivedMessages);

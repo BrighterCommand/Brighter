@@ -14,13 +14,22 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
         private const string ClientId = "BrighterIntegrationTests-Produce";
         private const string TopicPrefix = "BrighterIntegrationTests/ProducerTests";
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Proactor.MqttMessageProducerSendMessageTestsAsync "/> class.
+        /// </summary>
+        /// <param name="testOutputHelper">The output helper for capturing test output during execution.</param>
+        /// <remarks>
+        /// This constructor sets up the MQTT messaging gateway test environment by configuring the client ID, topic prefix, 
+        /// and test output helper. It leverages the base class <see cref="MqttTestClassBase{T}"/> to initialize the necessary 
+        /// MQTT configurations and logging mechanisms.
+        /// </remarks>
         public MqttMessageProducerSendMessageTestsAsync(ITestOutputHelper testOutputHelper)
         : base(ClientId, TopicPrefix, testOutputHelper)
         {
         }
 
         [Fact]
-        public async Task When_posting_multiples_message_via_the_messaging_gateway()
+        public async Task When_posting_multiples_message_via_the_messaging_gateway_async()
         {
             const int messageCount = 1000;
             List<Message> sentMessages = [];
@@ -32,11 +41,11 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
                     new MessageBody($"test message")
                 );
 
-                await MessageProducer.SendAsync(message);
+                await MessageProducerAsync.SendAsync(message);
                 sentMessages.Add(message);
             }
 
-            Message[] receivedMessages = await MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
             Assert.NotEmpty(receivedMessages);
             Assert.Equal(messageCount, receivedMessages.Length);

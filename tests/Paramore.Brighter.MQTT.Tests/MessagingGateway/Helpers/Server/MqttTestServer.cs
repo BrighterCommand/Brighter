@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
             serverPort ??= GetRandomServerPort();
 
             serverIPAddress ??= IPAddress.Loopback;
-            testMethodName ??= nameof(MqttMessageProducerSendMessageTestsAsync);
+            testMethodName ??= nameof(MqttTestServer);
             logger ??= CreateLogger(testMethodName);
 
             MqttTestServer? testMqttServer = null;

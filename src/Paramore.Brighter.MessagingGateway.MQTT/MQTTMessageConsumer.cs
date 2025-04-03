@@ -27,10 +27,22 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private readonly MqttClientOptions _mqttClientOptions;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MqttMessageConsumer" /> class.
-        /// Sync over Async within constructor
+        /// Initializes a new instance of the <see cref="MqttMessageConsumer"/> class.
         /// </summary>
-        /// <param name="configuration"></param>
+        /// <param name="configuration">
+        /// The configuration settings for the MQTT message consumer, including connection details, 
+        /// topic prefix, client credentials, and other options.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when the <paramref name="configuration.TopicPrefix"/> is null.
+        /// </exception>
+        /// <remarks>
+        /// This constructor sets up the MQTT client with the provided configuration, establishes 
+        /// the connection to the broker, and subscribes to the specified topic.
+        ///
+        /// 04/03/2025:
+        ///     - Removed support for user properties as they are not supported in v3.1.1 of the MQTT protocol.
+        /// </remarks>
         public MqttMessageConsumer(MqttMessagingGatewayConsumerConfiguration configuration)
         {
             _topic = $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
@@ -53,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 .WithTcpServer(configuration.Hostname, configuration.Port)
                 .Build();
 
-            //TODO: Switch to using the low level client here, as it allows us explicit control over ack, recieve etc.
+            //TODO: Switch to using the low level client here, as it allows us explicit control over ack, receive etc.
             //This is slated for post V10, for now, we just want to upgrade this support the V10 release
             _mqttClient = new MqttFactory().CreateMqttClient();
 
@@ -61,44 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             {
                 s_logger.LogInformation("MqttMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
                 var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.PayloadSegment.ToArray(), JsonSerialisationOptions.Options);
-
-                if (e.ApplicationMessage.UserProperties is not null)
-                {
-                    foreach (MqttUserProperty property in e.ApplicationMessage.UserProperties)
-                    {
-                        if (property.Name == HeaderNames.Type)
-                        {
-                            message.Header.Type = property.Value;
-                        }
-                        else if (property.Name == HeaderNames.SpecVersion)
-                        {
-                            message.Header.SpecVersion = property.Value;
-                        }
-                        else if (property.Name == HeaderNames.Source)
-                        {
-                            if (Uri.TryCreate(property.Value, UriKind.RelativeOrAbsolute, out var source))
-                            {
-                                message.Header.Source = source;
-                            }
-                        }
-                        else if (property.Name == HeaderNames.Subject)
-                        {
-                            message.Header.Subject = property.Value;
-                        }
-                        else if (property.Name == HeaderNames.DataContentType)
-                        {
-                            message.Header.ContentType = property.Value;
-                        }
-                        else if (property.Name == HeaderNames.DataSchema)
-                        {
-                            if (Uri.TryCreate(property.Value, UriKind.RelativeOrAbsolute, out var dataSchema))
-                            {
-                                message.Header.DataSchema = dataSchema;
-                            }
-                        }
-                    }
-                }
-
+             
                 _messageQueue.Enqueue(message);
                 return Task.CompletedTask;
             };
