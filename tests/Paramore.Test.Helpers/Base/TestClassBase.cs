@@ -13,13 +13,16 @@ namespace Paramore.Test.Helpers.Base
     /// This abstract class provides shared setup and utility functionality for derived test classes.
     /// Implements the <see cref="Xunit.IClassFixture{TFixture}"/> interface to support shared test context.
     /// </summary>
-    public abstract class TestClassBase : ITestClassBase
+    /// <typeparam name="T">
+    /// The type parameter representing the specific test class deriving from this base class.
+    /// </typeparam>
+    public abstract class TestClassBase<T> : ITestClassBase
     {
         private bool _disposedValue;
         private readonly Lazy<IServiceProvider> _serviceProviderLazy;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="TestClassBase"/> class.
+        /// Initializes a new instance of the <see cref="TestClassBase{T}"/> class.
         /// This constructor is used to set up the shared test context and output helper for derived test classes.
         /// </summary>
         /// <param name="testOutputHelper">
@@ -27,9 +30,13 @@ namespace Paramore.Test.Helpers.Base
         /// </param>
         protected TestClassBase(ITestOutputHelper testOutputHelper)
         {
+            if (testOutputHelper is null)
+            {
+                throw new ArgumentNullException(nameof(testOutputHelper));
+            }
+
             TestOutputHelper = new CoreTestOutputHelper(this, testOutputHelper);
             _serviceProviderLazy = new Lazy<IServiceProvider>(() => BuildServiceProvider(new ServiceCollection(), TestOutputHelper));
-            XunitTest = (ITest)GetTestField(testOutputHelper)?.GetValue(testOutputHelper)!;
         }
 
         /// <inheritdoc />
@@ -39,13 +46,13 @@ namespace Paramore.Test.Helpers.Base
         public ICoreTestOutputHelper TestOutputHelper { get; }
 
         /// <inheritdoc />
-        public ITest XunitTest { get; }
+        public ITest? XunitTest => (ITest?)GetTestField(TestOutputHelper.WrappedTestOutputHelper)?.GetValue(TestOutputHelper.WrappedTestOutputHelper);
 
         /// <inheritdoc />
-        public string TestQualifiedName => XunitTest.DisplayName;
+        public string TestQualifiedName => XunitTest?.DisplayName ?? typeof(T).GetLoggerCategoryName();
 
         /// <inheritdoc />
-        public string TestDisplayName => XunitTest.DisplayName.RemoveNamespace();
+        public string TestDisplayName => TestQualifiedName.RemoveNamespace();
 
         protected virtual IServiceProvider BuildServiceProvider(IServiceCollection services, ICoreTestOutputHelper testOutputHelper)
         {
@@ -53,7 +60,7 @@ namespace Paramore.Test.Helpers.Base
         }
 
         /// <summary>
-        /// Releases all resources used by the <see cref="TestClassBase"/> instance.
+        /// Releases all resources used by the <see cref="TestClassBase{T}"/> instance.
         /// </summary>
         /// <remarks>
         /// This method is responsible for performing cleanup operations for the current instance of the class.

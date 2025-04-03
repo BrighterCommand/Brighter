@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
@@ -46,6 +47,9 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
             }
 
             Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+
+            // Wait for the messages to be processed
+            await Task.Delay(500);
 
             Assert.NotEmpty(receivedMessages);
             Assert.Equal(messageCount, receivedMessages.Length);

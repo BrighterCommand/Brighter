@@ -23,7 +23,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
     /// This class initializes an MQTT test server, configures message producers and consumers, and provides
     /// utility methods for managing the lifecycle of these components during tests.
     /// </remarks>
-    public abstract class MqttTestClassBase<T> : TestClassBase
+    public abstract class MqttTestClassBase<T> : TestClassBase<T> 
+        where T : class
     {
         protected static readonly MqttFactory s_mqttFactory = new();
 
