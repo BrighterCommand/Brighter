@@ -4,36 +4,36 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
+using MQTTnet.Client;
 using MQTTnet.Protocol;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
     /// <summary>
-    /// Class MQTTMessagePublisher .
+    /// Class MqttMessagePublisher .
     /// </summary>
-    public class MQTTMessagePublisher
+    public class MqttMessagePublisher
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageProducer>();
-        private readonly MQTTMessagingGatewayConfiguration _config;
+        private readonly MqttMessagingGatewayConfiguration _config;
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MQTTMessagePublisher"/> class.
+        /// Initializes a new instance of the <see cref="MqttMessagePublisher"/> class.
         /// Sync over async, but necessary as we are in the ctor
         /// </summary>
         /// <param name="config">The Publisher configuration.</param>
-        public MQTTMessagePublisher(MQTTMessagingGatewayConfiguration config)
+        public MqttMessagePublisher(MqttMessagingGatewayConfiguration config)
         {
             _config = config;
 
-            _mqttClient = new MqttClientFactory().CreateMqttClient();
+            _mqttClient = new MqttFactory().CreateMqttClient();
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
-                .WithTcpServer(_config.Hostname)
+                .WithTcpServer(_config.Hostname, _config.Port)
                 .WithCleanSession(_config.CleanSession);
 
             if (!string.IsNullOrEmpty(_config.ClientID))
@@ -46,7 +46,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 mqttClientOptionsBuilder = mqttClientOptionsBuilder.WithCredentials(_config.Username, _config.Password);
             }
 
-            _mqttClientOptions = mqttClientOptionsBuilder.Build();
+            _mqttClientOptions = mqttClientOptionsBuilder
+                .WithTcpServer(config.Hostname, config.Port)
+                .Build();
 
             ConnectAsync().GetAwaiter().GetResult();
         }
@@ -58,12 +60,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 try
                 {
                     await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
-                    s_logger.LogInformation($"Connected to {_config.Hostname}");
+                    s_logger.LogInformation($"Connected to {_config.Hostname}:{_config.Port}");
                     return;
                 }
                 catch (Exception)
                 {
-                    s_logger.LogError($"Unable to connect to {_config.Hostname}");
+                    s_logger.LogError($"Unable to connect to {_config.Hostname}:{_config.Port}");
                 }
             }
         }
@@ -93,16 +95,16 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var builder = new MqttApplicationMessageBuilder()
                 .WithTopic(_config.TopicPrefix != null ? $"{_config.TopicPrefix}/{message.Header.Topic}" : message.Header.Topic)
                 .WithPayload(payload)
-                .WithContentType(message.Header.ContentType)
+                //.WithContentType(message.Header.ContentType)
                 .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce);
 
-            builder
-                .WithUserProperty(HeaderNames.Id, message.Header.MessageId)
-                .WithUserProperty(HeaderNames.Type, message.Header.Type)
-                .WithUserProperty(HeaderNames.Time, message.Header.TimeStamp.ToRcf3339())
-                .WithUserProperty(HeaderNames.Source, message.Header.Source.ToString())
-                .WithUserProperty(HeaderNames.DataContentType, message.Header.ContentType)
-                .WithUserProperty(HeaderNames.SpecVersion, message.Header.SpecVersion);
+            //builder
+            //    .WithUserProperty(HeaderNames.Id, message.Header.MessageId)
+            //    .WithUserProperty(HeaderNames.Type, message.Header.Type)
+            //    .WithUserProperty(HeaderNames.Time, message.Header.TimeStamp.ToRcf3339())
+            //    .WithUserProperty(HeaderNames.Source, message.Header.Source.ToString())
+            //    .WithUserProperty(HeaderNames.DataContentType, message.Header.ContentType)
+            //    .WithUserProperty(HeaderNames.SpecVersion, message.Header.SpecVersion);
 
             if (message.Header.DataSchema != null)
             {
@@ -113,7 +115,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             {
                 builder.WithUserProperty(HeaderNames.Subject, message.Header.Subject);
             }
-            
+
             return builder.Build();
         }
     }

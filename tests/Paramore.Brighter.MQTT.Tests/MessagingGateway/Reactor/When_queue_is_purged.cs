@@ -25,49 +25,26 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.MessagingGateway.MQTT;
+using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 {
     [Trait("Category", "MQTT")]
     [Collection("MQTT")]
-    public class When_queue_is_Purged : IDisposable, IAsyncDisposable
+    public class When_queue_is_Purged : MqttTestClassBase<When_queue_is_Purged>
     {
-        private const string MqttHost = "localhost";
         private const string ClientId = "BrighterIntegrationTests-Purge";
-        private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumerSync _messageConsumer;
-        private readonly string _topicPrefix = "BrighterIntegrationTests/PurgeTests";
-        private readonly Message _noopMessage = new();
+        private const string TopicPrefix = "BrighterIntegrationTests/PurgeTests";
 
-        public When_queue_is_Purged()
+        public When_queue_is_Purged(ITestOutputHelper testOutputHelper)
+            : base(ClientId, TopicPrefix, testOutputHelper)
         {
-
-            var mqttProducerConfig = new MQTTMessagingGatewayProducerConfiguration
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix
-            };
-
-            MQTTMessagePublisher mqttMessagePublisher = new(
-                mqttProducerConfig);
-
-            _messageProducer = new MQTTMessageProducer(mqttMessagePublisher);
-
-
-            MQTTMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix,
-                ClientID = ClientId
-            };
-
-            _messageConsumer = new MQTTMessageConsumer(mqttConsumerConfig);
         }
 
         [Fact]
-        public void When_purging_the_queue_on_the_messaging_gateway()
+        public async Task When_purging_the_queue_on_the_messaging_gateway()
         {
             for (int i = 0; i < 5; i++)
             {
@@ -76,31 +53,19 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
                     new MessageBody($"test message")
                 );
 
-                _messageProducer.Send(message);
+                await MessageProducer.SendAsync(message);
             }
 
             Thread.Sleep(100);
 
-            _messageConsumer.Purge();
+            await MessageConsumer.PurgeAsync();
 
-            Message[] recievedMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = await MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
-            Assert.NotEmpty(recievedMessages);
-            Assert.Single(recievedMessages);
-            Assert.Contains(_noopMessage, recievedMessages);
-            Assert.IsType<Message>(recievedMessages[0]);    
-        }
-
-        public void Dispose()
-        {
-            _messageProducer.Dispose();
-            _messageConsumer.Dispose();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await ((IAmAMessageProducerAsync)_messageProducer).DisposeAsync();
-            await ((IAmAMessageConsumerAsync)_messageConsumer).DisposeAsync();
+            Assert.NotEmpty(receivedMessages);
+            Assert.Single(receivedMessages);
+            Assert.Contains(_noopMessage, receivedMessages);
+            Assert.IsType<Message>(receivedMessages[0]);
         }
     }
 }

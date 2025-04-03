@@ -1,47 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Paramore.Brighter.MessagingGateway.MQTT;
+using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 {
     [Trait("Category", "MQTT")]
     [Collection("MQTT")]
-    public class MqttMessageProducerSendMessageTestsAsync : IAsyncDisposable, IDisposable
+    public class MqttMessageProducerSendMessageTestsAsync : MqttTestClassBase<MqttMessageProducerSendMessageTestsAsync>
     {
-        private const string MqttHost = "localhost";
         private const string ClientId = "BrighterIntegrationTests-Produce";
-        private readonly IAmAMessageProducerAsync _messageProducer;
-        private readonly IAmAMessageConsumerAsync _messageConsumer;
-        private readonly string _topicPrefix = "BrighterIntegrationTests/ProducerTests";
+        private const string TopicPrefix = "BrighterIntegrationTests/ProducerTests";
 
-        public MqttMessageProducerSendMessageTestsAsync()
+        public MqttMessageProducerSendMessageTestsAsync(ITestOutputHelper testOutputHelper)
+        : base(ClientId, TopicPrefix, testOutputHelper)
         {
-            var mqttProducerConfig = new MQTTMessagingGatewayProducerConfiguration
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix
-            };
-
-            MQTTMessagePublisher mqttMessagePublisher = new(mqttProducerConfig);
-            _messageProducer = new MQTTMessageProducer(mqttMessagePublisher);
-
-            MQTTMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix,
-                ClientID = ClientId
-            };
-
-            _messageConsumer = new MQTTMessageConsumer(mqttConsumerConfig);
         }
 
         [Fact]
         public async Task When_posting_multiples_message_via_the_messaging_gateway()
         {
             const int messageCount = 1000;
-            List<Message> sentMessages = new();
+            List<Message> sentMessages = [];
 
             for (int i = 0; i < messageCount; i++)
             {
@@ -50,27 +32,15 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
                     new MessageBody($"test message")
                 );
 
-                await _messageProducer.SendAsync(message);
+                await MessageProducer.SendAsync(message);
                 sentMessages.Add(message);
             }
 
-            Message[] receivedMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = await MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
             Assert.NotEmpty(receivedMessages);
             Assert.Equal(messageCount, receivedMessages.Length);
-            Assert.Equal(receivedMessages, sentMessages);    
-        }
-        
-        public void Dispose()
-        {
-            ((IAmAMessageProducerSync)_messageProducer).Dispose();
-            ((IAmAMessageConsumerSync)_messageConsumer).Dispose();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _messageProducer.DisposeAsync();
-            await _messageConsumer.DisposeAsync();
+            Assert.Equal(receivedMessages, sentMessages);
         }
     }
 }

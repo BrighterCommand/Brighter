@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.MessagingGateway.MQTT
 {
-    public class MQTTMessagingGatewayConfiguration : IAmGatewayConfiguration
+    public class MqttMessagingGatewayConfiguration : IAmGatewayConfiguration
     {
         /// <summary>
         /// Sets the MQTT ClientID.
@@ -26,6 +26,14 @@
         /// Sets the Server Hostname
         /// </summary>
         public string Hostname { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the port number used to connect to the MQTT broker.
+        /// </summary>
+        /// <value>
+        /// The port number for the MQTT connection. The default value is 1883.
+        /// </value>
+        public int Port { get; set; } = 1883;
 
         /// <summary>
         /// Sets the Topic Prefix
@@ -39,6 +47,6 @@
     }
 
 
-    public class MQTTMessagingGatewayProducerConfiguration : MQTTMessagingGatewayConfiguration{}
-    public class MQTTMessagingGatewayConsumerConfiguration : MQTTMessagingGatewayConfiguration{}
+    public class MqttMessagingGatewayProducerConfiguration : MqttMessagingGatewayConfiguration{}
+    public class MqttMessagingGatewayConsumerConfiguration : MqttMessagingGatewayConfiguration{}
 }

@@ -31,13 +31,13 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <inheritdoc />
         public IAmAMessageScheduler Scheduler { get; set; }
 
-        private MQTTMessagePublisher _mqttMessagePublisher;
+        private MqttMessagePublisher _mqttMessagePublisher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MQTTMessageProducer" /> class.
         /// </summary>
         /// <param name="mqttMessagePublisher">The publisher used to send messages</param>
-        public MQTTMessageProducer(MQTTMessagePublisher mqttMessagePublisher)
+        public MQTTMessageProducer(MqttMessagePublisher mqttMessagePublisher)
         {
             _mqttMessagePublisher = mqttMessagePublisher;
         }
