@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// <summary>
 /// A Sync and Async Message Producer for Azure Service Bus.
 /// </summary>
-public class AzureServiceBusTopicMessageProducer : AzureServiceBusMessageProducer
+public partial class AzureServiceBusTopicMessageProducer : AzureServiceBusMessageProducer
 {
     protected override ILogger Logger => s_logger;
         
@@ -84,8 +84,15 @@ public class AzureServiceBusTopicMessageProducer : AzureServiceBusMessageProduce
         {
             //The connection to Azure Service bus may have failed so we re-establish the connection.
             _administrationClientWrapper.Reset();
-            s_logger.LogError(e, "Failing to check or create topic");
+            Log.FailingToCheckOrCreateTopic(s_logger, e);
             throw;
         }
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Error, "Failing to check or create topic")]
+        public static partial void FailingToCheckOrCreateTopic(ILogger logger, Exception e);
+    }
 }
+

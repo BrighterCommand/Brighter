@@ -32,7 +32,7 @@ using ServiceStack;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    public class RedisMessageCreator
+    public partial class RedisMessageCreator
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RedisMessageCreator>();
         
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var header = reader.ReadLine();
             if (header is null || header.TrimEnd() != "<HEADER")
             {
-                s_logger.LogError("Expected message to begin with <HEADER, but was {ErrorMessage}", redisMessage);
+                Log.ExpectedHeaderError(s_logger, redisMessage);
                 return message;
             }
                 
@@ -71,20 +71,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             header = reader.ReadLine();
             if (header is null || header.TrimStart() != "HEADER/>")
             {
-                s_logger.LogError("Expected message to find end of HEADER/>, but was {ErrorMessage}", redisMessage);
+                Log.ExpectedHeaderEndError(s_logger, redisMessage);
                 return message;
             }
 
             var body = reader.ReadLine();
             if (body is null)
             {
-                s_logger.LogError("Expected message to have a body, but was {ErrorMessage}", redisMessage);
+                Log.ExpectedBodyError(s_logger, redisMessage);
                 return message;
             }
             
             if (body.TrimEnd() != "<BODY")
             {
-                s_logger.LogError("Expected message to have beginning of <BODY, but was {ErrorMessage}", redisMessage);
+                Log.ExpectedBodyStartError(s_logger, redisMessage);
                 return message;
             }
                 
@@ -93,13 +93,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             body = reader.ReadLine();
             if (body is null)
             {
-                s_logger.LogError("Expected message to have a body, but was {ErrorMessage}", redisMessage);
+                Log.ExpectedBodyError(s_logger, redisMessage);
                 return message;
             }
             
             if (body.TrimStart() != "BODY/>")
             {
-                s_logger.LogError("Expected message to find end of BODY/>, but was {ErrorMessage}", redisMessage);
+                Log.ExpectedBodyEndError(s_logger, redisMessage);
                 return message;
             }
                 
@@ -352,5 +352,23 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<RoutingKey>(RoutingKey.Empty, false);
         }
 
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Error, "Expected message to begin with <HEADER, but was {ErrorMessage}")]
+            public static partial void ExpectedHeaderError(ILogger logger, string errorMessage);
+
+            [LoggerMessage(LogLevel.Error, "Expected message to find end of HEADER/>, but was {ErrorMessage}")]
+            public static partial void ExpectedHeaderEndError(ILogger logger, string errorMessage);
+
+            [LoggerMessage(LogLevel.Error, "Expected message to have a body, but was {ErrorMessage}")]
+            public static partial void ExpectedBodyError(ILogger logger, string errorMessage);
+
+            [LoggerMessage(LogLevel.Error, "Expected message to have beginning of <BODY, but was {ErrorMessage}")]
+            public static partial void ExpectedBodyStartError(ILogger logger, string errorMessage);
+
+            [LoggerMessage(LogLevel.Error, "Expected message to find end of BODY/>, but was {ErrorMessage}")]
+            public static partial void ExpectedBodyEndError(ILogger logger, string errorMessage);
+        }
      }
 }
+

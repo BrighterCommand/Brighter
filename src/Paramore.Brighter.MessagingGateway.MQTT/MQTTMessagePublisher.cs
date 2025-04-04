@@ -14,9 +14,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// <summary>
     /// Class MQTTMessagePublisher .
     /// </summary>
-    public class MQTTMessagePublisher
+    public partial class MQTTMessagePublisher
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageProducer>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessagePublisher>();
         private readonly MQTTMessagingGatewayConfiguration _config;
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
@@ -58,12 +58,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 try
                 {
                     await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
-                    s_logger.LogInformation($"Connected to {_config.Hostname}");
+                    Log.ConnectedToHost(s_logger, _config.Hostname);
                     return;
                 }
                 catch (Exception)
                 {
-                    s_logger.LogError($"Unable to connect to {_config.Hostname}");
+                    Log.UnableToConnectToHost(s_logger, _config.Hostname);
                 }
             }
         }
@@ -116,5 +116,15 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             
             return builder.Build();
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Connected to {Hostname}")]
+            public static partial void ConnectedToHost(ILogger logger, string hostname);
+
+            [LoggerMessage(LogLevel.Error, "Unable to connect to {Hostname}")]
+            public static partial void UnableToConnectToHost(ILogger logger, string hostname);
+        }
     }
 }
+

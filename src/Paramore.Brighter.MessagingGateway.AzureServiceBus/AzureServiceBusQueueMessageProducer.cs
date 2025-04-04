@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// <summary>
     /// A Sync and Async Message Producer for Azure Service Bus.
     /// </summary>
-    public class AzureServiceBusQueueMessageProducer : AzureServiceBusMessageProducer
+    public partial class AzureServiceBusQueueMessageProducer : AzureServiceBusMessageProducer
     {
         protected override ILogger Logger => s_logger;
         
@@ -84,9 +84,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 _administrationClientWrapper.Reset();
-                s_logger.LogError(e, "Failing to check or create queue");
+                Log.FailingToCheckOrCreateQueue(s_logger, e);
                 throw;
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Error, "Failing to check or create queue")]
+            public static partial void FailingToCheckOrCreateQueue(ILogger logger, Exception e);
+        }
     }
 }
+

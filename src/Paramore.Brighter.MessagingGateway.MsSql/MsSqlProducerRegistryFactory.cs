@@ -7,7 +7,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class MsSqlProducerRegistryFactory : IAmAProducerRegistryFactory
+    public partial class MsSqlProducerRegistryFactory : IAmAProducerRegistryFactory
     {
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlProducerRegistryFactory>();
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
         public IAmAProducerRegistry Create()
         {
-            s_logger.LogDebug("MsSqlMessageProducerFactory: create producer");
+            Log.MsSqlMessageProducerFactoryCreateProducer(s_logger);
 
             var producerFactory = new MsSqlMessageProducerFactory(_msSqlConfiguration, _publications);
 
@@ -49,5 +49,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
            return Task.FromResult(Create()); 
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessageProducerFactory: create producer")]
+            public static partial void MsSqlMessageProducerFactoryCreateProducer(ILogger logger);
+        }
     }
 }
+

@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     /// <summary>
     /// A wrapper for the Azure Service Bus Administration Client
     /// </summary>
-    public class AdministrationClientWrapper : IAdministrationClientWrapper
+    public partial class AdministrationClientWrapper : IAdministrationClientWrapper
     {
         private readonly IServiceBusClientProvider _clientProvider;
         private ServiceBusAdministrationClient _administrationClient;
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         public void Reset()
         {
-            s_logger.LogWarning("Resetting management client wrapper...");
+            Log.ResettingManagementClientWrapper(s_logger);
             Initialise();
         }
          
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
         public async Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null)
         {
-            s_logger.LogInformation("Creating topic {Topic}...", queueName);
+            Log.CreatingTopic(s_logger, queueName);
 
             try
             {
@@ -79,11 +79,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failed to create queue {Queue}.", queueName);
+                Log.FailedToCreateQueue(s_logger, e, queueName);
                 throw;
             }
 
-            s_logger.LogInformation("Queue {Queue} created.", queueName);
+            Log.QueueCreated(s_logger, queueName);
         }
         
         /// <summary>
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         public async Task CreateSubscriptionAsync(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
         {
-            s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
+            Log.CreatingSubscriptionForTopic(s_logger, subscriptionName, topicName);
 
             if (!await TopicExistsAsync(topicName))
             {
@@ -121,11 +121,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failed to create subscription {ChannelName} for topic {Topic}.", subscriptionName, topicName);
+                Log.FailedToCreateSubscriptionForTopic(s_logger, e, subscriptionName, topicName);
                 throw;
             }
 
-            s_logger.LogInformation("Subscription {ChannelName} for topic {Topic} created.", subscriptionName, topicName);
+            Log.SubscriptionForTopicCreated(s_logger, subscriptionName, topicName);
         }
 
         
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
         public async Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null)
         {
-            s_logger.LogInformation("Creating topic {Topic}...", topicName);
+            Log.CreatingTopic(s_logger, topicName);
 
             try
             {
@@ -148,11 +148,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failed to create topic {Topic}.", topicName);
+                Log.FailedToCreateTopic(s_logger, e, topicName);
                 throw;
             }
 
-            s_logger.LogInformation("Topic {Topic} created.", topicName);
+            Log.TopicCreated(s_logger, topicName);
         }
 
 
@@ -162,15 +162,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="queueName">The name of the Queue</param>
         public async Task DeleteQueueAsync(string queueName)
         {
-            s_logger.LogInformation("Deleting queue {Queue}...", queueName);
+            Log.DeletingQueue(s_logger, queueName);
             try
             {
                     await _administrationClient.DeleteQueueAsync(queueName);
-                s_logger.LogInformation("Queue {Queue} successfully deleted", queueName);
+                Log.QueueSuccessfullyDeleted(s_logger, queueName);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to delete Queue {Queue}", queueName);
+                Log.FailedToDeleteQueue(s_logger, e, queueName);
             }
         }
 
@@ -180,15 +180,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="topicName">The name of the Topic</param>
         public async Task DeleteTopicAsync(string topicName)
         {
-            s_logger.LogInformation("Deleting topic {Topic}...", topicName);
+            Log.DeletingTopic(s_logger, topicName);
             try
             {
                 await _administrationClient.DeleteTopicAsync(topicName);
-                s_logger.LogInformation("Topic {Topic} successfully deleted", topicName);
+                Log.TopicSuccessfullyDeleted(s_logger, topicName);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failed to delete Topic {Topic}", topicName);
+                Log.FailedToDeleteTopic(s_logger, e, topicName);
             }
         }
         
@@ -212,7 +212,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <returns>True if the Queue exists.</returns>
         public async Task<bool> QueueExistsAsync(string queueName)
         {
-            s_logger.LogDebug("Checking if queue {Queue} exists...", queueName);
+            Log.CheckingIfQueueExists(s_logger, queueName);
 
             bool result;
 
@@ -222,17 +222,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to check if queue {Queue} exists", queueName);
+                Log.FailedToCheckIfQueueExists(s_logger, e, queueName);
                 throw;
             }
 
             if (result)
             {
-                s_logger.LogDebug("Queue {Queue} exists", queueName);
+                Log.QueueExists(s_logger, queueName);
             }
             else
             {
-                s_logger.LogWarning("Queue {Queue} does not exist", queueName);
+                Log.QueueDoesNotExist(s_logger, queueName);
             }
 
             return result;
@@ -246,7 +246,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <returns>True if the subscription exists on the specified Topic.</returns>
         public async Task<bool> SubscriptionExistsAsync(string topicName, string subscriptionName)
         {
-            s_logger.LogDebug("Checking if subscription {ChannelName} for topic {Topic} exists...", subscriptionName, topicName);
+            Log.CheckingIfSubscriptionForTopicExists(s_logger, subscriptionName, topicName);
 
             bool result;
 
@@ -256,17 +256,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failed to check if subscription {ChannelName} for topic {Topic} exists.", subscriptionName, topicName);
+                Log.FailedToCheckIfSubscriptionForTopicExists(s_logger, e, subscriptionName, topicName);
                 throw;
             }
 
             if (result)
             {
-                s_logger.LogDebug("Subscription {ChannelName} for topic {Topic} exists.", subscriptionName, topicName);
+                Log.SubscriptionForTopicExists(s_logger, subscriptionName, topicName);
             }
             else
             {
-                s_logger.LogWarning("Subscription {ChannelName} for topic {Topic} does not exist.", subscriptionName, topicName);
+                Log.SubscriptionForTopicDoesNotExist(s_logger, subscriptionName, topicName);
             }
 
             return result;
@@ -280,7 +280,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <returns>True if the Topic exists.</returns>
         public async Task<bool> TopicExistsAsync(string topicName)
         {
-            s_logger.LogDebug("Checking if topic {Topic} exists...", topicName);
+            Log.CheckingIfTopicExists(s_logger, topicName);
 
             bool result;
 
@@ -290,17 +290,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to check if topic {Topic} exists", topicName);
+                Log.FailedToCheckIfTopicExists(s_logger, e, topicName);
                 throw;
             }
 
             if (result)
             {
-                s_logger.LogDebug("Topic {Topic} exists", topicName);
+                Log.TopicExists(s_logger, topicName);
             }
             else
             {
-                s_logger.LogWarning("Topic {Topic} does not exist", topicName);
+                Log.TopicDoesNotExist(s_logger, topicName);
             }
 
             return result;
@@ -308,7 +308,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         
         private void Initialise()
         {
-            s_logger.LogDebug("Initialising new management client wrapper...");
+            Log.InitialisingNewManagementClientWrapper(s_logger);
 
             try
             {
@@ -316,11 +316,105 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to initialise new management client wrapper.");
+                Log.FailedToInitialiseNewManagementClientWrapper(s_logger, e);
                 throw;
             }
 
-            s_logger.LogDebug("New management client wrapper initialised.");
+            Log.NewManagementClientWrapperInitialised(s_logger);
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Resetting management client wrapper...")]
+            public static partial void ResettingManagementClientWrapper(ILogger logger);
+            
+            [LoggerMessage(LogLevel.Information, "Creating topic {Topic}...")]
+            public static partial void CreatingTopic(ILogger logger, string topic);
+            
+            [LoggerMessage(LogLevel.Error, "Failed to create queue {Queue}.")]
+            public static partial void FailedToCreateQueue(ILogger logger, Exception exception, string queue);
+            
+            [LoggerMessage(LogLevel.Information, "Queue {Queue} created.")]
+            public static partial void QueueCreated(ILogger logger, string queue);
+            
+            [LoggerMessage(LogLevel.Information, "Creating subscription {ChannelName} for topic {Topic}...")]
+            public static partial void CreatingSubscriptionForTopic(ILogger logger, string channelName, string topic);
+
+            [LoggerMessage(LogLevel.Error, "Failed to create subscription {ChannelName} for topic {Topic}.")]
+            public static partial void FailedToCreateSubscriptionForTopic(ILogger logger, Exception exception, string channelName, string topic);
+            
+            [LoggerMessage(LogLevel.Information, "Subscription {ChannelName} for topic {Topic} created.")]
+            public static partial void SubscriptionForTopicCreated(ILogger logger, string channelName, string topic);
+            
+            [LoggerMessage(LogLevel.Error, "Failed to create topic {Topic}.")]
+            public static partial void FailedToCreateTopic(ILogger logger, Exception exception, string topic);
+            
+            [LoggerMessage(LogLevel.Information, "Topic {Topic} created.")]
+            public static partial void TopicCreated(ILogger logger, string topic);
+            
+            [LoggerMessage(LogLevel.Information, "Deleting queue {Queue}...")]
+            public static partial void DeletingQueue(ILogger logger, string queue);
+            
+            [LoggerMessage(LogLevel.Information, "Queue {Queue} successfully deleted")]
+            public static partial void QueueSuccessfullyDeleted(ILogger logger, string queue);
+            
+            [LoggerMessage(LogLevel.Error, "Failed to delete Queue {Queue}")]
+            public static partial void FailedToDeleteQueue(ILogger logger, Exception exception, string queue);
+            
+            [LoggerMessage(LogLevel.Information, "Deleting topic {Topic}...")]
+            public static partial void DeletingTopic(ILogger logger, string topic);
+            
+            [LoggerMessage(LogLevel.Information, "Topic {Topic} successfully deleted")]
+            public static partial void TopicSuccessfullyDeleted(ILogger logger, string topic);
+            
+            [LoggerMessage(LogLevel.Error, "Failed to delete Topic {Topic}")]
+            public static partial void FailedToDeleteTopic(ILogger logger, Exception exception, string topic);
+            
+            [LoggerMessage(LogLevel.Debug, "Checking if queue {Queue} exists...")]
+            public static partial void CheckingIfQueueExists(ILogger logger, string queue);
+            
+            [LoggerMessage(LogLevel.Error, "Failed to check if queue {Queue} exists")]
+            public static partial void FailedToCheckIfQueueExists(ILogger logger, Exception exception, string queue);
+            
+            [LoggerMessage(LogLevel.Debug, "Queue {Queue} exists")]
+            public static partial void QueueExists(ILogger logger, string queue);
+            
+            [LoggerMessage(LogLevel.Warning, "Queue {Queue} does not exist")]
+            public static partial void QueueDoesNotExist(ILogger logger, string queue);
+            
+            [LoggerMessage(LogLevel.Debug, "Checking if subscription {ChannelName} for topic {Topic} exists...")]
+            public static partial void CheckingIfSubscriptionForTopicExists(ILogger logger, string channelName, string topic);
+            
+            [LoggerMessage(LogLevel.Error, "Failed to check if subscription {ChannelName} for topic {Topic} exists.")]
+            public static partial void FailedToCheckIfSubscriptionForTopicExists(ILogger logger, Exception exception, string channelName, string topic);
+            
+            [LoggerMessage(LogLevel.Debug, "Subscription {ChannelName} for topic {Topic} exists.")]
+            public static partial void SubscriptionForTopicExists(ILogger logger, string channelName, string topic);
+            
+            [LoggerMessage(LogLevel.Warning, "Subscription {ChannelName} for topic {Topic} does not exist.")]
+            public static partial void SubscriptionForTopicDoesNotExist(ILogger logger, string channelName, string topic);
+            
+            [LoggerMessage(LogLevel.Debug, "Checking if topic {Topic} exists...")]
+            public static partial void CheckingIfTopicExists(ILogger logger, string topic);
+            
+            [LoggerMessage(LogLevel.Error, "Failed to check if topic {Topic} exists")]
+            public static partial void FailedToCheckIfTopicExists(ILogger logger, Exception exception, string topic);
+            
+            [LoggerMessage(LogLevel.Debug, "Topic {Topic} exists")]
+            public static partial void TopicExists(ILogger logger, string topic);
+            
+            [LoggerMessage(LogLevel.Warning, "Topic {Topic} does not exist")]
+            public static partial void TopicDoesNotExist(ILogger logger, string topic);
+            
+            [LoggerMessage(LogLevel.Debug, "Initialising new management client wrapper...")]
+            public static partial void InitialisingNewManagementClientWrapper(ILogger logger);
+            
+            [LoggerMessage(LogLevel.Error, "Failed to initialise new management client wrapper.")]
+            public static partial void FailedToInitialiseNewManagementClientWrapper(ILogger logger, Exception exception);
+            
+            [LoggerMessage(LogLevel.Debug, "New management client wrapper initialised.")]
+            public static partial void NewManagementClientWrapperInitialised(ILogger logger);
         }
     }
 }
+

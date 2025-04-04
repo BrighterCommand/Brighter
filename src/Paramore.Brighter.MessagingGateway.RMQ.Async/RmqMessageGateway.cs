@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 ///     A channel is associated with a queue name, which binds to a <see cref="MessageHeader.Topic" /> when
 ///     <see cref="CommandProcessor.Post{T}" /> sends over a task queue.
 ///     So to listen for messages on that Topic you need to bind to the matching queue name.
-///     The configuration holds a &lt;serviceActivatorConnections&gt; section which in turn contains a &lt;connections&gt;
+///     The configuration holds a <serviceActivatorConnections> section which in turn contains a <connections>
 ///     collection that contains a set of connections.
 ///     Each subscription identifies a mapping between a queue name and a <see cref="IRequest" /> derived type. At runtime we
 ///     read this list and listen on the associated channels.
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 ///     request type in <see cref="IAmAMessageMapperRegistry" /> to translate between the
 ///     on-the-wire message and the <see cref="Command" /> or <see cref="Event" />
 /// </summary>
-public class RmqMessageGateway : IDisposable, IAsyncDisposable
+public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGateway>();
     private readonly AsyncPolicy _circuitBreakerPolicy;
@@ -74,7 +74,7 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
 
         _retryPolicy = connectionPolicyFactory.RetryPolicyAsync;
         _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicyAsync;
-        
+
        if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
         _connectionFactory = new ConnectionFactory
@@ -83,7 +83,7 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
             RequestedHeartbeat = TimeSpan.FromSeconds(connection.Heartbeat),
             ContinuationTimeout = TimeSpan.FromSeconds(connection.ContinuationTimeout)
         };
-        
+
         if (Connection.Exchange is null) throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
 
         DelaySupported = Connection.Exchange.SupportDelay;
@@ -111,10 +111,10 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
     /// <param name="cancellationToken">Cancel the operation</param>
     /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
     protected async Task EnsureBrokerAsync(
-        ChannelName? queueName = null, 
+        ChannelName? queueName = null,
         OnMissingChannel makeExchange = OnMissingChannel.Create,
         CancellationToken cancellationToken = default
-        )
+    )
     {
         queueName ??= new ChannelName("Producer Channel");
 
@@ -125,10 +125,10 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
     {
         await _circuitBreakerPolicy.ExecuteAsync(async () => await ConnectWithRetryAsync(queueName, makeExchange, cancellationToken));
     }
-    
+
     private async Task ConnectWithRetryAsync(ChannelName queueName, OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {
-        await _retryPolicy.ExecuteAsync(async _ => await ConnectToBrokerAsync(makeExchange,cancellationToken),
+        await _retryPolicy.ExecuteAsync(async _ => await ConnectToBrokerAsync(makeExchange, cancellationToken),
             new Dictionary<string, object> { { "queueName", queueName.Value } });
     }
 
@@ -138,13 +138,13 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
         {
             var connection = await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
                 .GetConnectionAsync(_connectionFactory, cancellationToken);
-            
+
            if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
             connection.ConnectionBlockedAsync += HandleBlockedAsync;
             connection.ConnectionUnblockedAsync += HandleUnBlockedAsync;
 
-            s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}", Connection.AmpqUri.GetSanitizedUri());
+            Log.OpeningChannelToRabbitMq(s_logger, Connection.AmpqUri.GetSanitizedUri());
 
             Channel = await connection.CreateChannelAsync(
                 new CreateChannelOptions(
@@ -160,9 +160,8 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
     private Task HandleBlockedAsync(object sender, ConnectionBlockedEventArgs args)
     {
        if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
-        
-        s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}",
-            Connection.AmpqUri.GetSanitizedUri(), args.Reason);
+
+        Log.SubscriptionBlocked(s_logger, Connection.AmpqUri.GetSanitizedUri(), args.Reason);
 
         return Task.CompletedTask;
     }
@@ -170,8 +169,8 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
     private Task HandleUnBlockedAsync(object sender, AsyncEventArgs args)
     {
        if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
-        
-        s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked", Connection.AmpqUri.GetSanitizedUri());
+
+        Log.SubscriptionUnblocked(s_logger, Connection.AmpqUri.GetSanitizedUri());
         return Task.CompletedTask;
     }
 
@@ -210,4 +209,17 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
                 .GetResult();
         }
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}")]
+        public static partial void SubscriptionBlocked(ILogger logger, string url, string errorMessage);
+
+        [LoggerMessage(LogLevel.Information, "RMQMessagingGateway: Subscription to {URL} unblocked")]
+        public static partial void SubscriptionUnblocked(ILogger logger, string url);
+
+        [LoggerMessage(LogLevel.Debug, "RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}")]
+        public static partial void OpeningChannelToRabbitMq(ILogger logger, string url);
+    }
 }
+

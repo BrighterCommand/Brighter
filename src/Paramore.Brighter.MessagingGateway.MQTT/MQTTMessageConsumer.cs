@@ -18,7 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// The <see cref="MQTTMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
     /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching.
     /// </summary>
-    public class MQTTMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class MQTTMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private readonly string _topic;
         private readonly Queue<Message> _messageQueue = new Queue<Message>();
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             _mqttClient.ApplicationMessageReceivedAsync += e =>
             {
-                s_logger.LogInformation("MQTTMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
+                Log.MqttMessageConsumerReceivedMessage(s_logger, configuration.TopicPrefix);
                 var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.Payload.ToArray(), JsonSerialisationOptions.Options);
                 foreach (MqttUserProperty property in e.ApplicationMessage.UserProperties)
                 {
@@ -175,7 +175,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     }
                     catch (TimeoutException)
                     {
-                        s_logger.LogWarning("MQTTMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}", _messageQueue.Count);
+                        Log.MqttMessageConsumerTimedOutRetrievingMessages(s_logger, _messageQueue.Count);
                     }
                 }
             }
@@ -230,18 +230,37 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 try
                 {
                     await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
-                    s_logger.LogInformation("MQTT Consumer Client Connected");
+                    Log.MqttConsumerClientConnected(s_logger);
 
                     await _mqttClient.SubscribeAsync(new MqttTopicFilter { Topic = _topic, QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce });
-                    s_logger.LogInformation("Subscribed to {Topic}", _topic);
+                    Log.SubscribedToTopic(s_logger, _topic);
 
                     return;
                 }
                 catch (Exception)
                 {
-                    s_logger.LogError("Unable to connect MQTT Consumer Client");
+                    Log.UnableToConnectMqttConsumerClient(s_logger);
                 }
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "MQTTMessageConsumer: Received message from queue {TopicPrefix}")]
+            public static partial void MqttMessageConsumerReceivedMessage(ILogger logger, object topicPrefix);
+
+            [LoggerMessage(LogLevel.Warning, "MQTTMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}")]
+            public static partial void MqttMessageConsumerTimedOutRetrievingMessages(ILogger logger, int queueLength);
+
+            [LoggerMessage(LogLevel.Information, "MQTT Consumer Client Connected")]
+            public static partial void MqttConsumerClientConnected(ILogger logger);
+
+            [LoggerMessage(LogLevel.Information, "Subscribed to {Topic}")]
+            public static partial void SubscribedToTopic(ILogger logger, string topic);
+            
+            [LoggerMessage(LogLevel.Error, "Unable to connect MQTT Consumer Client")]
+            public static partial void UnableToConnectMqttConsumerClient(ILogger logger);
+        }
     }
 }
+

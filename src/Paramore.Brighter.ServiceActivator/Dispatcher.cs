@@ -43,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
     /// the stop and start of individual connections through <see cref="Open(string)"/> and <see cref="Shut(string)"/>
     /// </summary>
-    public class Dispatcher : IDispatcher
+    public partial class Dispatcher : IDispatcher
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<Dispatcher>();
 
@@ -147,7 +147,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                s_logger.LogInformation("Dispatcher: Stopping dispatcher");
+                Log.StoppingDispatcher(s_logger);
                 Consumers.Each(consumer => consumer.Shut(consumer.Subscription.RoutingKey));
             }
 
@@ -169,7 +169,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscription">The subscription.</param>
         public void Open(Subscription subscription)
         {
-            s_logger.LogInformation("Dispatcher: Opening subscription {ChannelName}", subscription.Name);
+            Log.OpeningSubscription(s_logger, subscription.Name);
 
             AddSubscriptionToSubscriptions(subscription);
             var addedConsumers = CreateConsumers(new[] { subscription });
@@ -228,7 +228,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                s_logger.LogInformation("Dispatcher: Stopping subscription {ChannelName}", subscription.Name);
+                Log.StoppingSubscription(s_logger, subscription.Name);
                 var consumersForConnection = Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
@@ -285,14 +285,14 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                 {
-                    s_logger.LogInformation("Dispatcher: Dispatcher starting");
+                    Log.DispatcherStarting(s_logger);
                     State = DispatcherState.DS_RUNNING;
 
                     var consumers = Consumers.ToArray();
                     consumers.Each(consumer => consumer.Open());
                     consumers.Each(consumer => _tasks.TryAdd(consumer.JobId, consumer.Job!));
 
-                    s_logger.LogInformation("Dispatcher: Dispatcher starting {Consumers} performers", _tasks.Count);
+                    Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
 
                     while (_tasks.Any())
                     {
@@ -301,12 +301,12 @@ namespace Paramore.Brighter.ServiceActivator
                             var runningTasks = _tasks.Values.ToArray();
                             var index = Task.WaitAny(runningTasks);
                             var stoppingConsumer = runningTasks[index];
-                            s_logger.LogDebug("Dispatcher: Performer stopped with state {Status}", stoppingConsumer.Status);
+                            Log.PerformerStopped(s_logger, stoppingConsumer.Status);
 
                             var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
                             if (consumer != null)
                             {
-                                s_logger.LogDebug("Dispatcher: Removing a consumer with subscription name {ChannelName}", consumer.Name);
+                                Log.RemovingConsumer(s_logger, consumer.Name);
 
                                 if (_consumers.TryRemove(consumer.Name, out consumer))
                                 {
@@ -325,14 +325,14 @@ namespace Paramore.Brighter.ServiceActivator
                         {
                             ae.Handle(ex =>
                             {
-                                s_logger.LogError(ex, "Dispatcher: Error on consumer; consumer shut down");
+                                Log.ErrorOnConsumer(s_logger, ex);
                                 return true;
                             });
                         }
                     }
 
                     State = DispatcherState.DS_STOPPED;
-                    s_logger.LogInformation("Dispatcher: Dispatcher stopped");
+                    Log.DispatcherStopped(s_logger);
                 }
             },
             TaskCreationOptions.LongRunning);
@@ -360,7 +360,7 @@ namespace Paramore.Brighter.ServiceActivator
         
         private Consumer CreateConsumer(Subscription subscription, int? consumerNumber)
         {
-            s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", consumerNumber, subscription.Name);
+            Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name);
             var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
             if (subscription.MessagePumpType == MessagePumpType.Reactor)
             {
@@ -408,5 +408,39 @@ namespace Paramore.Brighter.ServiceActivator
                  return consumerFactory?.Create()!;
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Stopping dispatcher")]
+            public static partial void StoppingDispatcher(ILogger logger);
+
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Opening subscription {ChannelName}")]
+            public static partial void OpeningSubscription(ILogger logger, string channelName);
+            
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Stopping subscription {ChannelName}")]
+            public static partial void StoppingSubscription(ILogger logger, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Dispatcher starting")]
+            public static partial void DispatcherStarting(ILogger logger);
+
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Dispatcher starting {Consumers} performers")]
+            public static partial void DispatcherStartingPerformers(ILogger logger, int consumers);
+
+            [LoggerMessage(LogLevel.Debug, "Dispatcher: Performer stopped with state {Status}")]
+            public static partial void PerformerStopped(ILogger logger, TaskStatus status);
+
+            [LoggerMessage(LogLevel.Debug, "Dispatcher: Removing a consumer with subscription name {ChannelName}")]
+            public static partial void RemovingConsumer(ILogger logger, string channelName);
+
+            [LoggerMessage(LogLevel.Error, "Dispatcher: Error on consumer; consumer shut down")]
+            public static partial void ErrorOnConsumer(ILogger logger, Exception ex);
+
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Dispatcher stopped")]
+            public static partial void DispatcherStopped(ILogger logger);
+            
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}")]
+            public static partial void CreatingConsumer(ILogger logger, int? consumerNumber, string channelName);
+        }
     }
 }
+

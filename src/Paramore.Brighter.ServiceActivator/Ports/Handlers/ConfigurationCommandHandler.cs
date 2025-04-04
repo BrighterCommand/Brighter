@@ -32,7 +32,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
     /// <summary>
     /// Class ConfigurationMessageHandler.
     /// </summary>
-    public class ConfigurationCommandHandler : RequestHandler<ConfigurationCommand>
+    public partial class ConfigurationCommandHandler : RequestHandler<ConfigurationCommand>
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<ConfigurationCommandHandler>();
 
@@ -54,34 +54,34 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override ConfigurationCommand Handle(ConfigurationCommand command)
         {
-            s_logger.LogDebug("Handling Configuration Command of Type: {CommandType}", command.Type);
+            Log.HandlingConfigurationCommand(s_logger, command.Type);
 
             switch (command.Type)
             {
                 case ConfigurationCommandType.CM_STOPALL:
-                    s_logger.LogDebug("Configuration Command received and now stopping all consumers. Begin at {Time}", DateTime.UtcNow.ToString("o"));
-                    s_logger.LogDebug("--------------------------------------------------------------------------");
-                    s_logger.LogDebug("...");
+                    Log.StoppingAllConsumersBegin(s_logger, DateTime.UtcNow.ToString("o"));
+                    Log.LogSeparator(s_logger);
+                    Log.LogEllipsis(s_logger);
                     _dispatcher.End().Wait();
-                    s_logger.LogDebug("All consumers stopped in response to configuration command. Stopped at {Time}", DateTime.UtcNow.ToString("o"));
-                    s_logger.LogDebug("--------------------------------------------------------------------------");
+                    Log.AllConsumersStopped(s_logger, DateTime.UtcNow.ToString("o"));
+                    Log.LogSeparator(s_logger);
                     break;
                 case ConfigurationCommandType.CM_STARTALL:
-                    s_logger.LogDebug("--------------------------------------------------------------------------");
-                    s_logger.LogDebug("Configuration Command received and now starting all consumers. Begin at {Time}", DateTime.UtcNow.ToString("o"));
-                    s_logger.LogDebug("--------------------------------------------------------------------------");
+                    Log.LogSeparator(s_logger);
+                    Log.StartingAllConsumersBegin(s_logger, DateTime.UtcNow.ToString("o"));
+                    Log.LogSeparator(s_logger);
                     _dispatcher.Receive();
                     break;
                 case ConfigurationCommandType.CM_STOPCHANNEL:
-                    s_logger.LogDebug("--------------------------------------------------------------------------");
-                    s_logger.LogDebug("Configuration Command received and now stopping channel {ChannelName}", command.SubscriptionName);
-                    s_logger.LogDebug("--------------------------------------------------------------------------");
+                    Log.LogSeparator(s_logger);
+                    Log.StoppingChannel(s_logger, command.SubscriptionName);
+                    Log.LogSeparator(s_logger);
                     _dispatcher.Shut(new SubscriptionName(command.SubscriptionName));
                     break;
                 case ConfigurationCommandType.CM_STARTCHANNEL:
-                    s_logger.LogDebug("--------------------------------------------------------------------------");
-                    s_logger.LogDebug("Configuration Command received and now starting channel {ChannelName}", command.SubscriptionName);
-                    s_logger.LogDebug("--------------------------------------------------------------------------");
+                    Log.LogSeparator(s_logger);
+                    Log.StartingChannel(s_logger, command.SubscriptionName);
+                    Log.LogSeparator(s_logger);
                     _dispatcher.Open(new SubscriptionName(command.SubscriptionName));
                     break;
                 default:
@@ -91,5 +91,32 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
             return base.Handle(command);
         }
 
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "Handling Configuration Command of Type: {CommandType}")]
+            public static partial void HandlingConfigurationCommand(ILogger logger, ConfigurationCommandType commandType);
+
+            [LoggerMessage(LogLevel.Debug, "Configuration Command received and now stopping all consumers. Begin at {Time}")]
+            public static partial void StoppingAllConsumersBegin(ILogger logger, string time);
+
+            [LoggerMessage(LogLevel.Debug, "All consumers stopped in response to configuration command. Stopped at {Time}")]
+            public static partial void AllConsumersStopped(ILogger logger, string time);
+
+            [LoggerMessage(LogLevel.Debug, "Configuration Command received and now starting all consumers. Begin at {Time}")]
+            public static partial void StartingAllConsumersBegin(ILogger logger, string time);
+
+            [LoggerMessage(LogLevel.Debug, "Configuration Command received and now stopping channel {ChannelName}")]
+            public static partial void StoppingChannel(ILogger logger, string channelName);
+
+            [LoggerMessage(LogLevel.Debug, "Configuration Command received and now starting channel {ChannelName}")]
+            public static partial void StartingChannel(ILogger logger, string channelName);
+            
+            [LoggerMessage(LogLevel.Debug, "--------------------------------------------------------------------------")]
+            public static partial void LogSeparator(ILogger logger);
+            
+            [LoggerMessage(LogLevel.Debug, "...")]
+            public static partial void LogEllipsis(ILogger logger);
+        }
     }
 }
+

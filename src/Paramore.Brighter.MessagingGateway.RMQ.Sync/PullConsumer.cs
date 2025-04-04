@@ -33,7 +33,7 @@ using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
-    public class PullConsumer : DefaultBasicConsumer
+    public partial class PullConsumer : DefaultBasicConsumer
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
         
@@ -122,12 +122,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             catch (Exception e)
             {
                 //don't impede shutdown, just log
-                s_logger.LogWarning("Tried to nack unhandled messages on shutdown but failed for {ErrorMessage}",
-                    e.Message);
+                Log.NackUnhandledMessagesOnShutdownFailed(s_logger, e.Message);
             }
            
             base.OnCancel();
         }
 
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Tried to nack unhandled messages on shutdown but failed for {ErrorMessage}")]
+            public static partial void NackUnhandledMessagesOnShutdownFailed(ILogger logger, string errorMessage);
+        }
    }
 }
+

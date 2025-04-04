@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
 /// It handles subscription establishment, request sending and error handling
 /// </summary>
-public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
+public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
     private static readonly SemaphoreSlim s_lock = new(1, 1);
@@ -133,8 +133,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
 
         try
         {
-            s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {ExchangeName}",
-                Connection.Exchange.Name);
+            Log.PreparingToSendAsync(s_logger, Connection.Exchange.Name);
             
             await EnsureBrokerAsync(makeExchange: _publication.MakeChannels, cancellationToken: cancellationToken);
             
@@ -146,9 +145,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
             Channel.BasicAcksAsync += OnPublishSucceeded;
             Channel.BasicNacksAsync += OnPublishFailed;
 
-            s_logger.LogDebug(
-                "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}",
-                Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
+            Log.PublishingMessageAsync(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                 message.Header.Topic, message.Persist, message.Id, message.Body.Value);
 
             _pendingConfirmations.TryAdd(await Channel.GetNextPublishSequenceNumberAsync(cancellationToken), message.Id);
@@ -168,18 +165,13 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
                 schedulerSync.Schedule(message, delay.Value);
             }
 
-            s_logger.LogInformation(
-                "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}",
-                Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
+            Log.PublishedMessageAsync(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
                 message.Header.Topic, message.Persist, message.Id,
                 JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);
         }
         catch (IOException io)
         {
-            s_logger.LogError(io,
-                "RmqMessageProducer: Error talking to the socket on {URL}, resetting subscription",
-                Connection.AmpqUri.GetSanitizedUri()
-            );
+            Log.ErrorTalkingToSocketAsync(s_logger, io, Connection.AmpqUri.GetSanitizedUri());
             await ResetConnectionToBrokerAsync(cancellationToken);
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
         }
@@ -196,7 +188,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
         {
             OnMessagePublished?.Invoke(false, messageId);
             _pendingConfirmations.TryRemove(e.DeliveryTag, out _);
-            s_logger.LogDebug("Failed to publish message: {MessageId}", messageId);
+            Log.FailedToPublishMessageAsync(s_logger, messageId);
         }
 
         return Task.CompletedTask;
@@ -208,9 +200,31 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
         {
             OnMessagePublished?.Invoke(true, messageId);
             _pendingConfirmations.TryRemove(e.DeliveryTag, out _);
-            s_logger.LogInformation("Published message: {MessageId}", messageId);
+            Log.PublishedMessage(s_logger, messageId);
         }
 
         return Task.CompletedTask;
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Debug, "RmqMessageProducer: Preparing  to send message via exchange {ExchangeName}")]
+        public static partial void PreparingToSendAsync(ILogger logger, string exchangeName);
+
+        [LoggerMessage(LogLevel.Debug, "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}")]
+        public static partial void PublishingMessageAsync(ILogger logger, string exchangeName, string url, double delay, string topic, bool persist, string id, string request);
+
+        [LoggerMessage(LogLevel.Information, "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}")]
+        public static partial void PublishedMessageAsync(ILogger logger, string exchangeName, string url, TimeSpan? delay, string topic, bool persist, string id, string request, DateTime time);
+
+        [LoggerMessage(LogLevel.Error, "RmqMessageProducer: Error talking to the socket on {URL}, resetting subscription")]
+        public static partial void ErrorTalkingToSocketAsync(ILogger logger, Exception exception, string url);
+        
+        [LoggerMessage(LogLevel.Debug, "Failed to publish message: {MessageId}")]
+        public static partial void FailedToPublishMessageAsync(ILogger logger, string messageId);
+
+        [LoggerMessage(LogLevel.Information, "Published message: {MessageId}")]
+        public static partial void PublishedMessage(ILogger logger, string messageId);
+    }
 }
+

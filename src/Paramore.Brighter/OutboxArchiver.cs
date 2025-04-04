@@ -37,7 +37,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="TMessage">The type of message to archive</typeparam>
     /// <typeparam name="TTransaction">The transaction type of the Db</typeparam>
-    public class OutboxArchiver<TMessage, TTransaction> where TMessage : Message
+    public partial class OutboxArchiver<TMessage, TTransaction> where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
         private readonly IAmARequestContextFactory _requestContextFactory;
@@ -98,10 +98,7 @@ namespace Paramore.Brighter
                     .DispatchedMessages(dispatchedSince, requestContext, _archiveBatchSize)
                     .ToArray();
 
-                s_logger.LogInformation(
-                    "Found {NumberOfMessageArchived} message to archive, batch size : {BatchSize}",
-                    messages.Count(), _archiveBatchSize
-                );
+                Log.FoundMessagesToArchive(s_logger, messages.Count(), _archiveBatchSize);
 
                 if (messages.Length <= 0) return;
 
@@ -112,14 +109,11 @@ namespace Paramore.Brighter
 
                 _outBox.Delete(messages.Select(e => e.Id).ToArray(), requestContext);
 
-                s_logger.LogInformation(
-                    "Successfully archived {NumberOfMessageArchived}, batch size : {BatchSize}",
-                    messages.Count(), _archiveBatchSize
-                );
+                Log.SuccessfullyArchivedMessages(s_logger, messages.Count(), _archiveBatchSize);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Error while archiving from the outbox");
+                Log.ErrorArchivingFromOutbox(s_logger, e);
                 _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
             }
@@ -172,7 +166,7 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Error while archiving from the outbox");
+                Log.ErrorArchivingFromOutbox(s_logger, e);
                 _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
             }
@@ -182,5 +176,18 @@ namespace Paramore.Brighter
                 requestContext.Span = parentSpan;
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Found {NumberOfMessageArchived} message to archive, batch size : {BatchSize}")]
+            public static partial void FoundMessagesToArchive(ILogger logger, int numberOfMessageArchived, int batchSize);
+
+            [LoggerMessage(LogLevel.Information, "Successfully archived {NumberOfMessageArchived}, batch size : {BatchSize}")]
+            public static partial void SuccessfullyArchivedMessages(ILogger logger, int numberOfMessageArchived, int batchSize);
+
+            [LoggerMessage(LogLevel.Error, "Error while archiving from the outbox")]
+            public static partial void ErrorArchivingFromOutbox(ILogger logger, Exception ex);
+        }
     }
 }
+

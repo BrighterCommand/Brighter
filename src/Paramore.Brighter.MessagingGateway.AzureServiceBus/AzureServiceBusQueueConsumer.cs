@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// <summary>
 /// Implementation of <see cref="IAmAMessageConsumerSync"/> using Azure Service Bus for Transport.
 /// </summary>
-public class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
+public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
 {
     protected override string SubscriptionName => "Queue";
     protected override ILogger Logger => s_logger;
@@ -64,16 +64,14 @@ public class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
 
     protected override async Task GetMessageReceiverProviderAsync()
     {
-        s_logger.LogInformation(
-            "Getting message receiver provider for queue {Queue}...",
-            Topic);
+        Log.GettingMessageReceiverProviderAsync(s_logger, Topic);
         try
         {
             ServiceBusReceiver = await _serviceBusReceiverProvider.GetAsync(Topic, SubscriptionConfiguration.RequireSession);
         }
         catch (Exception e)
         {
-            s_logger.LogError(e, "Failed to get message receiver provider for queue {Queue}", Topic);
+            Log.FailedToGetMessageReceiverProviderAsync(s_logger, Topic, e);
         }
     }
         
@@ -82,7 +80,7 @@ public class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     /// </summary>
     public override async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
     {
-        Logger.LogInformation("Purging messages from Queue {Queue}", Topic);
+        Log.PurgingMessagesFromQueueAsync(s_logger, Topic);
 
         await AdministrationClientWrapper.DeleteQueueAsync(Topic);
         await EnsureChannelAsync();
@@ -113,8 +111,7 @@ public class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
         {
             if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
             {
-                s_logger.LogWarning(
-                    "Message entity already exists with queue {Queue}", Topic);
+                Log.MessageEntityAlreadyExists(s_logger, Topic);
                 _queueCreated = true;
             }
             else
@@ -124,7 +121,7 @@ public class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
         }
         catch (Exception e)
         {
-            s_logger.LogError(e, "Failing to check or create subscription");
+            Log.FailingToCheckOrCreateSubscription(s_logger, e);
 
             //The connection to Azure Service bus may have failed so we re-establish the connection.
             AdministrationClientWrapper.Reset();
@@ -132,4 +129,23 @@ public class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
             throw new ChannelFailureException("Failing to check or create subscription", e);
         }
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Information, "Getting message receiver provider for queue {Queue}...")]
+        public static partial void GettingMessageReceiverProviderAsync(ILogger logger, string queue);
+
+        [LoggerMessage(LogLevel.Error, "Failed to get message receiver provider for queue {Queue}")]
+        public static partial void FailedToGetMessageReceiverProviderAsync(ILogger logger, string queue, Exception e);
+        
+        [LoggerMessage(LogLevel.Information, "Purging messages from Queue {Queue}")]
+        public static partial void PurgingMessagesFromQueueAsync(ILogger logger, string queue);
+
+        [LoggerMessage(LogLevel.Warning, "Message entity already exists with queue {Queue}")]
+        public static partial void MessageEntityAlreadyExists(ILogger logger, string queue);
+
+        [LoggerMessage(LogLevel.Error, "Failing to check or create subscription")]
+        public static partial void FailingToCheckOrCreateSubscription(ILogger logger, Exception e);
+    }
 }
+

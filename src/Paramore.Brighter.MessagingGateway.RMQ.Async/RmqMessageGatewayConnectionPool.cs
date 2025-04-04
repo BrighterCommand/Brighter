@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// <summary>
 /// Class MessageGatewayConnectionPool.
 /// </summary>
-public class RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
+public partial class RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
 {
     private static readonly Dictionary<string, PooledConnection> s_connectionPool = new();
 
@@ -104,9 +104,7 @@ public class RmqMessageGatewayConnectionPool(string connectionName, ushort conne
               }
               catch (BrokerUnreachableException exception)
               {
-                  s_logger.LogError(exception,
-                      "RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {URL}",
-                      connectionFactory.Endpoint);
+                  Log.FailedToResetSubscriptionToRabbitMqEndpoint(s_logger, connectionFactory.Endpoint, exception);
               }
           }
           finally
@@ -143,8 +141,7 @@ public class RmqMessageGatewayConnectionPool(string connectionName, ushort conne
 
         await TryRemoveConnectionAsync(connectionId);
 
-        s_logger.LogDebug("RmqMessageGatewayConnectionPool: Creating subscription to Rabbit MQ endpoint {URL}",
-            connectionFactory.Endpoint);
+        Log.CreatingSubscriptionToRabbitMqEndpoint(s_logger, connectionFactory.Endpoint);
 
         connectionFactory.RequestedHeartbeat = TimeSpan.FromSeconds(connectionHeartbeat);
         connectionFactory.RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000);
@@ -153,15 +150,12 @@ public class RmqMessageGatewayConnectionPool(string connectionName, ushort conne
 
         var connection = await connectionFactory.CreateConnectionAsync(connectionName, cancellationToken);
 
-        s_logger.LogDebug("RmqMessageGatewayConnectionPool: new connected to {URL} added to pool named {ProviderName}",
-            connection.Endpoint, connection.ClientProvidedName);
+        Log.NewConnectedToAddedToPool(s_logger, connection.Endpoint, connection.ClientProvidedName);
 
 
         async Task ShutdownHandler(object sender, ShutdownEventArgs e)
         {
-            s_logger.LogWarning(
-                "RmqMessageGatewayConnectionPool: The subscription {URL} has been shutdown due to {ErrorMessage}",
-                connection.Endpoint, e.ToString());
+            Log.SubscriptionHasBeenShutdown(s_logger, connection.Endpoint, e.ToString());
 
             await s_lock.WaitAsync(e.CancellationToken);
 
@@ -202,4 +196,20 @@ public class RmqMessageGatewayConnectionPool(string connectionName, ushort conne
                 .ToLowerInvariant();
 
     private sealed record PooledConnection(IConnection Connection, AsyncEventHandler<ShutdownEventArgs> ShutdownHandler);
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Error, "RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {URL}")]
+        public static partial void FailedToResetSubscriptionToRabbitMqEndpoint(ILogger logger, AmqpTcpEndpoint url, Exception exception);
+
+        [LoggerMessage(LogLevel.Debug, "RmqMessageGatewayConnectionPool: Creating subscription to Rabbit MQ endpoint {URL}")]
+        public static partial void CreatingSubscriptionToRabbitMqEndpoint(ILogger logger, AmqpTcpEndpoint url);
+
+        [LoggerMessage(LogLevel.Debug, "RmqMessageGatewayConnectionPool: new connected to {URL} added to pool named {ProviderName}")]
+        public static partial void NewConnectedToAddedToPool(ILogger logger, AmqpTcpEndpoint url, string? providerName);
+
+        [LoggerMessage(LogLevel.Warning, "RmqMessageGatewayConnectionPool: The subscription {URL} has been shutdown due to {ErrorMessage}")]
+        public static partial void SubscriptionHasBeenShutdown(ILogger logger, AmqpTcpEndpoint url, string errorMessage);
+    }
 }
+

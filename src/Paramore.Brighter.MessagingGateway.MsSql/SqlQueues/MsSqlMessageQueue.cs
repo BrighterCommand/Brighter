@@ -14,7 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
     ///     Class MsSqlMessageQueue{T}
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class MsSqlMessageQueue<T>
+    public partial class MsSqlMessageQueue<T>
     {
         private const int RetryDelay = 100;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageQueue<T>>();
@@ -30,8 +30,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _connectionProvider = connectionProvider;
-            if (s_logger.IsEnabled(LogLevel.Debug))
-                s_logger.LogDebug("MsSqlMessageQueue({ConnectionString}, {QueueStoreTable})", _configuration.ConnectionString, _configuration.QueueStoreTable);
+            Log.MsSqlMessageQueueCtor(s_logger, _configuration.ConnectionString, _configuration.QueueStoreTable);
             ContinueOnCapturedContext = false;
         }
 
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             timeOut ??= TimeSpan.FromMilliseconds(-1);
             
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("Send<{CommandType}>(..., {Topic})", typeof(T).FullName, topic);
+            Log.Send(s_logger, typeof(T).FullName, topic);
 
             var parameters = InitAddDbParameters(topic.Value, message);
 
@@ -74,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <returns></returns>
         public async Task SendAsync(T message, string topic, TimeSpan? timeOut, CancellationToken cancellationToken = default)
         {
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("SendAsync<{CommandType}>(..., {Topic})", typeof(T).FullName, topic);
+            Log.SendAsync(s_logger, typeof(T).FullName, topic);
 
             timeOut ??= TimeSpan.FromMilliseconds(-1);
             
@@ -96,8 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             timeout ??= TimeSpan.FromMilliseconds(-1);
             
-            if (s_logger.IsEnabled(LogLevel.Debug))
-                s_logger.LogDebug("TryReceive<{CommandType}>(..., {Timeout})", typeof(T).FullName, timeout.Value.TotalMilliseconds);
+            Log.TryReceive(s_logger, typeof(T).FullName, timeout.Value.TotalMilliseconds);
             
             var rc = TryReceive(topic);
             var timeLeft = timeout.Value.TotalMilliseconds;
@@ -120,7 +118,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <returns>The message received -or- ReceivedResult&lt;T&gt;.Empty when no message is waiting</returns>
         private ReceivedResult<T> TryReceive(string topic)
         {
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("TryReceive<{CommandType}>(...)", typeof(T).FullName);
+            Log.TryReceiveInner(s_logger, typeof(T).FullName);
 
             var parameters = InitRemoveDbParameters(topic);
 
@@ -145,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public async Task<ReceivedResult<T>> TryReceiveAsync(string topic,
             CancellationToken cancellationToken = default)
         {
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("TryReceiveAsync<{CommandType}>(...)", typeof(T).FullName);
+            Log.TryReceiveAsync(s_logger, typeof(T).FullName);
 
             var parameters = InitRemoveDbParameters(topic);
 
@@ -185,7 +183,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         public void Purge()
         {
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("Purge()");
+            Log.Purge(s_logger);
 
             using var connection = _connectionProvider.GetConnection();
             var sqlCmd = InitPurgeDbCommand(connection);
@@ -251,5 +249,30 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             sqlCmd.CommandText = sql;
             return sqlCmd;
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessageQueue({ConnectionString}, {QueueStoreTable})")]
+            public static partial void MsSqlMessageQueueCtor(ILogger logger, string connectionString, string queueStoreTable);
+
+            [LoggerMessage(LogLevel.Debug, "Send<{CommandType}>(..., {Topic})")]
+            public static partial void Send(ILogger logger, string? commandType, RoutingKey topic);
+
+            [LoggerMessage(LogLevel.Debug, "SendAsync<{CommandType}>(..., {Topic})")]
+            public static partial void SendAsync(ILogger logger, string? commandType, string topic);
+
+            [LoggerMessage(LogLevel.Debug, "TryReceive<{CommandType}>(..., {Timeout})")]
+            public static partial void TryReceive(ILogger logger, string? commandType, double timeout);
+            
+            [LoggerMessage(LogLevel.Debug, "TryReceive<{CommandType}>(...)")]
+            public static partial void TryReceiveInner(ILogger logger, string? commandType);
+
+            [LoggerMessage(LogLevel.Debug, "TryReceiveAsync<{CommandType}>(...)")]
+            public static partial void TryReceiveAsync(ILogger logger, string? commandType);
+
+            [LoggerMessage(LogLevel.Debug, "Purge()")]
+            public static partial void Purge(ILogger logger);
+        }
     }
 }
+
