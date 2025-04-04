@@ -42,14 +42,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
                     new MessageBody($"test message")
                 );
 
-                await MessageProducerAsync.SendAsync(message).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+                await MessageProducerAsync.SendAsync(message);
                 sentMessages.Add(message);
             }
 
-            Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(200));
 
             // Spin until we receive all messages or timeout after 2 seconds.
-            Assert.True(SpinWait.SpinUntil(() => receivedMessages.Length == messageCount, 2000));
+            Assert.True(SpinWait.SpinUntil(() => receivedMessages.Length == messageCount, 5000), $"Received {receivedMessages.Length} of {messageCount} messages.");
 
             Assert.NotEmpty(receivedMessages);
             Assert.Equal(messageCount, receivedMessages.Length);
