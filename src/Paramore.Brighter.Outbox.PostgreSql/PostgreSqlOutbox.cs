@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
@@ -56,7 +57,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         public PostgreSqlOutbox(
             IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider) : base(
-            configuration.OutBoxTableName, new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
+                DbSystem.Postgresql, configuration.DatabaseName, configuration.OutBoxTableName, 
+                new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;

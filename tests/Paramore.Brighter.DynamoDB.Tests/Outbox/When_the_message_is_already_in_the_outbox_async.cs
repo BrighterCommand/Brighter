@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -58,7 +57,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             _exception = await Catch.ExceptionAsync(() => _dynamoDbOutbox.AddAsync(_messageEarliest, context));            
 
             //_should_ignore_the_duplicate_key_and_still_succeed
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
         }
     }
 }

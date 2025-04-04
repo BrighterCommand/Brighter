@@ -101,7 +101,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// How long to wait when asking for topic metadata
         /// </summary>
         public TimeSpan TopicFindTimeout { get; set; } = TimeSpan.FromMilliseconds(5000);
-
+        
+        /// <inheritdoc />
+        public override Type ChannelFactoryType => typeof(ChannelFactory); 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.

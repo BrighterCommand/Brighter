@@ -53,7 +53,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly ChannelName _queueName;
         private readonly RoutingKeys _routingKeys;
         private readonly bool _isDurable;
-        private readonly RmqMessageCreator _messageCreator;
         private readonly Message _noopMessage = new Message();
         private readonly string _consumerTag;
         private readonly OnMissingChannel _makeChannels;
@@ -128,7 +127,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             _routingKeys = routingKeys;
             _isDurable = isDurable;
             _highAvailability = highAvailability;
-            _messageCreator = new RmqMessageCreator();
             _batchSize = Convert.ToUInt16(batchSize);
             _makeChannels = makeChannels;
             _consumerTag = Connection.Name + Guid.NewGuid();
@@ -282,7 +280,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     var messages = new Message[resultCount];
                     for (var i = 0; i < resultCount; i++)
                     {
-                        var message = _messageCreator.CreateMessage(results[i]);
+                        var message = RmqMessageCreator.CreateMessage(results[i]);
                         messages[i] = message;
 
                         Log.ReceivedMessage(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));

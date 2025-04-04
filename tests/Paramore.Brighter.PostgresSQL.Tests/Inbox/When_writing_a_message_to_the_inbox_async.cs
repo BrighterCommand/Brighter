@@ -26,7 +26,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
 using Xunit;
@@ -55,16 +54,16 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Inbox_Async()
         {
-            await _pgSqlInbox.AddAsync(_raisedCommand, _contextKey);
+            await _pgSqlInbox.AddAsync(_raisedCommand, _contextKey, null, -1, default);
 
-            _storedCommand = await _pgSqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+            _storedCommand = await _pgSqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null, -1, default);
 
-            //_should_read_the_command_from_the__sql_inbox
-            AssertionExtensions.Should(_storedCommand).NotBeNull();
-            //_should_read_the_command_value
-            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
-            //_should_read_the_command_id
-            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
+            //Should read the command from the sql inbox
+            Assert.NotNull(_storedCommand);
+            //Should read the command value
+            Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
+            //Should read the command id
+            Assert.Equal(_raisedCommand.Id, _storedCommand.Id);
         }
 
         public void Dispose()

@@ -25,13 +25,10 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.Observability;
-using Paramore.Brighter.Tasks;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
@@ -189,10 +186,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             Log.PublishedMessage(s_logger, message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
         }
 
-        private IEnumerable<string> PushToQueues(IRedisClient client, long nextMsgId)
+        private HashSet<string> PushToQueues(IRedisClient client, long nextMsgId)
         {
             var key = Topic + "." + QUEUES;
-            var queues = client.GetAllItemsFromSet(key).ToList();
+            var queues = client.GetAllItemsFromSet(key);
             foreach (var queue in queues)
             {
                 //First add to the queue itself
@@ -201,10 +198,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return queues;
         }
         
-        private async Task<IEnumerable<string>> PushToQueuesAsync(IRedisClientAsync client, long nextMsgId, CancellationToken cancellationToken = default)
+        private async Task<HashSet<string>> PushToQueuesAsync(IRedisClientAsync client, long nextMsgId, CancellationToken cancellationToken = default)
         {
             var key = Topic + "." + QUEUES;
-            var queues = (await client.GetAllItemsFromSetAsync(key, cancellationToken)).ToList();
+            var queues = await client.GetAllItemsFromSetAsync(key, cancellationToken);
             foreach (var queue in queues)
             {
                 //First add to the queue itself

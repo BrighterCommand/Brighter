@@ -42,10 +42,10 @@ namespace Paramore.Brighter.Observability;
 /// <param name="networkPeerPort">Peer port number of the network connection</param>
 /// <param name="serverAddress">Name of the database host</param>
 /// <param name="dbAttributes">Other attributes (key-value pairs) not covered by the standard attributes</param>
-public record OutboxSpanInfo(
+public record BoxSpanInfo(
     DbSystem dbSystem,                    
     string dbName,
-    OutboxDbOperation dbOperation, 
+    BoxDbOperation dbOperation, 
     string dbTable,
     int serverPort = 0, 
     string? dbInstanceId = null, 

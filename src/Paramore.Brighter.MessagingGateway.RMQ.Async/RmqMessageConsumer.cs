@@ -52,7 +52,6 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private readonly ChannelName _queueName;
     private readonly RoutingKeys _routingKeys;
     private readonly bool _isDurable;
-    private readonly RmqMessageCreator _messageCreator;
     private readonly Message _noopMessage = new();
     private readonly string _consumerTag;
     private readonly OnMissingChannel _makeChannels;
@@ -90,7 +89,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         TimeSpan? ttl = null,
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
-        : this(connection, queueName, new RoutingKeys([routingKey]), isDurable, highAvailability,
+        : this(connection, queueName, new RoutingKeys(routingKey), isDurable, highAvailability,
             batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels)
     {
     }
@@ -127,7 +126,6 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         _routingKeys = routingKeys;
         _isDurable = isDurable;
         _highAvailability = highAvailability;
-        _messageCreator = new RmqMessageCreator();
         _batchSize = Convert.ToUInt16(batchSize);
         _makeChannels = makeChannels;
         _consumerTag = Connection.Name + Guid.NewGuid();
@@ -244,7 +242,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             var messages = new Message[resultCount];
             for (var i = 0; i < resultCount; i++)
             {
-                var message = _messageCreator.CreateMessage(results![i]);
+                var message = RmqMessageCreator.CreateMessage(results![i]);
                 messages[i] = message;
 
                 Log.ReceivedMessage(s_logger, _queueName.Value,

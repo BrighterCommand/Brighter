@@ -291,9 +291,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             //TODO: we removed delay support here because it blocked the pump
             // Return to this once we have scheduled message support
             
-            if (_inflight.ContainsKey(message.Id))
+            if (_inflight.TryGetValue(message.Id, out string? msgId))
             {
-                var msgId = _inflight[message.Id];
                 client.AddItemToList(_queueName, msgId);
                 var redisMsg = CreateRedisMessage(message);
                 StoreMessage(client, redisMsg, long.Parse(msgId));
@@ -324,9 +323,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             //TODO: we removed delay support here because it blocked the pump
             // Return to this once we have scheduled message support
             
-            if (_inflight.ContainsKey(message.Id))
+            if (_inflight.TryGetValue(message.Id, out string? msgId))
             {
-                var msgId = _inflight[message.Id];
                 await client.AddItemToListAsync(_queueName, msgId, cancellationToken);
                 var redisMsg = CreateRedisMessage(message);
                 await StoreMessageAsync(client, redisMsg, long.Parse(msgId));

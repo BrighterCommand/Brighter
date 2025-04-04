@@ -35,6 +35,7 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.MySql
 {
@@ -56,7 +57,8 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
         public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider)
-            : base(configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
+            : base(DbSystem.MySql, configuration.DatabaseName, configuration.OutBoxTableName, 
+                  new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;

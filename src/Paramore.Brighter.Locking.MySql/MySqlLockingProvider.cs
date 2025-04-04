@@ -172,9 +172,12 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
 
     private static string ComputeHash(byte[] bytes)
     {
+#if NETSTANDARD2_0
         using var sha = SHA512.Create();
         var hashBytes = sha.ComputeHash(bytes);
-
+#else
+        var hashBytes = SHA512.HashData(bytes);
+#endif
         // We truncate to 160 bits, which is 32 chars of Base32. This should still give us good collision resistance but allows for a 64-char
         // name to include a good portion of the original provided name, which is good for debugging. See
         // https://crypto.stackexchange.com/questions/9435/is-truncating-a-sha512-hash-to-the-first-160-bits-as-secure-as-using-sha1#:~:text=Yes.,time%20is%20still%20pretty%20big
@@ -185,7 +188,11 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
         // RFC 4648 from https://en.wikipedia.org/wiki/Base32
         const string Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567";
 
+#if NETSTANDARD2_0
         var chars = new char[HashLengthInChars];
+#else
+        Span<char> chars = stackalloc char[HashLengthInChars];
+#endif
         var byteIndex = 0;
         var bitBuffer = 0;
         var bitsRemaining = 0;

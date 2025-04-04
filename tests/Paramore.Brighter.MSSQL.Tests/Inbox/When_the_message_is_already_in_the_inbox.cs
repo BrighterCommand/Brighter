@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -47,28 +46,29 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
             _sqlInbox = new MsSqlInbox(_msSqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
-            _sqlInbox.Add(_raisedCommand, _contextKey);
+            _sqlInbox.Add(_raisedCommand, _contextKey, null, -1);
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox()
         {
-            _exception = Catch.Exception(() => _sqlInbox.Add(_raisedCommand, _contextKey));
+            _exception = Catch.Exception(() => _sqlInbox.Add(_raisedCommand, _contextKey, null, -1));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            _sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            Assert.Null(_exception);
+            Assert.True(_sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey, null, -1));
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            _sqlInbox.Add(_raisedCommand, "some other key");
+            _sqlInbox.Add(_raisedCommand, "some other key", null, -1);
 
-            var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
+            var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null, -1);
 
-            //_should_read_the_command_from_the__dynamo_db_inbox
-            AssertionExtensions.Should(storedCommand).NotBeNull();
+            //should read the command from the dynamo db inbox
+            Assert.NotNull(storedCommand);
+            
         }
 
         public void Dispose()

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2020 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -31,7 +32,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// what do we need to know to process a message
     /// </summary>
     /// <typeparam name="TResult">The type of the t result.</typeparam>
-    internal class HeaderResult<TResult>
+    internal sealed class HeaderResult<TResult>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="HeaderResult{TResult}"/> class.
@@ -62,6 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <value><c>true</c> if success; otherwise, <c>false</c>.</value>
         public bool Success { get; }
+
         /// <summary>
         /// Gets the result.
         /// </summary>
@@ -78,12 +80,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 return new HeaderResult<TResult>((TResult)(object)string.Empty, false);
             }
-            
+
             if (typeof(TResult) == typeof(RoutingKey))
             {
                 return new HeaderResult<TResult>((TResult)(object)RoutingKey.Empty, false);
             }
-            
+
             return new HeaderResult<TResult>(default(TResult), false);
         }
     }

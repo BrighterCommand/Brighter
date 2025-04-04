@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Aws;
@@ -73,12 +72,12 @@ public class SqsSchedulingMessageTest : IDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = _consumer.Receive(TimeSpan.FromMinutes(1));
-            messages.Should().ContainSingle();
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                messages[0].Body.Value.Should().Be(message.Body.Value);
-                messages[0].Header.Should().BeEquivalentTo(message.Header);
+                Assert.Equal(message.Body.Value, messages[0].Body.Value);
+                Assert.Equivalent(message.Header, messages[0].Header);
                 _consumer.Acknowledge(messages[0]);
                 return;
             }

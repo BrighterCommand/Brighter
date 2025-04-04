@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
@@ -50,16 +49,16 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Get_Async()
         {
             string commandId = Guid.NewGuid().ToString();
-            var exception = await Catch.ExceptionAsync(() => _sqlInbox.GetAsync<MyCommand>(commandId, "some-key"));
-            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            var exception = await Catch.ExceptionAsync(() => _sqlInbox.GetAsync<MyCommand>(commandId, "some-key", null, -1, default));
+            Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Check_Exists_Async()
         {
             string commandId = Guid.NewGuid().ToString();
-            bool exists = await _sqlInbox.ExistsAsync<MyCommand>(commandId, "some-key");
-            exists.Should().BeFalse();
+            bool exists = await _sqlInbox.ExistsAsync<MyCommand>(commandId, "some-key", null, -1, default);
+            Assert.False(exists);
         }
 
         public void Dispose()

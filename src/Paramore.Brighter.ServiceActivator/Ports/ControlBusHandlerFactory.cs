@@ -3,7 +3,7 @@ using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.ServiceActivator.Ports
 {
-    internal class ControlBusHandlerFactorySync : IAmAHandlerFactorySync
+    internal sealed class ControlBusHandlerFactorySync : IAmAHandlerFactorySync
     {
         private readonly Func<IAmACommandProcessor?> _commandProcessorFactory;
         private readonly IDispatcher _worker;

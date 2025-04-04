@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -80,12 +81,16 @@ namespace Paramore.Brighter.Inbox.Handlers
         {
             if (_contextKey is null)
                 throw new ArgumentException("ContextKey must be set before Handling");
+
+            var requestContext = InitRequestContext();
             
             if (_onceOnly)
             {
                 Log.CheckingIfCommandHasBeenSeen(s_logger, command.Id);
                 //TODO: We should not use an infinite timeout here - how to configure
-                var exists = await _inbox.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                var exists = 
+                    await _inbox.ExistsAsync<T>(command.Id, _contextKey, requestContext, -1, cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
                 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
@@ -105,11 +110,20 @@ namespace Paramore.Brighter.Inbox.Handlers
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             //TODO: We should not use an infinite timeout here - how to configure
-            await _inbox.AddAsync(command, _contextKey, - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            await _inbox.AddAsync(command, _contextKey, requestContext, -1, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
 
             return handledCommand;
         }
 
+        private RequestContext InitRequestContext()
+        {
+            return new RequestContext()
+            {
+                Span = Activity.Current
+            };
+        }
+        
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Debug, "Checking if command {Id} has already been seen")]

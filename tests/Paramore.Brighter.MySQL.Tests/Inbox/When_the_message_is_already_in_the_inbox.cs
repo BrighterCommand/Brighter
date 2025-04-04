@@ -1,29 +1,4 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
-using FluentAssertions;
+﻿using System;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.MySQL.Tests.TestDoubles;
@@ -48,27 +23,27 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
             _mysqlInbox = new MySqlInbox(_mysqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "test-context";
-            _mysqlInbox.Add(_raisedCommand, _contextKey);
+            _mysqlInbox.Add(_raisedCommand, _contextKey, null, -1);
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox()
         {
-            _exception = Catch.Exception(() => _mysqlInbox.Add(_raisedCommand, _contextKey));
+            _exception = Catch.Exception(() => _mysqlInbox.Add(_raisedCommand, _contextKey, null, -1));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            _mysqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            Assert.Null(_exception);
+            Assert.True(_mysqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey, null, -1));
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            _mysqlInbox.Add(_raisedCommand, "some other key");
+            _mysqlInbox.Add(_raisedCommand, "some other key", null, -1);
 
-            _exception = Catch.Exception(() => _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key"));
+            _exception = Catch.Exception(() => _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key", null, -1));
 
-            _exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+            Assert.IsType<RequestNotFoundException<MyCommand>>(_exception);
         }
 
         public void Dispose()

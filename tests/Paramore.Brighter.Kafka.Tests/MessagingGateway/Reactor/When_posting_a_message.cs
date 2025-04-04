@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -95,23 +94,22 @@ public class KafkaMessageProducerSendTests : IDisposable
         //ensure that the messages have flushed
         ((KafkaMessageProducer)producer).Flush();
 
-        //allow propogation of callback        
+        //allow propagation of callback
         await Task.Delay(1000);
 
-        messagePublished.Should().BeTrue();
+        Assert.True(messagePublished);
 
         var receivedMessage = GetMessage();
 
         var receivedCommand = JsonSerializer.Deserialize<MyCommand>(receivedMessage.Body.Value, JsonSerialisationOptions.Options);
 
-        receivedMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
-        receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
-        receivedMessage.Body.Value.Should().Be(message.Body.Value);
-        receivedMessage.Header.TimeStamp.ToString("u")
-            .Should().Be(message.Header.TimeStamp.ToString("u"));
-        receivedCommand.Id.Should().Be(command.Id);
-        receivedCommand.Value.Should().Be(command.Value);
+        Assert.Equal(MessageType.MT_COMMAND, receivedMessage.Header.MessageType);
+        Assert.Equal(_partitionKey, receivedMessage.Header.PartitionKey);
+        Assert.Equal(message.Body.Bytes, receivedMessage.Body.Bytes);
+        Assert.Equal(message.Body.Value, receivedMessage.Body.Value);
+        Assert.Equal(message.Header.TimeStamp.ToString("u"), receivedMessage.Header.TimeStamp.ToString("u"));
+        Assert.Equal(command.Id, receivedCommand.Id);
+        Assert.Equal(command.Value, receivedCommand.Value);
     }
 
     private Message GetMessage()

@@ -55,7 +55,6 @@ jobs:
         run: |
           dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d
           dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --no-build --verbosity d
-          dotnet test tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj  --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d      
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -67,7 +66,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
-
 
   release:
     if: startsWith(github.ref, 'refs/tags')
@@ -98,8 +96,40 @@ jobs:
         run: dotnet restore
       - name: In Memory Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n  
+        
+  hangfire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [ build ]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
       - name: Hangfire Tests
         run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+  
+  quartz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [ build ]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
       - name: Quartz Tests
         run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
   
@@ -433,3 +463,37 @@ jobs:
         run: dotnet restore
       - name: Azure Tests
         run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
+# MongoDB tool too long time to run
+#  mongodb-ci:
+#    runs-on: ubuntu-latest
+#    timeout-minutes: 5
+#    needs: [build]
+#    
+#    services:
+#      mongo:
+#        image: mongo
+#        ports:
+#          - 27017:27017
+#        env:
+#          MONGO_INITDB_ROOT_USERNAME: root
+#          MONGO_INITDB_ROOT_PASSWORD: example
+#          MONGO_INITDB_DATABASE: brighter
+#        options: >-
+#          --health-cmd mongo
+#          --health-interval 20s
+#          --health-timeout 10s
+#          --health-retries 10
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Setup dotnet
+#        uses: actions/setup-dotnet@v4
+#        with:
+#          dotnet-version: |
+#            8.0.x
+#            9.0.x
+#      - name: Install dependencies
+#        run: dotnet restore
+#      - name: MongoDB Tests
+#        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+        

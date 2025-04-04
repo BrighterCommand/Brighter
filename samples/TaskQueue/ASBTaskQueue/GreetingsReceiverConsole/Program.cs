@@ -13,7 +13,7 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
 namespace GreetingsReceiverConsole
 {
-    class Program
+    static class Program
     {
         public async static Task Main(string[] args)
         {

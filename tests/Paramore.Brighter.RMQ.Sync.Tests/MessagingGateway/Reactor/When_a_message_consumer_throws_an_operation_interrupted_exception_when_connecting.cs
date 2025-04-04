@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
@@ -70,10 +69,10 @@ public class RmqMessageConsumerOperationInterruptedTests : IDisposable
         catch (ChannelFailureException cfe)
         {
             exceptionHappened = true;
-            cfe.InnerException.Should().BeOfType<OperationInterruptedException>();
+            Assert.True((cfe.InnerException) is OperationInterruptedException);
         }
             
-        exceptionHappened.Should().BeTrue();
+        Assert.True(exceptionHappened);
     }
 
     public void Dispose()

@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyThrowingEventHandler : RequestHandler<MyEvent>
+    internal sealed class MyThrowingEventHandler : RequestHandler<MyEvent>
     {
         private static MyEvent s_receivedEvent;
 

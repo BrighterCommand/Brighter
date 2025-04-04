@@ -33,6 +33,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.MsSql
 {
@@ -52,7 +53,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
         public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration,
-            IAmARelationalDbConnectionProvider connectionProvider) : base(
+            IAmARelationalDbConnectionProvider connectionProvider) : base(DbSystem.MySql, configuration.DatabaseName,
             configuration.OutBoxTableName, new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlOutbox>())
         {
             _configuration = configuration;

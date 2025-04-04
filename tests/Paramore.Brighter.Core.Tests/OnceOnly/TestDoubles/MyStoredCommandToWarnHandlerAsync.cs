@@ -30,7 +30,7 @@ using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
 {
-    internal class MyStoredCommandToWarnHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal sealed class MyStoredCommandToWarnHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         public static int ReceivedCount { get; private set; }
         

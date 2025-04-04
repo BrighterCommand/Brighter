@@ -30,7 +30,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    internal partial class HandlerLifetimeScope : IAmALifetime
+    internal sealed partial class HandlerLifetimeScope : IAmALifetime
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<HandlerLifetimeScope>();
 

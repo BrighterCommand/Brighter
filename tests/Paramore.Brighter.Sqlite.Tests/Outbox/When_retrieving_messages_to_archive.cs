@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -47,9 +47,9 @@ public class SqliteArchiveFetchTests : IAsyncDisposable
         var messagesOver4Hours = _sqlOutbox.DispatchedMessages(4, context);
 
         //Assert
-        allDispatched.Should().HaveCount(2);
-        messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Single(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
 
     [Fact]
@@ -65,9 +65,9 @@ public class SqliteArchiveFetchTests : IAsyncDisposable
         var messagesOver4Hours = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        allDispatched.Should().HaveCount(2);
-        messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Single(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours ?? []);
     }
 
     public async ValueTask DisposeAsync()

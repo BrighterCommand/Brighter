@@ -1,6 +1,6 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,17 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Observability;
+using System;
+using Paramore.Brighter;
 
-/// <summary>
-/// The operation being performed on the outbox
-/// </summary>
-public enum OutboxDbOperation
+namespace Greetings.Ports.Commands
 {
-    Add = 0,                //Add a message to the outbox
-    Delete,                 //Delete a message from the outbox
-    DispatchedMessages,     //Retrieve a set of messages marked as dispatched 
-    Get,                    //Get a message from the outbox by id
-    MarkDispatched,         //Mark one or more messages as dispatched
-    OutStandingMessages     //Retrieve a set of messages that are still outstanding 
+    public class AnotherGreetingEvent : Event
+    {
+        public AnotherGreetingEvent() : base(Guid.NewGuid()) { }
+
+        public AnotherGreetingEvent(string greeting) : base(Guid.NewGuid())
+        {
+            Greeting = greeting;
+        }
+
+        public string Greeting { get; set; }
+    }
 }

@@ -1,8 +1,6 @@
-﻿using FluentAssertions;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection;
-using Xunit;
+﻿using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.RequestContextFactory;
+namespace Paramore.Brighter.Core.Tests.Context;
 
 public class RequestContextFactoryTests
 {
@@ -11,15 +9,15 @@ public class RequestContextFactoryTests
     {
         //arrange
         var requestContextFactory = new InMemoryRequestContextFactory();
-        
+
         //act
         var context = requestContextFactory.Create();
-        
+
         //assert
-        context.Should().NotBeNull();
-        context.Bag.Should().NotBeNull();
-        context.Policies.Should().BeNull();
-        context.FeatureSwitches.Should().BeNull();
-        context.Span.Should().BeNull();
+        Assert.NotNull(context);
+        Assert.NotNull(context.Bag);
+        Assert.Null(context.Policies);
+        Assert.Null(context.FeatureSwitches);
+        Assert.Null(context.Span);
     }
 }

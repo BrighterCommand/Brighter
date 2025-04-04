@@ -29,267 +29,217 @@ using System.Data.Common;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
-    public partial class PostgreSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public class PostgreSqlInbox : RelationalDatabaseInbox
     {
         private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlInbox>();
-        /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
-        /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
 
-        public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider = null)
+        public PostgreSqlInbox(IAmARelationalDbConnectionProvider connectionProvider, IAmARelationalDatabaseConfiguration configuration)
+            : base(DbSystem.Postgresql, configuration.DatabaseName, configuration.InBoxTableName, 
+                  new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlInbox>())
         {
-            _configuration = configuration;
             _connectionProvider = connectionProvider;
+            _configuration = configuration;
             ContinueOnCapturedContext = false;
         }
 
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration) 
+            : this(new PostgreSqlConnectionProvider(configuration), configuration)
         {
-            var parameters = InitAddDbParameters(command, contextKey);
-            var connection = GetConnection(); 
+        }
+
+        protected override void WriteToStore(Func<DbConnection, DbCommand> commandFunc, Action loggingAction)
+        {
+            using var connection = GetOpenConnection(_connectionProvider);
+            using var command = commandFunc.Invoke(connection);
             try
             {
-                using var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                sqlcmd.ExecuteNonQuery();
+                command.ExecuteNonQuery();
             }
-            catch (PostgresException sqlException)
+            catch (PostgresException ex)
             {
-                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
+                if (ex.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    Log.DuplicateCommandWarning(s_logger, command.Id);
-                    return;
-                }
-                throw;
-            }
-            finally
-            {
-                    connection.Dispose();
-            }
-        }
-
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {
-            var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
-            var parameters = new[]
-            {
-                InitNpgsqlParameter("CommandId", id),
-                InitNpgsqlParameter("ContextKey", contextKey)
-            };
-
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
-        }
-
-        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {
-            var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
-            var parameters = new[]
-            {
-                InitNpgsqlParameter("CommandId", id),
-                InitNpgsqlParameter("ContextKey", contextKey)
-            };
-
-            return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds, parameters);
-        }
-
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var parameters = InitAddDbParameters(command, contextKey);
-            var connection = GetConnection(); 
-
-            try
-            {
-                using var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            }
-            catch (PostgresException sqlException)
-            {
-                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                {
-                    Log.DuplicateCommandWarning(s_logger, command.Id);
+                    loggingAction.Invoke();
                     return;
                 }
 
                 throw;
             }
-            finally
+        }
+
+        protected override async Task WriteToStoreAsync(Func<DbConnection, DbCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
+        {
+            using var connection = await GetOpenConnectionAsync(_connectionProvider, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                connection.Dispose();
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (PostgresException ex)
+            {
+                if (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+                {
+                    loggingAction.Invoke();
+                    return;
+                }
+
+                throw;
             }
         }
 
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
+        protected override T ReadFromStore<T>(Func<DbConnection, DbCommand> commandFunc, Func<DbDataReader, string, T> resultFunc, string commandId)
         {
-            var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
+            using var connection = _connectionProvider.GetConnection();
+            using var command = commandFunc.Invoke(connection);
 
-            var parameters = new[]
-            {
-                InitNpgsqlParameter("CommandId", id),
-                InitNpgsqlParameter("ContextKey", contextKey)
-            };
+            var result = command.ExecuteReader();
+            return resultFunc.Invoke(result, commandId);
+        }
 
-            return await ExecuteCommandAsync(
-                    async command => ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext), id),
-                    sql,
-                    timeoutInMilliseconds,
-                    cancellationToken,
-                    parameters)
+        protected override async Task<T> ReadFromStoreAsync<T>(Func<DbConnection, DbCommand> commandFunc, 
+            Func<DbDataReader, string, CancellationToken, Task<T>> resultFunc, 
+            string commandId, 
+            CancellationToken cancellationToken)
+        {
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
+            using var command = commandFunc.Invoke(connection);
+
+            var result = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await resultFunc.Invoke(result, commandId, cancellationToken);
         }
 
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
-            var parameters = new[]
-            {
-                InitNpgsqlParameter("CommandId", id),
-                InitNpgsqlParameter("ContextKey", contextKey)
-            };
-
-            return await ExecuteCommandAsync<bool>(
-                    async command =>
-                    {
-                        var reader = await command.ExecuteReaderAsync(cancellationToken);
-                        return reader.HasRows;
-                    },
-                    sql,
-                    timeoutInMilliseconds,
-                    cancellationToken,
-                    parameters)
-                .ConfigureAwait(ContinueOnCapturedContext);
-        }
-        
-        private DbConnection GetConnection()
-        {
-            var connection = new NpgsqlConnection(_configuration.ConnectionString);
-            connection.Open();
-            return connection;
-        }
-
-        private async Task<DbConnection> GetOpenConnectionAsync(IAmARelationalDbConnectionProvider connectionProvider, CancellationToken cancellationToken = default)
-        {
-            DbConnection connection = await connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
-            return connection;
-        }
-
-        private NpgsqlParameter InitNpgsqlParameter(string parametername, object value)
-        {
-            if (value != null)
-                return new NpgsqlParameter(parametername, value);
-            else
-                return new NpgsqlParameter(parametername, DBNull.Value);
-        }
-
-        private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters, int timeoutInMilliseconds)
+        protected override DbCommand CreateCommand(
+            DbConnection connection, string sqlText, int outBoxTimeout, params IDbDataParameter[] parameters)
         {
             var command = connection.CreateCommand();
-            command.CommandText = string.Format(
-                "INSERT INTO {0} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)",
-                _configuration.InBoxTableName);
+
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
+            command.CommandText = sqlText;
             command.Parameters.AddRange(parameters);
+
             return command;
         }
 
-        private DbParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
+        protected override IDbDataParameter[] CreateAddParameters<T>(T command, string contextKey)
         {
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                InitNpgsqlParameter("CommandID", command.Id),
-                InitNpgsqlParameter("CommandType", typeof (T).Name),
-                InitNpgsqlParameter("CommandBody", commandJson),
-                new NpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz) {Value = DateTimeOffset.UtcNow},
-                InitNpgsqlParameter("ContextKey", contextKey)
+                CreateNpgsqlParameter("CommandID", command.Id),
+                CreateNpgsqlParameter("CommandType", typeof (T).Name),
+                CreateNpgsqlParameter("CommandBody", commandJson),
+                CreateNpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz, DateTimeOffset.UtcNow),
+                CreateNpgsqlParameter("ContextKey", contextKey)
             };
             return parameters;
         }
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
-            params DbParameter[] parameters)
+        protected override IDbDataParameter[] CreateExistsParameters(string commandId, string contextKey)
         {
-            var connection = GetConnection(); 
+            var parameters = new[]
+            {
+                CreateNpgsqlParameter("CommandId", commandId),
+                CreateNpgsqlParameter("ContextKey", contextKey)
+            };
+            return parameters;
+        }
 
+        protected override IDbDataParameter[] CreateGetParameters(string commandId, string contextKey)
+        {
+            var parameters = new[]
+            {
+                CreateNpgsqlParameter("CommandId", commandId),
+                CreateNpgsqlParameter("ContextKey", contextKey)
+            };
+            return parameters;
+        }
+
+        private NpgsqlParameter CreateNpgsqlParameter(string parameterName, object value)
+        {
+            if (value != null)
+                return new NpgsqlParameter(parameterName, value);
+            else
+                return new NpgsqlParameter(parameterName, DBNull.Value);
+        }
+
+        private NpgsqlParameter CreateNpgsqlParameter(string parameterName, NpgsqlDbType dbType, object value)
+        {
+            if (value != null)
+                return new NpgsqlParameter(parameterName, dbType) { Value = value };
+            else
+                return new NpgsqlParameter(parameterName, dbType) { Value = DBNull.Value };
+        }
+
+        protected override T MapFunction<T>(DbDataReader dr, string commandId)
+        {
             try
             {
-                using var command = connection.CreateCommand();
-                if (timeoutInMilliseconds != -1)
-                    command.CommandTimeout = timeoutInMilliseconds;
-
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
-
-                return execute(command);
+                if (dr.Read())
+                {
+                    var body = dr.GetString(dr.GetOrdinal("CommandBody"));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                }
             }
             finally
             {
-                connection.Dispose();
+                dr.Close();
             }
+
+            throw new RequestNotFoundException<T>(commandId);
         }
 
-        private async Task<T> ExecuteCommandAsync<T>(
-            Func<DbCommand, Task<T>> execute,
-            string sql,
-            int timeoutInMilliseconds,
-            CancellationToken cancellationToken = default,
-            params DbParameter[] parameters)
+        protected override async Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId, CancellationToken cancellationToken)
         {
-            var connection = GetConnection(); 
-
             try
             {
-                using var command = connection.CreateCommand();
-                if (timeoutInMilliseconds != -1)
-                    command.CommandTimeout = timeoutInMilliseconds;
-
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
-
-                return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
+                if (await dr.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                {
+                    var body = dr.GetString(dr.GetOrdinal("CommandBody"));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                }
             }
             finally
             {
-                connection.Dispose();
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
             }
+
+            throw new RequestNotFoundException<T>(commandId);
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr, string commandId) where TResult : class, IRequest
+        protected override bool MapBoolFunction(DbDataReader dr, string commandId)
         {
-            if (dr.Read())
+            try
             {
-                var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-                return JsonSerializer.Deserialize<TResult>(body, JsonSerialisationOptions.Options);
+                return dr.HasRows;
             }
-
-            throw new RequestNotFoundException<TResult>(commandId);
+            finally
+            {
+                dr.Close();
+            }
         }
 
-        private static partial class Log
+        protected override Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId, CancellationToken cancellationToken)
         {
-            [LoggerMessage(LogLevel.Warning, "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing")]
-            public static partial void DuplicateCommandWarning(ILogger logger, string id);
+            try
+            {
+                return Task.FromResult(dr.HasRows);
+            }
+            finally
+            {
+                dr.Close();
+            }
         }
     }
 }

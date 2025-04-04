@@ -453,7 +453,7 @@ public partial class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnec
         {
             response = await snsClient.ListSubscriptionsByTopicAsync(
                 new ListSubscriptionsByTopicRequest { TopicArn = topicArn });
-            exists = response.Subscriptions.Any(sub => sub.Protocol.ToLower() == "sqs" && sub.Endpoint == queueArn);
+            exists = response.Subscriptions.Any(sub => "sqs".Equals(sub.Protocol, StringComparison.OrdinalIgnoreCase) && sub.Endpoint == queueArn);
         } while (!exists && response.NextToken != null);
 
         return exists;

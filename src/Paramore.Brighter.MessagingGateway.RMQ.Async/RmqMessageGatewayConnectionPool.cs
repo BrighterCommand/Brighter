@@ -195,7 +195,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
             $"{connectionFactory.UserName}.{connectionFactory.Password}.{connectionFactory.HostName}.{connectionFactory.Port}.{connectionFactory.VirtualHost}"
                 .ToLowerInvariant();
 
-    private record PooledConnection(IConnection Connection, AsyncEventHandler<ShutdownEventArgs> ShutdownHandler);
+    private sealed record PooledConnection(IConnection Connection, AsyncEventHandler<ShutdownEventArgs> ShutdownHandler);
 
     private static partial class Log
     {

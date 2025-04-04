@@ -177,7 +177,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //register the generic interface with the transaction type
             var boxProviderType = transactionProviderInterface.MakeGenericType(transactionType);
 
+            // Register the transaction provider against both the generic and non-generic interface. The non-generic interface is needed
+            // by the CommandProcessor
             brighterBuilder.Services.Add(new ServiceDescriptor(boxProviderType, transactionProvider, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), transactionProvider, serviceLifetime));
 
             //NOTE: It is a little unsatisfactory to hard code our types in here
             RegisterRelationalProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider,
@@ -344,6 +347,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var eventBus = provider.GetService<IAmAnOutboxProducerMediator>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
+            var transactionProvider = provider.GetService<IAmABoxTransactionProvider>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
 
             INeedInstrumentation instrumentationBuilder = null;
@@ -357,6 +361,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 instrumentationBuilder = messagingBuilder.ExternalBus(
                     ExternalBusType.FireAndForget,
                     eventBus,
+                    transactionProvider,
                     eventBusConfiguration!.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration);
@@ -367,6 +372,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 instrumentationBuilder = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus,
+                    transactionProvider,
                     eventBusConfiguration!.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration);

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
@@ -9,7 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Claims;
 
-public class AsyncClaimCheckLargePayloadTests 
+public class AsyncClaimCheckLargePayloadTests
 {
     private readonly ClaimCheckTransformerAsync _transformerAsync;
     private readonly Message _message;
@@ -29,7 +28,7 @@ public class AsyncClaimCheckLargePayloadTests
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(_body));
     }
-    
+
     [Fact]
     public async Task When_a_message_wraps_a_large_payload()
     {
@@ -39,12 +38,12 @@ public class AsyncClaimCheckLargePayloadTests
         //assert
         bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object storedData);
 
-        hasLuggage.Should().BeTrue();
+        Assert.True(hasLuggage);
 
         var claimCheck = (string)storedData;
 
-        var luggage = await new StreamReader(await _store.RetrieveAsync(claimCheck)).ReadToEndAsync(); 
-        
-        luggage.Should().Be(_body);
+        var luggage = await new StreamReader(await _store.RetrieveAsync(claimCheck)).ReadToEndAsync();
+
+        Assert.Equal(_body, luggage);
     }
 }

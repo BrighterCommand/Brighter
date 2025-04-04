@@ -30,6 +30,7 @@ namespace Paramore.Brighter.Observability;
 /// </summary>
 public class InMemoryAttributes
 {
-    public const string DbName = "outbox";
+    public const string OutboxDbName = "outbox";
+    public const string InboxDbName = "inbox";
     public const string DbTable = "requests";
 }

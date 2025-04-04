@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyContextAwareCommandHandler : RequestHandler<MyCommand>
+    internal sealed class MyContextAwareCommandHandler : RequestHandler<MyCommand>
     {
         public static string TestString { get; set; }
 

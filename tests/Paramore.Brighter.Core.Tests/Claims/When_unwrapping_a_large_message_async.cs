@@ -2,7 +2,6 @@
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
@@ -32,7 +31,7 @@ public class AsyncLargeMessagePaylodUnwrapTests
 
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public async Task When_unwrapping_a_large_message()
     {
@@ -41,8 +40,8 @@ public class AsyncLargeMessagePaylodUnwrapTests
         var contents = DataGenerator.CreateString(6000);
         var myCommand = new MyLargeCommand(1) { Value = contents };
         var commandAsJson = JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
-        
-        var stream = new MemoryStream();                                                                               
+
+        var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
         await writer.WriteAsync(commandAsJson);
         await writer.FlushAsync();
@@ -51,7 +50,7 @@ public class AsyncLargeMessagePaylodUnwrapTests
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
- 
+
         //set the headers, so that we have a claim check listed
         var message = new Message(
             new MessageHeader(myCommand.Id, new RoutingKey("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
@@ -63,10 +62,10 @@ public class AsyncLargeMessagePaylodUnwrapTests
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
         var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
-        
+
         //assert
         //contents should be from storage
-        transformedMessage.Value.Should().Be(contents);
-        (await _inMemoryStorageProviderAsync.HasClaimAsync(id)).Should().BeFalse();
+        Assert.Equal(contents, transformedMessage.Value);
+        Assert.False(await _inMemoryStorageProviderAsync.HasClaimAsync(id));
     }
 }
