@@ -46,31 +46,29 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Loggers
         public bool IsEnabled => !WrappedLogger.IsEnabled(LogLevel.None);
 
         /// <inheritdoc />
-        public void Publish(MqttNetLogLevel logLevel, string source, string message, object[] parameters, Exception exception)
+        public void Publish(MqttNetLogLevel mqttNetlogLevel, string source, string message, object[] parameters,
+            Exception exception)
         {
-            if (!IsEnabled)
+            LogLevel logLevel = ConvertLogLevel(mqttNetlogLevel);
+
+            if (!this.WrappedLogger.IsEnabled(logLevel))
             {
                 return;
             }
 
-            using (WrappedLogger.BeginScope("{Source}", source))
+            WrappedLogger.Log(logLevel, exception, message, parameters);
+        }
+
+        public static LogLevel ConvertLogLevel(MqttNetLogLevel logLevel)
+        {
+            return logLevel switch
             {
-                switch (logLevel)
-                {
-                    case MqttNetLogLevel.Verbose:
-                        WrappedLogger.LogTrace(exception, message, parameters);
-                        break;
-                    case MqttNetLogLevel.Info:
-                        WrappedLogger.LogInformation(exception, message, parameters);
-                        break;
-                    case MqttNetLogLevel.Warning:
-                        WrappedLogger.LogWarning(exception, message, parameters);
-                        break;
-                    case MqttNetLogLevel.Error:
-                        WrappedLogger.LogError(exception, message, parameters);
-                        break;
-                }
-            }
+                MqttNetLogLevel.Verbose => LogLevel.Trace,
+                MqttNetLogLevel.Info => LogLevel.Information,
+                MqttNetLogLevel.Warning => LogLevel.Warning,
+                MqttNetLogLevel.Error => LogLevel.Error,
+                _ => LogLevel.None
+            };
         }
     }
 }

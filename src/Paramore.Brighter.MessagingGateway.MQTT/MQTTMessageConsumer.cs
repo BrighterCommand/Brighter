@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             _mqttClient.ApplicationMessageReceivedAsync += e =>
             {
-                s_logger.LogInformation("MqttMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
+                s_logger.LogTrace("MqttMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
                 var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.PayloadSegment.ToArray(), JsonSerialisationOptions.Options);
              
                 _messageQueue.Enqueue(message);
