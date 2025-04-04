@@ -139,6 +139,8 @@ public class SqsAttributes
 
             if (requestedSeconds < min || requestedSeconds > max)
                 actualSeconds = defaultValue;
+            else
+                actualSeconds = requestedSeconds;
         }
 
         return TimeSpan.FromSeconds(actualSeconds);

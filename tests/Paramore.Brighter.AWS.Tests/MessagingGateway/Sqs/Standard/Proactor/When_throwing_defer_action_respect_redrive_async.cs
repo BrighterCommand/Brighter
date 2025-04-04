@@ -55,10 +55,10 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
            queueAttributes: queueAttributes 
         );
 
-        var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
+        var myCommand = new MyDeferredCommand { Value = "Hello Redrive", Id = Guid.NewGuid().ToString() };
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType),
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: myCommand.GroupId),
             new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
         );
 
@@ -90,10 +90,10 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         );
 
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
-            null
+            null,
+            new SimpleMessageMapperFactoryAsync(_ => new MyDeferredCommandMessageMapperAsync())
         );
-        messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
+        messageMapperRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandMessageMapperAsync>();
 
         _messagePump = new Proactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry,
             new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)

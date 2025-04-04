@@ -202,7 +202,7 @@ namespace Paramore.Brighter
         private IAmAMessageMapper<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest
         {
             var messageMapper = _mapperRegistry.Get<TRequest>();
-            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set runAsync on the subscription to match the mapper type?", typeof(TRequest).Name));
+            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set MessagePumpType.Reactor on the subscription to match the mapper type?", typeof(TRequest).Name));
             return messageMapper;
         }
 

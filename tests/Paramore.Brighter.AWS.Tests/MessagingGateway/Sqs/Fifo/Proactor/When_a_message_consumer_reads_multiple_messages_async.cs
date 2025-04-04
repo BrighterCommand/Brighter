@@ -29,14 +29,13 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         _queueName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
 
         //we need the channel to create the queues and notifications
+        var channelName = new ChannelName(_queueName);
         var routingKey = new RoutingKey(_queueName);
-
         var queueAttributes = new SqsAttributes(
             type: SqsType.Fifo,
             messageRetentionPeriod: TimeSpan.FromSeconds(3600),
             deduplicationScope: DeduplicationScope.MessageGroup,
             fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId);
-        var channelName = new ChannelName(_queueName);
         
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(_queueName),
