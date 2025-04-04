@@ -249,4 +249,3 @@ namespace Paramore.Brighter.Inbox.Sqlite
         }
     }
 }
-

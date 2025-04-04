@@ -243,4 +243,3 @@ namespace Paramore.Brighter.Inbox.Postgres
         }
     }
 }
-

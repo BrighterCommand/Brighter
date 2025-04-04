@@ -253,4 +253,3 @@ namespace Paramore.Brighter.Inbox.MySql
         }
     }
 }
-
