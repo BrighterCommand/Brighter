@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class UseInboxHandler<T> : RequestHandler<T> where T: class, IRequest
+    public partial class UseInboxHandler<T> : RequestHandler<T> where T: class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandler<T>>();
 
@@ -79,31 +79,46 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             if (_onceOnly)
             {
-                 s_logger.LogDebug("Checking if command {Id} has already been seen", command.Id);
+                 Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, command.Id);
 
                  var exists = _inbox.Exists<T>(command.Id, _contextKey); 
                  
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {                    
-                    s_logger.LogDebug("Command {Id} has already been seen", command.Id);
+                    Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
-                    s_logger.LogWarning("Command {Id} has already been seen", command.Id);
+                    Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, command.Id);
                     return command;
                 }                
             }
             
             T handledCommand = base.Handle(command);
 
-            s_logger.LogDebug("Writing command {Id} to the Inbox", command.Id);
+            Log.WritingCommandToTheInbox(s_logger, command.Id);
 
             _inbox.Add(command, _contextKey);
 
             return handledCommand;
         }
 
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "Checking if command {Id} has already been seen")]
+            public static partial void CheckingIfCommandHasAlreadyBeenSeen(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Debug, "Command {Id} has already been seen")]
+            public static partial void CommandHasAlreadyBeenSeenAsDebug(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Debug, "Command {Id} has already been seen")]
+            public static partial void CommandHasAlreadyBeenSeenAsWarning(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Debug, "Writing command {Id} to the Inbox")]
+            public static partial void WritingCommandToTheInbox(ILogger logger, string id);
+        }
     }
 }
+

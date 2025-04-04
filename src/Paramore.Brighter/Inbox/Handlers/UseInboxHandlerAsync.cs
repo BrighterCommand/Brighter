@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class UseInboxHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
+    public partial class UseInboxHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandlerAsync<T>>();
 
@@ -83,24 +83,24 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             if (_onceOnly)
             {
-                s_logger.LogDebug("Checking if command {Id} has already been seen", command.Id);
+                Log.CheckingIfCommandHasBeenSeen(s_logger, command.Id);
                 //TODO: We should not use an infinite timeout here - how to configure
                 var exists = await _inbox.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
-                    s_logger.LogDebug("Command {Id} has already been seen", command.Id);
+                    Log.CommandHasBeenSeen(s_logger, command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
-                    s_logger.LogWarning("Command {Id} has already been seen", command.Id);
+                    Log.CommandHasBeenSeenWarning(s_logger, command.Id);
                     return command;
                 }
             }
             
-            s_logger.LogDebug("Writing command {Id} to the Inbox", command.Id);
+            Log.WritingCommandToInbox(s_logger, command.Id);
 
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
@@ -109,5 +109,21 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             return handledCommand;
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "Checking if command {Id} has already been seen")]
+            public static partial void CheckingIfCommandHasBeenSeen(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Debug, "Command {Id} has already been seen")]
+            public static partial void CommandHasBeenSeen(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Warning, "Command {Id} has already been seen")]
+            public static partial void CommandHasBeenSeenWarning(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Debug, "Writing command {Id} to the Inbox")]
+            public static partial void WritingCommandToInbox(ILogger logger, string id);
+        }
     }
 }
+

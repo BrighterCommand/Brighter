@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// <summary>
     /// Class RmqMessagePublisher.
     /// </summary>
-internal class RmqMessagePublisher
+internal partial class RmqMessagePublisher
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessagePublisher>();
         private static readonly string[] _headersToReset =
@@ -138,7 +138,7 @@ internal class RmqMessagePublisher
             var messageId = Guid.NewGuid().ToString() ;
             const string deliveryTag = "1";
 
-            s_logger.LogInformation("RmqMessagePublisher: Regenerating message {Id} with DeliveryTag of {1} to {2} with DeliveryTag of {DeliveryTag}", message.Id, deliveryTag, messageId, 1);
+            Log.RequeueMessageInformation(s_logger, message.Id, deliveryTag, messageId, 1);
 
             var headers = new Dictionary<string, object>
             {
@@ -238,5 +238,12 @@ internal class RmqMessagePublisher
                     return false;
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "RmqMessagePublisher: Regenerating message {OldMessageId} with DeliveryTag of {OldDeliveryTag} to {MessageId} with DeliveryTag of {DeliveryTag}")]
+            public static partial void RequeueMessageInformation(ILogger logger, string oldMessageId, string oldDeliveryTag, string messageId, int deliveryTag);
+        }
     }
 }
+

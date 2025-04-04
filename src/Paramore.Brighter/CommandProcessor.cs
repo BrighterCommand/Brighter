@@ -49,7 +49,7 @@ namespace Paramore.Brighter
     /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
     /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns 
     /// </summary>
-    public class CommandProcessor : IAmACommandProcessor
+    public partial class CommandProcessor : IAmACommandProcessor
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
@@ -250,8 +250,7 @@ namespace Paramore.Brighter
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
             try
             {
-                s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
-                    command.Id);
+                Log.BuildingSendPipelineForCommand(s_logger, command.GetType(), command.Id);
                 var handlerChain = builder.Build(context);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -328,8 +327,7 @@ namespace Paramore.Brighter
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             try
             {
-                s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
-                    command.GetType(), command.Id);
+                Log.BuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -405,14 +403,12 @@ namespace Paramore.Brighter
                     throw new ArgumentException("A subscriberRegistry must be configured.");
                 
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
-                s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
+                Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(context);
 
                 var handlerCount = handlerChain.Count();
 
-                s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
-                   @event.GetType(), @event.Id);
+                Log.FoundHandlerCountForEvent(s_logger, handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new ConcurrentBag<Exception>();
                 Parallel.ForEach(handlerChain, (handleRequests) =>
@@ -513,15 +509,12 @@ namespace Paramore.Brighter
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
              try
             {
-                s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
+                Log.BuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id);
 
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
                 var handlerCount = handlerChain.Count();
 
-                s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
-                    @event.GetType(), @event.Id
-                );
+                Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new ConcurrentBag<Exception>();
 
@@ -757,7 +750,7 @@ namespace Paramore.Brighter
             string? batchId = null) 
             where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
+            Log.SaveRequest(s_logger, request.GetType(), request.Id);
             
              var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
              var context = InitRequestContext(span, requestContext);
@@ -825,7 +818,7 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save bulk requests request: {RequestType}", typeof(TRequest));
+            Log.SaveBulkRequestsRequest(s_logger, typeof(TRequest));
             
             var span = _tracer?.CreateBatchSpan<TRequest>(requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
@@ -953,7 +946,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default,
             string? batchId = null) where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
+            Log.SaveRequest(s_logger, request.GetType(), request.Id);
             
              var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
              var context = InitRequestContext(span, requestContext);
@@ -1206,7 +1199,7 @@ namespace Paramore.Brighter
             subscription.RoutingKey = new RoutingKey(routingKey);
 
             using var responseChannel = _responseChannelFactory.CreateSyncChannel(subscription);
-            s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
+            Log.CreateReplyQueueForTopic(s_logger, channelName);
             request.ReplyAddress.Topic = subscription.RoutingKey;
             request.ReplyAddress.CorrelationId = channelName.ToString();
 
@@ -1223,18 +1216,18 @@ namespace Paramore.Brighter
                 var outMessage = s_mediator!.CreateMessageFromRequest(request, context);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
-                s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
+                Log.SendingRequestWithRoutingkey(s_logger, channelName);
                 s_mediator.CallViaExternalBus<T, TResponse>(outMessage, requestContext);
 
                 Message? responseMessage = null;
 
             //now we block on the receiver to try and get the message, until timeout.
-            s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
+            Log.AwaitingResponseOn(s_logger, channelName);
             Retry(() => responseMessage = responseChannel.Receive(timeOut));
             
                 if (responseMessage is not null && responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
-                    s_logger.LogDebug("Reply received from {ChannelName}", channelName);
+                    Log.ReplyReceivedFrom(s_logger, channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
                     s_mediator.CreateRequestFromMessage(responseMessage, context, out TResponse response);
                     Send(response);
@@ -1242,7 +1235,7 @@ namespace Paramore.Brighter
                     return response;
                 }
 
-                s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
+                Log.DeletingQueueForRoutingkey(s_logger, channelName);
 
                 return null;
             } 
@@ -1277,8 +1270,7 @@ namespace Paramore.Brighter
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
-            s_logger.LogInformation("Found {HandlerCount} pipelines for command: {Type} {Id}", handlerCount, typeof(T),
-                command.Id);
+            Log.FoundHandlerCountForCommand(s_logger, handlerCount, typeof(T), command.Id);
 
             if (handlerCount > 1)
                 throw new ArgumentException(
@@ -1337,9 +1329,57 @@ namespace Paramore.Brighter
             {
                 if (result.FinalException != null)
                 {
-                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+                    Log.ExceptionWhilstTryingToPublishMessage(s_logger, result.FinalException);
                 }
             }
+        }
+        
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Building send pipeline for command: {CommandType} {Id}")]
+            public static partial void BuildingSendPipelineForCommand(ILogger logger, Type commandType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Building send async pipeline for command: {CommandType} {Id}")]
+            public static partial void BuildingSendAsyncPipelineForCommand(ILogger logger, Type commandType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Building send async pipeline for event: {EventType} {Id}")]
+            public static partial void BuildingSendAsyncPipelineForEvent(ILogger logger, Type eventType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Building send pipeline for event: {EventType} {Id}")]
+            public static partial void BuildingSendPipelineForEvent(ILogger logger, Type eventType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Found {HandlerCount} pipelines for command: {CommandType} {Id}")]
+            public static partial void FoundHandlerCountForCommand(ILogger logger, int handlerCount, Type commandType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Found {HandlerCount} pipelines for event: {EventType} {Id}")]
+            public static partial void FoundHandlerCountForEvent(ILogger logger, int handlerCount, Type eventType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Found {HandlerCount} async pipelines for event: {EventType} {Id}")]
+            public static partial void FoundAsyncHandlerCount(ILogger logger, int handlerCount, Type eventType, string id);
+            
+            [LoggerMessage(LogLevel.Information, "Save request: {RequestType} {Id}")]
+            public static partial void SaveRequest(ILogger logger, Type requestType, string id);
+            
+            [LoggerMessage(LogLevel.Information, "Save bulk requests request: {RequestType}")]
+            public static partial void SaveBulkRequestsRequest(ILogger logger, Type requestType);
+            
+            [LoggerMessage(LogLevel.Information, "Create reply queue for topic {ChannelName}")]
+            public static partial void CreateReplyQueueForTopic(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Debug, "Sending request with routingkey {ChannelName}")]
+            public static partial void SendingRequestWithRoutingkey(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Debug, "Awaiting response on {ChannelName}")]
+            public static partial void AwaitingResponseOn(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Debug, "Reply received from {ChannelName}")]
+            public static partial void ReplyReceivedFrom(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Information, "Deleting queue for routingkey: {ChannelName}")]
+            public static partial void DeletingQueueForRoutingkey(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Error, "Exception whilst trying to publish message")]
+            public static partial void ExceptionWhilstTryingToPublishMessage(ILogger logger, Exception exception);
         }
     }
 }

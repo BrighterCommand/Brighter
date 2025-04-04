@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql;
 /// <summary>
 /// Factory class for creating MS SQL channels.
 /// </summary>
-public class ChannelFactory : IAmAChannelFactory
+public partial class ChannelFactory : IAmAChannelFactory
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ChannelFactory>();
     private readonly MsSqlMessageConsumerFactory _msSqlMessageConsumerFactory;
@@ -37,7 +37,7 @@ public class ChannelFactory : IAmAChannelFactory
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        s_logger.LogDebug("MsSqlInputChannelFactory: create input channel {ChannelName} for topic {Topic}", subscription.ChannelName, subscription.RoutingKey);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey);
         return new Channel(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -57,7 +57,7 @@ public class ChannelFactory : IAmAChannelFactory
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        s_logger.LogDebug("MsSqlInputChannelFactory: create input channel {ChannelName} for topic {Topic}", subscription.ChannelName, subscription.RoutingKey);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey);
         return new ChannelAsync(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -79,7 +79,7 @@ public class ChannelFactory : IAmAChannelFactory
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        s_logger.LogDebug("MsSqlInputChannelFactory: create input channel {ChannelName} for topic {Topic}", subscription.ChannelName, subscription.RoutingKey);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey);
         var channel = new ChannelAsync(
             subscription.ChannelName, 
             subscription.RoutingKey,
@@ -88,4 +88,11 @@ public class ChannelFactory : IAmAChannelFactory
 
         return await Task.FromResult(channel);
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Debug, "MsSqlInputChannelFactory: create input channel {ChannelName} for topic {Topic}")]
+        public static partial void MsSqlInputChannelFactoryCreateInputChannel(ILogger logger, string? channelName, string topic);
+    }
 }
+

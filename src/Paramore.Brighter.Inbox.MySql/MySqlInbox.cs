@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Inbox.MySql
     /// <summary>
     ///     Class MySqlInbox.
     /// </summary>
-    public class MySqlInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public partial class MySqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlInbox>();
 
@@ -79,9 +79,7 @@ namespace Paramore.Brighter.Inbox.MySql
             {
                 if (sqlException.Number == MySqlDuplicateKeyError)
                 {
-                    s_logger.LogWarning(
-                        "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    Log.DuplicateCommandWarning(s_logger, command.Id);
                     return;
                 }
 
@@ -188,9 +186,7 @@ namespace Paramore.Brighter.Inbox.MySql
             {
                 if (sqlException.Number == MySqlDuplicateKeyError)
                 {
-                    s_logger.LogWarning(
-                        "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    Log.DuplicateCommandWarning(s_logger, command.Id);
                     return;
                 }
 
@@ -321,5 +317,12 @@ namespace Paramore.Brighter.Inbox.MySql
 
             throw new RequestNotFoundException<TResult>(id);
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing")]
+            public static partial void DuplicateCommandWarning(ILogger logger, string id);
+        }
     }
 }
+

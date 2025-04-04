@@ -38,7 +38,7 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
-    public class PostgreSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public partial class PostgreSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
@@ -73,9 +73,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             {
                 if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    s_logger.LogWarning(
-                        "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    Log.DuplicateCommandWarning(s_logger, command.Id);
                     return;
                 }
                 throw;
@@ -125,9 +123,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             {
                 if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    s_logger.LogWarning(
-                        "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    Log.DuplicateCommandWarning(s_logger, command.Id);
                     return;
                 }
 
@@ -289,5 +285,12 @@ namespace Paramore.Brighter.Inbox.Postgres
 
             throw new RequestNotFoundException<TResult>(commandId);
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing")]
+            public static partial void DuplicateCommandWarning(ILogger logger, string id);
+        }
     }
 }
+

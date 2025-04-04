@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
     /// <summary>
     ///     Class SqliteInbox.
     /// </summary>
-    public class SqliteInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public partial class SqliteInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteInbox>();
 
@@ -73,9 +73,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
             {
                 if (IsExceptionUnqiueOrDuplicateIssue(sqliteException))
                 {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    Log.DuplicateCommandWarning(s_logger, command.Id);
                 }
             }
         }
@@ -167,9 +165,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
             catch (SqliteException sqliteException)
             {
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqliteException)) throw;
-                s_logger.LogWarning(
-                    "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                    command.Id);
+                Log.DuplicateCommandWarning(s_logger, command.Id);
             }
         }
 
@@ -299,5 +295,12 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 command.Parameters.Add(parameters[index]);
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing")]
+            public static partial void DuplicateCommandWarning(ILogger logger, string id);
+        }
     }
 }
+

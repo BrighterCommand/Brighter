@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Inbox.MsSql
     /// <summary>
     ///     Class MsSqlInbox.
     /// </summary>
-    public class MsSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public partial class MsSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlInbox>();
 
@@ -92,9 +92,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             {
                 if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    Log.DuplicateCommandWarning(s_logger, command.Id);
                     return;
                 }
 
@@ -166,9 +164,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             {
                 if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    Log.DuplicateCommandWarning(s_logger, command.Id);
                     return;
                 }
 
@@ -325,5 +321,12 @@ namespace Paramore.Brighter.Inbox.MsSql
 
             throw new RequestNotFoundException<TResult>(commandId);
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing")]
+            public static partial void DuplicateCommandWarning(ILogger logger, string id);
+        }
     }
 }
+

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     /// <summary>
     /// Wraps the <see cref="ServiceBusReceiver"/> to provide additional functionality.
     /// </summary>
-    internal class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
+    internal partial class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     {
         private readonly ServiceBusReceiver _messageReceiver;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceBusReceiverWrapper>();
@@ -70,16 +70,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         public void Close()
         {
-            s_logger.LogWarning("Closing the MessageReceiver connection");
+            Log.ClosingMessageReceiverConnection(s_logger);
             _messageReceiver.CloseAsync().GetAwaiter().GetResult();
-            s_logger.LogWarning("MessageReceiver connection stopped");
+            Log.MessageReceiverConnectionStopped(s_logger);
         }
         
         public async Task CloseAsync()
         {
-            s_logger.LogWarning("Closing the MessageReceiver connection");
+            Log.ClosingMessageReceiverConnection(s_logger);
             await _messageReceiver.CloseAsync().ConfigureAwait(false);
-            s_logger.LogWarning("MessageReceiver connection stopped");
+            Log.MessageReceiverConnectionStopped(s_logger);
         }
 
         /// <summary>
@@ -116,5 +116,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         {
             return ServiceBusModelFactory.ServiceBusReceivedMessage(lockTokenGuid: Guid.Parse(lockToken));
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Closing the MessageReceiver connection")]
+            public static partial void ClosingMessageReceiverConnection(ILogger logger);
+
+            [LoggerMessage(LogLevel.Warning, "MessageReceiver connection stopped")]
+            public static partial void MessageReceiverConnectionStopped(ILogger logger);
+        }
     }
 }
+

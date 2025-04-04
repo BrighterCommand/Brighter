@@ -30,6 +30,8 @@ using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon;
+using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
@@ -40,7 +42,7 @@ using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
+public partial class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 {
     protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AWSMessagingGateway>();
 
@@ -267,6 +269,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         if (string.IsNullOrEmpty(queueUrl))
         {
+            Log.CouldNotCreateQueue(s_logger, queueName, AwsConnection.Region);
             throw new InvalidOperationException($"Could not create Queue queue: {queueName} on {AwsConnection.Region}");
         }
 
@@ -334,6 +337,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         if (attributesResponse.HttpStatusCode != HttpStatusCode.OK)
         {
+            Log.CouldNotFindArnOfDlq(s_logger, attributesResponse.HttpStatusCode);
             throw new InvalidOperationException(
                 $"Could not find ARN of DLQ, status: {attributesResponse.HttpStatusCode}");
         }
@@ -360,6 +364,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
             return null;
         }
 
+        Log.QueueValidationError(s_logger, queueName);
         throw new QueueDoesNotExistException(
             $"Queue validation error: could not find queue {queueName}. Did you want Brighter to create infrastructure?");
     }
@@ -388,6 +393,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         {
             if (makeSubscriptions == OnMissingChannel.Validate)
             {
+                Log.SubscriptionValidationError(s_logger, queueUrl);
                 throw new BrokerUnreachableException(
                     $"Subscription validation error: could not find subscription for {queueUrl}");
             }
@@ -409,6 +415,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         var arn = await snsClient.SubscribeQueueAsync(topicArn, sqsClient, queueUrl);
         if (string.IsNullOrEmpty(arn))
         {
+            Log.CouldNotSubscribeToTopic(s_logger, topicArn, queueUrl, AwsConnection.Region);
             throw new InvalidOperationException(
                 $"Could not subscribe to topic: {topicArn} from queue: {queueUrl} in region {AwsConnection.Region}");
         }
@@ -421,6 +428,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
+            Log.UnableToSetSubscriptionAttribute(s_logger);
             throw new InvalidOperationException("Unable to set subscription attribute for raw message delivery");
         }
     }
@@ -435,6 +443,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         if (queueArn == null)
         {
+            Log.CouldNotFindQueueArn(s_logger, queueUrl);
             throw new BrokerUnreachableException($"Could not find queue ARN for queue {queueUrl}");
         }
 
@@ -469,5 +478,29 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         }
 
         return null;
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Error, "Could not create Queue queue: {QueueName} on {Region}")]
+        public static partial void CouldNotCreateQueue(ILogger logger, string queueName, RegionEndpoint region);
+
+        [LoggerMessage(LogLevel.Error, "Could not find ARN of DLQ, status: {HttpStatusCode}")]
+        public static partial void CouldNotFindArnOfDlq(ILogger logger, HttpStatusCode httpStatusCode);
+
+        [LoggerMessage(LogLevel.Error, "Queue validation error: could not find queue {QueueName}. Did you want Brighter to create infrastructure?")]
+        public static partial void QueueValidationError(ILogger logger, string queueName);
+
+        [LoggerMessage(LogLevel.Error, "Subscription validation error: could not find subscription for {QueueUrl}")]
+        public static partial void SubscriptionValidationError(ILogger logger, string queueUrl);
+
+        [LoggerMessage(LogLevel.Error, "Could not subscribe to topic: {TopicArn} from queue: {QueueUrl} in region {Region}")]
+        public static partial void CouldNotSubscribeToTopic(ILogger logger, string topicArn, string queueUrl, RegionEndpoint region);
+
+        [LoggerMessage(LogLevel.Error, "Unable to set subscription attribute for raw message delivery")]
+        public static partial void UnableToSetSubscriptionAttribute(ILogger logger);
+
+        [LoggerMessage(LogLevel.Error, "Could not find queue ARN for queue {QueueUrl}")]
+        public static partial void CouldNotFindQueueArn(ILogger logger, string queueUrl);
     }
 }

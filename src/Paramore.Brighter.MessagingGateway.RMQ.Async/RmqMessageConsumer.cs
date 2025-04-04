@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching, 
 /// result sending, and error handling.
 /// </summary>
-public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
@@ -153,16 +153,12 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
             
-            s_logger.LogInformation(
-                "RmqMessageConsumer: Acknowledging message {Id} as completed with delivery tag {DeliveryTag}",
-                message.Id, deliveryTag);
+            Log.AcknowledgingMessage(s_logger, message.Id, deliveryTag);
             await Channel.BasicAckAsync(deliveryTag, false, cancellationToken);
         }
         catch (Exception exception)
         {
-            s_logger.LogError(exception,
-                "RmqMessageConsumer: Error acknowledging message {Id} as completed with delivery tag {DeliveryTag}",
-                message.Id, deliveryTag);
+            Log.ErrorAcknowledgingMessage(s_logger, exception, message.Id, deliveryTag);
             throw;
         }
     }
@@ -181,7 +177,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
-            s_logger.LogDebug("RmqMessageConsumer: Purging channel {ChannelName}", _queueName.Value);
+            Log.PurgingChannel(s_logger, _queueName.Value);
 
             try
             {
@@ -199,8 +195,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
         }
         catch (Exception exception)
         {
-            s_logger.LogError(exception, "RmqMessageConsumer: Error purging channel {ChannelName}",
-                _queueName.Value);
+            Log.ErrorPurgingChannel(s_logger, exception, _queueName.Value);
             throw;
         }
     }
@@ -237,13 +232,10 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
             if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
            if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
-            s_logger.LogDebug(
-                "RmqMessageConsumer: Preparing to retrieve next message from queue {ChannelName} with routing key {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                _queueName.Value,
+            Log.RetrievingNextMessage(s_logger, _queueName.Value,
                 string.Join(";", _routingKeys.Select(rk => rk.Value)),
                 Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
+                Connection.AmpqUri.GetSanitizedUri());
         
             var (resultCount, results) = await _consumer.DeQueue(timeOut.Value, _batchSize);
 
@@ -255,14 +247,11 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
                 var message = _messageCreator.CreateMessage(results![i]);
                 messages[i] = message;
 
-                s_logger.LogInformation(
-                    "RmqMessageConsumer: Received message from queue {ChannelName} with routing key {RoutingKeys} via exchange {ExchangeName} on subscription {URL}, message: {Request}",
-                    _queueName.Value,
+                Log.ReceivedMessage(s_logger, _queueName.Value,
                     string.Join(";", _routingKeys.Select(rk => rk.Value)),
                     Connection.Exchange.Name,
                     Connection.AmpqUri.GetSanitizedUri(),
-                    JsonSerializer.Serialize(message, JsonSerialisationOptions.Options)
-                );
+                    JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
             }
 
             return messages;
@@ -304,8 +293,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
 
         try
         {
-            s_logger.LogDebug("RmqMessageConsumer: Re-queueing message {Id} with a delay of {Delay} milliseconds",
-                message.Id, timeout.Value.TotalMilliseconds);
+            Log.RequeueingMessage(s_logger, message.Id, timeout.Value.TotalMilliseconds);
             
             await EnsureChannelAsync(cancellationToken);
             
@@ -328,16 +316,14 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
 
             //ack the original message to remove it from the queue
             var deliveryTag = message.DeliveryTag;
-            s_logger.LogInformation(
-                "RmqMessageConsumer: Deleting message {Id} with delivery tag {DeliveryTag} as re-queued",
-                message.Id, deliveryTag);
+            Log.DeletingMessage(s_logger, message.Id, deliveryTag);
             await Channel.BasicAckAsync(deliveryTag, false, cancellationToken);
 
             return true;
         }
         catch (Exception exception)
         {
-            s_logger.LogError(exception, "RmqMessageConsumer: Error re-queueing message {Id}", message.Id);
+            Log.ErrorRequeueingMessage(s_logger, exception, message.Id);
             return false;
         }
     }
@@ -356,14 +342,13 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
             
             if (Channel is null) throw new InvalidOperationException($"RmqMessageConsumer: channel {_queueName.Value} is null");
             
-            s_logger.LogInformation("RmqMessageConsumer: NoAck message {Id} with delivery tag {DeliveryTag}",
-                message.Id, message.DeliveryTag);
+            Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag);
             //if we have a DLQ, this will force over to the DLQ
             await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
         }
         catch (Exception exception)
         {
-            s_logger.LogError(exception, "RmqMessageConsumer: Error try to NoAck message {Id}", message.Id);
+            Log.ErrorNoAckMessage(s_logger, exception, message.Id);
             throw;
         }
     }
@@ -394,14 +379,10 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
             if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
            if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
-            s_logger.LogInformation(
-                "RmqMessageConsumer: Created rabbitmq channel {ConsumerNumber} for queue {ChannelName} with routing key/s {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                Channel.ChannelNumber,
-                _queueName.Value,
+            Log.CreatedChannel(s_logger, Channel.ChannelNumber, _queueName.Value,
                 string.Join(";", _routingKeys.Select(rk => rk.Value)),
                 Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
+                Connection.AmpqUri.GetSanitizedUri());
         }
     }
 
@@ -440,13 +421,10 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
 
         await _consumer.HandleBasicConsumeOkAsync(_consumerTag, cancellationToken);
 
-        s_logger.LogInformation(
-            "RmqMessageConsumer: Created consumer for queue {ChannelName} with routing key {Topic} via exchange {ExchangeName} on subscription {URL}",
-            _queueName.Value,
+        Log.CreatedConsumer(s_logger, _queueName.Value,
             string.Join(";", _routingKeys.Select(rk => rk.Value)),
             Connection.Exchange.Name,
-            Connection.AmpqUri.GetSanitizedUri()
-        );
+            Connection.AmpqUri.GetSanitizedUri());
     }
 
     private async Task CreateQueueAsync(CancellationToken cancellationToken)
@@ -455,8 +433,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
         if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
        if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
         
-        s_logger.LogDebug("RmqMessageConsumer: Creating queue {ChannelName} on subscription {URL}",
-            _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
+        Log.CreatingQueue(s_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
         await Channel.QueueDeclareAsync(_queueName.Value, _isDurable, false, false, SetQueueArguments(),
             cancellationToken: cancellationToken);
         
@@ -491,13 +468,10 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
         if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null", exception);
        if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null", exception);
         
-        s_logger.LogError(exception,
-            "RmqMessageConsumer: There was an error listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-            _queueName.Value,
+        Log.ErrorListeningToQueue(s_logger, exception, _queueName.Value,
             string.Join(";", _routingKeys.Select(rk => rk.Value)),
             Connection.Exchange.Name,
-            Connection.AmpqUri.GetSanitizedUri()
-        );
+            Connection.AmpqUri.GetSanitizedUri());
         
         if (resetConnection) await ResetConnectionToBrokerAsync(cancellationToken);
         throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", exception);
@@ -509,8 +483,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
         if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
        if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
-        s_logger.LogDebug("RmqMessageConsumer: Validating queue {ChannelName} on subscription {URL}",
-            _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
+        Log.ValidatingQueue(s_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
 
         try
         {
@@ -589,4 +562,57 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     {
         Dispose(false);
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: Acknowledging message {Id} as completed with delivery tag {DeliveryTag}")]
+        public static partial void AcknowledgingMessage(ILogger logger, string id, ulong deliveryTag);
+
+        [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: Error acknowledging message {Id} as completed with delivery tag {DeliveryTag}")]
+        public static partial void ErrorAcknowledgingMessage(ILogger logger, Exception exception, string id, ulong deliveryTag);
+
+        [LoggerMessage(LogLevel.Debug, "RmqMessageConsumer: Purging channel {ChannelName}")]
+        public static partial void PurgingChannel(ILogger logger, string channelName);
+
+        [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: Error purging channel {ChannelName}")]
+        public static partial void ErrorPurgingChannel(ILogger logger, Exception exception, string channelName);
+
+        [LoggerMessage(LogLevel.Debug, "RmqMessageConsumer: Preparing to retrieve next message from queue {ChannelName} with routing key {RoutingKeys} via exchange {ExchangeName} on subscription {URL}")]
+        public static partial void RetrievingNextMessage(ILogger logger, string channelName, string routingKeys, string exchangeName, string url);
+
+        [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: Received message from queue {ChannelName} with routing key {RoutingKeys} via exchange {ExchangeName} on subscription {URL}, message: {Request}")]
+        public static partial void ReceivedMessage(ILogger logger, string channelName, string routingKeys, string exchangeName, string url, string request);
+
+        [LoggerMessage(LogLevel.Debug, "RmqMessageConsumer: Re-queueing message {Id} with a delay of {Delay} milliseconds")]
+        public static partial void RequeueingMessage(ILogger logger, string id, double delay);
+
+        [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: Deleting message {Id} with delivery tag {DeliveryTag} as re-queued")]
+        public static partial void DeletingMessage(ILogger logger, string id, ulong deliveryTag);
+
+        [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: Error re-queueing message {Id}")]
+        public static partial void ErrorRequeueingMessage(ILogger logger, Exception exception, string id);
+
+        [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: NoAck message {Id} with delivery tag {DeliveryTag}")]
+        public static partial void NoAckMessage(ILogger logger, string id, ulong deliveryTag);
+
+        [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: Error try to NoAck message {Id}")]
+        public static partial void ErrorNoAckMessage(ILogger logger, Exception exception, string id);
+
+        [LoggerMessage(LogLevel.Information,
+            "RmqMessageConsumer: Created rabbitmq channel {ConsumerNumber} for queue {ChannelName} with routing key/s {RoutingKeys} via exchange {ExchangeName} on subscription {URL}")]
+        public static partial void CreatedChannel(ILogger logger, int consumerNumber, string channelName, string routingKeys, string exchangeName, string url);
+
+        [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: Created consumer for queue {ChannelName} with routing key {Topic} via exchange {ExchangeName} on subscription {URL}")]
+        public static partial void CreatedConsumer(ILogger logger, string channelName, string topic, string exchangeName, string url);
+
+        [LoggerMessage(LogLevel.Debug, "RmqMessageConsumer: Creating queue {ChannelName} on subscription {URL}")]
+        public static partial void CreatingQueue(ILogger logger, string channelName, string url);
+
+        [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: There was an error listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}")]
+        public static partial void ErrorListeningToQueue(ILogger logger, Exception exception, string channelName, string routingKeys, string exchangeName, string url);
+
+        [LoggerMessage(LogLevel.Debug, "RmqMessageConsumer: Validating queue {ChannelName} on subscription {URL}")]
+        public static partial void ValidatingQueue(ILogger logger, string channelName, string url);
+    }
 }
+

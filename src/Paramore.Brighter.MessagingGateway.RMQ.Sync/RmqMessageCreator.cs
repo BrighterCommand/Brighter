@@ -35,7 +35,7 @@ using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
-    internal class RmqMessageCreator
+    internal partial class RmqMessageCreator
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
 
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
             catch (Exception e)
             {
-                s_logger.LogWarning(e,"Failed to create message from amqp message");
+                Log.FailedToCreateMessageFromAmqpMessage(s_logger, e);
                 message = FailureMessage(topic, messageId);
             }
 
@@ -127,7 +127,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             if (!(value is byte[] bytes))
             {
-                s_logger.LogWarning("The value of header {Key} could not be cast to a byte array", key);
+                Log.HeaderValueCouldNotBeCastToByteArray(s_logger, key);
                 return new HeaderResult<string?>(null, false);
             }
 
@@ -139,7 +139,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             catch (Exception e)
             {
                 var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                s_logger.LogWarning(e,"Failed to read the value of header {Key} as UTF-8, first 20 byes follow: \n\t{1}", key, firstTwentyBytes);
+                Log.FailedToReadHeaderValueAsUtf8(s_logger, key, firstTwentyBytes, e);
                 return new HeaderResult<string?>(null, false);
             }
         }
@@ -270,7 +270,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             if (string.IsNullOrEmpty(messageId))
             {
-                s_logger.LogDebug("No message id found in message MessageId, new message id is {Id}", newMessageId);
+                Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
                 return new HeaderResult<string?>(newMessageId, true);
             }
 
@@ -296,5 +296,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             return value is byte[] bytes ? Encoding.UTF8.GetString(bytes) : value;
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Failed to create message from amqp message")]
+            public static partial void FailedToCreateMessageFromAmqpMessage(ILogger logger, Exception e);
+
+            [LoggerMessage(LogLevel.Warning, "The value of header {Key} could not be cast to a byte array")]
+            public static partial void HeaderValueCouldNotBeCastToByteArray(ILogger logger, string key);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to read the value of header {Key} as UTF-8, first 20 byes follow: \n\t{FirstTwentyBytes}")]
+            public static partial void FailedToReadHeaderValueAsUtf8(ILogger logger, string key, string firstTwentyBytes, Exception e);
+
+            [LoggerMessage(LogLevel.Debug, "No message id found in message MessageId, new message id is {Id}")]
+            public static partial void NoMessageIdFoundInMessage(ILogger logger, string id);
+        }
     }
 }
+

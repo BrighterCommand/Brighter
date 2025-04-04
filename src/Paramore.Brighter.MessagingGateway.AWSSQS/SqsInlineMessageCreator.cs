@@ -33,7 +33,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
+internal partial class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
 
@@ -103,7 +103,7 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         }
         catch (Exception e)
         {
-            s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
+            Log.FailedToCreateMessageFromAwsSqsMessage(s_logger, e);
             message = FailureMessage(topic, messageId);
         }
 
@@ -125,7 +125,7 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         }
         catch (Exception ex)
         {
-            s_logger.LogWarning($"Failed while deserializing Sqs Message body, ex: {ex}");
+            Log.FailedWhileDeserializingSqsMessageBody(s_logger, ex);
         }
 
         return messageAttributes ?? new Dictionary<string, JsonElement>();
@@ -252,7 +252,7 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
             {
                 return new HeaderResult<RoutingKey>(new RoutingKey(topic.Substring(indexOf + 1)), true);
             }
-            
+
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }
 
@@ -270,7 +270,7 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         }
         catch (Exception ex)
         {
-            s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
         }
 
         return new HeaderResult<string?>(null, true);
@@ -287,7 +287,7 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         }
         catch (Exception ex)
         {
-            s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
         }
 
         return new MessageBody(string.Empty);
@@ -316,4 +316,18 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
 
         return new HeaderResult<string>(string.Empty, false);
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Failed to create message from Aws Sqs message")]
+        public static partial void FailedToCreateMessageFromAwsSqsMessage(ILogger logger, Exception ex);
+
+        [LoggerMessage(LogLevel.Warning, "Failed while deserializing Sqs Message body")]
+        public static partial void FailedWhileDeserializingSqsMessageBody(ILogger logger, Exception ex);
+        
+        [LoggerMessage(LogLevel.Warning, "Failed to parse Sqs Message Body to valid Json Document")]
+        public static partial void FailedToParseSqsMessageBodyToValidJsonDocument(ILogger logger, Exception ex);
+
+    }
 }
+

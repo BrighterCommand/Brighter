@@ -48,7 +48,7 @@ internal enum ARNAmazonSNS
     SubscriptionId = 6
 }
 
-internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
+internal partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageCreator>();
 
@@ -115,7 +115,7 @@ internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
         }
         catch (Exception e)
         {
-            s_logger.LogWarning(e, "Failed to create message from amqp message");
+            Log.FailedToCreateMessageFromAmqpMessage(s_logger, e);
             message = FailureMessage(topic, messageId);
         }
 
@@ -289,5 +289,11 @@ internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
         }
 
         return new HeaderResult<string>(null, false);
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Failed to create message from amqp message")]
+        public static partial void FailedToCreateMessageFromAmqpMessage(ILogger logger, Exception e);
     }
 }
