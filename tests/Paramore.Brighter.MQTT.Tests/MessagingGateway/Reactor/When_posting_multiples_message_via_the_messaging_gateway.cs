@@ -25,82 +25,75 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Paramore.Brighter.MessagingGateway.MQTT;
+using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 {
     [Trait("Category", "MQTT")]
     [Collection("MQTT")]
-    public class MqttMessageProducerSendMessageTests : IDisposable, IAsyncDisposable
+    public class MqttMessageProducerSendMessageTests : MqttTestClassBase<MqttMessageProducerSendMessageTests>
     {
-        private const string MqttHost = "localhost";
         private const string ClientId = "BrighterIntegrationTests-Produce";
-        private readonly IAmAMessageProducerAsync _messageProducer;
-        private readonly IAmAMessageConsumerSync _messageConsumer;
-        private readonly string _topicPrefix = "BrighterIntegrationTests/ProducerTests";
+        private const string TopicPrefix = "BrighterIntegrationTests/ProducerTests";
 
-        public MqttMessageProducerSendMessageTests()
+        public MqttMessageProducerSendMessageTests(ITestOutputHelper testOutputHelper)
+            : base(ClientId, TopicPrefix, testOutputHelper)
         {
-            
-            var mqttProducerConfig = new MQTTMessagingGatewayProducerConfiguration 
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix
-            };
-
-            MQTTMessagePublisher mqttMessagePublisher = new(
-                mqttProducerConfig);
-
-            _messageProducer = new MQTTMessageProducer(mqttMessagePublisher);
-
-
-            MQTTMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix,
-                ClientID = ClientId
-            };
-
-            _messageConsumer = new MQTTMessageConsumer(mqttConsumerConfig);
         }
 
+        /// <summary>
+        /// Gets the synchronous message producer instance derived from the asynchronous message producer.
+        /// </summary>
+        /// <remarks>
+        /// This property casts the asynchronous message producer (<see cref="IAmAMessageProducerAsync"/>) 
+        /// to a synchronous message producer (<see cref="IAmAMessageProducerSync"/>). 
+        /// It is used to send messages synchronously in the test scenarios.
+        /// </remarks>
+        /// <value>
+        /// An instance of <see cref="IAmAMessageProducerSync"/> representing the synchronous message producer.
+        /// </value>
+        protected IAmAMessageProducerSync MessageProducerSync => (MessageProducerAsync as IAmAMessageProducerSync)!;
+
+        /// <summary>
+        /// Gets the synchronous message consumer used for receiving messages from the messaging gateway.
+        /// </summary>
+        /// <remarks>
+        /// This property casts the asynchronous message consumer to its synchronous counterpart.
+        /// It is used in scenarios where synchronous message consumption is required.
+        /// </remarks>
+        /// <value>
+        /// An instance of <see cref="IAmAMessageConsumerSync"/> representing the synchronous message consumer.
+        /// </value>
+        /// <exception cref="InvalidCastException">
+        /// Thrown if the asynchronous message consumer cannot be cast to <see cref="IAmAMessageConsumerSync"/>.
+        /// </exception>
+        protected IAmAMessageConsumerSync MessageConsumerSync => (MessageConsumerAsync as IAmAMessageConsumerSync)!;
+
         [Fact]
-        public void When_posting_multiples_message_via_the_messaging_gateway()
+        public void When_posting_multiples_message_via_the_messaging_gateway_sync()
         {
             const int messageCount = 1000;
-            List<Message> sentMessages = new();
+            List<Message> sentMessages = [];
 
             for (int i = 0; i < messageCount; i++)
             {
-                Message _message = new(
+                Message message = new(
                     new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND),
                     new MessageBody($"test message")
                 );
 
-                Task task = _messageProducer.SendAsync(_message);
-                task.Wait();
+                MessageProducerSync.Send(message);
 
-                sentMessages.Add(_message);
+                sentMessages.Add(message);
             }
 
-            Message[] receivedMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = MessageConsumerSync.Receive(TimeSpan.FromMilliseconds(100));
 
             Assert.NotEmpty(receivedMessages);
-            Assert.Equal(messageCount, receivedMessages.Length);    
-            Assert.Equal(sentMessages, receivedMessages);   
-        }
-
-        public void Dispose()
-        {
-            ((IAmAMessageProducerSync)_messageProducer).Dispose();
-            _messageConsumer.Dispose();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _messageProducer.DisposeAsync();
-            await ((IAmAMessageConsumerAsync)_messageConsumer).DisposeAsync();
+            Assert.Equal(messageCount, receivedMessages.Length);
+            Assert.Equal(sentMessages, receivedMessages);
         }
     }
 }
