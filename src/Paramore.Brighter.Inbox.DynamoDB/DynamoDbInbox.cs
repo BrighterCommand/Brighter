@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -32,23 +31,35 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.DynamoDB
 {
     public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
-       private readonly DynamoDBContext _context;
-       private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
+        private readonly DynamoDBContext _context;
+        private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
+        private readonly DynamoDbInboxConfiguration _configuration;
+        private readonly InstrumentationOptions _instrumentationOptions;
 
-       public bool ContinueOnCapturedContext { get; set; }
-       
+        private const string DYNAMO_DB_NAME = "inbox";
+
+        /// <inheritdoc/>
+        public bool ContinueOnCapturedContext { get; set; }
+
+        /// <inheritdoc/>
+        public IAmABrighterTracer Tracer { private get; set; }
+
         /// <summary>
         ///     Initialises a new instance of the <see cref="DynamoDbInbox"/> class.
         /// </summary>
         /// <param name="client">The Amazon Dynamo Db client to use</param>
-        public DynamoDbInbox(IAmazonDynamoDB client, DynamoDbInboxConfiguration configuration)
+        public DynamoDbInbox(IAmazonDynamoDB client, DynamoDbInboxConfiguration configuration, 
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _context = new DynamoDBContext(client);
+            _configuration = configuration;
+            _instrumentationOptions = instrumentationOptions;
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
             {
                 OverrideTableName = configuration.TableName
@@ -56,64 +67,121 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         }
 
         /// <summary>
-        ///  Adds a command to the store
-        ///  Will block, and consume another thread for callback on threadpool; use within sync pipeline only 
+        ///   Adds a command to the store.
+        ///   Will block, and consume another thread for callback on threadpool; use within sync pipeline only.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command to be stored</param>
+        /// <param name="command">The command.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {            
-            AddAsync(command, contextKey)
-                .ConfigureAwait(false)
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
+        public void Add<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
+        {
+            // Note: Don't add a span here as we call AddAsync
+            AddAsync(command, contextKey, requestContext)
+                .ConfigureAwait(ContinueOnCapturedContext)
                 .GetAwaiter()
                 .GetResult();
         }
 
         /// <summary>
-        ///  Finds a command with the specified identifier.
+        ///   Finds a command with the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
         /// <returns><see cref="T"/></returns>
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public T Get<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            return GetCommandAsync<T>(id, contextKey)
-                .ConfigureAwait(false)
+            // Note: Don't add a span here as we call GetAsync
+            return GetAsync<T>(id, contextKey, requestContext, timeoutInMilliseconds, default)
+                .ConfigureAwait(ContinueOnCapturedContext)
                 .GetAwaiter()
                 .GetResult();
         }
 
         /// <summary>
-        /// Adds a command to the store
+        ///   Checks whether a command with the specified identifier exists in the store.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command to be stored</param>
+        /// <param name="id">The identifier.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>D
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
+        /// <returns><see langword="true"/> if it exists, otherwise <see langword="false"/>.</returns>
+        public bool Exists<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            await _context
-                .SaveAsync(new CommandItem<T>(command, contextKey), _dynamoOverwriteTableConfig, cancellationToken)
-                .ConfigureAwait(false);
+            // Note: Don't add a span here as we call ExistsAsync
+            return ExistsAsync<T>(id, contextKey, requestContext)
+                .ConfigureAwait(ContinueOnCapturedContext)
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <summary>
-        /// Finds the command based on the specified identifier.
+        ///   Awaitably adds a command to the store.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier</param>
+        /// <param name="command">The command.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
-        /// <returns><see cref="Task{T}"/></returns>
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
-        {                
-            return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+        /// <returns><see cref="Task"/>.</returns>
+        public async Task AddAsync<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", command.Id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Add, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                await _context
+                .SaveAsync(new CommandItem<T>(command, contextKey), _dynamoOverwriteTableConfig, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <summary>
+        ///   Awaitably finds a command with the specified identifier.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+        /// <returns><see cref="Task{T}"/>.</returns>
+        public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Get, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -121,35 +189,35 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// </summary>
         /// <param name="id">The identifier</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see langword="true"/> if Command exists, otherwise <see langword="false"/></returns>
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
-       {
-           try
-           {
-               var command = await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
-               return command != null;
-           }
-           catch (RequestNotFoundException<T>)
-           {
-               return false;
-           }
-       }
-
-
-       /// <summary>
-       ///     Checks if the command exists based on the id
-       /// </summary>
-       /// <param name="id">The identifier</param>
-       /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-       /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
-       /// <typeparam name="T">Type of command being checked</typeparam>
-       /// <returns><see langword="true"/> if Command exists, otherwise <see langword="false"/></returns>
-       public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <returns><see cref="Task{true}"/> if it exists, otherwise <see cref="Task{false}"/>.</returns>
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
-            return ExistsAsync<T>(id, contextKey).Result;
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.command.id", id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Exists, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var command = await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                return command != null;
+            }
+            catch (RequestNotFoundException<T>)
+            {
+                return false;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         private async Task<T> GetCommandAsync<T>(string id, string contextKey, CancellationToken cancellationToken = default) where T : class, IRequest
@@ -161,7 +229,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             };
            
             //block async to make this sync
-            var messages = await PageAllMessagesAsync<T>(queryConfig).ConfigureAwait(false);
+            var messages = await PageAllMessagesAsync<T>(queryConfig).ConfigureAwait(ContinueOnCapturedContext);
 
             var result = messages.Select(msg => msg.ConvertToCommand()).FirstOrDefault();
             if (result == null)
@@ -178,12 +246,10 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             var messages = new List<CommandItem<T>>();
             do
             { 
-                messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(false));
+                messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(ContinueOnCapturedContext));
             } while (!asyncSearch.IsDone);
 
             return messages;
         }
- 
-        
-   }
+    }
 }

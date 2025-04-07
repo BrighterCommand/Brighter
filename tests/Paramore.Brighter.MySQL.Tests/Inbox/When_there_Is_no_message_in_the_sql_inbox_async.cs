@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         public async Task When_There_Is_No_Message_In_The_Sql_Inbox_Get_Async()
         {
             string commandId = Guid.NewGuid().ToString();
-            var exception = await Catch.ExceptionAsync(() => _mysqlInbox.GetAsync<MyCommand>(commandId, _contextKey));
+            var exception = await Catch.ExceptionAsync(() => _mysqlInbox.GetAsync<MyCommand>(commandId, _contextKey, null, -1, default));
             Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         public async Task When_There_Is_No_Message_In_The_Sql_Inbox_Exists_Async()
         {
             string commandId = Guid.NewGuid().ToString();
-            bool exists = await _mysqlInbox.ExistsAsync<MyCommand>(commandId, _contextKey);
+            bool exists = await _mysqlInbox.ExistsAsync<MyCommand>(commandId, _contextKey, null, -1, default);
             Assert.False(exists);
         }
 

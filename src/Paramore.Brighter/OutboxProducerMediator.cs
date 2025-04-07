@@ -204,7 +204,7 @@ namespace Paramore.Brighter
 
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span,
+            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, message, requestContext.Span,
                 overridingTransactionProvider != null, true, _instrumentationOptions);
 
             var written = await RetryAsync(
@@ -247,7 +247,7 @@ namespace Paramore.Brighter
 
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span,
+            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, message, requestContext.Span,
                 overridingTransactionProvider != null, false, _instrumentationOptions);
 
             var written = Retry(() =>
@@ -318,7 +318,7 @@ namespace Paramore.Brighter
                     if (message is null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, span, false, false,
+                    BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, message, span, false, false,
                         _instrumentationOptions);
 
                     Dispatch(new[] { message }, requestContext, args);
@@ -374,7 +374,7 @@ namespace Paramore.Brighter
                     if (message is null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, requestContext.Span, false, true,
+                    BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, message, requestContext.Span, false, true,
                         _instrumentationOptions);
 
                     await DispatchAsync(new[] { message }, requestContext, continueOnCapturedContext,
@@ -511,7 +511,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
+            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
                 transactionProvider != null, false, _instrumentationOptions);
 
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
@@ -540,7 +540,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
+            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
                 transactionProvider != null, true, _instrumentationOptions);
 
             if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
@@ -610,7 +610,7 @@ namespace Paramore.Brighter
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
                             pageSize: amountToClear, args: args, cancellationToken: cancellationToken)).ToArray();
 
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, true,
+                    BrighterTracer.WriteOutboxEvent(BoxDbOperation.OutStandingMessages, messages, span, false, true,
                         _instrumentationOptions);
 
                     requestContext.Span = parentSpan;

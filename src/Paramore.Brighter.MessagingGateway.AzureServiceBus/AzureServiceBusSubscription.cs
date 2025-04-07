@@ -35,6 +35,9 @@ public class AzureServiceBusSubscription : Subscription
 {
     public AzureServiceBusSubscriptionConfiguration Configuration { get; }
 
+    /// <inheritdoc />
+    public override Type ChannelFactoryType => typeof(AzureServiceBusChannelFactory); 
+
     /// <summary>
     /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
     /// </summary>

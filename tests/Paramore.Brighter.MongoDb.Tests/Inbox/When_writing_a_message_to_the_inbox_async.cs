@@ -52,9 +52,9 @@ public class MongoDbInboxAddMessageAsyncTests : IDisposable
     [Fact]
     public async Task When_Writing_A_Message_To_The_Inbox_Async()
     {
-        await _inbox.AddAsync(_raisedCommand, _contextKey);
+        await _inbox.AddAsync(_raisedCommand, _contextKey, null);
 
-        var storedCommand = await _inbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+        var storedCommand = await _inbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
 
         //_should_read_the_command_from_the__sql_inbox
         Assert.NotNull(storedCommand);

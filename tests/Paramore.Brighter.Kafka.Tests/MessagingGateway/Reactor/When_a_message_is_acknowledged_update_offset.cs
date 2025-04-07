@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
 [Trait("Fragile", "CI")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+[Collection("Kafka")] //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerUpdateOffset : IDisposable
 {
     private readonly ITestOutputHelper _output;
@@ -26,20 +26,22 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "Kafka Producer Send Test", 
-                BootStrapServers = new[] {"localhost:9092"}
+                Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" }
             },
-            new[] {new KafkaPublication
+            new[]
             {
-                Topic = new RoutingKey(_topic),
-                NumPartitions = 1,
-                ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests, 
-                //your production values ought to be lower
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).Create();
+                new KafkaPublication
+                {
+                    Topic = new RoutingKey(_topic),
+                    NumPartitions = 1,
+                    ReplicationFactor = 1,
+                    //These timeouts support running on a container using the same host as the tests, 
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Create
+                }
+            }).Create();
     }
 
     //[Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
@@ -48,12 +50,12 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
     {
         // let topic propogate in the broker
         await Task.Delay(500);
-        
+
         var groupId = Guid.NewGuid().ToString();
-        
+
         var routingKey = new RoutingKey(_topic);
         var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
-            
+
         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
@@ -66,13 +68,12 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                 ));
             sentMessages[i] = msgId;
         }
-        
+
         //ensure the messages are actually sent
         ((KafkaMessageProducer)producer).Flush();
 
         //This will create, then delete the consumer
         Message[] messages = await ConsumeMessages(groupId: groupId, batchLimit: 5);
-
 
         //check we read the first 5 messages
         Assert.Equal(5, messages.Length);
@@ -88,7 +89,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         Assert.Equal(5, newMessages.Length);
         for (int i = 0; i < 5; i++)
         {
-            Assert.Equal(sentMessages[i+5], newMessages[i].Id);
+            Assert.Equal(sentMessages[i + 5], newMessages[i].Id);
         }
     }
 
@@ -101,10 +102,9 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
             {
                 consumedMessages.Add(ConsumeMessage(consumer));
             }
-            
+
             //yield to allow commits to flush
             await Task.Delay(TimeSpan.FromMilliseconds(5000));
-
         }
 
         return consumedMessages.ToArray();
@@ -118,7 +118,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                 try
                 {
                     maxTries++;
-                   //makes a blocking call to Kafka
+                    //makes a blocking call to Kafka
                     messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
@@ -126,7 +126,6 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                         consumer.Acknowledge(messages[0]);
                         return messages[0];
                     }
-
                 }
                 catch (ChannelFailureException cfx)
                 {
@@ -144,8 +143,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Consumer Test", 
-                    BootStrapServers = new[] {"localhost:9092"}
+                    Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
                 })
             .Create(new KafkaSubscription<MyCommand>
             (
@@ -154,7 +152,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                 routingKey: new RoutingKey(_topic),
                 groupId: groupId,
                 offsetDefault: AutoOffsetReset.Earliest,
-                commitBatchSize:5,
+                commitBatchSize: 5,
                 numOfPartitions: 1,
                 replicationFactor: 1,
                 messagePumpType: MessagePumpType.Reactor,

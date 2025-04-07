@@ -2,6 +2,7 @@ using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.MessageMappers;
 
@@ -9,6 +10,7 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
 {
     public IRequestContext? Context { get; set; }
 
+    [CloudEvents(0)]
     public Task<Message> MapToMessageAsync(TRequest request, Publication publication,
         CancellationToken cancellationToken = default)
         => Task.FromResult(MapToMessage(request, publication));

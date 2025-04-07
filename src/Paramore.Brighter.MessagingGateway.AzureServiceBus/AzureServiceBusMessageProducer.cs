@@ -34,6 +34,7 @@ using Polly;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Polly.Retry;
 using System.Threading.Tasks;
+using Azure.Messaging;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.Tasks;
 
@@ -151,7 +152,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         {
             foreach (var batch in batches)
             {
-                var asbMessages = batch.Select(ConvertToServiceBusMessage).ToArray();
+                var asbMessages = batch.Select(message => ConvertToServiceBusMessage(message, _publication)).ToArray();
 
                 Logger.LogDebug("Publishing {NumberOfMessages} messages to topic {Topic}.",
                     asbMessages.Length, topic);
@@ -196,7 +197,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
                 "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}",
                 message.Header.Topic, delay, message.Body.Value, message.Id);
 
-            var azureServiceBusMessage = ConvertToServiceBusMessage(message);
+            var azureServiceBusMessage = ConvertToServiceBusMessage(message, _publication);
             if (delay == TimeSpan.Zero)
             {
                 await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage, cancellationToken);
@@ -247,9 +248,10 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         }
     }
 
-    private ServiceBusMessage ConvertToServiceBusMessage(Message message)
+    private static ServiceBusMessage ConvertToServiceBusMessage(Message message, AzureServiceBusPublication publication)
     {
-        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
+        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Value);
+        
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
@@ -259,7 +261,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
             azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
         }
             
-        if(message.Header.CorrelationId is not null)
+        if(!string.IsNullOrEmpty(message.Header.CorrelationId))
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
         azureServiceBusMessage.ContentType = message.Header.ContentType;
         azureServiceBusMessage.MessageId = message.Header.MessageId;

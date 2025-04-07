@@ -47,13 +47,13 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
             _sqlInbox = new MsSqlInbox(_msSqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
-            _sqlInbox.Add(_raisedCommand, _contextKey);
+            _sqlInbox.Add(_raisedCommand, _contextKey, null, -1);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Inbox()
         {
-            _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
+            _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null, -1);
 
             Assert.NotNull(_storedCommand);
             Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         [Fact]
         public void When_Reading_A_Message_From_The_Inbox_And_ContextKey_IsNull()
         {
-            var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, null));
+            var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, null, null, -1));
             //should_not_read_message
             Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }

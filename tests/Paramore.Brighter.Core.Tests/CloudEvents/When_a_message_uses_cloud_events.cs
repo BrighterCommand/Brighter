@@ -33,7 +33,7 @@ public class CloudEventsTransformerTests
     public void When_a_message_uses_cloud_events_via_attribute()
     {
         //act
-        _transformer.InitializeWrapFromAttributeParams(_source, _type, _dataContentType, _dataSchema, _subject);
+        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject);
         var cloudEvents = _transformer.Wrap(_message, new Publication());
         
         //assert
@@ -48,7 +48,6 @@ public class CloudEventsTransformerTests
     [Fact]
     public void When_a_message_uses_cloud_events_via_a_publication()
     {
-
         //act
         var cloudEvents = _transformer.Wrap(_message, new Publication
         {
@@ -57,7 +56,6 @@ public class CloudEventsTransformerTests
             ContentType = _dataContentType,
             DataSchema = _dataSchema,
             Subject = _subject
-            
         });
         
         //assert
@@ -81,26 +79,25 @@ public class CloudEventsTransformerTests
             ContentType = _dataContentType,
             DataSchema = _dataSchema,
             Subject = _subject
-            
         };
         
         //These attributes override the publication values above
-        var source =  new Uri("http://goparamore.io/OverrideSource");
-        var type = "goparamore.io/OverrideType";
-        var dataContentType = "application/xml";
-        var dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerOverride/schema");
-        var subject = "CloudEventsTransformerAlternative"; 
+        const string source = "http://goparamore.io/OverrideSource";
+        const string type = "goparamore.io/OverrideType";
+        const string dataContentType = "application/xml";
+        const string dataSchema = "http://goparamore.io/CloudEventsTransformerOverride/schema";
+        const string subject = "CloudEventsTransformerAlternative"; 
 
         //act
-        _transformer.InitializeWrapFromAttributeParams(source, type, dataContentType, dataSchema, subject);
+        _transformer.InitializeWrapFromAttributeParams(source, type, null, dataContentType, dataSchema, subject);
 
         var cloudEvents = _transformer.Wrap(_message, publication);
         
         //assert
-        Assert.Equal(source, cloudEvents.Header.Source);
+        Assert.Equal(source, cloudEvents.Header.Source.ToString());
         Assert.Equal(type, cloudEvents.Header.Type);
         Assert.Equal(dataContentType, cloudEvents.Header.ContentType);
-        Assert.Equal(dataSchema, cloudEvents.Header.DataSchema);
+        Assert.Equal(dataSchema, cloudEvents.Header.DataSchema.ToString());
         Assert.Equal(subject, cloudEvents.Header.Subject);
 
     }
@@ -125,6 +122,5 @@ public class CloudEventsTransformerTests
         Assert.Equal("text/plain", cloudEvents.Header.ContentType);
         Assert.Null(cloudEvents.Header.DataSchema);
         Assert.Null(cloudEvents.Header.Subject);
-
     }
 }

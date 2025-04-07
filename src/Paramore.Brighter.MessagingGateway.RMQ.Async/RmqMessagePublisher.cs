@@ -89,10 +89,12 @@ internal sealed class RmqMessagePublisher
     /// <param name="message">The message.</param>
     /// <param name="delay">The delay in ms. 0 is no delay. Defaults to 0</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> that cancels the Publish operation</param>
-    public async Task PublishMessageAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
+    public async Task PublishMessageAsync(Message message, TimeSpan? delay = null,
+        CancellationToken cancellationToken = default)
     {
-        if (_connection.Exchange is null) throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
-        
+        if (_connection.Exchange is null)
+            throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
+
         var messageId = message.Id;
         var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG)
             ? message.DeliveryTag.ToString()
@@ -100,10 +102,28 @@ internal sealed class RmqMessagePublisher
 
         var headers = new Dictionary<string, object?>
         {
-            { HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString() },
-            { HeaderNames.TOPIC, message.Header.Topic.Value },
-            { HeaderNames.HANDLED_COUNT, message.Header.HandledCount }
+            // Cloud event
+            [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId,
+            [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
+            [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
+            [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
+            [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRcf3339(),
+
+            // Brighter custom headers
+            [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
+            [HeaderNames.TOPIC] = message.Header.Topic.Value,
+            [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
         };
+
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+        {
+            headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject);
+        }
+
+        if (message.Header.DataSchema != null)
+        {
+            headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
+        }
 
         if (message.Header.CorrelationId != string.Empty)
             headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
@@ -141,7 +161,8 @@ internal sealed class RmqMessagePublisher
     /// <param name="queueName">The queue name.</param>
     /// <param name="timeOut">Delay. Set to TimeSpan.Zero for not delay</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> that cancels the requeue</param>
-    public async Task RequeueMessageAsync(Message message, ChannelName queueName, TimeSpan timeOut, CancellationToken cancellationToken = default)
+    public async Task RequeueMessageAsync(Message message, ChannelName queueName, TimeSpan timeOut,
+        CancellationToken cancellationToken = default)
     {
         var messageId = Guid.NewGuid().ToString();
         const string deliveryTag = "1";
@@ -152,10 +173,28 @@ internal sealed class RmqMessagePublisher
 
         var headers = new Dictionary<string, object?>
         {
-            { HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString() },
-            { HeaderNames.TOPIC, message.Header.Topic.Value },
-            { HeaderNames.HANDLED_COUNT, message.Header.HandledCount },
+            // Cloud event
+            [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId,
+            [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
+            [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
+            [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
+            [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRcf3339(),
+
+            // Brighter custom headers
+            [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
+            [HeaderNames.TOPIC] = message.Header.Topic.Value,
+            [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
         };
+        
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+        {
+            headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject);
+        }
+        
+        if (message.Header.DataSchema != null)
+        {
+            headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
+        }
 
         if (message.Header.CorrelationId != string.Empty)
             headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
@@ -196,16 +235,19 @@ internal sealed class RmqMessagePublisher
 
     private static BasicProperties CreateBasicProperties(
         string id,
-        DateTimeOffset timeStamp, 
+        DateTimeOffset timeStamp,
         string type,
         string contentType,
-        string replyTo, 
-        bool persistMessage, 
+        string replyTo,
+        bool persistMessage,
         IDictionary<string, object?>? headers = null)
     {
         var basicProperties = new BasicProperties
         {
-            DeliveryMode = persistMessage ? DeliveryModes.Persistent : DeliveryModes.Transient, // delivery mode set to 2 if message is persistent or 1 if non-persistent
+            DeliveryMode =
+                persistMessage
+                    ? DeliveryModes.Persistent
+                    : DeliveryModes.Transient, // delivery mode set to 2 if message is persistent or 1 if non-persistent
             ContentType = contentType,
             Type = type,
             MessageId = id,
@@ -224,7 +266,8 @@ internal sealed class RmqMessagePublisher
                 if (header.Value is not null && !IsAnAmqpType(header.Value))
                 {
                     throw new ConfigurationException(
-                        $"The value {header.Value} is type {header.Value.GetType()} for header {header.Key} value only supports the AMQP 0-8/0-9 standard entry types S, I, D, T and F, as well as the QPid-0-8 specific b, d, f, l, s, t, x and V types and the AMQP 0-9-1 A type.");}
+                        $"The value {header.Value} is type {header.Value.GetType()} for header {header.Key} value only supports the AMQP 0-8/0-9 standard entry types S, I, D, T and F, as well as the QPid-0-8 specific b, d, f, l, s, t, x and V types and the AMQP 0-9-1 A type.");
+                }
             }
 
             basicProperties.Headers = headers;

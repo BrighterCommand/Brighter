@@ -319,7 +319,7 @@ public class BrighterTracer : IAmABrighterTracer
     }
 
     /// <summary>
-    /// Creates a span for an archive operation. Because a sweeper may not create an externa bus, but just use the archiver directly, we
+    /// Creates a span for an archive operation. Because a sweeper may not create an external bus, but just use the archiver directly, we
     /// check for this existing and then recreate directly in the archive provider if it does not exist
     /// </summary>
     /// <param name="parentActivity">A parent activity that called this one</param>
@@ -399,13 +399,13 @@ public class BrighterTracer : IAmABrighterTracer
     } 
 
     /// <summary>
-    /// Create a span for an outbox operation
+    /// Create a span for an inbox or outbox operation
     /// </summary>
-    /// <param name="info">An <see cref="OutboxSpanInfo"/> with the attributes of the db operation</param>
+    /// <param name="info">An <see cref="BoxSpanInfo"/> with the attributes of the db operation</param>
     /// <param name="parentActivity">The parent <see cref="Activity"/>, if any, that we should assign to this span</param>
     /// <param name="options">The <see cref="InstrumentationOptions"/> that explain how deep should the instrumentation go?</param>
     /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
-    public Activity? CreateDbSpan(OutboxSpanInfo info, Activity? parentActivity, InstrumentationOptions options)
+    public Activity? CreateDbSpan(BoxSpanInfo info, Activity? parentActivity, InstrumentationOptions options)
     {
         var spanName = !string.IsNullOrEmpty(info.dbTable) 
             ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
@@ -576,14 +576,14 @@ public class BrighterTracer : IAmABrighterTracer
     /// This is generic and not specific details from a particular outbox and is thus mostly message properties
     /// NOTE: Events are static, as we only need the instance state to create an activity
     /// </summary>
-    /// <param name="operation">What <see cref="OutboxDbOperation"/> are we performing on the Outbox</param>
+    /// <param name="operation">What <see cref="BoxDbOperation"/> are we performing on the Outbox</param>
     /// <param name="message">What is the <see cref="Message"/> we want to write to the Outbox or have read from the Outbox</param>
     /// <param name="span">What is the parent <see cref="Activity"/> for this event</param>
     /// <param name="isSharedTransaction">Does this from part of a shared transaction with handler code?</param>
     /// <param name="isAsync">Is the handler writing async?</param>
     /// <param name="instrumentationOptions"> <see cref="InstrumentationOptions"/> for how verbose should our instrumentation be</param>
     public static void WriteOutboxEvent(
-        OutboxDbOperation operation, 
+        BoxDbOperation operation, 
         Message message, 
         Activity? span,
         bool isSharedTransaction, 
@@ -617,14 +617,14 @@ public class BrighterTracer : IAmABrighterTracer
     /// This is generic and not specific details from a particular outbox and is thus mostly message properties
     /// NOTE: Events are static, as we only need the instance state to create an activity
     /// </summary>
-    /// <param name="operation">What <see cref="OutboxDbOperation"/> are we performing on the group of messages</param>
+    /// <param name="operation">What <see cref="BoxDbOperation"/> are we performing on the group of messages</param>
     /// <param name="messages">The set of <see cref="Message"/>s we want to record the event for</param>
     /// <param name="span">The <see cref="Activity"/> we are adding the <see cref="ActivityEvent"/> to</param>
     /// <param name="isSharedTransaction">Are we using a shared transaction with the application to write to the Outbox</param>
     /// <param name="isAsync">Is this an async operation</param>
     /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
     public static void WriteOutboxEvent(
-        OutboxDbOperation operation, 
+        BoxDbOperation operation, 
         IEnumerable<Message> messages, 
         Activity? span, 
         bool isSharedTransaction, 

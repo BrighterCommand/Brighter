@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             await _commandProcessor.SendAsync(@event);
 
             //assert we are in, and auto-context added us under our name
-            var boxed = await _inbox.ExistsAsync<MyCommand>(@event.Id, typeof(MyEventHandlerAsync).FullName, 100);
+            var boxed = await _inbox.ExistsAsync<MyCommand>(@event.Id, typeof(MyEventHandlerAsync).FullName, null, 100);
             Assert.True(boxed);
         }
 

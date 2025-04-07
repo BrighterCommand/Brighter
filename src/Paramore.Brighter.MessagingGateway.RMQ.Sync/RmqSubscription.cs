@@ -28,7 +28,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     public class RmqSubscription : Subscription
     {
-
         /// <summary>
         /// The name of  the queue to send rejects messages to
         /// </summary>
@@ -63,6 +62,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// A null value, the default, is infinite
         /// </summary>
         public TimeSpan? Ttl { get; }
+        
+        /// <inheritdoc />
+        public override Type ChannelFactoryType => typeof(ChannelFactory); 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.

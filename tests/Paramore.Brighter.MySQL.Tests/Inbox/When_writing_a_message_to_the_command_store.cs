@@ -46,13 +46,13 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
             _mysqlInbox = new MySqlInbox(_mysqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "test-context";
-            _mysqlInbox.Add(_raisedCommand, _contextKey);
+            _mysqlInbox.Add(_raisedCommand, _contextKey, null, -1);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Inbox()
         {
-            _storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
+            _storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null, -1);
 
             //_should_read_the_command_from_the__sql_inbox
             Assert.NotNull(_storedCommand);
