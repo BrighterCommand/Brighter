@@ -14,7 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// The <see cref="MQTTMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles subscription establishment, request sending and error handling
     /// </summary>
-    public partial class MQTTMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, IAmAMessageProducerSync
+    public class MQTTMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, IAmAMessageProducerSync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageProducer>();
         
@@ -91,9 +91,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 return;
             }
             
+            // delay is not natively supported
             if (message == null)
             {
-                Log.MessageIsNull(s_logger);
                 throw new ArgumentNullException(nameof(message));
             }
             
@@ -118,18 +118,10 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             
             if (message == null)
             {
-                Log.MessageIsNull(s_logger);
                 throw new ArgumentNullException(nameof(message));
             }
 
             await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
         }
-
-        private static partial class Log
-        {
-            [LoggerMessage(LogLevel.Error, "Message is null")]
-            public static partial void MessageIsNull(ILogger logger);
-        }
     }
 }
-
