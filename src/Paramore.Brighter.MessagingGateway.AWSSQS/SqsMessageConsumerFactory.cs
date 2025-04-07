@@ -58,10 +58,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             SqsSubscription? sqsSubscription = subscription as SqsSubscription;
             if (sqsSubscription == null) throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+
+            //if it is a url, don't alter; if it is just a name, ensure it is valid
+            ChannelName queueName = subscription.ChannelName;
+            if (sqsSubscription.FindQueueBy == QueueFindBy.Name)    
+               queueName =queueName.ToValidSQSQueueName(sqsSubscription.QueueAttributes.Type == SqsType.Fifo);
             
             return new SqsMessageConsumer(
                 awsConnection: _awsConnection, 
-                queueName: subscription.ChannelName.ToValidSQSQueueName(sqsSubscription.QueueAttributes.Type == SqsType.Fifo), 
+                queueName: queueName, 
+                isQueueUrl: (sqsSubscription.FindQueueBy == QueueFindBy.Url),   
                 batchSize: subscription.BufferSize,
                 hasDlq: sqsSubscription.QueueAttributes.RedrivePolicy == null,
                 rawMessageDelivery: sqsSubscription.QueueAttributes.RawMessageDelivery

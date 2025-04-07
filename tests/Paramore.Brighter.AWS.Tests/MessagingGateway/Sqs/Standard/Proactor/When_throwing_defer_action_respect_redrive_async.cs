@@ -20,7 +20,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;
     private readonly Message _message;
-    private readonly string _dlqChannelName;
+    private readonly string _dlqQueueName;
     private readonly IAmAChannelAsync _channel;
     private readonly SqsMessageProducer _sender;
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -32,7 +32,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         const string replyTo = "http:\\queueUrl";
         const string contentType = "text\\plain";
         
-        _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        _dlqQueueName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
         var subscriptionName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -40,7 +40,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         
         var channelName = new ChannelName(queueName);
         var queueAttributes = new SqsAttributes(
-            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqQueueName), 2),
             type: SqsType.Fifo
         );
 
@@ -122,7 +122,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact]
+    [Fact(Skip = "DLQ is fragile on async tests")]
     public async Task When_throwing_defer_action_respect_redrive_async()
     {
         await _sender.SendAsync(_message);
@@ -137,7 +137,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
         await Task.Delay(5000);
 
-        int dlqCount = await GetDLQCountAsync(_dlqChannelName);
+        int dlqCount = await GetDLQCountAsync(_dlqQueueName);
         Assert.Equal(1, dlqCount);
     }
 

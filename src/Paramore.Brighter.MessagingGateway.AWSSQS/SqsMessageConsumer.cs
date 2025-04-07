@@ -58,12 +58,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="queueName">The name of the SQS Queue</param>
         /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
         /// <param name="hasDlq">Do we have a DLQ attached to this queue?</param>
+        /// <param name="isQueueUrl">Is the queue name a queue url?</param>
         /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
         public SqsMessageConsumer(
             AWSMessagingGatewayConnection awsConnection,
             string? queueName,
             int batchSize = 1,
             bool hasDlq = false,
+            bool isQueueUrl = false,
             bool rawMessageDelivery = true)
         {
             if (string.IsNullOrEmpty(queueName))
@@ -71,6 +73,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             _clientFactory = new AWSClientFactory(awsConnection);
             _queueName = queueName!;
+            if (isQueueUrl)
+                _channelUrl = queueName;
             _batchSize = batchSize;
             _hasDlq = hasDlq;
             _rawMessageDelivery = rawMessageDelivery;

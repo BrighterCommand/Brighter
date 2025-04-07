@@ -25,8 +25,14 @@ public class ValidateQueueByName : IValidateQueue, IDisposable
         _client = client;
         _type = type;
     }
-
-    /// <inheritdoc cref="IValidateQueue.ValidateAsync"/>
+    
+    /// <summary>
+    /// Validates that a queue exists by name.
+    /// We use the GetQueueUrlAsync method to check if the queue exists.
+    /// </summary>
+    /// <param name="queue">The name of the queue</param>
+    /// <param name="cancellationToken">Cancels the ongoing operation</param>
+    /// <returns></returns>
     public async Task<(bool, string?)> ValidateAsync(string queue, CancellationToken cancellationToken = default)
     {
         try

@@ -31,7 +31,6 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
 
         var channelName = new ChannelName(queueName);
         
-        
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
@@ -65,7 +64,10 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: new ChannelName(queueUrl), makeChannels: OnMissingChannel.Validate) 
+            new SqsPublication(
+                channelName: new ChannelName(queueUrl), 
+                findQueueBy: QueueFindBy.Url,
+                makeChannels: OnMissingChannel.Validate) 
         );
       
 
