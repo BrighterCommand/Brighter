@@ -36,7 +36,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var queueAttributes = new SqsAttributes(
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
             type: SqsType.Fifo
             );
 

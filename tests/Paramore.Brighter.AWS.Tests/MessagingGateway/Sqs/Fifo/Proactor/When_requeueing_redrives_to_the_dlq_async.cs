@@ -34,7 +34,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(queueName);
 
         var queueAttributes = new SqsAttributes(
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
             type: SqsType.Fifo);
 
         var channelName = new ChannelName(queueName);

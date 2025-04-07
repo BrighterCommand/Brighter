@@ -55,7 +55,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
            queueAttributes: queueAttributes 
         );
 
-        var myCommand = new MyDeferredCommand { Value = "Hello Redrive", Id = Guid.NewGuid().ToString() };
+        var myCommand = new MyDeferredCommand { Value = "Hello Redrive", GroupId = Guid.NewGuid().ToString() };
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: myCommand.GroupId),

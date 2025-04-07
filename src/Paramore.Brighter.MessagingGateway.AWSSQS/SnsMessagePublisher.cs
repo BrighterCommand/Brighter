@@ -80,7 +80,6 @@ public class SnsMessagePublisher
             };
         }
         
-        
         if (_sqsType == SqsType.Fifo)
         {
             publishRequest.MessageGroupId = message.Header.PartitionKey;

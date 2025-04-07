@@ -43,10 +43,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="deadLetterQueueName">The name of any dead letter queue used by a redrive policy</param>
         /// <param name="maxReceiveCount">The maximum number of retries before we push to a DLQ</param>
-        public RedrivePolicy(string deadLetterQueueName, int maxReceiveCount)
+        public RedrivePolicy(ChannelName deadLetterQueueName, int maxReceiveCount)
         {
             MaxReceiveCount = maxReceiveCount;
-            DeadlLetterQueueName = new ChannelName(deadLetterQueueName);
+            DeadlLetterQueueName = deadLetterQueueName;
         }
     }
 }
