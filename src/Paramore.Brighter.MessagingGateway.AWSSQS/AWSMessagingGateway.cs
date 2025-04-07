@@ -343,10 +343,13 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
     {
         if (!isDLQ && sqsAttributes.RedrivePolicy != null)
         {
-            var policy = new { maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount, deadLetterTargetArn = ChannelDeadLetterQueueArn };
+            var policy = new
+            {
+                maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount, 
+                deadLetterTargetArn = ChannelDeadLetterQueueArn
+            };
 
-            attributes.Add(QueueAttributeName.RedrivePolicy,
-                JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
+            attributes.Add(QueueAttributeName.RedrivePolicy, JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
         }
 
         attributes.Add(QueueAttributeName.DelaySeconds, Convert.ToString(Convert.ToInt32(sqsAttributes.DelaySeconds.TotalSeconds)));

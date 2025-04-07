@@ -65,7 +65,7 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
             new SqsPublication
             {
                 Topic = routingKey,
-                QueueUrl= queueUrl,
+                ChannelName= new ChannelName(queueUrl),
                 FindQueueBy = QueueFindBy.Url,
                 MakeChannels = OnMissingChannel.Validate
             });

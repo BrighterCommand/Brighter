@@ -59,10 +59,9 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
         _messageProducer = new SqsMessageProducer(
             awsConnection,
             new SqsPublication(
-                channelName: channelName,
+                channelName: new ChannelName(queueUrl),
                 queueAttributes: queueAttributes,
                 findQueueBy: QueueFindBy.Url,
-                queueUrl: queueUrl,
                 makeChannels: OnMissingChannel.Validate
                 )
             );

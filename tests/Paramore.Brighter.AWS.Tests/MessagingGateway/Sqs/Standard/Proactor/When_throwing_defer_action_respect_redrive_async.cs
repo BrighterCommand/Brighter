@@ -105,7 +105,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
     private async Task<int> GetDLQCountAsync(string queueName)
     {
         using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
-        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName);
+        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName.ToValidSQSQueueName(true));
         var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {
             QueueUrl = queueUrlResponse.QueueUrl,

@@ -62,11 +62,13 @@ public class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProducerAsync,
         : base(connection)
     {
         _publication = publication ?? throw new ArgumentNullException(nameof(publication));
+        if (_publication.ChannelName is null) 
+            throw new InvalidOperationException($"We must have a valid Channel Name on the Publication, either a queue name or a Url");
         _clientFactory = new AWSClientFactory(connection);
 
-        if (publication.QueueUrl != null)
+        if (publication.FindQueueBy == QueueFindBy.Url)
         {
-            ChannelQueueUrl = publication.QueueUrl;
+            ChannelQueueUrl = publication.ChannelName!.Value;
         }
     }
 
@@ -102,21 +104,12 @@ public class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProducerAsync,
         
         if (_publication is null)
             throw new ConfigurationException("No publication specified for producer");
-
-        string? queueName = _publication.FindQueueBy switch
-        {
-            QueueFindBy.Url when _publication.QueueUrl is not null => _publication.QueueUrl,
-            QueueFindBy.Url => throw new ConfigurationException("If you use QueueFindBy.QueueUrl, you must supply the QueueUrl on the Publication"),
-            QueueFindBy.Name when _publication.ChannelName is not null => _publication.ChannelName,
-            QueueFindBy.Name  => throw new ConfigurationException("The publication must provide a Channel Name, with the name of the queue"),
-            _ => null
-        };
-
-        if (queueName is null)
-            throw new ConfigurationException("No queue specified for producer");
+        
+        if (_publication.ChannelName is null)
+            throw new ConfigurationException("No channel name specified for publication");
 
         var queueUrl = await EnsureQueueAsync(
-            queueName!,
+            _publication.ChannelName!,
             _publication.ChannelType,
             _publication.FindQueueBy,
             _publication.QueueAttributes,
