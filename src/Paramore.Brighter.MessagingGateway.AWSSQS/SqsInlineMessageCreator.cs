@@ -33,7 +33,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-internal sealed class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
+internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
 
@@ -108,7 +108,7 @@ internal sealed class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessa
         }
         catch (Exception e)
         {
-            s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
+            Log.FailedToCreateMessageFromAwsSqsMessage(s_logger, e);
             message = FailureMessage(topic, messageId);
         }
 
@@ -130,7 +130,7 @@ internal sealed class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessa
         }
         catch (Exception ex)
         {
-            s_logger.LogWarning(ex, "Failed while deserializing Sqs Message body");
+            Log.FailedWhileDeserializingSqsMessageBody(s_logger, ex);
         }
 
         return messageAttributes ?? new Dictionary<string, JsonElement>();
@@ -338,7 +338,7 @@ internal sealed class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessa
           }
           catch (Exception ex)
           {
-              s_logger.LogWarning(ex, "Failed to parse Sqs Message Body to valid Json Document");
+              Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
           }
 
           return new HeaderResult<string?>(null, true);
@@ -355,7 +355,7 @@ internal sealed class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessa
         }
         catch (Exception ex)
         {
-            s_logger.LogWarning(ex,"Failed to parse Sqs Message Body to valid Json Document");
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
         }
 
         return new MessageBody(string.Empty);
@@ -382,4 +382,18 @@ internal sealed class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessa
 
         return new HeaderResult<string>(string.Empty, false);
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Failed to create message from Aws Sqs message")]
+        public static partial void FailedToCreateMessageFromAwsSqsMessage(ILogger logger, Exception ex);
+
+        [LoggerMessage(LogLevel.Warning, "Failed while deserializing Sqs Message body")]
+        public static partial void FailedWhileDeserializingSqsMessageBody(ILogger logger, Exception ex);
+        
+        [LoggerMessage(LogLevel.Warning, "Failed to parse Sqs Message Body to valid Json Document")]
+        public static partial void FailedToParseSqsMessageBodyToValidJsonDocument(ILogger logger, Exception ex);
+
+    }
 }
+

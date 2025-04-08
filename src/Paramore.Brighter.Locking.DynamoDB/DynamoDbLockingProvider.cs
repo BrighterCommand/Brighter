@@ -27,7 +27,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Locking.DynamoDb
 {
-    public class DynamoDbLockingProvider : IDistributedLock
+    public partial class DynamoDbLockingProvider : IDistributedLock
     {
         private readonly IAmazonDynamoDB _dynamoDb;
         private readonly DynamoDbLockingProviderOptions _options;
@@ -63,11 +63,11 @@ namespace Paramore.Brighter.Locking.DynamoDb
             }
             catch (ConditionalCheckFailedException)
             {
-                s_logger.LogInformation("Unable to obtain lock for resource {resource}, an existing lock is in place", resource);
+                Log.UnableToObtainLockForResource(s_logger, resource);
                 return null;
             }
 
-            s_logger.LogInformation("Obtained lock {lockId} for resource {resource}", lockId, resource);
+            Log.ObtainedLockForResource(s_logger, lockId, resource);
             return lockId;
         }
 
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Locking.DynamoDb
                 }
                 catch (ConditionalCheckFailedException)
                 {
-                    s_logger.LogInformation("Unable to release lock {lockId} for resource {resourceId} - lock has expired", lockId, resource);
+                    Log.UnableToReleaseLockForResource(s_logger, lockId, resource);
                 }
             }
         }
@@ -141,5 +141,18 @@ namespace Paramore.Brighter.Locking.DynamoDb
                 }
             };
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Unable to obtain lock for resource {Resource}, an existing lock is in place")]
+            public static partial void UnableToObtainLockForResource(ILogger logger, string resource);
+
+            [LoggerMessage(LogLevel.Information, "Obtained lock {LockId} for resource {Resource}")]
+            public static partial void ObtainedLockForResource(ILogger logger, string lockId, string resource);
+
+            [LoggerMessage(LogLevel.Information, "Unable to release lock {LockId} for resource {ResourceId} - lock has expired")]
+            public static partial void UnableToReleaseLockForResource(ILogger logger, string lockId, string resourceId);
+        }
     }
 }
+
