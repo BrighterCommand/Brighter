@@ -14,7 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// <summary>
     /// Class MqttMessagePublisher .
     /// </summary>
-    public class MqttMessagePublisher
+    public partial class MqttMessagePublisher
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageProducer>();
         private readonly MqttMessagingGatewayConfiguration _config;
@@ -132,4 +132,3 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         }
     }
 }
-

@@ -17,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// The <see cref="MqttMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
     /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching.
     /// </summary>
-    public class MqttMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class MqttMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private readonly string _topic;
         private readonly Queue<Message> _messageQueue = new();
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             {
                 s_logger.LogTrace("MqttMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
                 var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.PayloadSegment.ToArray(), JsonSerialisationOptions.Options);
-             
+
                 _messageQueue.Enqueue(message);
                 return Task.CompletedTask;
             };
@@ -240,7 +240,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             [LoggerMessage(LogLevel.Information, "Subscribed to {Topic}")]
             public static partial void SubscribedToTopic(ILogger logger, string topic);
-            
+
             [LoggerMessage(LogLevel.Error, "Unable to connect MQTT Consumer Client")]
             public static partial void UnableToConnectMqttConsumerClient(ILogger logger);
         }
