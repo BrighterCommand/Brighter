@@ -1,4 +1,4 @@
-# 24. Scoping dependencies inline with lifetime scope
+# 24. Scheduling Requests and Messages
 
 Date: 2025-01-20
 
