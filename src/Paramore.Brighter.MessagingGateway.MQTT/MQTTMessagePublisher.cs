@@ -121,5 +121,15 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 }
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Connected to {Hostname}")]
+            public static partial void ConnectedToHost(ILogger logger, string hostname);
+
+            [LoggerMessage(LogLevel.Error, "Unable to connect to {Hostname}")]
+            public static partial void UnableToConnectToHost(ILogger logger, string hostname);
+        }
     }
 }
+
