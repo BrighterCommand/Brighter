@@ -112,23 +112,23 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 try
                 {
                     await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
-                    s_logger.LogInformation($"Connected to {_config.Hostname}:{_config.Port}");
+                    Log.ConnectedToHost(s_logger, _config.Hostname, _config.Port);
                     return;
                 }
                 catch (Exception)
                 {
-                    s_logger.LogError($"Unable to connect to {_config.Hostname}:{_config.Port}");
+                    Log.ConnectedToHost(s_logger, _config.Hostname, _config.Port);
                 }
             }
         }
 
         private static partial class Log
         {
-            [LoggerMessage(LogLevel.Information, "Connected to {Hostname}")]
-            public static partial void ConnectedToHost(ILogger logger, string hostname);
+            [LoggerMessage(LogLevel.Information, "Connected to {Hostname}:{Port}")]
+            public static partial void ConnectedToHost(ILogger logger, string hostname, int port);
 
-            [LoggerMessage(LogLevel.Error, "Unable to connect to {Hostname}")]
-            public static partial void UnableToConnectToHost(ILogger logger, string hostname);
+            [LoggerMessage(LogLevel.Error, "Unable to connect to {Hostname}:{Port}")]
+            public static partial void UnableToConnectToHost(ILogger logger, string hostname, int port);
         }
     }
 }

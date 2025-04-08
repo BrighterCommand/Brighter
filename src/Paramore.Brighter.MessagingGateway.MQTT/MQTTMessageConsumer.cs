@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             _mqttClient.ApplicationMessageReceivedAsync += e =>
             {
-                s_logger.LogTrace("MqttMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
+                Log.MqttMessageConsumerReceivedMessage(s_logger, configuration.TopicPrefix);
                 var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.PayloadSegment.ToArray(), JsonSerialisationOptions.Options);
 
                 _messageQueue.Enqueue(message);
@@ -158,7 +158,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     }
                     catch (TimeoutException te)
                     {
-                        s_logger.LogWarning(te, "MqttMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}", _messageQueue.Count);
+                        Log.MqttMessageConsumerTimedOutRetrievingMessages(s_logger, te, _messageQueue.Count);
                     }
                 }
             }
@@ -222,18 +222,18 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 }
                 catch (Exception ex)
                 {
-                    s_logger.LogError(ex, "Unable to connect MQTT Consumer Client");
+                    Log.UnableToConnectMqttConsumerClient(s_logger, ex);
                 }
             }
         }
 
         private static partial class Log
         {
-            [LoggerMessage(LogLevel.Information, "MQTTMessageConsumer: Received message from queue {TopicPrefix}")]
+            [LoggerMessage(LogLevel.Trace, "MQTTMessageConsumer: Received message from queue {TopicPrefix}")]
             public static partial void MqttMessageConsumerReceivedMessage(ILogger logger, object topicPrefix);
 
-            [LoggerMessage(LogLevel.Warning, "MQTTMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}")]
-            public static partial void MqttMessageConsumerTimedOutRetrievingMessages(ILogger logger, int queueLength);
+            [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}")]
+            public static partial void MqttMessageConsumerTimedOutRetrievingMessages(ILogger logger, Exception ex, int queueLength);
 
             [LoggerMessage(LogLevel.Information, "MQTT Consumer Client Connected")]
             public static partial void MqttConsumerClientConnected(ILogger logger);
@@ -241,8 +241,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             [LoggerMessage(LogLevel.Information, "Subscribed to {Topic}")]
             public static partial void SubscribedToTopic(ILogger logger, string topic);
 
-            [LoggerMessage(LogLevel.Error, "Unable to connect MQTT Consumer Client")]
-            public static partial void UnableToConnectMqttConsumerClient(ILogger logger);
+            [LoggerMessage(Level = LogLevel.Error, Message = "Unable to connect MQTT Consumer Client")]
+            public static partial void UnableToConnectMqttConsumerClient(ILogger logger, Exception ex);
         }
     }
 }
