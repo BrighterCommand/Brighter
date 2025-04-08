@@ -1,16 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Amazon.Scheduler;
-using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.AWSScheduler.Tests.Helpers;
+using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.Scheduler.Events;
-using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.Scheduler.Requests.Sqs;
+namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Requests.Sqs;
 
 [Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
 [Collection("Scheduler SQS")]
@@ -89,12 +84,12 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
                 Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);
-                Assert.True(messages[0].Body.Value.Any());
+                Assert.True(Enumerable.Any<char>(messages[0].Body.Value));
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
-                Assert.NotNull(m);
+                Assert.NotNull((object?)m);
                 Assert.Equivalent(message, m.Message);
-                Assert.True(m.Async);
+                Assert.True((bool)m.Async);
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }

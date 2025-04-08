@@ -1,18 +1,13 @@
-﻿using System;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Paramore.Brighter.AWS.Tests.Helpers;
+﻿using Paramore.Brighter.AWSScheduler.Tests.Helpers;
+using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.Scheduler.Events;
-using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.Scheduler.Messages.Sns;
+namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Messages.Sns;
 
 [Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
 [Collection("Scheduler SNS")]
-public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
+public class SnsSchedulingMessageTest : IDisposable
 {
     private const string ContentType = "text\\plain";
     private const int BufferSize = 3;
@@ -22,17 +17,17 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly IAmAMessageSchedulerFactory _factory;
 
-    public SnsSchedulingMessageViaFireSchedulerAsyncTest()
+    public SnsSchedulingMessageTest()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
         _channelFactory = new ChannelFactory(awsConnection);
         //we need the channel to create the queues and notifications
-        _topicName = $"Producer-Fire-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var channelName = $"Producer-Fire-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        _topicName = $"Producer-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var channelName = $"Producer-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_topicName);
 
-        var channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<FireSchedulerMessage>(
+        var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
@@ -43,8 +38,8 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
-        _messageProducer =
-            new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SnsMessageProducer(awsConnection,
+            new SnsPublication { MakeChannels = OnMissingChannel.Create });
 
         // Enforce topic to be created
         _messageProducer.Send(new Message(
@@ -52,16 +47,17 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
                 correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
             new MessageBody("test content one")
         ));
+
         _consumer.Purge();
 
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
-            UseMessageTopicAsTarget = false, MakeRole = OnMissingRole.Create, SchedulerTopicOrQueue = routingKey
+            UseMessageTopicAsTarget = true, MakeRole = OnMissingRole.Create
         };
     }
 
     [Fact]
-    public async Task When_Scheduling_A_Sns_Message_Async()
+    public void When_Scheduling_A_Sns_Message()
     {
         var routingKey = new RoutingKey(_topicName);
         var message = new Message(
@@ -70,31 +66,27 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
             new MessageBody("test content one")
         );
 
-        var scheduler = (IAmAMessageSchedulerAsync)_factory.Create(null!);
-        await scheduler.ScheduleAsync(message, TimeSpan.FromMinutes(1));
+        var scheduler = (IAmAMessageSchedulerSync)_factory.Create(null!);
+        scheduler.Schedule(message, TimeSpan.FromMinutes(1));
 
-        await Task.Delay(TimeSpan.FromMinutes(1));
-        
+        Thread.Sleep(TimeSpan.FromMinutes(1));
+
         var stopAt = DateTimeOffset.UtcNow.AddMinutes(2);
         while (stopAt > DateTimeOffset.UtcNow)
         {
-            var messages = await _consumer.ReceiveAsync();
+            var messages = _consumer.Receive();
             Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);
-                Assert.True(messages[0].Body.Value.Any());
-                var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
-                    JsonSerialisationOptions.Options);
-                Assert.NotNull(m);
-                Assert.Equivalent(message, m.Message);
-                Assert.True(m.Async);
-                await _consumer.AcknowledgeAsync(messages[0]);
+                Assert.Equal(message.Header.MessageType, messages[0].Header.MessageType);
+                Assert.Equal((string?)message.Body.Value, (string?)messages[0].Body.Value);
+                Assert.Equivalent(message.Header, messages[0].Header);
+                _consumer.Acknowledge(messages[0]);
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            Thread.Sleep(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");

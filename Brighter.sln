@@ -377,6 +377,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\Transf
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\Transforms\AWSTransfomers\CloudEvents\GreetingsSender\GreetingsSender.csproj", "{01EEF2C9-2573-4EFD-B3D9-C3CC5CDA42A6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.AWSScheduler.Tests", "tests\Paramore.Brighter.AWSScheduler.Tests\Paramore.Brighter.AWSScheduler.Tests.csproj", "{5D1A6569-01D7-4A3A-9904-25D53BE70008}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -2139,6 +2141,18 @@ Global
 		{01EEF2C9-2573-4EFD-B3D9-C3CC5CDA42A6}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{01EEF2C9-2573-4EFD-B3D9-C3CC5CDA42A6}.Release|x86.ActiveCfg = Release|Any CPU
 		{01EEF2C9-2573-4EFD-B3D9-C3CC5CDA42A6}.Release|x86.Build.0 = Release|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Debug|x86.Build.0 = Debug|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Release|x86.ActiveCfg = Release|Any CPU
+		{5D1A6569-01D7-4A3A-9904-25D53BE70008}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,19 +1,13 @@
-﻿using System;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.AWS.Tests.TestDoubles;
+﻿using Paramore.Brighter.AWSScheduler.Tests.Helpers;
+using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.Scheduler.Events;
-using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.Scheduler.Messages.Sqs;
+namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Messages.Sqs;
 
 [Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
 [Collection("Scheduler SQS")]
-public class SqsSchedulingAsyncMessageViaFireSchedulerTest : IAsyncDisposable
+public class SqsSchedulingAsyncMessageTest : IAsyncDisposable
 {
     private const string ContentType = "text\\plain";
     private const int BufferSize = 3;
@@ -23,7 +17,7 @@ public class SqsSchedulingAsyncMessageViaFireSchedulerTest : IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly IAmAMessageSchedulerFactory _factory;
 
-    public SqsSchedulingAsyncMessageViaFireSchedulerTest()
+    public SqsSchedulingAsyncMessageTest()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
@@ -47,14 +41,12 @@ public class SqsSchedulingAsyncMessageViaFireSchedulerTest : IAsyncDisposable
 
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
-            UseMessageTopicAsTarget = false,
-            MakeRole = OnMissingRole.Create, 
-            SchedulerTopicOrQueue = routingKey
+            UseMessageTopicAsTarget = true
         };
     }
 
     [Fact]
-    public async Task When_Scheduling_A_Sqs_Message_Via_FireScheduler_Async()
+    public async Task When_Scheduling_A_Sqs_Message_Async()
     {
         var routingKey = new RoutingKey(_queueName);
         var message = new Message(
@@ -76,13 +68,8 @@ public class SqsSchedulingAsyncMessageViaFireSchedulerTest : IAsyncDisposable
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);
-                Assert.True(messages[0].Body.Value.Any());
-                var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
-                    JsonSerialisationOptions.Options);
-                Assert.NotNull(m);
-                Assert.Equivalent(message, m.Message);
-                Assert.True(m.Async);
+                Assert.Equal((string?)message.Body.Value, (string?)messages[0].Body.Value);
+                Assert.Equivalent(message.Header, messages[0].Header);
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }

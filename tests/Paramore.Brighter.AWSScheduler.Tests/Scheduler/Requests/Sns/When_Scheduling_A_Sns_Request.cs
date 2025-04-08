@@ -1,21 +1,17 @@
-﻿using System;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
-using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.AWSScheduler.Tests.Helpers;
+using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Scheduler.Events;
-using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.Scheduler.Requests.Sns;
+namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Requests.Sns;
 
 [Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
 [Collection("Scheduler SNS")]
-public class SnsSchedulingRequestAsyncTest : IDisposable
+public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
 {
     private const string ContentType = "text\\plain";
     private const int BufferSize = 3;
@@ -25,14 +21,14 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
     private readonly AwsSchedulerFactory _factory;
     private readonly IAmazonScheduler _scheduler;
 
-    public SnsSchedulingRequestAsyncTest()
+    public SnsSchedulingMessageViaFireSchedulerRequestTest()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
         _channelFactory = new ChannelFactory(awsConnection);
         //we need the channel to create the queues and notifications
-        string topicName = $"Producer-FSRA-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var channelName = $"Producer-FSRA-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        string topicName = $"Producer-FSR-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var channelName = $"Producer-FSR-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<FireSchedulerMessage>(
@@ -69,13 +65,13 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
     [InlineData(RequestSchedulerType.Send)]
     [InlineData(RequestSchedulerType.Post)]
     [InlineData(RequestSchedulerType.Publish)]
-    public async Task When_Scheduling_A_Sns_Request_With_Delay_Async(RequestSchedulerType schedulerType)
+    public async Task When_Scheduling_A_Sns_Request_With_Delay(RequestSchedulerType schedulerType)
     {
         var command = new MyCommand();
 
-        var scheduler = _factory.CreateAsync(null!);
-        var id = await scheduler.ScheduleAsync(command, schedulerType, TimeSpan.FromMinutes(1));
-        Assert.True(id.Any());
+        var scheduler = _factory.CreateSync(null!);
+        var id = scheduler.Schedule(command, schedulerType, TimeSpan.FromMinutes(1));
+        Assert.True(Enumerable.Any<char>(id));
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);
@@ -85,20 +81,20 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
         var stopAt = DateTimeOffset.UtcNow.AddMinutes(2);
         while (stopAt > DateTimeOffset.UtcNow)
         {
-            var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
+            var messages = _consumer.Receive(TimeSpan.FromMinutes(1));
             Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
                 Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);
-                Assert.True((messages[0].Body.Value)?.Any());
+                Assert.True((bool?)(messages[0].Body.Value)?.Any());
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
-                Assert.NotNull(m);
+                Assert.NotNull((object?)m);
                 Assert.Equal(schedulerType, m.SchedulerType);
-                Assert.Equal(typeof(MyCommand).FullName, m.RequestType);
-                Assert.True(m.Async);
-                await _consumer.AcknowledgeAsync(messages[0]);
+                Assert.Equal(typeof(MyCommand).FullName, (string?)m.RequestType);
+                Assert.False((bool)m.Async);
+                _consumer.Acknowledge(messages[0]);
                 return;
             }
 
@@ -112,14 +108,12 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
     [InlineData(RequestSchedulerType.Send)]
     [InlineData(RequestSchedulerType.Post)]
     [InlineData(RequestSchedulerType.Publish)]
-    public async Task When_Scheduling_A_Sns_Request_With_SpecificDateTimeOffset_Async(
-        RequestSchedulerType schedulerType)
+    public async Task When_Scheduling_A_Sns_Request_With_SpecificDateTime(RequestSchedulerType schedulerType)
     {
         var command = new MyCommand();
 
-        var scheduler = _factory.CreateAsync(null!);
-        var id = await scheduler.ScheduleAsync(command, schedulerType,
-            DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(1)));
+        var scheduler = _factory.CreateSync(null!);
+        var id = scheduler.Schedule(command, schedulerType, DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(1)));
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);
@@ -127,20 +121,21 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
         var stopAt = DateTimeOffset.UtcNow.AddMinutes(2);
         while (stopAt > DateTimeOffset.UtcNow)
         {
-            var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
+            var messages = _consumer.Receive(TimeSpan.FromMinutes(1));
+            
             Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
                 Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);
-                Assert.True((messages[0].Body.Value)?.Any());
+                Assert.True((bool?)(messages[0].Body.Value)?.Any());
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
-                Assert.NotNull(m);
+                Assert.NotNull((object?)m);
                 Assert.Equal(schedulerType, m.SchedulerType);
-                Assert.Equal(typeof(MyCommand).FullName, m.RequestType);
-                Assert.True(m.Async);
-                await _consumer.AcknowledgeAsync(messages[0]);
+                Assert.Equal(typeof(MyCommand).FullName, (string?)m.RequestType);
+                Assert.False((bool)m.Async);
+                _consumer.Acknowledge(messages[0]);
                 return;
             }
 
@@ -154,18 +149,18 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
     [InlineData(RequestSchedulerType.Send)]
     [InlineData(RequestSchedulerType.Post)]
     [InlineData(RequestSchedulerType.Publish)]
-    public async Task When_Rescheduling_A_Sns_Request_With_Delay_Async(RequestSchedulerType schedulerType)
+    public async Task When_Rescheduling_A_Sns_Request_With_Delay(RequestSchedulerType schedulerType)
     {
         var command = new MyCommand();
 
-        var scheduler = _factory.CreateAsync(null!);
-        var id = await scheduler.ScheduleAsync(command, schedulerType, TimeSpan.FromMinutes(1));
-        Assert.True(id.Any());
+        var scheduler = _factory.CreateSync(null!);
+        var id = scheduler.Schedule(command, schedulerType, TimeSpan.FromMinutes(1));
+        Assert.True((bool?)(id)?.Any());
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);
 
-        Assert.True((await scheduler.ReSchedulerAsync(id, TimeSpan.FromMinutes(2))));
+        Assert.True((bool)scheduler.ReScheduler(id, TimeSpan.FromMinutes(2)));
 
         var awsReScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsReScheduler);
@@ -178,20 +173,18 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
     [InlineData(RequestSchedulerType.Send)]
     [InlineData(RequestSchedulerType.Post)]
     [InlineData(RequestSchedulerType.Publish)]
-    public async Task When_Rescheduling_A_Sns_Request_With_SpecificDateTimeOffset_Async(
-        RequestSchedulerType schedulerType)
+    public async Task When_Rescheduling_A_Sns_Request_With_SpecificDateTimeOffset(RequestSchedulerType schedulerType)
     {
         var command = new MyCommand();
 
-        var scheduler = _factory.CreateAsync(null!);
-        var id = await scheduler.ScheduleAsync(command, schedulerType,
-            DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(1)));
-        Assert.True((id)?.Any());
+        var scheduler = _factory.CreateSync(null!);
+        var id = scheduler.Schedule(command, schedulerType, DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(1)));
+        Assert.True((bool?)(id)?.Any());
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);
 
-        Assert.True((await scheduler.ReSchedulerAsync(id, DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(2)))));
+        Assert.True((bool)scheduler.ReScheduler(id, DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(2))));
 
         var awsReScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsReScheduler);
@@ -201,31 +194,30 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
     }
 
     [Fact]
-    public async Task When_Rescheduling_A_Sns_Request_That_Not_Exists_Async()
+    public void When_Rescheduling_A_Sns_Request_That_Not_Exists()
     {
-        var scheduler = _factory.CreateAsync(null!);
-        Assert.False((await scheduler.ReSchedulerAsync(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddHours(1))));
+        var scheduler = _factory.CreateSync(null!);
+        Assert.False((bool)scheduler.ReScheduler(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddHours(1)));
 
-        Assert.False((await scheduler.ReSchedulerAsync(Guid.NewGuid().ToString("N"), TimeSpan.FromMinutes(1))));
+        Assert.False((bool)scheduler.ReScheduler(Guid.NewGuid().ToString("N"), TimeSpan.FromMinutes(1)));
     }
 
     [Theory]
     [InlineData(RequestSchedulerType.Send)]
     [InlineData(RequestSchedulerType.Post)]
     [InlineData(RequestSchedulerType.Publish)]
-    public async Task When_Cancel_A_Sns_Request_Async(RequestSchedulerType schedulerType)
+    public async Task When_Cancel_A_Sns_Request(RequestSchedulerType schedulerType)
     {
         var command = new MyCommand();
 
-        var scheduler = _factory.CreateAsync(null!);
-        var id = await scheduler.ScheduleAsync(command, schedulerType,
-            DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(1)));
-        Assert.True((id)?.Any());
+        var scheduler = _factory.CreateSync(null!);
+        var id = scheduler.Schedule(command, schedulerType, DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(1)));
+        Assert.True((bool?)(id)?.Any());
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);
 
-        await scheduler.CancelAsync(id);
+        scheduler.Cancel(id);
 
         var ex = await Catch.ExceptionAsync(async () =>
             await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id }));
@@ -233,7 +225,7 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
         Assert.NotNull(ex);
         Assert.True((ex) is ResourceNotFoundException);
     }
-
+    
     public void Dispose()
     {
         _channelFactory.DeleteQueueAsync().GetAwaiter().GetResult();
