@@ -20,7 +20,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;
     private readonly Message _message;
-    private readonly string _dlqChannelName;
+    private readonly string _dlqQueueName;
     private readonly IAmAChannelAsync _channel;
     private readonly SqsMessageProducer _sender;
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -32,27 +32,33 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         const string replyTo = "http:\\queueUrl";
         const string contentType = "text\\plain";
         
-        _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        _dlqQueueName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
         var subscriptionName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
+        
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqQueueName), 2),
+            type: SqsType.Fifo
+        );
 
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             requeueCount: -1,
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
-            channelType: ChannelType.PointToPoint
+           queueAttributes: queueAttributes 
         );
 
-        var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
+        var myCommand = new MyDeferredCommand { Value = "Hello Redrive", GroupId = Guid.NewGuid().ToString() };
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType),
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: myCommand.GroupId),
             new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
         );
 
@@ -60,12 +66,11 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _sender = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication
-            {
-                Topic = routingKey,
-                RequestType = typeof(MyDeferredCommand),
-                MakeChannels = OnMissingChannel.Create
-            }
+            new SqsPublication(
+                channelName: channelName, 
+                queueAttributes: queueAttributes,
+                makeChannels: OnMissingChannel.Create
+            )
         );
 
         _channelFactory = new ChannelFactory(_awsConnection);
@@ -85,10 +90,10 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         );
 
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
-            null
+            null,
+            new SimpleMessageMapperFactoryAsync(_ => new MyDeferredCommandMessageMapperAsync())
         );
-        messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
+        messageMapperRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandMessageMapperAsync>();
 
         _messagePump = new Proactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry,
             new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
@@ -100,7 +105,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
     private async Task<int> GetDLQCountAsync(string queueName)
     {
         using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
-        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName);
+        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName.ToValidSQSQueueName(true));
         var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {
             QueueUrl = queueUrlResponse.QueueUrl,
@@ -117,7 +122,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact(Skip = "Failing async tests caused by task scheduler issues")]
+    [Fact(Skip = "DLQ is fragile on async tests")]
     public async Task When_throwing_defer_action_respect_redrive_async()
     {
         await _sender.SendAsync(_message);
@@ -132,7 +137,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
         await Task.Delay(5000);
 
-        int dlqCount = await GetDLQCountAsync(_dlqChannelName);
+        int dlqCount = await GetDLQCountAsync(_dlqQueueName);
         Assert.Equal(1, dlqCount);
     }
 

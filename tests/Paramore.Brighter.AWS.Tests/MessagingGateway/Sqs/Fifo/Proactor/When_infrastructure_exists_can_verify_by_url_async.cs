@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDisposable
+public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -19,7 +19,7 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByUrlTestsAsync()
+    public AwsValidateInfrastructureByUrlTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -29,15 +29,17 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
 
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(type: SqsType.Fifo);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, 
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Proactor, 
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -52,26 +54,17 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
 
         var queueUrl = FindQueueUrl(awsConnection, routingKey.ToValidSQSQueueName(true)).Result;
 
-        subscription = new(
-            name: new SubscriptionName(queueName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            findQueueBy: QueueFindBy.Url,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+        subscription.MakeChannels = OnMissingChannel.Validate;
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication
-            {
-                Topic = routingKey,
-                QueueUrl = queueUrl,
-                FindQueueBy = QueueFindBy.Url,
-                MakeChannels = OnMissingChannel.Validate,
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+            new SqsPublication(
+                channelName: new ChannelName(queueUrl),
+                queueAttributes: queueAttributes,
+                findQueueBy: QueueFindBy.Url,
+                makeChannels: OnMissingChannel.Validate
+                )
+            );
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }

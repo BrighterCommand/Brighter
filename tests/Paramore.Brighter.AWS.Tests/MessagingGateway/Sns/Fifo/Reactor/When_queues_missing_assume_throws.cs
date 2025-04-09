@@ -9,34 +9,39 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-public class AWSAssumeQueuesTests : IDisposable, IAsyncDisposable
+public class AwsAssumeQueuesTests : IDisposable, IAsyncDisposable
 {
     private readonly ChannelFactory _channelFactory;
     private readonly SqsMessageConsumer _consumer;
 
-    public AWSAssumeQueuesTests()
+    public AwsAssumeQueuesTests()
     {
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Assume,
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: new SqsAttributes(
+                type: SqsType.Fifo
+            ), 
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Assume);
 
         var awsConnection = GatewayFactory.CreateFactory();
 
         //create the topic, we want the queue to be the issue
         //We need to create the topic at least, to check the queues
+        
         var producer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = topicAttributes
             });
 
         producer.ConfirmTopicExistsAsync(topicName).Wait();

@@ -31,7 +31,6 @@
 
   <ItemGroup>
     <Folder Include="MessagingGateway\Sns\" />
-    <Folder Include="Scheduler\Messages\" />
   </ItemGroup>
 
 </Project>

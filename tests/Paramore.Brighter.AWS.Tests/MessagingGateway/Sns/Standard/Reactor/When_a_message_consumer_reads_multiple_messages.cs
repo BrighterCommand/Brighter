@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -21,7 +21,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTests()
+    public SqsBufferedConsumerTests()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
@@ -33,10 +33,12 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(_topicName);
             
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName:new ChannelName(channelName),
-            routingKey:routingKey,
+            subscriptionName: new SubscriptionName(channelName),
+            channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey,
             bufferSize: BufferSize,
+            messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create
         ));
             

@@ -9,26 +9,25 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
+public class AwsAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly ChannelFactory _channelFactory;
     private readonly IAmAMessageConsumerAsync _consumer;
 
-    public AWSAssumeQueuesTestsAsync()
+    public AwsAssumeQueuesTestsAsync()
     {
         var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            makeChannels: OnMissingChannel.Assume,
-            messagePumpType: MessagePumpType.Proactor,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            channelType: ChannelType.PointToPoint, 
+            routingKey: routingKey, 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Assume);
 
         var awsConnection = GatewayFactory.CreateFactory();
 

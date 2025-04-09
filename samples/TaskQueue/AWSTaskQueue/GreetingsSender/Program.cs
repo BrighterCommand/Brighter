@@ -75,9 +75,9 @@ namespace GreetingsSender
                         {
                             Topic = new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
                             RequestType = typeof(FarewellEvent),
-                            SnsAttributes = new SnsAttributes
+                            TopicAttributes = new SnsAttributes
                             {
-                                Type = SnsSqsType.Fifo
+                                Type = SqsType.Fifo
                             }
                         }
                     }

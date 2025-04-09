@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -30,19 +29,23 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         const string contentType = "text\\plain";
         _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
-        var channelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(queueName);
 
+        var queueAttributes = new SqsAttributes(
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
+            type: SqsType.Fifo);
+
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
+            queueAttributes: queueAttributes
         );
 
         _message = new Message(
@@ -53,11 +56,10 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(_awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+        _sender = new SqsMessageProducer(
+            _awsConnection,
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)
+            );
 
         _channelFactory = new ChannelFactory(_awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);

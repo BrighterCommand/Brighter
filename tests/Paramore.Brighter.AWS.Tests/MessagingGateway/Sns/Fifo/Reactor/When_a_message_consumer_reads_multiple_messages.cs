@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -21,7 +21,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTests()
+    public SqsBufferedConsumerTests()
     {
         var awsConnection = GatewayFactory.CreateFactory();
         _channelFactory = new ChannelFactory(awsConnection);
@@ -31,18 +31,25 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
-        var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+        var subscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             bufferSize: BufferSize,
+            queueAttributes: new SqsAttributes(
+                type: SqsType.Fifo,
+                contentBasedDeduplication: true,
+                deduplicationScope: DeduplicationScope.MessageGroup,
+                fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId
+            ), 
+            topicAttributes: topicAttributes,
             makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            contentBasedDeduplication: true,
-            deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: 1
-        ));
+            messagePumpType: MessagePumpType.Reactor);
+        
+        var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
@@ -51,7 +58,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Create,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = topicAttributes
             });
     }
 

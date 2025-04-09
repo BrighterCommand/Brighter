@@ -25,6 +25,9 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
+/// <summary>
+/// The names of Headers
+/// </summary>
 public static class HeaderNames
 {
     public const string Id = "id";
@@ -44,4 +47,12 @@ public static class HeaderNames
     public const string Time = "time";
     public const string DataContentType = "datacontenttype";
     public const string DataSchema = "dataschema";
+    public const string DataRef = "dataref";
+    
+    /// <summary>
+    /// Use this because we cannot set cloud events as individual headers, SNS/SQS can only have 10 headers in raw message delivery
+    /// and instead need a single header with all cloud events for example, 
+    /// </summary>
+    public const string CloudEventHeaders = "cloudeventheaders";
+
 }

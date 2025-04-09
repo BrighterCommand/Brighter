@@ -9,7 +9,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
@@ -29,12 +28,15 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
 
         // Set rawMessageDelivery to false
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            makeChannels: OnMissingChannel.Create,
-            rawMessageDelivery: false));
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: new SqsAttributes(
+                rawMessageDelivery: false), 
+            makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication

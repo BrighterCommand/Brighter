@@ -29,15 +29,16 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
-
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, 
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor, 
+            makeChannels: OnMissingChannel.Create
+            );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -54,19 +55,14 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            channelType: ChannelType.PointToPoint,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Assume
-        );
+        subscription.MakeChannels = OnMissingChannel.Assume;
+        subscription.ChannelName = channel.Name;
 
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication { MakeChannels = OnMissingChannel.Assume });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection, 
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Assume));
 
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name);
     }
 
     [Fact]

@@ -9,26 +9,26 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-public class AWSValidateQueuesTestsAsync : IAsyncDisposable
+public class AwsValidateQueuesTestsAsync : IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
-    private ChannelFactory _channelFactory;
+    private ChannelFactory? _channelFactory;
 
-    public AWSValidateQueuesTestsAsync()
+    public AwsValidateQueuesTestsAsync()
     {
         var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
 
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
+            subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
+            channelType: ChannelType.PointToPoint, 
             routingKey: routingKey,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            makeChannels: OnMissingChannel.Validate);
 
         _awsConnection = GatewayFactory.CreateFactory();
     }
@@ -45,6 +45,7 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync();
+        if (_channelFactory != null)
+            await _channelFactory.DeleteTopicAsync();
     }
 }

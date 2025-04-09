@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// The SQS Message producer
 /// </summary>
-public partial class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync, IAmAMessageProducerSync
+public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
     private readonly SqsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
@@ -57,16 +57,18 @@ public partial class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProduc
     /// Initialize a new instance of the <see cref="SqsMessageProducer"/>.
     /// </summary>
     /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
-    /// <param name="publication">Configuration of a producer</param>
+    /// <param name="publication">Configuration of a producer. Required.</param>
     public SqsMessageProducer(AWSMessagingGatewayConnection connection, SqsPublication publication)
         : base(connection)
     {
-        _publication = publication;
+        _publication = publication ?? throw new ArgumentNullException(nameof(publication));
+        if (_publication.ChannelName is null) 
+            throw new InvalidOperationException($"We must have a valid Channel Name on the Publication, either a queue name or a Url");
         _clientFactory = new AWSClientFactory(connection);
 
-        if (publication.QueueUrl != null)
+        if (publication.FindQueueBy == QueueFindBy.Url)
         {
-            ChannelQueueUrl = publication.QueueUrl;
+            ChannelQueueUrl = publication.ChannelName!.Value;
         }
     }
 
@@ -87,48 +89,34 @@ public partial class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProduc
     /// </summary>
     /// <param name="queue">The queue name.</param>
     public bool ConfirmQueueExists(string? queue = null)
-        => BrighterAsyncContext.Run(async () => await ConfirmQueueExistsAsync(queue));
+        => BrighterAsyncContext.Run(async () => await ConfirmQueueExistsAsync());
 
     /// <summary>
     /// Confirm the queue exists.
     /// </summary>
-    /// <param name="queue">The queue name.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
     /// <returns>Return true if the queue exists otherwise return false</returns>
-    public async Task<bool> ConfirmQueueExistsAsync(string? queue = null, CancellationToken cancellationToken = default)
+    public async Task<bool> ConfirmQueueExistsAsync(CancellationToken cancellationToken = default)
     {
-        //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
+        //Only do this on first send for a queue for efficiency; won't auto-recreate when goes missing at runtime as a result
         if (!string.IsNullOrEmpty(ChannelQueueUrl))
-        {
             return true;
-        }
-
-        _publication.SqsAttributes ??= new SqsAttributes();
-
-        // For SQS Publish, it should be always Point-to-Point
-        _publication.SqsAttributes.ChannelType = ChannelType.PointToPoint;
-
-        RoutingKey? routingKey = null;
-        if (queue is not null)
-        {
-            routingKey = new RoutingKey(queue);
-        }
-        else if (_publication.Topic is not null)
-        {
-            routingKey = _publication.Topic;
-        }
-
-        if (RoutingKey.IsNullOrEmpty(routingKey))
-        {
-            throw new ConfigurationException("No topic specified for producer");
-        }
+        
+        if (_publication is null)
+            throw new ConfigurationException("No publication specified for producer");
+        
+        if (_publication.ChannelName is null)
+            throw new ConfigurationException("No channel name specified for publication");
 
         var queueUrl = await EnsureQueueAsync(
-            routingKey,
+            _publication.ChannelName!,
+            _publication.ChannelType,
             _publication.FindQueueBy,
-            _publication.SqsAttributes,
+            _publication.QueueAttributes,
             _publication.MakeChannels,
             cancellationToken);
+        
+        ChannelQueueUrl = queueUrl;
 
         return !string.IsNullOrEmpty(queueUrl);
     }
@@ -144,6 +132,9 @@ public partial class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProduc
     
     private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken = default)
     {
+        if (_publication is null)
+            throw new ConfigurationException("No publication specified for producer");
+        
         delay ??= TimeSpan.Zero;
         // SQS support delay until 15min, more than that we are going to use scheduler
         if (delay > TimeSpan.FromMinutes(15))
@@ -162,11 +153,10 @@ public partial class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProduc
         
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
 
-        await ConfirmQueueExistsAsync(message.Header.Topic, cancellationToken);
+        await ConfirmQueueExistsAsync(cancellationToken);
 
         using var client = _clientFactory.CreateSqsClient();
-        var type = _publication.SqsAttributes?.Type ?? SnsSqsType.Standard;
-        var sender = new SqsMessageSender(ChannelQueueUrl!, type, client);
+        var sender = new SqsMessageSender(ChannelQueueUrl!, _publication.QueueAttributes!.Type, client);
         var messageId = await sender.SendAsync(message, delay, cancellationToken);
 
         if (messageId == null)

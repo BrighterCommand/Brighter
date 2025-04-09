@@ -49,6 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly bool _hasDlq;
         private readonly bool _rawMessageDelivery;
         private readonly Message _noopMessage = new Message();
+        private string? _channelUrl;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageConsumer"/> class.
@@ -56,12 +57,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="awsConnection">The awsConnection details used to connect to the SQS queue.</param>
         /// <param name="queueName">The name of the SQS Queue</param>
         /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
-        /// <param name="hasDLQ">Do we have a DLQ attached to this queue?</param>
+        /// <param name="hasDlq">Do we have a DLQ attached to this queue?</param>
+        /// <param name="isQueueUrl">Is the queue name a queue url?</param>
         /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
-        public SqsMessageConsumer(AWSMessagingGatewayConnection awsConnection,
+        public SqsMessageConsumer(
+            AWSMessagingGatewayConnection awsConnection,
             string? queueName,
             int batchSize = 1,
-            bool hasDLQ = false,
+            bool hasDlq = false,
+            bool isQueueUrl = false,
             bool rawMessageDelivery = true)
         {
             if (string.IsNullOrEmpty(queueName))
@@ -69,8 +73,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             _clientFactory = new AWSClientFactory(awsConnection);
             _queueName = queueName!;
+            if (isQueueUrl)
+                _channelUrl = queueName;
             _batchSize = batchSize;
-            _hasDlq = hasDLQ;
+            _hasDlq = hasDlq;
             _rawMessageDelivery = rawMessageDelivery;
         }
 
@@ -86,8 +92,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cancellationToken">Cancels the ackowledge operation</param>
-        public async Task AcknowledgeAsync(Message message,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
                 return;
@@ -97,11 +102,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 using var client = _clientFactory.CreateSqsClient();
-                var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
-                await client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle),
+                await EnsureChannelUrl(client, cancellationToken);
+                await client.DeleteMessageAsync(new DeleteMessageRequest(_channelUrl, receiptHandle),
                     cancellationToken);
 
-                Log.DeletedMessage(s_logger, message.Id, receiptHandle, urlResponse.QueueUrl);
+                Log.DeletedMessage(s_logger, message.Id, receiptHandle, _channelUrl!);
             }
             catch (Exception exception)
             {
@@ -134,17 +139,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName);
 
                 using var client = _clientFactory.CreateSqsClient();
-                var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
+                await EnsureChannelUrl(client, cancellationToken);
                 if (_hasDlq)
                 {
                     await client.ChangeMessageVisibilityAsync(
-                        new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0),
+                        new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, 0),
                         cancellationToken
                     );
                 }
                 else
                 {
-                    await client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle, cancellationToken);
+                    await client.DeleteMessageAsync(_channelUrl, receiptHandle, cancellationToken);
                 }
             }
             catch (Exception exception)
@@ -170,8 +175,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 using var client = _clientFactory.CreateSqsClient();
                 Log.PurgingQueue(s_logger, _queueName);
 
-                var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
-                await client.PurgeQueueAsync(urlResponse.QueueUrl, cancellationToken);
+                await EnsureChannelUrl(client, cancellationToken);
+                await client.PurgeQueueAsync(_channelUrl, cancellationToken);
 
                 Log.PurgedQueue(s_logger, _queueName);
             }
@@ -202,12 +207,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 client = _clientFactory.CreateSqsClient();
-                var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
+                
+                await EnsureChannelUrl(client, cancellationToken);
                 timeOut ??= TimeSpan.Zero;
 
-                Log.RetrievingNextMessage(s_logger, urlResponse.QueueUrl);
+                Log.RetrievingNextMessage(s_logger,_channelUrl!);
 
-                var request = new ReceiveMessageRequest(urlResponse.QueueUrl)
+                var request = new ReceiveMessageRequest(_channelUrl)
                 {
                     MaxNumberOfMessages = _batchSize,
                     WaitTimeSeconds = timeOut.Value.Seconds,
@@ -253,8 +259,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
 
             return messages;
-        }      
-
+        }
 
         public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
 
@@ -281,9 +286,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 using (var client = _clientFactory.CreateSqsClient())
                 {
-                    var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
+                    await EnsureChannelUrl(client, cancellationToken);
                     await client.ChangeMessageVisibilityAsync(
-                        new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, delay.Value.Seconds),
+                        new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, delay.Value.Seconds),
                         cancellationToken
                     );
                 }
@@ -311,6 +316,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             GC.SuppressFinalize(this);
             return new ValueTask(Task.CompletedTask);
+        }
+        
+        private async Task EnsureChannelUrl(AmazonSQSClient client, CancellationToken cancellationToken)
+        {
+            //only grab the queue url once
+            if (_channelUrl is not null)
+                return;
+            
+            var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);      
+            _channelUrl = urlResponse.QueueUrl;
         }
 
         private static partial class Log

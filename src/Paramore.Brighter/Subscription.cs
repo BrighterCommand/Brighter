@@ -48,9 +48,11 @@ namespace Paramore.Brighter
         public IAmAChannelFactory? ChannelFactory { get; set; }
 
         /// <summary>
-        /// Gets the name we use for this channel. In platforms where queues have names, will be used as the name of the queue
-        /// Note that this is not the logical endpoint that the channel consumes from, that is the RoutingKey
+        /// Gets the <see cref="ChannelName"/> we use for this channel. In platforms where queues have names, will be used as the name of the queue
         /// </summary>
+        /// <remarks>
+        /// Note that this is not the logical endpoint, the topic, that the channel consumes from for pub-sub, that is the <see cref="RoutingKey"/>
+        /// </remarks>
         /// <value>The name.</value>
         public ChannelName ChannelName { get; set; }
 
@@ -73,7 +75,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
         /// </summary>
-        public OnMissingChannel MakeChannels { get; }
+        public OnMissingChannel MakeChannels { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the subscription, for identification.
@@ -101,6 +103,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets or sets the routing key or topic that this channel subscribes to on the broker.
         /// </summary>
+        /// <remarks>
+        ///  In many platforms, a queue subscribes to the topic. In that case the <see cref="ChannelName"/> gives the queue name
+        /// whilst this is the topic to which that queue subscribes.
+        /// </remarks>
         /// <value>The name.</value>
         public RoutingKey RoutingKey { get; set; }
 
@@ -137,7 +143,7 @@ namespace Paramore.Brighter
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
@@ -153,7 +159,7 @@ namespace Paramore.Brighter
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
             Type dataType,
-            SubscriptionName? name = null,
+            SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
             int bufferSize = 1,
@@ -172,7 +178,7 @@ namespace Paramore.Brighter
                 throw new ConfigurationException("You must set a message pump type: use Reactor for sync pipelines; use Proactor for async pipelines");
             
             DataType = dataType;
-            Name = name ?? new SubscriptionName(dataType.FullName!);
+            Name = subscriptionName ?? new SubscriptionName(dataType.FullName!);
             ChannelName = channelName ?? new ChannelName(dataType.FullName!);
             RoutingKey = routingKey ?? new RoutingKey(dataType.FullName!);
             BufferSize = bufferSize;
@@ -202,7 +208,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class with data type T.
         /// </summary>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="noOfPerformers">The no of performers.</param>
@@ -217,7 +223,7 @@ namespace Paramore.Brighter
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
-            SubscriptionName? name = null,
+            SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
             int noOfPerformers = 1,
@@ -233,7 +239,7 @@ namespace Paramore.Brighter
             TimeSpan? channelFailureDelay = null)
             : base(
                 typeof(T),
-                name,
+                subscriptionName,
                 channelName,
                 routingKey,
                 bufferSize,

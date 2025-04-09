@@ -10,8 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerSync _consumer;
@@ -19,7 +18,7 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByConventionTests()
+    public AwsValidateInfrastructureByConventionTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -30,8 +29,9 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         var routingKey = new RoutingKey(topicName);
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create
@@ -52,14 +52,9 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            findTopicBy: TopicFindBy.Convention,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate
-        );
+        subscription.FindQueueBy = QueueFindBy.Name;
+        subscription.FindTopicBy = TopicFindBy.Convention;
+        subscription.MakeChannels =  OnMissingChannel.Validate;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

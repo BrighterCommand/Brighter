@@ -27,15 +27,17 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         var subscriptionName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
-
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, 
+            findQueueBy: QueueFindBy.Name,
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Create
+            );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -49,7 +51,10 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         _messageProducer =
-            new SqsMessageProducer(awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+            new SqsMessageProducer(
+                awsConnection, 
+                new SqsPublication(channelName,  makeChannels: OnMissingChannel.Create)
+                );
     }
 
     [Fact]

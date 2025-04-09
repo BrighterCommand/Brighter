@@ -29,11 +29,12 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         var routingKey = new RoutingKey(topicName);
             
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey, 
             messagePumpType: MessagePumpType.Reactor,
-            routingKey: routingKey
-        );
+            makeChannels: OnMissingChannel.Create);
             
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

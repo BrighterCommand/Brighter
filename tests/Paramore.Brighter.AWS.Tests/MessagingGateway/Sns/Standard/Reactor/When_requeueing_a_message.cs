@@ -13,8 +13,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessageProducerSync _sender;
-    private Message _requeuedMessage;
-    private Message _receivedMessage;
+    private Message? _requeuedMessage;
+    private Message? _receivedMessage;
     private readonly IAmAChannelSync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
@@ -30,9 +30,12 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
             
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            routingKey: routingKey
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create
         );
             
         _message = new Message(

@@ -34,15 +34,17 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            rawMessageDelivery: false,
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: new SqsAttributes(rawMessageDelivery:false, type: SqsType.Fifo),
+            topicAttributes: topicAttributes
+             );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
@@ -63,7 +65,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
             {
                 Topic = new RoutingKey(_topicName),
                 MakeChannels = OnMissingChannel.Create,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = topicAttributes
             });
     }
 

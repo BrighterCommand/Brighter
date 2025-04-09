@@ -9,7 +9,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
@@ -24,24 +23,29 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var bufferSize = 10;
 
         //Set rawMessageDelivery to false
         _channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            makeChannels: OnMissingChannel.Create,
             messagePumpType: MessagePumpType.Reactor,
-            rawMessageDelivery: false,
-            sqsType: SnsSqsType.Fifo));
+            queueAttributes: new SqsAttributes(
+                rawMessageDelivery: false,
+                type: SqsType.Fifo), 
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, 
+                TopicAttributes = topicAttributes
             });
     }
 

@@ -28,21 +28,29 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         const int bufferSize = 10;
 
         // Set rawMessageDelivery to false
+        var queueAttributes = new SqsAttributes(
+            rawMessageDelivery: true,
+            type: SqsType.Fifo);
+        var channelName = new ChannelName(queueName);
+        
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
-            channelName: new ChannelName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            makeChannels: OnMissingChannel.Create,
-            rawMessageDelivery: true,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint));
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create)
+        );
 
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(
+                channelName: channelName, 
+                queueAttributes: queueAttributes,  
+                makeChannels: OnMissingChannel.Create)
+            );
     }
 
     [Fact]

@@ -12,8 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDisposable
+public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -21,7 +20,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByArnTestsAsync()
+    public AwsValidateInfrastructureByArnTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -31,10 +30,11 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var routingKey = new RoutingKey($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
         );
 
@@ -52,14 +52,10 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
 
         var topicArn = FindTopicArn(awsConnection, routingKey.Value).Result;
         var routingKeyArn = new RoutingKey(topicArn);
-
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKeyArn,
-            findTopicBy: TopicFindBy.Arn,
-            makeChannels: OnMissingChannel.Validate
-        );
+        
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.RoutingKey = routingKeyArn;
+        subscription.FindTopicBy = TopicFindBy.Arn;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,

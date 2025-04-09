@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// The <see cref="ChannelFactory"/> class is responsible for creating and managing SNS/SQS channels.
 /// </summary>
-public partial class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
+public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
 {
     private readonly SqsMessageConsumerFactory _messageConsumerFactory;
     private SqsSubscription? _subscription;
@@ -90,7 +89,8 @@ public partial class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="ct">Cancels the creation operation</param>
     /// <returns>An instance of <see cref="IAmAChannelAsync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,
+    public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(
+        Subscription subscription,
         CancellationToken ct = default)
     {
         var channel = await _retryPolicy.ExecuteAsync(async () =>
@@ -101,31 +101,44 @@ public partial class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
                                 "We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
 
-            var isFifo = _subscription.SqsType == SnsSqsType.Fifo;
-            var routingKey = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
+            var isFifo = _subscription.QueueAttributes.Type == SqsType.Fifo;
+            var queueName = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
+            
+            //on assume, don't try to create the queue or topic, just return a channel
+            if (_subscription.MakeChannels == OnMissingChannel.Assume)
+                return new ChannelAsync(
+                    new ChannelName(queueName),
+                    new RoutingKey(_subscription.RoutingKey),
+                    _messageConsumerFactory.CreateAsync(subscription),
+                    subscription.BufferSize
+                ); 
+            
+            var queueUrl =await EnsureQueueAsync(
+                queueName,
+                _subscription.ChannelType,
+                _subscription.FindQueueBy,
+                _subscription.QueueAttributes,
+                _subscription.MakeChannels,
+                ct);
+            
+            //Either we found it, or we made it, so we should have a queueUrl
+            if (queueUrl is null)
+                throw new InvalidOperationException($"ChannelFactory.CreateAsyncChannelAsync: Could not create queue {queueName}");
+            
+            var routingKey = RoutingKey.Empty;
             if (_subscription.ChannelType == ChannelType.PubSub)
-            {
-                var snsAttributes = _subscription.SnsAttributes ?? new SnsAttributes();
-                snsAttributes.Type = _subscription.SqsType;
-
-                await EnsureTopicAsync(_subscription.RoutingKey,
+                routingKey = await EnsureSubscriptionAsync(
+                    isFifo, 
+                    queueUrl, 
+                    _subscription.RoutingKey,
                     _subscription.FindTopicBy,
-                    snsAttributes,
+                    _subscription.TopicAttributes,
+                    _subscription.QueueAttributes,
                     _subscription.MakeChannels,
                     ct);
 
-                routingKey = _subscription.RoutingKey.ToValidSNSTopicName(isFifo);
-            }
-
-            await EnsureQueueAsync(
-                _subscription.ChannelName.Value,
-                _subscription.FindQueueBy,
-                SqsAttributes.From(_subscription),
-                _subscription.MakeChannels,
-                ct);
-
             return new ChannelAsync(
-                subscription.ChannelName.ToValidSQSQueueName(isFifo),
+                new ChannelName(queueName),
                 new RoutingKey(routingKey),
                 _messageConsumerFactory.CreateAsync(subscription),
                 subscription.BufferSize
@@ -146,7 +159,7 @@ public partial class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         using var sqsClient = new AWSClientFactory(AwsConnection).CreateSqsClient();
         (bool exists, string? queueUrl) queueExists =
             await QueueExistsAsync(sqsClient,
-                _subscription.ChannelName.ToValidSQSQueueName(_subscription.SqsType == SnsSqsType.Fifo));
+                _subscription.ChannelName.ToValidSQSQueueName(_subscription.QueueAttributes.Type == SqsType.Fifo));
 
         if (queueExists is { exists: true, queueUrl: not null })
         {
@@ -196,30 +209,44 @@ public partial class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             _subscription = sqsSubscription ??
                             throw new ConfigurationException(
                                 "We expect an SqsSubscription or SqsSubscription<T> as a parameter");
-            var routingKey = _subscription.ChannelName.Value;
 
-            var isFifo = _subscription.SqsType == SnsSqsType.Fifo;
-            if (_subscription.ChannelType == ChannelType.PubSub)
-            {
-                var snsAttributes = _subscription.SnsAttributes ?? new SnsAttributes();
-                snsAttributes.Type = _subscription.SqsType;
+            var isFifo = _subscription.QueueAttributes.Type == SqsType.Fifo;
+            var queueName = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
+            
+            //on assume, don't try to create the queue or topic, just return a channel
+            if (_subscription.MakeChannels == OnMissingChannel.Assume)
+                return new Channel(
+                    new ChannelName(queueName),
+                    new RoutingKey(_subscription.RoutingKey),
+                    _messageConsumerFactory.Create(subscription),
+                    subscription.BufferSize
+                ); 
 
-                await EnsureTopicAsync(_subscription.RoutingKey,
-                    _subscription.FindTopicBy,
-                    snsAttributes,
-                    _subscription.MakeChannels);
-
-                routingKey = _subscription.RoutingKey.ToValidSNSTopicName(isFifo);
-            }
-
-            await EnsureQueueAsync(
-                _subscription.ChannelName.Value,
+            var queueUrl = await EnsureQueueAsync(
+                queueName,
+                _subscription.ChannelType,
                 _subscription.FindQueueBy,
-                SqsAttributes.From(_subscription),
+                _subscription.QueueAttributes,
                 _subscription.MakeChannels);
+            
+            //Either we found it, or we made it, so we should have a queueUrl
+            if (queueUrl is null)
+                throw new InvalidOperationException($"ChannelFactory.CreateAsyncChannelAsync: Could not create queue {queueName}");
+            
+            var routingKey = RoutingKey.Empty;
+            if (_subscription.ChannelType == ChannelType.PubSub)
+                routingKey = await EnsureSubscriptionAsync(
+                    isFifo, 
+                    queueUrl, 
+                    _subscription.RoutingKey,
+                    _subscription.FindTopicBy,
+                    _subscription.TopicAttributes,
+                    _subscription.QueueAttributes,
+                    _subscription.MakeChannels
+                );
 
             return new Channel(
-                subscription.ChannelName.ToValidSQSQueueName(isFifo),
+                new ChannelName(queueName),
                 new RoutingKey(routingKey),
                 _messageConsumerFactory.Create(subscription),
                 subscription.BufferSize
@@ -264,46 +291,6 @@ public partial class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         }
 
         return (exists, queueUrl);
-    }
-
-    private async Task<bool> SubscriptionExistsAsync(AmazonSQSClient sqsClient,
-        AmazonSimpleNotificationServiceClient snsClient)
-    {
-        string? queueArn = await GetQueueArnForChannelAsync(sqsClient);
-
-        if (queueArn == null)
-            throw new BrokerUnreachableException($"Could not find queue ARN for queue {ChannelQueueUrl}");
-
-        bool exists = false;
-        ListSubscriptionsByTopicResponse response;
-        do
-        {
-            response = await snsClient.ListSubscriptionsByTopicAsync(
-                new ListSubscriptionsByTopicRequest { TopicArn = ChannelAddress });
-            exists = response.Subscriptions.Any(sub => "sqs".Equals(sub.Protocol, StringComparison.OrdinalIgnoreCase) && (sub.Endpoint == queueArn));
-        } while (!exists && response.NextToken != null);
-
-        return exists;
-    }
-
-    /// <summary>
-    /// Gets the ARN of the queue for the channel.
-    /// Sync over async is used here; should be alright in context of channel creation.
-    /// </summary>
-    /// <param name="sqsClient">The SQS client.</param>
-    /// <returns>The ARN of the queue.</returns>
-    private async Task<string?> GetQueueArnForChannelAsync(AmazonSQSClient sqsClient)
-    {
-        var result = await sqsClient.GetQueueAttributesAsync(
-            new GetQueueAttributesRequest { QueueUrl = ChannelQueueUrl, AttributeNames = ["QueueArn"] }
-        );
-
-        if (result.HttpStatusCode == HttpStatusCode.OK)
-        {
-            return result.QueueARN;
-        }
-
-        return null;
     }
 
     /// <summary>

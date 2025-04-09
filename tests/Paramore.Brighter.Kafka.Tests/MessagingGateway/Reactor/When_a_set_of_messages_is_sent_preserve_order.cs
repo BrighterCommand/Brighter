@@ -144,7 +144,7 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
                     BootStrapServers = ["localhost:9092"]
                 })
             .Create(new KafkaSubscription<MyCommand>(
-                name: new SubscriptionName("Paramore.Brighter.Tests"),
+                subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),
                 channelName: new ChannelName(_queueName),
                 routingKey: new RoutingKey(_topic),
                 groupId: _kafkaGroupId,

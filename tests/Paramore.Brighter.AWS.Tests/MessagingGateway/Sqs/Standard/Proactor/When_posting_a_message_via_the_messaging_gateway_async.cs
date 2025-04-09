@@ -30,14 +30,14 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_queueName);
+        var channelName = new ChannelName(_queueName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(_queueName),
-            routingKey: routingKey,
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, 
             messagePumpType: MessagePumpType.Proactor,
-            channelType: ChannelType.PointToPoint
-        );
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
@@ -50,7 +50,11 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication { Topic = new RoutingKey(_queueName), MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication
+        {
+            ChannelName = channelName,
+            MakeChannels = OnMissingChannel.Create
+        });
     }
 
     [Fact]

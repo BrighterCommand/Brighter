@@ -32,11 +32,12 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         var routingKey = new RoutingKey(_topicName);
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            rawMessageDelivery: false
+            queueAttributes: new SqsAttributes(rawMessageDelivery: false)
         );
 
         _message = new Message(
@@ -50,7 +51,13 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication { Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SnsMessageProducer(
+            awsConnection, 
+            new SnsPublication
+            {
+                Topic = new RoutingKey(_topicName), 
+                MakeChannels = OnMissingChannel.Create
+            });
     }
 
     [Fact]

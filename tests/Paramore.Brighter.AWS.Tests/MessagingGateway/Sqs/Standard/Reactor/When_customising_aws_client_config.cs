@@ -26,13 +26,12 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
 
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            messagePumpType: MessagePumpType.Reactor,
-            routingKey: routingKey,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, messagePumpType: MessagePumpType.Reactor);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -54,7 +53,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         });
 
         _messageProducer = new SqsMessageProducer(publishAwsConnection,
-            new SqsPublication { Topic = new RoutingKey(queueName), MakeChannels = OnMissingChannel.Create });
+            new SqsPublication { ChannelName = channelName, MakeChannels = OnMissingChannel.Create });
     }
 
     [Fact]

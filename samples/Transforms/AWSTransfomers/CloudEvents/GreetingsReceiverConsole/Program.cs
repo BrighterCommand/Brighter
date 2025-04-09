@@ -51,15 +51,17 @@ namespace GreetingsReceiverConsole
                 .ConfigureServices((_, services) =>
 
                 {
+                    var queueAttributes = new SqsAttributes(lockTimeout: TimeSpan.FromSeconds(30));
                     var subscriptions = new Subscription[]
                     {
                         new SqsSubscription<GreetingEvent>(
                             new SubscriptionName("paramore.example.greeting"),
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            channelType: ChannelType.PubSub,
+                            routingKey: new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            queueAttributes: queueAttributes,
                             bufferSize: 10,
                             timeOut: TimeSpan.FromMilliseconds(20), 
-                            lockTimeout: 30,
                             findTopicBy: TopicFindBy.Convention,
                             makeChannels: OnMissingChannel.Create)
                     };

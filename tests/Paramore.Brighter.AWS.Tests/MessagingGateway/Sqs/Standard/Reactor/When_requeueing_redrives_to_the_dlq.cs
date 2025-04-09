@@ -35,11 +35,17 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
 
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
+        );
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
             routingKey: routingKey,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
+            queueAttributes: queueAttributes,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(
@@ -51,7 +57,10 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(_awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SqsMessageProducer(
+            _awsConnection, 
+            new SqsPublication (channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create )
+            );
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);

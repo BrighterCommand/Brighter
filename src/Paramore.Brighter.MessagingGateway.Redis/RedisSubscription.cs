@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         protected RedisSubscription(
             Type dataType, 
-            SubscriptionName? name = null, 
+            SubscriptionName? subscriptionName = null, 
             ChannelName? channelName = null, 
             RoutingKey? routingKey = null, 
             int bufferSize = 1, 
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
+            : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public RedisSubscription(
-            SubscriptionName? name = null, 
+            SubscriptionName? subscriptionName = null, 
             ChannelName? channelName = null, 
             RoutingKey? routingKey = null, 
             int bufferSize = 1, 
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
-            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
+            : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }

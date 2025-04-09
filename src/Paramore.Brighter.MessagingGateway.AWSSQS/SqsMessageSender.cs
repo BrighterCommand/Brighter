@@ -22,7 +22,7 @@ public partial class SqsMessageSender
     private static readonly TimeSpan s_maxDelay = TimeSpan.FromSeconds(900);
     
     private readonly string _queueUrl;
-    private readonly SnsSqsType _queueType;
+    private readonly SqsType _queueType;
     private readonly AmazonSQSClient _client;
 
     /// <summary>
@@ -31,7 +31,7 @@ public partial class SqsMessageSender
     /// <param name="queueUrl">The queue ARN</param>
     /// <param name="queueType">The queue type</param>
     /// <param name="client">The SQS Client</param>
-    public SqsMessageSender(string queueUrl, SnsSqsType queueType, AmazonSQSClient client)
+    public SqsMessageSender(string queueUrl, SqsType queueType, AmazonSQSClient client)
     {
         _queueUrl = queueUrl;
         _queueType = queueType;
@@ -66,7 +66,7 @@ public partial class SqsMessageSender
             request.DelaySeconds = (int)delay.Value.TotalSeconds;
         }
 
-        if (_queueType == SnsSqsType.Fifo)
+        if (_queueType == SqsType.Fifo)
         {
             request.MessageGroupId = message.Header.PartitionKey;
             if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
@@ -74,51 +74,33 @@ public partial class SqsMessageSender
                 request.MessageDeduplicationId = (string)deduplicationId;
             }
         }
+        
+        // Combine cloud event headers into a single JSON object
+        string cloudEventHeadersJson = CreateCloudEventHeadersJson(message);
 
+        // we can set up to 10 attributes;  we use a single JSON object as the cloud event headers; we can set nine others directly 
         var messageAttributes = new Dictionary<string, MessageAttributeValue>
         { 
-            // Cloud event
-            [HeaderNames.Id] = new() { StringValue = Convert.ToString(message.Header.MessageId), DataType = "String" },
-            [HeaderNames.DataContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.SpecVersion] = new() { StringValue = message.Header.SpecVersion, DataType = "String" },
-            [HeaderNames.Type] = new() { StringValue = message.Header.Type, DataType = "String" },
-            [HeaderNames.Source] = new() { StringValue = message.Header.Source.ToString(), DataType = "String" },
-            [HeaderNames.Time] = new() { StringValue = message.Header.TimeStamp.ToRcf3339(), DataType = "String" },
-                        
-             // Brighter custom headers
-             [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
-             [HeaderNames.HandledCount] = new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
-             [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-                        
-             // Backward compatibility with old brighter version
-             [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-             [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String" }
+            [HeaderNames.Id] = new (){ StringValue = message.Header.MessageId, DataType = "String" },
+            [HeaderNames.CloudEventHeaders] = new() { StringValue = cloudEventHeadersJson, DataType = "String" },
+            [HeaderNames.Topic] = new() { StringValue = _queueUrl ,DataType = "String" },
+            [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+            [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
+            [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRcf3339()), DataType = "String" }
         };
-
+        
         if (!string.IsNullOrEmpty(message.Header.ReplyTo))
-        {
-            messageAttributes.Add(HeaderNames.ReplyTo,
-                new MessageAttributeValue { StringValue = message.Header.ReplyTo, DataType = "String" });
-        }
+            messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue { StringValue = message.Header.ReplyTo, DataType = "String" });
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
-        {
-            messageAttributes.Add(HeaderNames.Subject,
-                new MessageAttributeValue { StringValue = message.Header.Subject, DataType = "String" });
-        }
+            messageAttributes.Add(HeaderNames.Subject, new MessageAttributeValue { StringValue = message.Header.Subject, DataType = "String" });
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            messageAttributes.Add(HeaderNames.CorrelationId,
-                new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
-        }
+            messageAttributes.Add(HeaderNames.CorrelationId,  new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
         
-        if (message.Header.DataSchema != null)
-        {
-            messageAttributes.Add(HeaderNames.DataSchema, new MessageAttributeValue { StringValue = message.Header.DataSchema.ToString() });
-        }
+        //we have to add some attributes into our bag, to prevent overloading the message attributes
+        message.Header.Bag[HeaderNames.HandledCount] = message.Header.HandledCount.ToString(CultureInfo.InvariantCulture);
         
-        // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };
         request.MessageAttributes = messageAttributes;
@@ -131,6 +113,32 @@ public partial class SqsMessageSender
         }
 
         return null;
+    }
+
+    private static string CreateCloudEventHeadersJson(Message message)
+    {
+        var cloudEventHeaders = new Dictionary<string, string>
+        {
+            [HeaderNames.Id] = Convert.ToString(message.Header.MessageId),
+            [HeaderNames.DataContentType] = message.Header.ContentType ?? "plain/text",
+            [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
+            [HeaderNames.SpecVersion] = message.Header.SpecVersion,
+            [HeaderNames.Type] = message.Header.Type,
+            [HeaderNames.Source] = message.Header.Source.ToString(),
+            [HeaderNames.Time] = message.Header.TimeStamp.ToRcf3339()
+        };
+
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+            cloudEventHeaders[HeaderNames.Subject] = message.Header.Subject!;
+
+        if (message.Header.DataSchema != null)
+            cloudEventHeaders[HeaderNames.DataSchema] = message.Header.DataSchema.ToString();
+
+        if (message.Header.DataRef != null)
+            cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
+
+        var cloudEventHeadersJson = JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
+        return cloudEventHeadersJson;
     }
 
     private static partial class Log

@@ -11,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+    public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     {
         private readonly Message _message;
         private readonly IAmAMessageConsumerAsync _consumer;
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
-        public AWSValidateInfrastructureTestsAsync()
+        public AwsValidateInfrastructureTestsAsync()
         {
             _myCommand = new MyCommand { Value = "Test" };
             const string replyTo = "http:\\queueUrl";
@@ -28,15 +28,16 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
             var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(queueName);
-
+            var channelName = new ChannelName(queueName);
+            
             var subscription = new SqsSubscription<MyCommand>(
-                name: new SubscriptionName(subscriptionName),
-                channelName: new ChannelName(queueName),
-                routingKey: routingKey,
-                messagePumpType: MessagePumpType.Proactor,
-                makeChannels: OnMissingChannel.Create,
-                channelType: ChannelType.PointToPoint
-            );
+                subscriptionName: new SubscriptionName(subscriptionName),
+                channelName: channelName,
+                channelType: ChannelType.PointToPoint, 
+                findQueueBy: QueueFindBy.Name,
+                routingKey: routingKey, 
+                messagePumpType: MessagePumpType.Proactor, 
+                makeChannels: OnMissingChannel.Create);
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -49,24 +50,11 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-            subscription = new(
-                name: new SubscriptionName(subscriptionName),
-                channelName: channel.Name,
-                routingKey: routingKey,
-                findTopicBy: TopicFindBy.Name,
-                messagePumpType: MessagePumpType.Proactor,
-                makeChannels: OnMissingChannel.Validate,
-                channelType: ChannelType.PointToPoint
-            );
+            subscription.MakeChannels = OnMissingChannel.Validate;
 
             _messageProducer = new SqsMessageProducer(
                 awsConnection,
-                new SqsPublication
-                {
-                    FindQueueBy = QueueFindBy.Name,
-                    MakeChannels = OnMissingChannel.Validate,
-                    Topic = new RoutingKey(queueName)
-                }
+                new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Validate)
             );
 
             _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
