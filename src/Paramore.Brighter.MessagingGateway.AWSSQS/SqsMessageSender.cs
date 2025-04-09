@@ -16,7 +16,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// Class responsible for sending a message to a SQS
 /// </summary>
-public class SqsMessageSender
+public partial class SqsMessageSender
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageSender>();
     private static readonly TimeSpan s_maxDelay = TimeSpan.FromSeconds(900);
@@ -60,7 +60,7 @@ public class SqsMessageSender
             if (delay.Value > s_maxDelay)
             {
                 delay = s_maxDelay;
-                s_logger.LogWarning("Set delay from {CurrentDelay} to 15min (SQS support up to 15min)", delay);
+                Log.DelaySetToMaximum(s_logger, delay);
             }
 
             request.DelaySeconds = (int)delay.Value.TotalSeconds;
@@ -132,4 +132,11 @@ public class SqsMessageSender
 
         return null;
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Set delay from {CurrentDelay} to 15min (SQS support up to 15min)")]
+        public static partial void DelaySetToMaximum(ILogger logger, TimeSpan? currentDelay);
+    }
 }
+

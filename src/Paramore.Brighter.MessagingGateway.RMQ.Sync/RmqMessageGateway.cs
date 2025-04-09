@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     ///     A channel is associated with a queue name, which binds to a <see cref="MessageHeader.Topic" /> when
     ///     <see cref="CommandProcessor.Post{T}" /> sends over a task queue.
     ///     So to listen for messages on that Topic you need to bind to the matching queue name.
-    ///     The configuration holds a &lt;serviceActivatorConnections&gt; section which in turn contains a &lt;connections&gt;
+    ///     The configuration holds a <serviceActivatorConnections> section which in turn contains a <connections>
     ///     collection that contains a set of connections.
     ///     Each subscription identifies a mapping between a queue name and a <see cref="IRequest" /> derived type. At runtime we
     ///     read this list and listen on the associated channels.
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     ///     request type in <see cref="IAmAMessageMapperRegistry" /> to translate between the
     ///     on-the-wire message and the <see cref="Command" /> or <see cref="Event" />
     /// </summary>
-    public class RmqMessageGateway : IDisposable
+    public partial class RmqMessageGateway : IDisposable
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGateway>();
         private readonly Policy _circuitBreakerPolicy;
@@ -143,8 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 connection.ConnectionBlocked += HandleBlocked;
                 connection.ConnectionUnblocked += HandleUnBlocked;
 
-                s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}",
-                    Connection.AmpqUri.GetSanitizedUri());
+                Log.OpeningChannelToRabbitMq(s_logger, Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
 
@@ -155,13 +154,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void HandleBlocked(object? sender, ConnectionBlockedEventArgs args)
         {
-            s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}", 
-                Connection.AmpqUri!.GetSanitizedUri(), args.Reason);
+            Log.SubscriptionBlocked(s_logger, Connection.AmpqUri!.GetSanitizedUri(), args.Reason);
         }
 
         private void HandleUnBlocked(object? sender, EventArgs args)
         { 
-            s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked", Connection.AmpqUri!.GetSanitizedUri());
+            Log.SubscriptionUnblocked(s_logger, Connection.AmpqUri!.GetSanitizedUri());
         }
 
         protected void ResetConnectionToBroker()
@@ -190,5 +188,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}")]
+            public static partial void OpeningChannelToRabbitMq(ILogger logger, string url);
+
+            [LoggerMessage(LogLevel.Warning, "RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}")]
+            public static partial void SubscriptionBlocked(ILogger logger, string url, string errorMessage);
+
+            [LoggerMessage(LogLevel.Information, "RMQMessagingGateway: Subscription to {URL} unblocked")]
+            public static partial void SubscriptionUnblocked(ILogger logger, string url);
+        }
     }
 }
+
