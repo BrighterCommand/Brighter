@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
@@ -64,7 +65,12 @@ public class InMemorySchedulerMessageTests
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
         var trace = new BrighterTracer(_timeProvider);
-        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = trace };
+        _outbox = new InMemoryOutbox(_timeProvider)
+        {
+            Tracer = trace, 
+            //We need to set the outbox entries time to live to be greater than the re-schedule time, otherwise the test will fail
+            EntryTimeToLive = TimeSpan.FromHours(3)
+        };
 
         var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
@@ -161,7 +167,7 @@ public class InMemorySchedulerMessageTests
     }
 
     [Fact]
-    public void When_reschedule_a_message_with_a_datetimeoffset()
+    public async Task When_reschedule_a_message_with_a_datetimeoffset()
     {
         var req = new MyEvent();
         var message =
