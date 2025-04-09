@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Outbox.MySql
     /// <summary>
     /// Implements an outbox using Sqlite as a backing store  
     /// </summary>
-    public class MySqlOutbox : RelationDatabaseOutbox
+    public partial class MySqlOutbox : RelationDatabaseOutbox
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutbox>();
 
@@ -91,8 +91,7 @@ namespace Paramore.Brighter.Outbox.MySql
             catch (MySqlException sqlException)
             {
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
-                s_logger.LogWarning(
-                    "MsSqlOutbox: A duplicate was detected in the batch");
+                Log.DuplicateDetectedInBatch(s_logger);
             }
             finally
             {
@@ -119,8 +118,7 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                 {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate was detected in the batch");
+                    Log.DuplicateDetectedInBatch(s_logger);
                     return;
                 }
 
@@ -518,5 +516,12 @@ namespace Paramore.Brighter.Outbox.MySql
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "MsSqlOutbox: A duplicate was detected in the batch")]
+            public static partial void DuplicateDetectedInBatch(ILogger logger);
+        }
     }
 }
+

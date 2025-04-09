@@ -48,7 +48,7 @@ internal enum ARNAmazonSNS
     SubscriptionId = 6
 }
 
-internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
+internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageCreator>();
 
@@ -108,7 +108,7 @@ internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCrea
         }
         catch (Exception e)
         {
-            s_logger.LogWarning(e, "Failed to create message from amqp message");
+            Log.FailedToCreateMessageFromAmqpMessage(s_logger, e);
             message = FailureMessage(topic, messageId);
         }
 
@@ -384,4 +384,55 @@ internal sealed class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCrea
 
         return new HeaderResult<string>(null, false);
     }
+<<<<<<< HEAD
+=======
+    
+    private static HeaderResult<string> ReadSpecVersion(Amazon.SQS.Model.Message sqsMessage)
+    {
+        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.SpecVersion, out var value))
+        {
+            return new HeaderResult<string>(value.StringValue, true);
+        }
+    
+        return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
+    }
+    
+     private static HeaderResult<string> ReadType(Amazon.SQS.Model.Message sqsMessage)
+     {
+         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Type, out var value))
+         {
+             return new HeaderResult<string>(value.StringValue, true);
+         }
+        
+         return new HeaderResult<string>(MessageHeader.DefaultType, true);
+     }
+     
+     private static HeaderResult<Uri> ReadSource(Amazon.SQS.Model.Message sqsMessage)
+     {
+         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Source, out var value)
+             && Uri.TryCreate(value.StringValue, UriKind.RelativeOrAbsolute, out var source ))
+         {
+             return new HeaderResult<Uri>(source, true);
+         }
+        
+         return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
+     }
+     
+     private static HeaderResult<Uri?> ReadDataSchema(Amazon.SQS.Model.Message sqsMessage)
+     {
+         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.DataSchema, out var value)
+             && Uri.TryCreate(value.StringValue, UriKind.RelativeOrAbsolute, out var dataSchema))
+         {
+             return new HeaderResult<Uri?>(dataSchema, true);
+         }
+        
+         return new HeaderResult<Uri?>(null, true);
+     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Failed to create message from amqp message")]
+        public static partial void FailedToCreateMessageFromAmqpMessage(ILogger logger, Exception e);
+    }
+>>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
 }

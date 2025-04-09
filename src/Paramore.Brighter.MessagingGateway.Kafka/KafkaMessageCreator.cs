@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// to coerce them to the appropriate type yourself. You can set the serializer, so your alternative is to
     /// override the bag creation code to use more specific types.
     /// </summary>
-    public class KafkaMessageCreator
+    public partial class KafkaMessageCreator
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageCreator>();
 
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (Exception e)
             {
-                s_logger.LogWarning(e, "Failed to create message from Kafka offset");
+                Log.FailedToCreateMessageFromKafkaOffset(s_logger, e);
                 message = FailureMessage(topic, messageId);
             }
 
@@ -135,7 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(correlationId))
                     {
-                        s_logger.LogDebug("No correlation id found in message");
+                        Log.NoCorrelationIdFoundInMessage(s_logger);
                         return new HeaderResult<string>(string.Empty, true);
                     }
 
@@ -150,7 +150,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No delay milliseconds found in message");
+                        Log.NoDelayMillisecondsFoundInMessage(s_logger);
                         return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
                     }
 
@@ -159,7 +159,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayMilliseconds), true);
                     }
 
-                    s_logger.LogDebug("Could not parse message delayMilliseconds: {DelayMillisecondsValue}", s);
+                    Log.CouldNotParseMessageDelayMilliseconds(s_logger, s);
                     return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
                 });
         }
@@ -171,7 +171,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No handled count found in message");
+                        Log.NoHandledCountFoundInMessage(s_logger);
                         return new HeaderResult<int>(0, true);
                     }
 
@@ -180,7 +180,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         return new HeaderResult<int>(handledCount, true);
                     }
 
-                    s_logger.LogDebug("Could not parse message handled count: {HandledCountValue}", s);
+                    Log.CouldNotParseMessageHandledCount(s_logger, s);
                     return new HeaderResult<int>(0, false);
                 });
         }
@@ -192,7 +192,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No reply to found in message");
+                        Log.NoReplyToFoundInMessage(s_logger);
                         return new HeaderResult<string>(string.Empty, true);
                     }
 
@@ -271,8 +271,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(messageId))
                     {
-                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}",
-                            newMessageId);
+                        Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
                         return new HeaderResult<string>(newMessageId, true);
                     }
 
@@ -292,7 +291,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No partition key found in message");
+                        Log.NoPartitionKeyFoundInMessage(s_logger);
                         return new HeaderResult<string>(string.Empty, false);
                     }
 
@@ -330,9 +329,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 catch (Exception e)
                 {
                     var firstTwentyBytes = BitConverter.ToString(lastHeader.Take(20).ToArray());
-                    s_logger.LogWarning(e,
-                        "Failed to read the value of header {Topic} as UTF-8, first 20 byes follow: \n\t{1}", key,
-                        firstTwentyBytes);
+                    Log.FailedToReadTheValueOfHeader(s_logger, e, key, firstTwentyBytes);
                     return new HeaderResult<string>(null, false);
                 }
             }
@@ -351,5 +348,39 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!BrighterDefinedHeaders.HeadersToReset.Any(htr => htr.Equals(header.Key)))
                 message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString(header.GetValueBytes()));
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Failed to create message from Kafka offset")]
+            public static partial void FailedToCreateMessageFromKafkaOffset(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Debug, "No correlation id found in message")]
+            public static partial void NoCorrelationIdFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "No delay milliseconds found in message")]
+            public static partial void NoDelayMillisecondsFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "Could not parse message delayMilliseconds: {DelayMillisecondsValue}")]
+            public static partial void CouldNotParseMessageDelayMilliseconds(ILogger logger, string delayMillisecondsValue);
+
+            [LoggerMessage(LogLevel.Debug, "No handled count found in message")]
+            public static partial void NoHandledCountFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "Could not parse message handled count: {HandledCountValue}")]
+            public static partial void CouldNotParseMessageHandledCount(ILogger logger, string handledCountValue);
+
+            [LoggerMessage(LogLevel.Debug, "No reply to found in message")]
+            public static partial void NoReplyToFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "No message id found in message MessageId, new message id is {NewMessageId}")]
+            public static partial void NoMessageIdFoundInMessage(ILogger logger, string newMessageId);
+
+            [LoggerMessage(LogLevel.Debug, "No partition key found in message")]
+            public static partial void NoPartitionKeyFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to read the value of header {Topic} as UTF-8, first 20 byes follow: \n\t{FirstTwentyBytes}")]
+            public static partial void FailedToReadTheValueOfHeader(ILogger logger, Exception exception, string topic, string firstTwentyBytes);
+        }
     }
 }
+

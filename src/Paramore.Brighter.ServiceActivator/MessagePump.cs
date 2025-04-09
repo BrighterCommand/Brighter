@@ -43,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     /// Timeout on the handler should be provided by timeout policy using an attribute on the handler 
     /// </summary>
-    public abstract class MessagePump<TRequest> where TRequest : class, IRequest
+    public abstract partial class MessagePump<TRequest> where TRequest : class, IRequest
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
 
@@ -127,15 +127,23 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {
-                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id,
-                    MessageType.MT_COMMAND));
+                Log.MessageMismatchCommand(s_logger, request.Id, MessageType.MT_COMMAND);
             }
 
             if (messageType == MessageType.MT_EVENT && request is ICommand)
             {
-                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id,
-                    MessageType.MT_EVENT));
+                Log.MessageMismatchEvent(s_logger, request.Id, MessageType.MT_EVENT);
             }
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Error, "Message {MessageId} mismatch. Message type is '{MessageType}' yet mapper produced message of type IEvent")]
+            public static partial void MessageMismatchCommand(ILogger logger, string messageId, MessageType messageType);
+
+            [LoggerMessage(LogLevel.Error, "Message {MessageId} mismatch. Message type is '{MessageType}' yet mapper produced message of type ICommand")]
+            public static partial void MessageMismatchEvent(ILogger logger, string messageId, MessageType messageType);
         }
    }
 }
+

@@ -41,7 +41,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// The <see cref="ChannelFactory"/> class is responsible for creating and managing SNS/SQS channels.
 /// </summary>
+<<<<<<< HEAD
 public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
+=======
+public partial class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
+>>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
 {
     private readonly SqsMessageConsumerFactory _messageConsumerFactory;
     private SqsSubscription? _subscription;
@@ -169,7 +173,7 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             }
             catch (Exception)
             {
-                s_logger.LogError("Could not delete queue {ChannelName}", queueExists.queueUrl);
+                Log.CouldNotDeleteQueue(s_logger, queueExists.queueUrl);
             }
         }
     }
@@ -196,7 +200,7 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             }
             catch (Exception)
             {
-                s_logger.LogError("Could not delete topic {TopicResourceName}", ChannelTopicArn);
+                Log.CouldNotDeleteTopic(s_logger, ChannelTopicArn);
             }
         }
     }
@@ -311,10 +315,22 @@ public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                     await snsClient.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = sub.SubscriptionArn });
                 if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
                 {
-                    s_logger.LogError("Error unsubscribing from {TopicResourceName} for sub {ChannelResourceName}",
-                        ChannelAddress, sub.SubscriptionArn);
+                    Log.ErrorUnsubscribingFromTopic(s_logger, ChannelAddress, sub.SubscriptionArn);
                 }
             }
         } while (response.NextToken != null);
+    }
+
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Error, "Could not delete queue {ChannelName}")]
+        public static partial void CouldNotDeleteQueue(ILogger logger, string channelName);
+
+        [LoggerMessage(LogLevel.Error, "Could not delete topic {TopicResourceName}")]
+        public static partial void CouldNotDeleteTopic(ILogger logger, string topicResourceName);
+
+        [LoggerMessage(LogLevel.Error, "Error unsubscribing from {TopicResourceName} for sub {ChannelResourceName}")]
+        public static partial void ErrorUnsubscribingFromTopic(ILogger logger, string? topicResourceName, string channelResourceName);
     }
 }

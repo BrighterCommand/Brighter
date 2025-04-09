@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Read messages from an SQS queue
     /// </summary>
-    public class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
@@ -106,15 +106,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 await client.DeleteMessageAsync(new DeleteMessageRequest(_channelUrl, receiptHandle),
                     cancellationToken);
 
+<<<<<<< HEAD
                 s_logger.LogInformation(
                     "SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}",
                     message.Id, receiptHandle, _channelUrl);
+=======
+                Log.DeletedMessage(s_logger, message.Id, receiptHandle, urlResponse.QueueUrl);
+>>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
             }
             catch (Exception exception)
             {
-                s_logger.LogError(exception,
-                    "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
-                    message.Id, receiptHandle, _queueName);
+                Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
                 throw;
             }
         }
@@ -140,10 +142,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                s_logger.LogInformation(
-                    "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
-                    message.Id, receiptHandle, _queueName
-                );
+                Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName);
 
                 using var client = _clientFactory.CreateSqsClient();
                 await EnsureChannelUrl(client, cancellationToken);
@@ -161,9 +160,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (Exception exception)
             {
-                s_logger.LogError(exception,
-                    "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
-                    message.Id, receiptHandle, _queueName);
+                Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
                 throw;
             }
         }
@@ -182,16 +179,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 using var client = _clientFactory.CreateSqsClient();
-                s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
+                Log.PurgingQueue(s_logger, _queueName);
 
                 await EnsureChannelUrl(client, cancellationToken);
                 await client.PurgeQueueAsync(_channelUrl, cancellationToken);
 
-                s_logger.LogInformation("SqsMessageConsumer: Purged the queue {ChannelName}", _queueName);
+                Log.PurgedQueue(s_logger, _queueName);
             }
             catch (Exception exception)
             {
-                s_logger.LogError(exception, "SqsMessageConsumer: Error purging queue {ChannelName}", _queueName);
+                Log.ErrorPurgingQueue(s_logger, exception, _queueName);
                 throw;
             }
         }
@@ -220,7 +217,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 await EnsureChannelUrl(client, cancellationToken);
                 timeOut ??= TimeSpan.Zero;
 
+<<<<<<< HEAD
                 s_logger.LogDebug("SqsMessageConsumer: Preparing to retrieve next message from queue {URL}", _channelUrl);  
+=======
+                Log.RetrievingNextMessage(s_logger, urlResponse.QueueUrl);
+>>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
 
                 var request = new ReceiveMessageRequest(_channelUrl)
                 {
@@ -236,18 +237,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (InvalidOperationException ioe)
             {
-                s_logger.LogDebug("SqsMessageConsumer: Could not determine number of messages to retrieve");
+                Log.CouldNotDetermineNumberOfMessagesToRetrieve(s_logger);
                 throw new ChannelFailureException("Error connecting to SQS, see inner exception for details", ioe);
             }
             catch (OperationCanceledException oce)
             {
-                s_logger.LogDebug("SqsMessageConsumer: Could not find messages to retrieve");
+                Log.CouldNotFindMessagesToRetrieve(s_logger);
                 throw new ChannelFailureException("Error connecting to SQS, see inner exception for details", oce);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "SqsMessageConsumer: There was an error listening to queue {ChannelName} ",
-                    _queueName);
+                Log.ErrorListeningToQueue(s_logger, e, _queueName);
                 throw;
             }
             finally
@@ -264,10 +264,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             for (int i = 0; i < sqsMessages.Length; i++)
             {
                 var message = SqsMessageCreatorFactory.Create(_rawMessageDelivery).CreateMessage(sqsMessages[i]);
-                s_logger.LogInformation(
-                    "SqsMessageConsumer: Received message from queue {ChannelName}, message: {1}{Request}",
-                    _queueName, Environment.NewLine,
-                    JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
+                Log.ReceivedMessageFromQueue(s_logger, _queueName, Environment.NewLine, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
                 messages[i] = message;
             }
 
@@ -295,7 +292,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                s_logger.LogInformation("SqsMessageConsumer: re-queueing the message {Id}", message.Id);
+                Log.RequeueingMessage(s_logger, message.Id);
 
                 using (var client = _clientFactory.CreateSqsClient())
                 {
@@ -306,15 +303,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     );
                 }
 
-                s_logger.LogInformation("SqsMessageConsumer: re-queued the message {Id}", message.Id);
+                Log.RequeuedMessage(s_logger, message.Id);
 
                 return true;
             }
             catch (Exception exception)
             {
-                s_logger.LogError(exception,
-                    "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
-                    message.Id, receiptHandle, _queueName);
+                Log.ErrorRequeueingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
                 return false;
             }
         }
@@ -332,6 +327,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             GC.SuppressFinalize(this);
             return new ValueTask(Task.CompletedTask);
         }
+<<<<<<< HEAD
         
         private async Task EnsureChannelUrl(AmazonSQSClient client, CancellationToken cancellationToken)
         {
@@ -343,5 +339,57 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _channelUrl = urlResponse.QueueUrl;
         }
 
+=======
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {Url}")]
+            public static partial void DeletedMessage(ILogger logger, string id, string? receiptHandle, string url);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
+            public static partial void ErrorDeletingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
+            public static partial void RejectingMessage(ILogger logger, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
+            public static partial void ErrorRejectingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Purging the queue {ChannelName}")]
+            public static partial void PurgingQueue(ILogger logger, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Purged the queue {ChannelName}")]
+            public static partial void PurgedQueue(ILogger logger, string channelName);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error purging queue {ChannelName}")]
+            public static partial void ErrorPurgingQueue(ILogger logger, Exception exception, string channelName);
+            
+            [LoggerMessage(LogLevel.Debug, "SqsMessageConsumer: Preparing to retrieve next message from queue {Url}")]
+            public static partial void RetrievingNextMessage(ILogger logger, string url);
+
+            [LoggerMessage(LogLevel.Debug, "SqsMessageConsumer: Could not determine number of messages to retrieve")]
+            public static partial void CouldNotDetermineNumberOfMessagesToRetrieve(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "SqsMessageConsumer: Could not find messages to retrieve")]
+            public static partial void CouldNotFindMessagesToRetrieve(ILogger logger);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: There was an error listening to queue {ChannelName}")]
+            public static partial void ErrorListeningToQueue(ILogger logger, Exception exception, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Received message from queue {ChannelName}, message: {NewLine}{Request}")]
+            public static partial void ReceivedMessageFromQueue(ILogger logger, string channelName, string newLine, string request);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: re-queueing the message {Id}")]
+            public static partial void RequeueingMessage(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: re-queued the message {Id}")]
+            public static partial void RequeuedMessage(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
+            public static partial void ErrorRequeueingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
+        }
+>>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
     }
 }
+

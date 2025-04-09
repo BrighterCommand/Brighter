@@ -33,7 +33,7 @@ using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter
 {
-    public class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
+    public partial class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
         where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
@@ -158,7 +158,7 @@ namespace Paramore.Brighter
             }
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
-            s_logger.LogDebug("New handler pipeline created: {HandlerName}", TracePipeline(firstInPipeline));
+            Log.NewHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
         }
 
@@ -234,7 +234,7 @@ namespace Paramore.Brighter
             }
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
-            s_logger.LogDebug("New async handler pipeline created: {HandlerName}", TracePipeline(firstInPipeline));
+            Log.NewAsyncHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
         }
 
@@ -436,5 +436,15 @@ namespace Paramore.Brighter
             
             return scope;
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "New handler pipeline created: {HandlerName}")]
+            public static partial void NewHandlerPipelineCreated(ILogger logger, string handlerName);
+
+            [LoggerMessage(LogLevel.Debug, "New async handler pipeline created: {HandlerName}")]
+            public static partial void NewAsyncHandlerPipelineCreated(ILogger logger, string handlerName);
+        }
     }
 }
+

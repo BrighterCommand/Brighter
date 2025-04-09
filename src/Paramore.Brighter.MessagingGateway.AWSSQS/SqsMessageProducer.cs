@@ -35,7 +35,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// The SQS Message producer
 /// </summary>
+<<<<<<< HEAD
 public class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProducerAsync, IAmAMessageProducerSync
+=======
+public partial class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync, IAmAMessageProducerSync
+>>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
 {
     private readonly SqsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
@@ -151,9 +155,7 @@ public class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProducerAsync,
             return;
         }
         
-        s_logger.LogDebug(
-            "SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
-            message.Header.Topic, message.Id, message.Body);
+        Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
 
         await ConfirmQueueExistsAsync(cancellationToken);
 
@@ -167,13 +169,22 @@ public class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProducerAsync,
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
         }
 
-        s_logger.LogDebug(
-            "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-            message.Header.Topic, message.Id, messageId);
+        Log.PublishedMessage(s_logger, message.Header.Topic, message.Id, messageId);
     }
 
     public void Send(Message message) => SendWithDelay(message, null);
 
     public void SendWithDelay(Message message, TimeSpan? delay)
         => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay, false));
+
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Debug, "SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}")]
+        public static partial void PublishingMessage(ILogger logger, string topic, string id, MessageBody request);
+
+        [LoggerMessage(LogLevel.Debug, "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}")]
+        public static partial void PublishedMessage(ILogger logger, string topic, string messageId, string snsMessageId);
+    }
 }
+

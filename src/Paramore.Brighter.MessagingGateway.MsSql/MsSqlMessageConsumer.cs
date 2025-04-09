@@ -8,7 +8,7 @@ using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class MsSqlMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class MsSqlMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private readonly string _topic;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumer>();
@@ -47,13 +47,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         public void Purge()
         {
-            s_logger.LogDebug("MsSqlMessagingConsumer: purging queue");
+            Log.PurgingQueue(s_logger);
             _sqlMessageQueue.Purge();
         }
         
         public async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            s_logger.LogDebug("MsSqlMessagingConsumer: purging queue");
+            Log.PurgingQueue(s_logger);
             await Task.Run( () => _sqlMessageQueue.Purge(), cancellationToken);
         }
         
@@ -103,9 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="message">The message.</param>
         public void Reject(Message message)
          {
-             s_logger.LogInformation(
-                 "MsSqlMessagingConsumer: rejecting message with topic {Topic} and id {Id}, NOT IMPLEMENTED",
-                 message.Header.Topic, message.Id);
+             Log.RejectingMessageNotImplemented(s_logger, message.Header.Topic, message.Id);
          }
 
         /// <summary>
@@ -135,8 +133,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             // delay is not natively supported - don't block with Task.Delay
             var topic = message.Header.Topic;
 
-            s_logger.LogDebug("MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}", topic,
-                message.Id.ToString());
+            Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
 
             _sqlMessageQueue.Send(message, topic); 
             return true;
@@ -155,8 +152,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             // delay is not natively supported - don't block with Task.Delay
             var topic = message.Header.Topic;
 
-            s_logger.LogDebug("MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}", topic,
-                message.Id.ToString());
+            Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
 
             await _sqlMessageQueue.SendAsync(message, topic, null, cancellationToken: cancellationToken); 
             return true;
@@ -178,5 +174,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             GC.SuppressFinalize(this);
             return new ValueTask(Task.CompletedTask);
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessagingConsumer: purging queue")]
+            public static partial void PurgingQueue(ILogger logger);
+
+            [LoggerMessage(LogLevel.Information, "MsSqlMessagingConsumer: rejecting message with topic {Topic} and id {Id}, NOT IMPLEMENTED")]
+            public static partial void RejectingMessageNotImplemented(ILogger logger, string topic, string id);
+            
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}")]
+            public static partial void RequeuingMessage(ILogger logger, string topic, string id);
+        }
     }
 }
+
