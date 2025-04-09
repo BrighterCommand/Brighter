@@ -35,11 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// The SQS Message producer
 /// </summary>
-<<<<<<< HEAD
-public class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProducerAsync, IAmAMessageProducerSync
-=======
-public partial class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync, IAmAMessageProducerSync
->>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
+public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
     private readonly SqsPublication _publication;
     private readonly AWSClientFactory _clientFactory;

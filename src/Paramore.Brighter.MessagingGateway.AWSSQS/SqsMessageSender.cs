@@ -114,8 +114,7 @@ public partial class SqsMessageSender
 
         return null;
     }
-<<<<<<< HEAD
-    
+
     private static string CreateCloudEventHeadersJson(Message message)
     {
         var cloudEventHeaders = new Dictionary<string, string>
@@ -134,19 +133,18 @@ public partial class SqsMessageSender
 
         if (message.Header.DataSchema != null)
             cloudEventHeaders[HeaderNames.DataSchema] = message.Header.DataSchema.ToString();
-        
+
         if (message.Header.DataRef != null)
             cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
 
         var cloudEventHeadersJson = JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
         return cloudEventHeadersJson;
-=======
+    }
 
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Warning, "Set delay from {CurrentDelay} to 15min (SQS support up to 15min)")]
         public static partial void DelaySetToMaximum(ILogger logger, TimeSpan? currentDelay);
->>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
     }
 }
 

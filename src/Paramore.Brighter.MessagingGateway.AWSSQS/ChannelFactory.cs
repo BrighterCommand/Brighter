@@ -41,11 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// The <see cref="ChannelFactory"/> class is responsible for creating and managing SNS/SQS channels.
 /// </summary>
-<<<<<<< HEAD
-public class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
-=======
-public partial class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
->>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
+public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
 {
     private readonly SqsMessageConsumerFactory _messageConsumerFactory;
     private SqsSubscription? _subscription;

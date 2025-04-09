@@ -106,13 +106,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 await client.DeleteMessageAsync(new DeleteMessageRequest(_channelUrl, receiptHandle),
                     cancellationToken);
 
-<<<<<<< HEAD
-                s_logger.LogInformation(
-                    "SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}",
-                    message.Id, receiptHandle, _channelUrl);
-=======
-                Log.DeletedMessage(s_logger, message.Id, receiptHandle, urlResponse.QueueUrl);
->>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
+                Log.DeletedMessage(s_logger, message.Id, receiptHandle, _channelUrl!);
             }
             catch (Exception exception)
             {
@@ -217,11 +211,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 await EnsureChannelUrl(client, cancellationToken);
                 timeOut ??= TimeSpan.Zero;
 
-<<<<<<< HEAD
-                s_logger.LogDebug("SqsMessageConsumer: Preparing to retrieve next message from queue {URL}", _channelUrl);  
-=======
-                Log.RetrievingNextMessage(s_logger, urlResponse.QueueUrl);
->>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
+                Log.RetrievingNextMessage(s_logger,_channelUrl!);
 
                 var request = new ReceiveMessageRequest(_channelUrl)
                 {
@@ -327,7 +317,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             GC.SuppressFinalize(this);
             return new ValueTask(Task.CompletedTask);
         }
-<<<<<<< HEAD
         
         private async Task EnsureChannelUrl(AmazonSQSClient client, CancellationToken cancellationToken)
         {
@@ -338,8 +327,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);      
             _channelUrl = urlResponse.QueueUrl;
         }
-
-=======
 
         private static partial class Log
         {
@@ -389,7 +376,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             public static partial void ErrorRequeueingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
 
         }
->>>>>>> 0741b9ef1 (feature: Use source generated logging (#3579))
     }
 }
 
