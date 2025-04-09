@@ -72,7 +72,12 @@ public class InMemorySchedulerMessageAsyncTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var trace = new BrighterTracer(_timeProvider);
-        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = trace };
+        _outbox = new InMemoryOutbox(_timeProvider)
+        {
+            Tracer = trace, 
+            //We need to set the outbox entries time to live to be greater than the re-schedule time, otherwise the test will fail
+            EntryTimeToLive = TimeSpan.FromHours(3)
+        };
 
         var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
@@ -195,7 +200,7 @@ public class InMemorySchedulerMessageAsyncTests
         
         var actual = _outbox.Get(req.Id, new RequestContext());
 
-        Assert.Equivalent(message.Body, actual.Body);
+        Assert.Equivalent(message.Body.Value, actual.Body.Value);
         Assert.Equal(message.Id, actual.Id);
         Assert.Equal(message.Persist, actual.Persist);
         Assert.Equal(message.Redelivered, actual.Redelivered);
