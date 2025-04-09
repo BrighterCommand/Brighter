@@ -5,48 +5,69 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
     /// <summary>
     /// Class ClientRequestHandler .
-    /// The <see cref="MQTTMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
+    /// The <see cref="MqttMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles subscription establishment, request sending and error handling
     /// </summary>
-    public class MQTTMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, IAmAMessageProducerSync
+    public partial class MqttMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, IAmAMessageProducerSync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageProducer>();
-        
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageProducer>();
+
+        private MqttMessagePublisher _mqttMessagePublisher;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MqttMessageProducer" /> class.
+        /// </summary>
+        /// <param name="mqttMessagePublisher">The publisher used to send messages</param>
+        public MqttMessageProducer(MqttMessagePublisher mqttMessagePublisher)
+        {
+            _mqttMessagePublisher = mqttMessagePublisher;
+        }
+
+        /// <summary>
+        /// Gets or sets the maximum number of outstanding messages that can be sent without acknowledgment.
+        /// A value of -1 indicates no limit on the number of outstanding messages.
+        /// </summary>
         public int MaxOutStandingMessages { get; set; } = -1;
+
+        /// <summary>
+        /// Gets or sets the interval, in milliseconds, at which the producer checks for outstanding messages.
+        /// </summary>
+        /// <remarks>
+        /// This property determines the frequency of checks for outstanding messages when the producer is managing message flow.
+        /// A value of <c>0</c> disables the periodic checks.
+        /// </remarks>
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+
+        /// <summary>
+        /// Gets or sets a collection of key-value pairs that can be used to store additional metadata or context 
+        /// related to the messages being produced.
+        /// </summary>
+        /// <remarks>
+        /// This property serves as a flexible container for storing custom data that may be required during 
+        /// message production or processing. The keys are strings, and the values are objects, allowing for 
+        /// diverse types of data to be stored.
+        /// </remarks>
+        public Dictionary<string, object> OutBoxBag { get; set; } = [];
 
         /// <inheritdoc />
         public Publication Publication { get; set; }
 
         /// <inheritdoc />
         public Activity Span { get; set; }
-        
+
         /// <inheritdoc />
         public IAmAMessageScheduler Scheduler { get; set; }
-
-        private MQTTMessagePublisher _mqttMessagePublisher;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MQTTMessageProducer" /> class.
-        /// </summary>
-        /// <param name="mqttMessagePublisher">The publisher used to send messages</param>
-        public MQTTMessageProducer(MQTTMessagePublisher mqttMessagePublisher)
-        {
-            _mqttMessagePublisher = mqttMessagePublisher;
-        }
 
         /// <summary>
         /// Disposes of the producer
         /// </summary>
-        public void Dispose(){ }
-        
+        public void Dispose() { }
+
         /// <summary>
         /// Disposes of the producer
         /// </summary>
@@ -75,7 +96,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
         }
-        
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -90,13 +111,13 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 schedulerSync.Schedule(message, delay.Value);
                 return;
             }
-            
+
             // delay is not natively supported
             if (message == null)
             {
                 throw new ArgumentNullException(nameof(message));
             }
-            
+
             _mqttMessagePublisher.PublishMessage(message);
         }
 
@@ -115,7 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
                 return;
             }
-            
+
             if (message == null)
             {
                 throw new ArgumentNullException(nameof(message));
