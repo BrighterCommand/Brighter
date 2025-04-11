@@ -1,0 +1,217 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="Mixed Platforms" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/samples/" />
+  <Folder Name="/samples/CommandProcessor/">
+    <Project Path="samples/CommandProcessor/HelloWorld/HelloWorld.csproj" />
+    <Project Path="samples/CommandProcessor/HelloWorldAsync/HelloWorldAsync.csproj" />
+    <Project Path="samples/CommandProcessor/HelloWorldInternalBus/HelloWorldInternalBus.csproj" />
+  </Folder>
+  <Folder Name="/samples/Scheduler/" />
+  <Folder Name="/samples/Scheduler/Aws/">
+    <Project Path="samples/Scheduler/AwsTaskQueue/Greetings/Greetings.csproj" />
+    <Project Path="samples/Scheduler/AwsTaskQueue/GreetingsPumper/GreetingsPumper.csproj" />
+    <Project Path="samples/Scheduler/AwsTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+  </Folder>
+  <Folder Name="/samples/Scheduler/Quartz/">
+    <Project Path="samples/Scheduler/QuartzTaskQueue/Greetings/Greetings.csproj" />
+    <Project Path="samples/Scheduler/QuartzTaskQueue/GreetingsPumper/GreetingsPumper.csproj" />
+    <Project Path="samples/Scheduler/QuartzTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/">
+    <File Path="samples/TaskQueue/README.md" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/ASBTaskQueue/">
+    <Project Path="samples/TaskQueue/ASBTaskQueue/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/ASBTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/ASBTaskQueue/GreetingsScopedReceiverConsole/GreetingsScopedReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/ASBTaskQueue/GreetingsSender.Web/GreetingsSender.Web.csproj" />
+    <Project Path="samples/TaskQueue/ASBTaskQueue/GreetingsSender/GreetingsSender.csproj" />
+    <Project Path="samples/TaskQueue/ASBTaskQueue/GreetingsWorker/GreetingsWorker.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/AWSTaskQueue/">
+    <Project Path="samples/TaskQueue/AWSTaskQueue/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/AWSTaskQueue/GreetingsPumper/GreetingsPumper.csproj" />
+    <Project Path="samples/TaskQueue/AWSTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/AWSTaskQueue/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/KafkaSchemaRegistry/">
+    <Project Path="samples/TaskQueue/KafkaSchemaRegistry/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/KafkaSchemaRegistry/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/KafkaSchemaRegistry/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/KafkaTaskQueue/">
+    <Project Path="samples/TaskQueue/KafkaTaskQueue/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/KafkaTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/KafkaTaskQueue/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/MsSqlMessagingGateway/">
+    <File Path="samples/TaskQueue/MsSqlMessagingGateway/BrighterSqlQueue.sql" />
+    <Project Path="samples/TaskQueue/MsSqlMessagingGateway/CompetingReceiverConsole/CompetingReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/MsSqlMessagingGateway/CompetingSender/CompetingSender.csproj" />
+    <Project Path="samples/TaskQueue/MsSqlMessagingGateway/Events/Events.csproj" />
+    <Project Path="samples/TaskQueue/MsSqlMessagingGateway/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/MsSqlMessagingGateway/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/MultiBus/">
+    <Project Path="samples/TaskQueue/MultiBus/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/MultiBus/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/MultiBus/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/RedisTaskQueue/">
+    <Project Path="samples/TaskQueue/RedisTaskQueue/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/RedisTaskQueue/GreetingsReceiver/GreetingsReceiver.csproj" />
+    <Project Path="samples/TaskQueue/RedisTaskQueue/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/RMQRequestReply/">
+    <Project Path="samples/TaskQueue/RMQRequestReply/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/RMQRequestReply/GreetingsClient/GreetingsClient.csproj" />
+    <Project Path="samples/TaskQueue/RMQRequestReply/GreetingsServer/GreetingsServer.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/RMQTaskQueue/">
+    <Project Path="samples/TaskQueue/RMQTaskQueue/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/RMQTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/RMQTaskQueue/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/Transforms/" />
+  <Folder Name="/samples/Transforms/ClaimCheck/">
+    <Project Path="samples/Transforms/AWSTransfomers/ClaimCheck/Greetings/Greetings.csproj" />
+    <Project Path="samples/Transforms/AWSTransfomers/ClaimCheck/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/Transforms/AWSTransfomers/ClaimCheck/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/Transforms/CloudEvents/">
+    <Project Path="samples/Transforms/AWSTransfomers/CloudEvents/Greetings/Greetings.csproj" />
+    <Project Path="samples/Transforms/AWSTransfomers/CloudEvents/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/Transforms/AWSTransfomers/CloudEvents/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/Transforms/Compression/">
+    <Project Path="samples/Transforms/AWSTransfomers/Compression/Greetings/Greetings.csproj" />
+    <Project Path="samples/Transforms/AWSTransfomers/Compression/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/Transforms/AWSTransfomers/Compression/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/WebAPI/" />
+  <Folder Name="/samples/WebAPI/WebAPI_Common/">
+    <File Path="samples/WebAPI/WebAPI_Common/README.md" />
+    <Project Path="samples/WebAPI/WebAPI_Common/DbMaker/DbMaker.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Common/Greetings_Migrations/Greetings_Migrations.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Common/Salutations_Migrations/Salutations_Migrations.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Common/TransportMaker/TransportMaker.csproj" />
+  </Folder>
+  <Folder Name="/samples/WebAPI/WebAPI_Dapper/">
+    <File Path="samples/WebAPI/WebAPI_Dapper/README.md" />
+    <File Path="samples/WebAPI/WebAPI_Dapper/tests.http" />
+    <Project Path="samples/WebAPI/WebAPI_Dapper/GreetingsApp/GreetingsApp.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dapper/GreetingsWeb/GreetingsWeb.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dapper/Greetings_Sweeper/Greetings_Sweeper.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dapper/SalutationAnalytics/SalutationAnalytics.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dapper/SalutationApp/SalutationApp.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dapper/Salutation_Sweeper/Salutation_Sweeper.csproj" />
+  </Folder>
+  <Folder Name="/samples/WebAPI/WebAPI_Dynamo/">
+    <File Path="samples/WebAPI/WebAPI_Dynamo/README.md" />
+    <File Path="samples/WebAPI/WebAPI_Dynamo/tests.http" />
+    <Project Path="samples/WebAPI/WebAPI_Dynamo/GreetingsApp/GreetingsApp.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dynamo/GreetingsWeb/GreetingsWeb.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dynamo/Greetings_Sweeper/Greetings_Sweeper.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dynamo/SalutationAnalytics/SalutationAnalytics.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_Dynamo/SalutationApp/SalutationApp.csproj" />
+  </Folder>
+  <Folder Name="/samples/WebAPI/WebAPI_EFCore/">
+    <File Path="samples/WebAPI/WebAPI_EFCore/README.md" />
+    <File Path="samples/WebAPI/WebAPI_EFCore/tests.http" />
+    <Project Path="samples/WebAPI/WebAPI_EFCore/GreetingsApp/GreetingsApp.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_EFCore/GreetingsWeb/GreetingsWeb.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_EFCore/Greetings_Sweeper/Greetings_Sweeper.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_EFCore/SalutationAnalytics/SalutationAnalytics.csproj" />
+    <Project Path="samples/WebAPI/WebAPI_EFCore/SalutationApp/SalutationApp.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="src/Directory.Build.props" />
+  </Folder>
+  <Folder Name="/tests/">
+    <File Path="tests/README.md" />
+    <Project Path="tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Azure.Tests/Paramore.Brighter.Azure.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj" />
+    <Project Path="tests/Paramore.Test.Helpers/Paramore.Test.Helpers.csproj" />
+  </Folder>
+  <Project Path="src/Paramore.Brighter.Archive.Azure/Paramore.Brighter.Archive.Azure.csproj" />
+  <Project Path="src/Paramore.Brighter.Dapper/Paramore.Brighter.Dapper.csproj" />
+  <Project Path="src/Paramore.Brighter.DynamoDb/Paramore.Brighter.DynamoDb.csproj" />
+  <Project Path="src/Paramore.Brighter.Extensions.DependencyInjection/Paramore.Brighter.Extensions.DependencyInjection.csproj" />
+  <Project Path="src/Paramore.Brighter.Extensions.Diagnostics/Paramore.Brighter.Extensions.Diagnostics.csproj" />
+  <Project Path="src/Paramore.Brighter.Inbox.DynamoDB/Paramore.Brighter.Inbox.DynamoDB.csproj" />
+  <Project Path="src/Paramore.Brighter.Inbox.MongoDb/Paramore.Brighter.Inbox.MongoDb.csproj" />
+  <Project Path="src/Paramore.Brighter.Inbox.MsSql/Paramore.Brighter.Inbox.MsSql.csproj" />
+  <Project Path="src/Paramore.Brighter.Inbox.MySql/Paramore.Brighter.Inbox.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.Inbox.Postgres/Paramore.Brighter.Inbox.Postgres.csproj" />
+  <Project Path="src/Paramore.Brighter.Inbox.Sqlite/Paramore.Brighter.Inbox.Sqlite.csproj" />
+  <Project Path="src/Paramore.Brighter.Locking.Azure/Paramore.Brighter.Locking.Azure.csproj" />
+  <Project Path="src/Paramore.Brighter.Locking.DynamoDB/Paramore.Brighter.Locking.DynamoDB.csproj" />
+  <Project Path="src/Paramore.Brighter.Locking.MongoDb/Paramore.Brighter.Locking.MongoDb.csproj" />
+  <Project Path="src/Paramore.Brighter.Locking.MsSql/Paramore.Brighter.Locking.MsSql.csproj" />
+  <Project Path="src/Paramore.Brighter.Locking.MySql/Paramore.Brighter.Locking.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.Locking.PostgresSql/Paramore.Brighter.Locking.PostgresSql.csproj" />
+  <Project Path="src/Paramore.Brighter.MessageScheduler.Aws/Paramore.Brighter.MessageScheduler.Aws.csproj" />
+  <Project Path="src/Paramore.Brighter.MessageScheduler.Azure/Paramore.Brighter.MessageScheduler.Azure.csproj" />
+  <Project Path="src/Paramore.Brighter.MessageScheduler.Hangfire/Paramore.Brighter.MessageScheduler.Hangfire.csproj" />
+  <Project Path="src/Paramore.Brighter.MessageScheduler.Quartz/Paramore.Brighter.MessageScheduler.Quartz.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.AWSSQS/Paramore.Brighter.MessagingGateway.AWSSQS.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.AzureServiceBus/Paramore.Brighter.MessagingGateway.AzureServiceBus.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.Kafka/Paramore.Brighter.MessagingGateway.Kafka.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.MQTT/Paramore.Brighter.MessagingGateway.MQTT.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.MsSql/Paramore.Brighter.MessagingGateway.MsSql.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.Redis/Paramore.Brighter.MessagingGateway.Redis.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.RMQ.Async/Paramore.Brighter.MessagingGateway.RMQ.Async.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.RMQ.Sync/Paramore.Brighter.MessagingGateway.RMQ.Sync.csproj" />
+  <Project Path="src/Paramore.Brighter.MongoDb/Paramore.Brighter.MongoDb.csproj" />
+  <Project Path="src/Paramore.Brighter.MsSql.Azure/Paramore.Brighter.MsSql.Azure.csproj" />
+  <Project Path="src/Paramore.Brighter.MsSql.EntityFrameworkCore/Paramore.Brighter.MsSql.EntityFrameworkCore.csproj" />
+  <Project Path="src/Paramore.Brighter.MsSql/Paramore.Brighter.MsSql.csproj" />
+  <Project Path="src/Paramore.Brighter.MySql.EntityFrameworkCore/Paramore.Brighter.MySql.EntityFrameworkCore.csproj" />
+  <Project Path="src/Paramore.Brighter.MySql/Paramore.Brighter.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.Outbox.DynamoDB/Paramore.Brighter.Outbox.DynamoDB.csproj" />
+  <Project Path="src/Paramore.Brighter.Outbox.Hosting/Paramore.Brighter.Outbox.Hosting.csproj" />
+  <Project Path="src/Paramore.Brighter.Outbox.MongoDb/Paramore.Brighter.Outbox.MongoDb.csproj" />
+  <Project Path="src/Paramore.Brighter.Outbox.MsSql/Paramore.Brighter.Outbox.MsSql.csproj" />
+  <Project Path="src/Paramore.Brighter.Outbox.MySql/Paramore.Brighter.Outbox.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.Outbox.PostgreSql/Paramore.Brighter.Outbox.PostgreSql.csproj" />
+  <Project Path="src/Paramore.Brighter.Outbox.Sqlite/Paramore.Brighter.Outbox.Sqlite.csproj" />
+  <Project Path="src/Paramore.Brighter.PostgreSql.EntityFrameworkCore/Paramore.Brighter.PostgreSql.EntityFrameworkCore.csproj" />
+  <Project Path="src/Paramore.Brighter.PostgreSql/Paramore.Brighter.PostgreSql.csproj" />
+  <Project Path="src/Paramore.Brighter.ServiceActivator.Control.Api/Paramore.Brighter.ServiceActivator.Control.Api.csproj" />
+  <Project Path="src/Paramore.Brighter.ServiceActivator.Control/Paramore.Brighter.ServiceActivator.Control.csproj" />
+  <Project Path="src/Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection/Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj" />
+  <Project Path="src/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.csproj" />
+  <Project Path="src/Paramore.Brighter.ServiceActivator.Extensions.Hosting/Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj" />
+  <Project Path="src/Paramore.Brighter.ServiceActivator/Paramore.Brighter.ServiceActivator.csproj" />
+  <Project Path="src/Paramore.Brighter.Sqlite.Dapper/Paramore.Brighter.Sqlite.Dapper.csproj" />
+  <Project Path="src/Paramore.Brighter.Sqlite.EntityFrameworkCore/Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj" />
+  <Project Path="src/Paramore.Brighter.Sqlite/Paramore.Brighter.Sqlite.csproj" />
+  <Project Path="src/Paramore.Brighter.Tranformers.AWS/Paramore.Brighter.Tranformers.AWS.csproj" />
+  <Project Path="src/Paramore.Brighter.Transformers.Azure/Paramore.Brighter.Transformers.Azure.csproj" />
+  <Project Path="src/Paramore.Brighter/Paramore.Brighter.csproj" />
+</Solution>
