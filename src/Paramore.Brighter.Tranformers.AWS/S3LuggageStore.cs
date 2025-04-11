@@ -66,12 +66,11 @@ namespace Paramore.Brighter.Tranformers.AWS
         AssumeExists
     }
 
-    public class S3LuggageStore : IAmAStorageProviderAsync, IDisposable
+    public partial class S3LuggageStore : IAmAStorageProviderAsync, IDisposable
     {
         private string _accountId;
         private string _bucketName;
         private IAmazonS3 _client;
-        private AsyncRetryPolicy _policy;
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<S3LuggageStore>();
         private string _luggagePrefix;
@@ -157,7 +156,6 @@ namespace Paramore.Brighter.Tranformers.AWS
             luggageStore._luggagePrefix = luggagePrefix;
 
             if (policy == null) policy = GetDefaultS3Policy();
-            luggageStore._policy = policy;
 
             if (storeCreation == S3LuggageStoreCreation.CreateIfMissing || storeCreation == S3LuggageStoreCreation.ValidateExists)
             {
@@ -186,7 +184,7 @@ namespace Paramore.Brighter.Tranformers.AWS
                 }
                 catch (Exception e)
                 {
-                    s_logger.LogError(e, "Error creating or validating luggage store {bucketname} in {bucketRegion}", bucketName, bucketRegion);
+                    Log.ErrorCreatingValidatingLuggageStore(s_logger, bucketName, bucketRegion, e);
                     throw;
                 }
             }
@@ -206,20 +204,20 @@ namespace Paramore.Brighter.Tranformers.AWS
             var response = await _client.DeleteObjectAsync(request, cancellationToken);
 
             if (response.HttpStatusCode != HttpStatusCode.NoContent)
-                s_logger.LogError("Could not delete luggage with claim {claim check} from {bucket}", claimCheck, _bucketName);
+                Log.CouldNotDeleteLuggage(s_logger, claimCheck, _bucketName);
         }
 
         public async Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default)
         {
             var request = new GetObjectRequest { BucketName = _bucketName, Key = claimCheck, };
 
-            s_logger.LogInformation("Downloading {claim check} from {bucket}", claimCheck, _bucketName);
+            Log.Downloading(s_logger, claimCheck, _bucketName);
 
             // Issue request and remember to dispose of the response
             GetObjectResponse response = await _client.GetObjectAsync(request, cancellationToken);
             if (response.HttpStatusCode != HttpStatusCode.OK)
             {
-                s_logger.LogError("Could not download {claimCheck} from {bucketName}", claimCheck, _bucketName);
+                Log.CouldNotDownload(s_logger, claimCheck, _bucketName);
                 throw new InvalidOperationException($"Could not download {claimCheck} from {_bucketName}");
             }
 
@@ -233,12 +231,12 @@ namespace Paramore.Brighter.Tranformers.AWS
             }
             catch (AmazonS3Exception)
             {
-                s_logger.LogError("Unable to read {claim check} from {bucket}", claimCheck, _bucketName);
+                Log.UnableToRead(s_logger, claimCheck, _bucketName);
                 throw;
             }
             catch (Exception e) when (e is ObjectDisposedException || e is NotSupportedException)
             {
-                s_logger.LogError("Unable to read {claim check} from {bucket}", claimCheck, _bucketName);
+                Log.UnableToRead(s_logger, claimCheck, _bucketName);
                 throw;
             }
             finally
@@ -271,7 +269,7 @@ namespace Paramore.Brighter.Tranformers.AWS
         {
             var claim = $"{_luggagePrefix}/luggage_store/{Guid.NewGuid().ToString()}";
 
-            s_logger.LogInformation("Uploading {claim check} to {bucket}", claim, _bucketName);
+            Log.Uploading(s_logger, claim, _bucketName);
             var transferUtility = new TransferUtility(_client);
             await transferUtility.UploadAsync(stream, _bucketName, claim, cancellationToken);
             return claim;
@@ -294,7 +292,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             httpClient.BaseAddress = new Uri($"https://{bucketName}.s3.{bucketRegion.Value}.amazonaws.com");
             using var headRequest = new HttpRequestMessage(HttpMethod.Head, @"/");
             headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
-            var response = await httpClient.SendAsync(headRequest);
+            using var response = await httpClient.SendAsync(headRequest);
             //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 
             return (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden);
         }
@@ -424,5 +422,27 @@ namespace Paramore.Brighter.Tranformers.AWS
                 })
                 .WaitAndRetryAsync(delay);
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Error, "Error creating or validating luggage store {BucketName} in {BucketRegion}")]
+            public static partial void ErrorCreatingValidatingLuggageStore(ILogger logger, string bucketName, S3Region bucketRegion, Exception e);
+
+            [LoggerMessage(LogLevel.Error, "Could not delete luggage with claim {ClaimCheck} from {Bucket}")]
+            public static partial void CouldNotDeleteLuggage(ILogger logger, string claimCheck, string bucket);
+
+            [LoggerMessage(LogLevel.Information, "Downloading {ClaimCheck} from {Bucket}")]
+            public static partial void Downloading(ILogger logger, string claimCheck, string bucket);
+
+            [LoggerMessage(LogLevel.Error, "Could not download {ClaimCheck} from {BucketName}")]
+            public static partial void CouldNotDownload(ILogger logger, string claimCheck, string bucketName);
+
+            [LoggerMessage(LogLevel.Error, "Unable to read {ClaimCheck} from {Bucket}")]
+            public static partial void UnableToRead(ILogger logger, string claimCheck, string bucket);
+            
+            [LoggerMessage(LogLevel.Information, "Uploading {ClaimCheck} to {Bucket}")]
+            public static partial void Uploading(ILogger logger, string claimCheck, string bucket);
+        }
     }
 }
+

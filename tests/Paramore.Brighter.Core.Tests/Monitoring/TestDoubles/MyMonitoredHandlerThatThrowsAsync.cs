@@ -30,7 +30,7 @@ using Paramore.Brighter.Monitoring.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring.TestDoubles
 {
-    internal class MyMonitoredHandlerThatThrowsAsync : RequestHandlerAsync<MyCommand>
+    internal sealed class MyMonitoredHandlerThatThrowsAsync : RequestHandlerAsync<MyCommand>
     {
         [MonitorAsync(1, HandlerTiming.Before, typeof(MyMonitoredHandlerThatThrowsAsync))]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)

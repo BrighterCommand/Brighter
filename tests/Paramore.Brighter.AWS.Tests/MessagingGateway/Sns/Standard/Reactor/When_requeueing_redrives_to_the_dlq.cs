@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -36,10 +35,15 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
+            ),
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(
@@ -51,7 +55,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SnsMessageProducer(_awsConnection,  new SnsPublication { MakeChannels = OnMissingChannel.Create });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
 
@@ -77,7 +81,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         Task.Delay(5000);
 
         //inspect the dlq
-        GetDLQCount(_dlqChannelName).Should().Be(1);
+        Assert.Equal(1, GetDLQCount(_dlqChannelName));
     }
 
     private int GetDLQCount(string queueName)

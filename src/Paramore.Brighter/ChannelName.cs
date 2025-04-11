@@ -123,5 +123,10 @@ namespace Paramore.Brighter
         {
             return !Equals(left, right);
         }
+
+        public static bool IsNullOrEmpty(ChannelName? channelName)
+        {
+            return channelName is not null && string.IsNullOrEmpty(channelName._name);
+        }
     }
 }

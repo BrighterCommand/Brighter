@@ -3,11 +3,10 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
-using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
@@ -35,12 +34,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             };
 
             _correlationId = Guid.NewGuid().ToString();
-            _channelName = $"Consumer-Tests-{Guid.NewGuid()}".Truncate(50);
             _topicName = $"Consumer-Tests-{Guid.NewGuid()}";
             var routingKey = new RoutingKey(_topicName);
 
             AzureServiceBusSubscription<ASBTestCommand> subscription = new(
-                name: new SubscriptionName(_channelName),
+                subscriptionName: new SubscriptionName(_channelName),
                 channelName: new ChannelName(_channelName),
                 routingKey: routingKey
             );
@@ -48,7 +46,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _contentType = "application/json";
 
             _message = new Message(
-                new MessageHeader(command.Id, new RoutingKey(_topicName), MessageType.MT_COMMAND, correlationId:_correlationId, 
+                new MessageHeader(command.Id, new RoutingKey(_topicName), MessageType.MT_COMMAND, correlationId:_correlationId,
                     contentType: _contentType
                 ),
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
@@ -95,50 +93,47 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             });
 
             var producer = _producerRegistry.LookupBy(new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
-            
+
             await producer.SendAsync(_message);
-    
+
             var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            
+
             _channel.Reject(message);
 
             var deadLetter = await deadLetterReceiver.ReceiveMessageAsync();
 
-            deadLetter.MessageId.Should().Be(message.Id);
-            deadLetter.CorrelationId.Should().Be(_correlationId);
-            deadLetter.ContentType.Should().Be(_contentType);
-            deadLetter.ApplicationProperties["HandledCount"].Should().Be(0);
-            //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-            deadLetter.Body.ToString().Should().Be(message.Body.Value);
+            Assert.Equal(message.Id, deadLetter.MessageId);
+            Assert.Equal(_correlationId, deadLetter.CorrelationId);
+            Assert.Equal(_contentType, deadLetter.ContentType);
+            Assert.Equal(0, deadLetter.ApplicationProperties["HandledCount"]);
+            Assert.Equal(message.Body.Value, deadLetter.Body.ToString());
         }
-        
+
         [Fact]
         public async Task When_Requeueing_a_message_via_the_consumer()
         {
             //arrange
             var producer = _producerRegistry.LookupBy(new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
-            
+
             await producer.SendAsync(_message);
 
             var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
             message.Header.HandledCount++;
-            
+
             _channel.Requeue(message);
 
             var requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            
-            requeuedMessage.Id.Should().Be(message.Id);
-            requeuedMessage.Redelivered.Should().BeFalse();
-            requeuedMessage.Header.MessageId.Should().Be(message.Id);
-            requeuedMessage.Header.Topic.Should().Be(new RoutingKey(_topicName));
-            requeuedMessage.Header.CorrelationId.Should().Be(_correlationId);
-            requeuedMessage.Header.ContentType.Should().Be(_contentType);
-            requeuedMessage.Header.HandledCount.Should().Be(1);
-            //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-            requeuedMessage.Header.Delayed.Should().Be(TimeSpan.Zero);
-            //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-            requeuedMessage.Body.Value.Should().Be(message.Body.Value);
+
+            Assert.Equal(message.Id, requeuedMessage.Id);
+            Assert.False(requeuedMessage.Redelivered);
+            Assert.Equal(message.Id, requeuedMessage.Header.MessageId);
+            Assert.Equal(new RoutingKey(_topicName), requeuedMessage.Header.Topic);
+            Assert.Equal(_correlationId, requeuedMessage.Header.CorrelationId);
+            Assert.Equal(_contentType, requeuedMessage.Header.ContentType);
+            Assert.Equal(1, requeuedMessage.Header.HandledCount);
+            Assert.Equal(TimeSpan.Zero, requeuedMessage.Header.Delayed);
+            Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
         }
 
         [Fact]
@@ -146,11 +141,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         {
             var sub = await _administrationClient.GetSubscriptionAsync(_topicName, _channelName, CancellationToken.None);
 
-            sub.DeadLetteringOnMessageExpiration.Should()
-                .Be(_subscriptionConfiguration.DeadLetteringOnMessageExpiration);
-            sub.DefaultMessageTimeToLive.Should().Be(_subscriptionConfiguration.DefaultMessageTimeToLive);
-            sub.LockDuration.Should().Be(_subscriptionConfiguration.LockDuration);
-            sub.MaxDeliveryCount.Should().Be(_subscriptionConfiguration.MaxDeliveryCount);
+            Assert.Equal(_subscriptionConfiguration.DeadLetteringOnMessageExpiration, sub.DeadLetteringOnMessageExpiration);
+            Assert.Equal(_subscriptionConfiguration.DefaultMessageTimeToLive, sub.DefaultMessageTimeToLive);
+            Assert.Equal(_subscriptionConfiguration.LockDuration, sub.LockDuration);
+            Assert.Equal(_subscriptionConfiguration.MaxDeliveryCount, sub.MaxDeliveryCount);
 
             //ToDo: Need to Add Test for Filter
         }

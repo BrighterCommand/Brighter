@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -10,7 +9,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
@@ -29,15 +27,17 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            topicAttributes: topicAttributes, 
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -53,7 +53,9 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, 
+                Topic = routingKey, 
+                TopicAttributes = topicAttributes
             });
     }
 
@@ -75,7 +77,7 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         // clear the queue
         await _channel.AcknowledgeAsync(message);
 
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
     }
 
     public void Dispose()

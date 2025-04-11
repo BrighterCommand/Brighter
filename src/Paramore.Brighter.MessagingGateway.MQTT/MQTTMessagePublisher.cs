@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
+using MQTTnet.Client;
 using MQTTnet.Protocol;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
@@ -11,28 +12,28 @@ using Paramore.Brighter.Tasks;
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
     /// <summary>
-    /// Class MQTTMessagePublisher .
+    /// Class MqttMessagePublisher .
     /// </summary>
-    public class MQTTMessagePublisher
+    public partial class MqttMessagePublisher
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageProducer>();
-        private readonly MQTTMessagingGatewayConfiguration _config;
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageProducer>();
+        private readonly MqttMessagingGatewayConfiguration _config;
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MQTTMessagePublisher"/> class.
+        /// Initializes a new instance of the <see cref="MqttMessagePublisher"/> class.
         /// Sync over async, but necessary as we are in the ctor
         /// </summary>
         /// <param name="config">The Publisher configuration.</param>
-        public MQTTMessagePublisher(MQTTMessagingGatewayConfiguration config)
+        public MqttMessagePublisher(MqttMessagingGatewayConfiguration config)
         {
             _config = config;
 
-            _mqttClient = new MqttClientFactory().CreateMqttClient();
+            _mqttClient = new MqttFactory().CreateMqttClient();
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
-                .WithTcpServer(_config.Hostname)
+                .WithTcpServer(_config.Hostname, _config.Port)
                 .WithCleanSession(_config.CleanSession);
 
             if (!string.IsNullOrEmpty(_config.ClientID))
@@ -45,27 +46,45 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 mqttClientOptionsBuilder = mqttClientOptionsBuilder.WithCredentials(_config.Username, _config.Password);
             }
 
-            _mqttClientOptions = mqttClientOptionsBuilder.Build();
+            _mqttClientOptions = mqttClientOptionsBuilder
+                .WithTcpServer(config.Hostname, config.Port)
+                .Build();
 
             ConnectAsync().GetAwaiter().GetResult();
         }
 
-        private async Task ConnectAsync()
+        /// <summary>
+        /// Creates an MQTT application message from the provided <see cref="Message"/> and topic prefix.
+        /// </summary>
+        /// <param name="message">
+        /// The <see cref="Message"/> instance containing the header and body data to be included in the MQTT message.
+        /// </param>
+        /// <param name="topicPrefix">
+        /// An optional prefix to be prepended to the topic of the MQTT message. If <c>null</c>, the topic will be derived solely from the message header.
+        /// </param>
+        /// <returns>
+        /// An instance of <see cref="MqttApplicationMessage"/> configured with the serialized message payload, topic, and quality of service level.
+        /// </returns>
+        /// <remarks>
+        /// This method serializes the message body using the options defined in <see cref="JsonSerialisationOptions.Options"/>.
+        /// It also sets user properties for the MQTT message based on the message header, such as <c>DataSchema</c> and <c>Subject</c>, if available.
+        ///
+        /// 04/03/2025:
+        ///     - Removed ContentType as it's not supported in v3.1.1 of the MQTT protocol.  Version 5.0 supports it, but we are not using it.
+        ///     - Removed the user properties for Id, Type, Time, Source, DataContentType, SpecVersion, DataSchema, and Subject as user properties
+        ///       are not supported in v3.1.1 of the MQTT protocol. Version 5.0 supports it, but we are not using it.
+        /// </remarks>
+        public static MqttApplicationMessage CreateMqttMessage(Message message, object topicPrefix)
         {
-            for (int i = 0; i < _config.ConnectionAttempts; i++)
-            {
-                try
-                {
-                    await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
-                    s_logger.LogInformation($"Connected to {_config.Hostname}");
-                    return;
-                }
-                catch (Exception)
-                {
-                    s_logger.LogError($"Unable to connect to {_config.Hostname}");
-                }
-            }
+            string payload = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options);
+            var builder = new MqttApplicationMessageBuilder()
+                .WithTopic(topicPrefix != null ? $"{topicPrefix}/{message.Header.Topic}" : message.Header.Topic)
+                .WithPayload(payload)
+                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce);
+
+            return builder.Build();
         }
+
 
         /// <summary>
         /// Sends the specified message.
@@ -82,18 +101,34 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <returns>Task.</returns>
         public async Task PublishMessageAsync(Message message, CancellationToken cancellationToken = default)
         {
-            MqttApplicationMessage mqttMessage = CreateMqttMessage(message);
+            MqttApplicationMessage mqttMessage = CreateMqttMessage(message, _config.TopicPrefix);
             await _mqttClient.PublishAsync(mqttMessage, cancellationToken);
         }
 
-        private MqttApplicationMessage CreateMqttMessage(Message message)
+        private async Task ConnectAsync()
         {
-            string payload = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options);
-            MqttApplicationMessageBuilder outMessage = new MqttApplicationMessageBuilder()
-                .WithTopic(_config.TopicPrefix != null ? $"{_config.TopicPrefix}/{message.Header.Topic}" : message.Header.Topic)
-                .WithPayload(payload)
-                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce);
-            return outMessage.Build();
+            for (int i = 0; i < _config.ConnectionAttempts; i++)
+            {
+                try
+                {
+                    await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
+                    Log.ConnectedToHost(s_logger, _config.Hostname, _config.Port);
+                    return;
+                }
+                catch (Exception)
+                {
+                    Log.ConnectedToHost(s_logger, _config.Hostname, _config.Port);
+                }
+            }
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Connected to {Hostname}:{Port}")]
+            public static partial void ConnectedToHost(ILogger logger, string hostname, int port);
+
+            [LoggerMessage(LogLevel.Error, "Unable to connect to {Hostname}:{Port}")]
+            public static partial void UnableToConnectToHost(ILogger logger, string hostname, int port);
         }
     }
 }

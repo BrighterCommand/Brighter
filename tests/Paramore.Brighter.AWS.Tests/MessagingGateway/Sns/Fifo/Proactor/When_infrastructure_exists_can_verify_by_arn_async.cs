@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -11,8 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDisposable
+public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -20,7 +18,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByArnTestsAsync()
+    public AwsValidateInfrastructureByArnTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -29,15 +27,17 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            topicAttributes: topicAttributes,
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -53,14 +53,9 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var topicArn = FindTopicArn(awsConnection, routingKey.ToValidSNSTopicName(true)).Result;
         var routingKeyArn = new RoutingKey(topicArn);
 
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKeyArn,
-            findTopicBy: TopicFindBy.Arn,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo
-        );
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.RoutingKey = routingKeyArn;
+        subscription.FindTopicBy = TopicFindBy.Arn;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -70,7 +65,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
                 TopicArn = topicArn,
                 FindTopicBy = TopicFindBy.Arn,
                 MakeChannels = OnMissingChannel.Validate,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = topicAttributes
             });
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
@@ -86,7 +81,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         await _consumer.AcknowledgeAsync(message);
     }

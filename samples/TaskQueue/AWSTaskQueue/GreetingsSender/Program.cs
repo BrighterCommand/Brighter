@@ -23,9 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Threading.Tasks;
-using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
@@ -39,7 +37,7 @@ using Serilog.Extensions.Logging;
 
 namespace GreetingsSender
 {
-    class Program
+    static class Program
     {
         static async Task Main(string[] args)
         {
@@ -77,9 +75,9 @@ namespace GreetingsSender
                         {
                             Topic = new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
                             RequestType = typeof(FarewellEvent),
-                            SnsAttributes = new SnsAttributes
+                            TopicAttributes = new SnsAttributes
                             {
-                                Type = SnsSqsType.Fifo
+                                Type = SqsType.Fifo
                             }
                         }
                     }

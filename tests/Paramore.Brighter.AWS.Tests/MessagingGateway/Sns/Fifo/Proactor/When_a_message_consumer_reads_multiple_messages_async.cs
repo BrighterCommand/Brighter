@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -12,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -22,27 +21,31 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTestsAsync()
+    public SqsBufferedConsumerTestsAsync()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
         _channelFactory = new ChannelFactory(awsConnection);
         var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_topicName);
 
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             bufferSize: BufferSize,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: 1
-        )).GetAwaiter().GetResult();
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: new SqsAttributes(
+                type: SqsType.Fifo,
+                deduplicationScope: DeduplicationScope.MessageGroup,
+                fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId), 
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create)).GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
@@ -50,7 +53,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = topicAttributes
             });
     }
 
@@ -116,10 +119,10 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             //retrieve  messages
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
 
-            messages.Length.Should().BeLessThanOrEqualTo(outstandingMessageCount);
+            Assert.True(messages.Length <= outstandingMessageCount);
 
             //should not receive more than buffer in one hit
-            messages.Length.Should().BeLessThanOrEqualTo(BufferSize);
+            Assert.True(messages.Length <= BufferSize);
 
             var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
             foreach (var message in moreMessages)
@@ -133,7 +136,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             await Task.Delay(1000);
         } while ((iteration <= 5) && (messagesReceivedCount < MessageCount));
 
-        messagesReceivedCount.Should().Be(4);
+        Assert.Equal(4, messagesReceivedCount);
     }
 
     public async ValueTask DisposeAsync()

@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -36,14 +35,16 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
 
-        var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
-            channelType: ChannelType.PointToPoint
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
         );
+        
+        var subscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey, messagePumpType: MessagePumpType.Proactor, queueAttributes: queueAttributes);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -53,7 +54,10 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(_awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SqsMessageProducer(
+            _awsConnection,
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)
+            );
         
         _channelFactory = new ChannelFactory(_awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
@@ -75,7 +79,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         int dlqCount = await GetDLQCountAsync(_dlqChannelName);
-        dlqCount.Should().Be(1);
+        Assert.Equal(1, dlqCount);
     }
 
     private async Task<int> GetDLQCountAsync(string queueName)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -14,13 +16,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// Class responsible for sending a message to a SQS
 /// </summary>
-public class SqsMessageSender
+public partial class SqsMessageSender
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageSender>();
     private static readonly TimeSpan s_maxDelay = TimeSpan.FromSeconds(900);
     
     private readonly string _queueUrl;
-    private readonly SnsSqsType _queueType;
+    private readonly SqsType _queueType;
     private readonly AmazonSQSClient _client;
 
     /// <summary>
@@ -29,7 +31,7 @@ public class SqsMessageSender
     /// <param name="queueUrl">The queue ARN</param>
     /// <param name="queueType">The queue type</param>
     /// <param name="client">The SQS Client</param>
-    public SqsMessageSender(string queueUrl, SnsSqsType queueType, AmazonSQSClient client)
+    public SqsMessageSender(string queueUrl, SqsType queueType, AmazonSQSClient client)
     {
         _queueUrl = queueUrl;
         _queueType = queueType;
@@ -58,13 +60,13 @@ public class SqsMessageSender
             if (delay.Value > s_maxDelay)
             {
                 delay = s_maxDelay;
-                s_logger.LogWarning("Set delay from {CurrentDelay} to 15min (SQS support up to 15min)", delay);
+                Log.DelaySetToMaximum(s_logger, delay);
             }
 
             request.DelaySeconds = (int)delay.Value.TotalSeconds;
         }
 
-        if (_queueType == SnsSqsType.Fifo)
+        if (_queueType == SqsType.Fifo)
         {
             request.MessageGroupId = message.Header.PartitionKey;
             if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
@@ -72,42 +74,33 @@ public class SqsMessageSender
                 request.MessageDeduplicationId = (string)deduplicationId;
             }
         }
+        
+        // Combine cloud event headers into a single JSON object
+        string cloudEventHeadersJson = CreateCloudEventHeadersJson(message);
 
+        // we can set up to 10 attributes;  we use a single JSON object as the cloud event headers; we can set nine others directly 
         var messageAttributes = new Dictionary<string, MessageAttributeValue>
-        {
-            [HeaderNames.Id] =
-                new() { StringValue = message.Header.MessageId, DataType = "String" },
-            [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
+        { 
+            [HeaderNames.Id] = new (){ StringValue = message.Header.MessageId, DataType = "String" },
+            [HeaderNames.CloudEventHeaders] = new() { StringValue = cloudEventHeadersJson, DataType = "String" },
+            [HeaderNames.Topic] = new() { StringValue = _queueUrl ,DataType = "String" },
+            [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
             [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.HandledCount] =
-                new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
-            [HeaderNames.MessageType] =
-                new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new()
-            {
-                StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
-            }
+            [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRcf3339()), DataType = "String" }
         };
-
+        
         if (!string.IsNullOrEmpty(message.Header.ReplyTo))
-        {
-            messageAttributes.Add(HeaderNames.ReplyTo,
-                new MessageAttributeValue { StringValue = message.Header.ReplyTo, DataType = "String" });
-        }
+            messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue { StringValue = message.Header.ReplyTo, DataType = "String" });
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
-        {
-            messageAttributes.Add(HeaderNames.Subject,
-                new MessageAttributeValue { StringValue = message.Header.Subject, DataType = "String" });
-        }
-        
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            messageAttributes.Add(HeaderNames.CorrelationId,
-                new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
-        }
+            messageAttributes.Add(HeaderNames.Subject, new MessageAttributeValue { StringValue = message.Header.Subject, DataType = "String" });
 
-        // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
+        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+            messageAttributes.Add(HeaderNames.CorrelationId,  new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
+        
+        //we have to add some attributes into our bag, to prevent overloading the message attributes
+        message.Header.Bag[HeaderNames.HandledCount] = message.Header.HandledCount.ToString(CultureInfo.InvariantCulture);
+        
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };
         request.MessageAttributes = messageAttributes;
@@ -121,4 +114,37 @@ public class SqsMessageSender
 
         return null;
     }
+
+    private static string CreateCloudEventHeadersJson(Message message)
+    {
+        var cloudEventHeaders = new Dictionary<string, string>
+        {
+            [HeaderNames.Id] = Convert.ToString(message.Header.MessageId),
+            [HeaderNames.DataContentType] = message.Header.ContentType ?? "plain/text",
+            [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
+            [HeaderNames.SpecVersion] = message.Header.SpecVersion,
+            [HeaderNames.Type] = message.Header.Type,
+            [HeaderNames.Source] = message.Header.Source.ToString(),
+            [HeaderNames.Time] = message.Header.TimeStamp.ToRcf3339()
+        };
+
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+            cloudEventHeaders[HeaderNames.Subject] = message.Header.Subject!;
+
+        if (message.Header.DataSchema != null)
+            cloudEventHeaders[HeaderNames.DataSchema] = message.Header.DataSchema.ToString();
+
+        if (message.Header.DataRef != null)
+            cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
+
+        var cloudEventHeadersJson = JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
+        return cloudEventHeadersJson;
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Set delay from {CurrentDelay} to 15min (SQS support up to 15min)")]
+        public static partial void DelaySetToMaximum(ILogger logger, TimeSpan? currentDelay);
+    }
 }
+

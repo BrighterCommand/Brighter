@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -50,23 +49,23 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             var firstMessage = await ConsumeMessagesAsync(consumer);
             var message = firstMessage.First();
-            message.Empty.Should().BeFalse("A message should be returned");
-            message.Id.Should().Be(msgId);
+            Assert.False(message.IsEmpty);
+            Assert.Equal(msgId, message.Id);
 
             var secondMessage = await ConsumeMessagesAsync(consumer);
             message = secondMessage.First();
-            message.Empty.Should().BeFalse("A message should be returned");
-            message.Id.Should().Be(msgId2);
+            Assert.False(message.IsEmpty);
+            Assert.Equal(msgId2, message.Id);
 
             var thirdMessages = await ConsumeMessagesAsync(consumer);
             message = thirdMessages.First();
-            message.Empty.Should().BeFalse("A message should be returned");
-            message.Id.Should().Be(msgId3);
+            Assert.False(message.IsEmpty);
+            Assert.Equal(msgId3, message.Id);
 
             var fourthMessage = await ConsumeMessagesAsync(consumer);
             message = fourthMessage.First();
-            message.Empty.Should().BeFalse("A message should be returned");
-            message.Id.Should().Be(msgId4);
+            Assert.False(message.IsEmpty);
+            Assert.Equal(msgId4, message.Id);
         }
 
         private async Task<string> SendMessageAsync()

@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -12,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -20,7 +19,7 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureTestsAsync()
+    public AwsValidateInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -28,20 +27,20 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var correlationId = Guid.NewGuid().ToString();
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
-        var routingKey = new RoutingKey(queueName);
+
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes( type: SqsType.Fifo);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, 
+            queueAttributes: queueAttributes, 
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
-            new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
+            new MessageHeader(_myCommand.Id, new RoutingKey(channelName), MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: messageGroupId),
             new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
@@ -51,25 +50,15 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        subscription = new(
-            name: new SubscriptionName(queueName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            findTopicBy: TopicFindBy.Name,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo
-        );
+        subscription.MakeChannels = OnMissingChannel.Validate;
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication
-            {
-                FindQueueBy= QueueFindBy.Name,
-                MakeChannels = OnMissingChannel.Validate,
-                Topic = new RoutingKey(queueName),
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            }
+            new SqsPublication(
+                channelName: channelName, 
+                queueAttributes: queueAttributes, 
+                findQueueBy: QueueFindBy.Name, 
+                makeChannels: OnMissingChannel.Validate)
         );
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
@@ -85,7 +74,7 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         await _consumer.AcknowledgeAsync(message);
     }

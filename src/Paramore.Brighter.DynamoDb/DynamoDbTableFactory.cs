@@ -25,8 +25,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
@@ -401,7 +399,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             throw new NotSupportedException($"We can't convert {propertyType.Name} to a DynamoDb type. Avoid marking as an attribute and see if the lib can figure it out");
         }
 
-        private class GlobalSecondaryIndexDetails
+        private sealed class GlobalSecondaryIndexDetails
         {
             public PropertyInfo Prop { get; set; }
             public CustomAttributeData Attribute { get; set; }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -12,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 {
     private readonly SqsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -22,7 +21,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTests()
+    public SqsBufferedConsumerTests()
     {
         var awsConnection = GatewayFactory.CreateFactory();
         _channelFactory = new ChannelFactory(awsConnection);
@@ -32,29 +31,34 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_queueName);
-
-        var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(_queueName),
-            routingKey: routingKey,
-            bufferSize: BufferSize,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
+        var channelName = new ChannelName(_queueName);
+        var queueAttributes = new SqsAttributes(
+            type: SqsType.Fifo,
             contentBasedDeduplication: true,
             deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: 1,
-            channelType: ChannelType.PointToPoint
-        ));
+            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId
+        );
+
+        var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
+            bufferSize: BufferSize,
+            queueAttributes: queueAttributes,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true), BufferSize);
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Create,
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(
+                channelName: channelName,
+                queueAttributes: queueAttributes,
+                makeChannels: OnMissingChannel.Create
+            ));
     }
 
     [Fact]
@@ -122,10 +126,10 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             //retrieve  messages
             var messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
 
-            messages.Length.Should().BeLessThanOrEqualTo(outstandingMessageCount);
+            Assert.True(messages.Length <= outstandingMessageCount);
 
             //should not receive more than buffer in one hit
-            messages.Length.Should().BeLessThanOrEqualTo(BufferSize);
+            Assert.True(messages.Length <= BufferSize);
 
             var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
             foreach (var message in moreMessages)
@@ -140,7 +144,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
         } while ((iteration <= 5) && (messagesReceivedCount < MessageCount));
 
 
-        messagesReceivedCount.Should().Be(4);
+        Assert.Equal(4, messagesReceivedCount);
     }
 
     public void Dispose()

@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -11,8 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
+public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
@@ -20,7 +18,7 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTests()
+    public AwsAssumeInfrastructureTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -31,8 +29,9 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create
@@ -52,15 +51,9 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
-        //Now change the subscription to validate, just check what we made
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Assume
-        );
-
+        //Now change the subscription to assume that it exists 
+        subscription.MakeChannels = OnMissingChannel.Assume;
+        
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication { MakeChannels = OnMissingChannel.Assume });
 
@@ -77,7 +70,7 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
 
         //Assert
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         //clear the queue
         _consumer.Acknowledge(message);

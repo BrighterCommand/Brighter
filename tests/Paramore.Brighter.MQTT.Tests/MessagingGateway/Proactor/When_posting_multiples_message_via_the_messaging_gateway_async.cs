@@ -1,48 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Paramore.Brighter.MessagingGateway.MQTT;
+using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 {
     [Trait("Category", "MQTT")]
     [Collection("MQTT")]
-    public class MqttMessageProducerSendMessageTestsAsync : IAsyncDisposable, IDisposable
+    public class MqttMessageProducerSendMessageTestsAsync : MqttTestClassBase<MqttMessageProducerSendMessageTestsAsync>
     {
-        private const string MqttHost = "localhost";
         private const string ClientId = "BrighterIntegrationTests-Produce";
-        private readonly IAmAMessageProducerAsync _messageProducer;
-        private readonly IAmAMessageConsumerAsync _messageConsumer;
-        private readonly string _topicPrefix = "BrighterIntegrationTests/ProducerTests";
+        private const string TopicPrefix = "BrighterIntegrationTests/ProducerTests";
 
-        public MqttMessageProducerSendMessageTestsAsync()
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Proactor.MqttMessageProducerSendMessageTestsAsync "/> class.
+        /// </summary>
+        /// <param name="testOutputHelper">The output helper for capturing test output during execution.</param>
+        /// <remarks>
+        /// This constructor sets up the MQTT messaging gateway test environment by configuring the client ID, topic prefix, 
+        /// and test output helper. It leverages the base class <see cref="MqttTestClassBase{T}"/> to initialize the necessary 
+        /// MQTT configurations and logging mechanisms.
+        /// </remarks>
+        public MqttMessageProducerSendMessageTestsAsync(ITestOutputHelper testOutputHelper)
+        : base(ClientId, TopicPrefix, testOutputHelper)
         {
-            var mqttProducerConfig = new MQTTMessagingGatewayProducerConfiguration
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix
-            };
-
-            MQTTMessagePublisher mqttMessagePublisher = new(mqttProducerConfig);
-            _messageProducer = new MQTTMessageProducer(mqttMessagePublisher);
-
-            MQTTMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix,
-                ClientID = ClientId
-            };
-
-            _messageConsumer = new MQTTMessageConsumer(mqttConsumerConfig);
         }
 
         [Fact]
-        public async Task When_posting_multiples_message_via_the_messaging_gateway()
+        public async Task When_posting_multiples_message_via_the_messaging_gateway_async()
         {
             const int messageCount = 1000;
-            List<Message> sentMessages = new();
+            List<Message> sentMessages = [];
 
             for (int i = 0; i < messageCount; i++)
             {
@@ -51,28 +42,18 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
                     new MessageBody($"test message")
                 );
 
-                await _messageProducer.SendAsync(message);
+                await MessageProducerAsync.SendAsync(message);
                 sentMessages.Add(message);
             }
 
-            Message[] receivedMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(200));
 
-            receivedMessages.Should().NotBeEmpty()
-                .And.HaveCount(messageCount)
-                .And.ContainInOrder(sentMessages)
-                .And.ContainItemsAssignableTo<Message>();
-        }
-        
-        public void Dispose()
-        {
-            ((IAmAMessageProducerSync)_messageProducer).Dispose();
-            ((IAmAMessageConsumerSync)_messageConsumer).Dispose();
-        }
+            // Spin until we receive all messages or timeout after 2 seconds.
+            Assert.True(SpinWait.SpinUntil(() => receivedMessages.Length == messageCount, 5000), $"Received {receivedMessages.Length} of {messageCount} messages.");
 
-        public async ValueTask DisposeAsync()
-        {
-            await _messageProducer.DisposeAsync();
-            await _messageConsumer.DisposeAsync();
+            Assert.NotEmpty(receivedMessages);
+            Assert.Equal(messageCount, receivedMessages.Length);
+            Assert.Equal(receivedMessages, sentMessages);
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -13,8 +12,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _sender;
-    private Message _requeuedMessage;
-    private Message _receivedMessage;
+    private Message? _requeuedMessage;
+    private Message? _receivedMessage;
     private readonly IAmAChannelAsync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
@@ -30,15 +29,18 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(queueName);
 
+        var queueAttributes = new SqsAttributes(
+            type: SqsType.Fifo);
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subcriptionName),
-            channelName: new ChannelName(queueName),
+            subscriptionName: new SubscriptionName(subcriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -49,10 +51,7 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
         var awsConnection = GatewayFactory.CreateFactory();
 
         _sender = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes));
 
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
@@ -66,10 +65,10 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
         await _channel.RequeueAsync(_receivedMessage);
 
         _requeuedMessage = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
-
+        
         await _channel.AcknowledgeAsync(_requeuedMessage);
 
-        _requeuedMessage.Body.Value.Should().Be(_receivedMessage.Body.Value);
+        Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
     }
 
     public void Dispose()

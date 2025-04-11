@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -22,28 +21,33 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
     private readonly AWSMessagingGatewayConnection _awsConnection;
-    private readonly string _dlqChannelName;
+    private readonly ChannelName _deadLetterChannel;
 
     public SqsMessageProducerDlqTestsAsync()
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
         const string contentType = "text\\plain";
-        _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var dlQueue= $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
         var channelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        _deadLetterChannel = new ChannelName(dlQueue);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: new SqsAttributes(
+                type: SqsType.Fifo, redrivePolicy: new RedrivePolicy(_deadLetterChannel!, 2)),
+            topicAttributes: topicAttributes
+            );
+        
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -56,7 +60,8 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         _sender = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, 
+                TopicAttributes = topicAttributes
             });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
@@ -80,14 +85,14 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         await Task.Delay(5000);
 
-        int dlqCount = await GetDLQCountAsync(_dlqChannelName + ".fifo");
-        dlqCount.Should().Be(1);
+        int dlqCount = await GetDLQCountAsync();
+        Assert.Equal(1, dlqCount);
     }
 
-    private async Task<int> GetDLQCountAsync(string queueName)
+    private async Task<int> GetDLQCountAsync()
     {
         using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
-        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName);
+        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(_deadLetterChannel.Value + ".fifo");
         var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {
             QueueUrl = queueUrlResponse.QueueUrl,
@@ -98,7 +103,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
             throw new AmazonSQSException(
-                $"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
+                $"Failed to GetMessagesAsync for queue {_deadLetterChannel.Value}. Response: {response.HttpStatusCode}");
         }
 
         return response.Messages.Count;

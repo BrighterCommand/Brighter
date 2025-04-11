@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// to coerce them to the appropriate type yourself. You can set the serializer, so your alternative is to
     /// override the bag creation code to use more specific types.
     /// </summary>
-    public class KafkaMessageCreator
+    public partial class KafkaMessageCreator
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageCreator>();
 
@@ -48,28 +49,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
-            var timeStamp = HeaderResult<DateTime>.Empty();
-            var messageType = HeaderResult<MessageType>.Empty();
-            var correlationId = HeaderResult<string>.Empty();
-            var partitionKey = HeaderResult<string>.Empty();
-            var replyTo = HeaderResult<string>.Empty();
-            var contentType = HeaderResult<string>.Empty();
-            var delay = HeaderResult<TimeSpan>.Empty();
-            var handledCount = HeaderResult<int>.Empty();
 
             Message message;
             try
             {
                 topic = ReadTopic(consumeResult.Topic);
                 messageId = ReadMessageId(consumeResult.Message.Headers);
-                timeStamp = ReadTimeStamp(consumeResult.Message.Headers);
-                messageType = ReadMessageType(consumeResult.Message.Headers);
-                correlationId = ReadCorrelationId(consumeResult.Message.Headers);
-                partitionKey = ReadPartitionKey(consumeResult.Message.Headers);
-                replyTo = ReadReplyTo(consumeResult.Message.Headers);
-                contentType = ReadContentType(consumeResult.Message.Headers);
-                delay = ReadDelay(consumeResult.Message.Headers);
-                handledCount = ReadHandledCount(consumeResult.Message.Headers);
+                var timeStamp = ReadTimeStamp(consumeResult.Message.Headers);
+                var messageType = ReadMessageType(consumeResult.Message.Headers);
+                var correlationId = ReadCorrelationId(consumeResult.Message.Headers);
+                var partitionKey = ReadPartitionKey(consumeResult.Message);
+                var replyTo = ReadReplyTo(consumeResult.Message.Headers);
+                var contentType = ReadContentType(consumeResult.Message.Headers);
+                var delay = ReadDelay(consumeResult.Message.Headers);
+                var handledCount = ReadHandledCount(consumeResult.Message.Headers);
+                var subject = ReadSubject(consumeResult.Message.Headers);
+                var dataSchema = ReadDataSchema(consumeResult.Message.Headers);
+                var type = ReadType(consumeResult.Message.Headers);
+                var source = ReadSource(consumeResult.Message.Headers);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success))
                 {
@@ -81,16 +78,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         messageId: messageId.Result,
                         topic: topic.Result,
                         messageType.Result,
-                        source: null,
-                        type: "",
-                        timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                        source: source.Result,
+                        type: type.Result,
+                        timeStamp: timeStamp.Success ? timeStamp.Result : DateTimeOffset.UtcNow,
                         correlationId: correlationId.Success ? correlationId.Result : "",
                         replyTo: replyTo.Success ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
                         contentType: contentType.Success ? contentType.Result : "plain/text",
                         partitionKey: partitionKey.Success ? partitionKey.Result : consumeResult.Message.Key,
                         handledCount: handledCount.Success ? handledCount.Result : 0,
-                        dataSchema: null,
-                        subject: null,
+                        dataSchema: dataSchema.Result,
+                        subject: subject.Result,
                         delayed: delay.Success ? delay.Result : TimeSpan.Zero
                     );
 
@@ -108,7 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (Exception e)
             {
-                s_logger.LogWarning(e, "Failed to create message from Kafka offset");
+                Log.FailedToCreateMessageFromKafkaOffset(s_logger, e);
                 message = FailureMessage(topic, messageId);
             }
 
@@ -125,35 +122,35 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return message;
         }
 
-        private HeaderResult<string> ReadContentType(Headers headers)
+        private static HeaderResult<string> ReadContentType(Headers headers)
         {
-            return ReadHeader(headers, HeaderNames.CONTENT_TYPE);
+            var contentType = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, true);
+            return !contentType.Success ? contentType : ReadHeader(headers, HeaderNames.CONTENT_TYPE);
         }
 
-        private HeaderResult<string> ReadCorrelationId(Headers headers)
+        private static HeaderResult<string> ReadCorrelationId(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.CORRELATION_ID)
                 .Map(correlationId =>
                 {
                     if (string.IsNullOrEmpty(correlationId))
                     {
-                        s_logger.LogDebug("No correlation id found in message");
+                        Log.NoCorrelationIdFoundInMessage(s_logger);
                         return new HeaderResult<string>(string.Empty, true);
                     }
 
                     return new HeaderResult<string>(correlationId, true);
-
                 });
         }
 
-        private HeaderResult<TimeSpan> ReadDelay(Headers headers)
+        private static HeaderResult<TimeSpan> ReadDelay(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.DELAYED_MILLISECONDS)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No delay milliseconds found in message");
+                        Log.NoDelayMillisecondsFoundInMessage(s_logger);
                         return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
                     }
 
@@ -162,19 +159,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayMilliseconds), true);
                     }
 
-                    s_logger.LogDebug("Could not parse message delayMilliseconds: {DelayMillisecondsValue}", s);
+                    Log.CouldNotParseMessageDelayMilliseconds(s_logger, s);
                     return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
                 });
         }
 
-        private HeaderResult<int> ReadHandledCount(Headers headers)
+        private static HeaderResult<int> ReadHandledCount(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.HANDLED_COUNT)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No handled count found in message");
+                        Log.NoHandledCountFoundInMessage(s_logger);
                         return new HeaderResult<int>(0, true);
                     }
 
@@ -183,19 +180,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         return new HeaderResult<int>(handledCount, true);
                     }
 
-                    s_logger.LogDebug("Could not parse message handled count: {HandledCountValue}", s);
+                    Log.CouldNotParseMessageHandledCount(s_logger, s);
                     return new HeaderResult<int>(0, false);
                 });
         }
 
-        private HeaderResult<string> ReadReplyTo(Headers headers)
+        private static HeaderResult<string> ReadReplyTo(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.REPLY_TO)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No reply to found in message");
+                        Log.NoReplyToFoundInMessage(s_logger);
                         return new HeaderResult<string>(string.Empty, true);
                     }
 
@@ -203,31 +200,35 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<DateTime> ReadTimeStamp(Headers headers)
+        private static HeaderResult<DateTimeOffset> ReadTimeStamp(Headers headers)
         {
-            if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out byte[] lastHeader))
+            if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out var lastHeader))
             {
                 //Additional testing for a non unixtimestamp string
-                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AdjustToUniversal, out DateTime timestamp))
+                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.InvariantInfo,
+                        DateTimeStyles.AdjustToUniversal, out DateTime timestamp))
                 {
-                    return new HeaderResult<DateTime>(timestamp, true);
+                    return new HeaderResult<DateTimeOffset>(timestamp, true);
                 }
 
                 try
                 {
-                    return new HeaderResult<DateTime>(
+                    return new HeaderResult<DateTimeOffset>(
                         DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(lastHeader, 0)).DateTime, true);
                 }
                 catch (Exception)
                 {
-                    return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+                    return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
                 }
             }
 
-            return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+            return ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TIME)
+                .Map(x => DateTimeOffset.TryParse(x, out var timestamp)
+                    ? new HeaderResult<DateTimeOffset>(timestamp, true)
+                    : new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true));
         }
 
-        private HeaderResult<MessageType> ReadMessageType(Headers headers)
+        private static HeaderResult<MessageType> ReadMessageType(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
                 .Map(s =>
@@ -242,21 +243,35 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<RoutingKey> ReadTopic(string topic)
+        private static HeaderResult<RoutingKey> ReadTopic(string topic)
         {
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }
 
-        private HeaderResult<string> ReadMessageId(Headers headers)
+        private static HeaderResult<string> ReadMessageId(Headers headers)
         {
-            var newMessageId = Guid.NewGuid().ToString();
+            var id = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_ID, true)
+                .Map(messageId =>
+                {
+                    if (string.IsNullOrEmpty(messageId))
+                    {
+                        return new HeaderResult<string>(string.Empty, false);
+                    }
 
+                    return new HeaderResult<string>(messageId, true);
+                });
+            if (id.Success)
+            {
+                return id;
+            }
+
+            var newMessageId = Guid.NewGuid().ToString();
             return ReadHeader(headers, HeaderNames.MESSAGE_ID)
                 .Map(messageId =>
                 {
                     if (string.IsNullOrEmpty(messageId))
                     {
-                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}", newMessageId);
+                        Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
                         return new HeaderResult<string>(newMessageId, true);
                     }
 
@@ -264,14 +279,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<string> ReadPartitionKey(Headers headers)
+        private static HeaderResult<string> ReadPartitionKey(Message<string, byte[]> message)
         {
-            return ReadHeader(headers, HeaderNames.PARTITIONKEY)
+            if (!string.IsNullOrEmpty(message.Key))
+            {
+                return new HeaderResult<string>(message.Key, true);
+            }
+            
+            return ReadHeader(message.Headers, HeaderNames.PARTITIONKEY)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No partition key found in message");
+                        Log.NoPartitionKeyFoundInMessage(s_logger);
                         return new HeaderResult<string>(string.Empty, false);
                     }
 
@@ -279,7 +299,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<string> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
+        private static HeaderResult<string> ReadSubject(Headers headers)
+            => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_SUBJECT);
+
+        private static HeaderResult<string> ReadType(Headers headers)
+            => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TYPE);
+
+        private static HeaderResult<Uri> ReadDataSchema(Headers headers) =>
+            ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, true)
+                .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
+                    ? new HeaderResult<Uri>(dataSchema, true)
+                    : new HeaderResult<Uri>(null, false));
+
+        private static HeaderResult<Uri> ReadSource(Headers headers) =>
+            ReadHeader(headers, HeaderNames.CLOUD_EVENTS_SOURCE)
+                .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
+                    ? new HeaderResult<Uri>(dataSchema, true)
+                    : new HeaderResult<Uri>(new Uri("http://goparamore.io"), true));
+
+        private static HeaderResult<string> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
         {
             if (headers.TryGetLastBytesIgnoreCase(key, out byte[] lastHeader))
             {
@@ -291,9 +329,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 catch (Exception e)
                 {
                     var firstTwentyBytes = BitConverter.ToString(lastHeader.Take(20).ToArray());
-                    s_logger.LogWarning(e,
-                        "Failed to read the value of header {Topic} as UTF-8, first 20 byes follow: \n\t{1}", key,
-                        firstTwentyBytes);
+                    Log.FailedToReadTheValueOfHeader(s_logger, e, key, firstTwentyBytes);
                     return new HeaderResult<string>(null, false);
                 }
             }
@@ -312,5 +348,39 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!BrighterDefinedHeaders.HeadersToReset.Any(htr => htr.Equals(header.Key)))
                 message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString(header.GetValueBytes()));
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Failed to create message from Kafka offset")]
+            public static partial void FailedToCreateMessageFromKafkaOffset(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Debug, "No correlation id found in message")]
+            public static partial void NoCorrelationIdFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "No delay milliseconds found in message")]
+            public static partial void NoDelayMillisecondsFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "Could not parse message delayMilliseconds: {DelayMillisecondsValue}")]
+            public static partial void CouldNotParseMessageDelayMilliseconds(ILogger logger, string delayMillisecondsValue);
+
+            [LoggerMessage(LogLevel.Debug, "No handled count found in message")]
+            public static partial void NoHandledCountFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "Could not parse message handled count: {HandledCountValue}")]
+            public static partial void CouldNotParseMessageHandledCount(ILogger logger, string handledCountValue);
+
+            [LoggerMessage(LogLevel.Debug, "No reply to found in message")]
+            public static partial void NoReplyToFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "No message id found in message MessageId, new message id is {NewMessageId}")]
+            public static partial void NoMessageIdFoundInMessage(ILogger logger, string newMessageId);
+
+            [LoggerMessage(LogLevel.Debug, "No partition key found in message")]
+            public static partial void NoPartitionKeyFoundInMessage(ILogger logger);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to read the value of header {Topic} as UTF-8, first 20 byes follow: \n\t{FirstTwentyBytes}")]
+            public static partial void FailedToReadTheValueOfHeader(ILogger logger, Exception exception, string topic, string firstTwentyBytes);
+        }
     }
 }
+

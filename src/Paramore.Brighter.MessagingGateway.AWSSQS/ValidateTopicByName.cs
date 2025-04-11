@@ -33,10 +33,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// The <see cref="ValidateTopicByName"/> class is responsible for validating an AWS SNS topic by its name.
     /// </summary>
-    internal class ValidateTopicByName : IValidateTopic
+    internal sealed class ValidateTopicByName : IValidateTopic
     {
         private readonly AmazonSimpleNotificationServiceClient _snsClient;
-        private readonly SnsSqsType _type;
+        private readonly SqsType _type;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ValidateTopicByName"/> class.
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="region">The AWS region.</param>
         /// <param name="clientConfigAction">An optional action to configure the client.</param>
         /// <param name="type">The SNS Type.</param>
-        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null, SnsSqsType type = SnsSqsType.Standard)
+        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null, SqsType type = SqsType.Standard)
         {
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _snsClient = clientFactory.CreateSnsClient();
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="snsClient">The SNS client.</param>
         /// <param name="type">The SNS Type.</param>
-        public ValidateTopicByName(AmazonSimpleNotificationServiceClient snsClient, SnsSqsType type = SnsSqsType.Standard)
+        public ValidateTopicByName(AmazonSimpleNotificationServiceClient snsClient, SqsType type = SqsType.Standard)
         {
             _snsClient = snsClient;
             _type = type;
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </remarks>
         public async Task<(bool, string? TopicArn)> ValidateAsync(string topicName, CancellationToken cancellationToken = default)
         {
-            topicName = topicName.ToValidSNSTopicName(_type == SnsSqsType.Fifo);
+            topicName = topicName.ToValidSNSTopicName(_type == SqsType.Fifo);
             var topic = await _snsClient.FindTopicAsync(topicName);
             return (topic != null, topic?.TopicArn);
         }

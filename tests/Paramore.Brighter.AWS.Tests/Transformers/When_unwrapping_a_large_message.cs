@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
@@ -32,11 +31,11 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             TransformPipelineBuilder.ClearPipelineCache();
 
             var mapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
-                null
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyLargeCommandMessageMapperAsync())
             );
 
-            mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+            mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
 
             var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
 
@@ -111,8 +110,8 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             //assert
             //contents should be from storage
-            transformedMessage.Value.Should().Be(contents);
-            (await _luggageStore.HasClaimAsync(id)).Should().BeFalse();
+            Assert.Equal(contents, transformedMessage.Value);
+            Assert.False((await _luggageStore.HasClaimAsync(id)));
         }
 
         public void Dispose()

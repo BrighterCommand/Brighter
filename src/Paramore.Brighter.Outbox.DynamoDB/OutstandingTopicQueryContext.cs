@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Outbox.DynamoDB;
 
-internal class OutstandingTopicQueryContext
+internal sealed class OutstandingTopicQueryContext
 {
     public int NextPage { get; private set; }
     public int ShardNumber { get; private set; }

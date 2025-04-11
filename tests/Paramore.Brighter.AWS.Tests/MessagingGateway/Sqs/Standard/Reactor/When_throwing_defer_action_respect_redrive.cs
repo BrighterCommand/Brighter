@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -38,24 +37,31 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         var subscriptionName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
+        var channelName = new ChannelName(queueName);
 
         //how are we consuming
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
             channelType: ChannelType.PointToPoint,
             //don't block the redrive policy from owning retry management
-            requeueCount: -1,
+            routingKey: routingKey,
             //delay before requeuing
+            requeueCount: -1,
             requeueDelay: TimeSpan.FromMilliseconds(50),
-            messagePumpType: MessagePumpType.Reactor,
-            //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
-            redrivePolicy: new RedrivePolicy
-            (
-                deadLetterQueueName: new ChannelName(_dlqChannelName),
-                maxReceiveCount: 2
-            ));
+            messagePumpType: MessagePumpType.Reactor, queueAttributes: new SqsAttributes(
+                messageRetentionPeriod: TimeSpan.FromMinutes(10),
+                lockTimeout: TimeSpan.FromSeconds(30),
+                timeOut: TimeSpan.FromSeconds(30),
+                delaySeconds: TimeSpan.Zero,
+                //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
+                redrivePolicy: new RedrivePolicy(
+                    deadLetterQueueName: new ChannelName(_dlqChannelName)!,
+                    maxReceiveCount: 2
+                    )
+                ),
+            makeChannels: OnMissingChannel.Create
+            );
 
         //what do we send
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
@@ -71,10 +77,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         //how do we send to the queue
         _sender = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication
-            {
-                Topic = routingKey, RequestType = typeof(MyDeferredCommand), MakeChannels = OnMissingChannel.Create
-            }
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create)
         );
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
@@ -153,7 +156,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         //inspect the dlq
-        GetDLQCount(_dlqChannelName).Should().Be(1);
+        Assert.Equal(1, GetDLQCount(_dlqChannelName));
     }
 
     public void Dispose()

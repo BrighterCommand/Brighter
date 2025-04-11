@@ -2,7 +2,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.Runtime.CredentialManagement;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -29,11 +28,15 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
         var subscriptionName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
-
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(
@@ -47,7 +50,10 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SqsMessageProducer(
+            awsConnection, 
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create)
+            );
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(awsConnection);
@@ -66,7 +72,7 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
         //clear the queue
         _channel.Acknowledge(_requeuedMessage);
 
-        _requeuedMessage.Body.Value.Should().Be(_receivedMessage.Body.Value);
+        Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
     }
 
     public void Dispose()

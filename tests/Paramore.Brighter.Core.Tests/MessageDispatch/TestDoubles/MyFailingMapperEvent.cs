@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 
-internal class MyFailingMapperEvent : IRequest
+internal sealed class MyFailingMapperEvent : IRequest
 {
     /// <summary>
     /// Gets or sets the identifier.

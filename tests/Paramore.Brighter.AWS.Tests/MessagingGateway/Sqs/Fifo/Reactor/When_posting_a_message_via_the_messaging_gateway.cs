@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -35,15 +34,18 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_queueName);
 
+        var channelName = new ChannelName(_queueName);
+        var queueAttributes = new SqsAttributes(type:SqsType.Fifo, rawMessageDelivery: true);
+
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(_queueName),
-            channelName: new ChannelName(_queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            rawMessageDelivery: true,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(_queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor, 
+            queueAttributes: queueAttributes,
+            makeChannels: OnMissingChannel.Create
+            );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
@@ -59,13 +61,10 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                Topic = new RoutingKey(_queueName),
-                MakeChannels = OnMissingChannel.Create,
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes)
+        );
     }
 
     [Fact]
@@ -83,26 +82,26 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _channel.Acknowledge(message);
 
         // should_send_the_message_to_aws_sqs
-        message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
 
-        message.Id.Should().Be(_myCommand.Id);
-        message.Redelivered.Should().BeFalse();
-        message.Header.MessageId.Should().Be(_myCommand.Id);
-        message.Header.Topic.Value.Should().Contain(_queueName);
-        message.Header.CorrelationId.Should().Be(_correlationId);
-        message.Header.ReplyTo.Should().Be(_replyTo);
-        message.Header.ContentType.Should().Be(_contentType);
-        message.Header.HandledCount.Should().Be(0);
-        message.Header.Subject.Should().Be(_message.Header.Subject);
+        Assert.Equal(_myCommand.Id, message.Id);
+        Assert.False(message.Redelivered);
+        Assert.Equal(_myCommand.Id, message.Header.MessageId);
+        Assert.Contains(_queueName, message.Header.Topic.Value);
+        Assert.Equal(_correlationId, message.Header.CorrelationId);
+        Assert.Equal(_replyTo, message.Header.ReplyTo);
+        Assert.Equal(_contentType, message.Header.ContentType);
+        Assert.Equal(0, message.Header.HandledCount);
+        Assert.Equal(_message.Header.Subject, message.Header.Subject);
         // allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-        message.Header.TimeStamp.Should().BeAfter(RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-        message.Header.Delayed.Should().Be(TimeSpan.Zero);
+        Assert.True((message.Header.TimeStamp) > (RoundToSeconds(DateTime.UtcNow.AddMinutes(-1))));
+        Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
         // {"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-        message.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, message.Body.Value);
 
-        message.Header.PartitionKey.Should().Be(_messageGroupId);
-        message.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
-        message.Header.Bag[HeaderNames.DeduplicationId].Should().Be(_deduplicationId);
+        Assert.Equal(_messageGroupId, message.Header.PartitionKey);
+        Assert.Contains(HeaderNames.DeduplicationId, message.Header.Bag);
+        Assert.Equal(_deduplicationId, message.Header.Bag[HeaderNames.DeduplicationId]);
     }
 
     public void Dispose()

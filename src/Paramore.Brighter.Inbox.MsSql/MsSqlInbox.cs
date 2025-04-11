@@ -26,27 +26,24 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using System.Data.Common;
-using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.MsSql
 {
     /// <summary>
     ///     Class MsSqlInbox.
     /// </summary>
-    public class MsSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public class MsSqlInbox : RelationalDatabaseInbox
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlInbox>();
-
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
@@ -54,9 +51,10 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The Connection Provider.</param>
-        public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
+        public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
+            : base(DbSystem.MsSql, configuration.DatabaseName, configuration.InBoxTableName, 
+                  new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlInbox>())
         {
-            _configuration = configuration;
             ContinueOnCapturedContext = false;
             _connectionProvider = connectionProvider;
         }
@@ -70,31 +68,31 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
         }
 
-        /// <summary>
-        ///     Adds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns>Task.</returns>
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        protected override DbCommand CreateCommand(
+            DbConnection connection, string sqlText, int outBoxTimeout, params IDbDataParameter[] parameters)
         {
-            var parameters = InitAddDbParameters(command, contextKey);
+            var command = connection.CreateCommand();
 
-            using var connection = _connectionProvider.GetConnection();
-            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
+            command.CommandText = sqlText;
+            command.Parameters.AddRange(parameters);
+
+            return command;
+        }
+
+        protected override void WriteToStore(Func<DbConnection, DbCommand> commandFunc, Action loggingAction)
+        {
+            using var connection = GetOpenConnection(_connectionProvider);
+            using var command = commandFunc.Invoke(connection);
             try
             {
-                sqlcmd.ExecuteNonQuery();
+                command.ExecuteNonQuery();
             }
-            catch (SqlException sqlException)
+            catch (SqlException ex)
             {
-                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                if (ex.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || ex.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    loggingAction.Invoke();
                     return;
                 }
 
@@ -102,73 +100,21 @@ namespace Paramore.Brighter.Inbox.MsSql
             }
         }
 
-        /// <summary>
-        ///     Finds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns>T.</returns>
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        protected override async Task WriteToStoreAsync(Func<DbConnection, DbCommand> commandFunc, 
+            Action loggingAction, CancellationToken cancellationToken)
         {
-            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId AND ContextKey = @contextKey";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
-        }
-
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {
-            var sql = $"SELECT TOP 1 CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId AND ContextKey = @contextKey";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds, parameters);
-        }
-
-        /// <summary>
-        ///     Awaitably adds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
-        /// <returns><see cref="Task" />.</returns>
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
-            where T : class, IRequest
-        {
-            var parameters = InitAddDbParameters(command, contextKey);
-
-            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+            using var connection = await GetOpenConnectionAsync(_connectionProvider, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            using var command = commandFunc.Invoke(connection);
             try
             {
-                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
-            catch (SqlException sqlException)
+            catch (SqlException ex)
             {
-                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                if (ex.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || ex.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    loggingAction.Invoke();
                     return;
                 }
 
@@ -176,132 +122,29 @@ namespace Paramore.Brighter.Inbox.MsSql
             }
         }
 
-
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var sql = $"SELECT TOP 1 CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId AND ContextKey = @contextKey";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return await ExecuteCommandAsync<bool>(
-                    async command =>
-                    {
-                        var reader = await command.ExecuteReaderAsync(cancellationToken);
-                        return reader.HasRows;
-                    },
-                    sql,
-                    timeoutInMilliseconds,
-                    cancellationToken,
-                    parameters)
-                .ConfigureAwait(ContinueOnCapturedContext);
-        }
-
-        /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
-        /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
-
-        /// <summary>
-        ///     Awaitably finds the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allow the sender to cancel the request</param>
-        /// <returns><see cref="Task{T}" />.</returns>
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default)
-            where T : class, IRequest
-        {
-            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId AND ContextKey = @contextKey";
-
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return await ExecuteCommandAsync(
-                async command => ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext), id),
-                sql,
-                timeoutInMilliseconds,
-                cancellationToken,
-                parameters)
-                .ConfigureAwait(ContinueOnCapturedContext);
-        }
-
-        private SqlParameter CreateSqlParameter(string parameterName, object value)
-        {
-            return new SqlParameter(parameterName, value ?? DBNull.Value);
-        }
-
-        private T ExecuteCommand<T>(
-            Func<DbCommand, T> execute, 
-            string sql, 
-            int timeoutInMilliseconds,
-            params IDbDataParameter[] parameters
-            )
+        protected override T ReadFromStore<T>(Func<DbConnection, DbCommand> commandFunc, Func<DbDataReader, string, T> resultFunc, string commandId)
         {
             using var connection = _connectionProvider.GetConnection();
-            using var command = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
+            using var command = commandFunc.Invoke(connection);
 
-            var item = execute(command);
-            return item;
+            var result = command.ExecuteReader();
+            return resultFunc.Invoke(result, commandId);
         }
 
-        private async Task<T> ExecuteCommandAsync<T>(
-            Func<DbCommand, Task<T>> execute,
-            string sql,
-            int timeoutInMilliseconds,
-            CancellationToken cancellationToken = default,
-            params IDbDataParameter[] parameters)
+        protected override async Task<T> ReadFromStoreAsync<T>(Func<DbConnection, DbCommand> commandFunc, 
+            Func<DbDataReader, string, CancellationToken, Task<T>> resultFunc, 
+            string commandId, 
+            CancellationToken cancellationToken)
         {
-            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            using var command = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            using var command = commandFunc.Invoke(connection);
 
-            var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-            return item;
+            var result = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await resultFunc.Invoke(result, commandId, cancellationToken);
         }
 
-        private DbCommand InitAddDbCommand(DbConnection connection, IDbDataParameter[] parameters, int timeoutInMilliseconds)
-        {
-            var sqlAdd =
-                $"insert into {_configuration.InBoxTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
-
-            var sqlcmd = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
-
-            sqlcmd.CommandText = sqlAdd;
-            sqlcmd.Parameters.AddRange(parameters);
-            return sqlcmd;
-        }
-
-        private IDbDataParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
+        protected override IDbDataParameter[] CreateAddParameters<T>(T command, string contextKey)
         {
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
@@ -315,15 +158,95 @@ namespace Paramore.Brighter.Inbox.MsSql
             return parameters;
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr, string commandId) where TResult : class, IRequest
+        protected override IDbDataParameter[] CreateGetParameters(string commandId, string contextKey)
         {
-            if (dr.Read())
+            var parameters = new[]
             {
-                var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-                return JsonSerializer.Deserialize<TResult>(body, JsonSerialisationOptions.Options);
+                CreateSqlParameter("CommandID", commandId),
+                CreateSqlParameter("ContextKey", contextKey)
+            };
+            return parameters;
+        }
+
+        protected override IDbDataParameter[] CreateExistsParameters(string commandId, string contextKey)
+        {
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandID", commandId),
+                CreateSqlParameter("ContextKey", contextKey)
+            };
+            return parameters;
+        }
+
+        private SqlParameter CreateSqlParameter(string parameterName, object value)
+        {
+            return new SqlParameter(parameterName, value ?? DBNull.Value);
+        }
+
+        protected override T MapFunction<T>(DbDataReader dr, string commandId)
+        {
+            try
+            {
+                if (dr.Read())
+                {
+                    var body = dr.GetString(dr.GetOrdinal("CommandBody"));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                }
+            }
+            finally
+            {
+                dr.Close();
             }
 
-            throw new RequestNotFoundException<TResult>(commandId);
+            throw new RequestNotFoundException<T>(commandId);
+        }
+
+        protected override async Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId, 
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (await dr.ReadAsync().ConfigureAwait(ContinueOnCapturedContext))
+                {
+                    var body = dr.GetString(dr.GetOrdinal("CommandBody"));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                }
+            }
+            finally
+            {
+#if NET462
+                dr.Close();
+#else
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+#endif
+            }
+
+            throw new RequestNotFoundException<T>(commandId);
+        }
+
+        protected override bool MapBoolFunction(DbDataReader dr, string commandId)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+
+        protected override Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId, 
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Task.FromResult(dr.HasRows);
+            }
+            finally
+            {
+                dr.Close();
+            }
         }
     }
 }

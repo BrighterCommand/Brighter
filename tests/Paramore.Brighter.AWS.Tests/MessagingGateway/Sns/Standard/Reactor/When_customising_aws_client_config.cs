@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -28,11 +27,10 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            messagePumpType: MessagePumpType.Reactor,
-            routingKey: routingKey
-        );
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -53,8 +51,10 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
             config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sync_pub"));
         });
 
-        _messageProducer = new SnsMessageProducer(publishAwsConnection,
-            new SnsPublication { Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SnsMessageProducer(
+            publishAwsConnection,
+            new SnsPublication { Topic = new RoutingKey(topicName), 
+                MakeChannels = OnMissingChannel.Create });
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         _channel.Acknowledge(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
-        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("sync_sub");
-        InterceptingDelegatingHandler.RequestCount["sync_sub"].Should().BeGreaterThan(0);
+        Assert.Contains("sync_sub", InterceptingDelegatingHandler.RequestCount);
+        Assert.True((InterceptingDelegatingHandler.RequestCount["sync_sub"]) > (0));
         
-        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("sync_pub");
-        InterceptingDelegatingHandler.RequestCount["sync_pub"].Should().BeGreaterThan(0);
+        Assert.Contains("sync_pub", InterceptingDelegatingHandler.RequestCount);
+        Assert.True((InterceptingDelegatingHandler.RequestCount["sync_pub"]) > (0));
     }
 
     public void Dispose()

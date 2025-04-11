@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -34,14 +33,22 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
+
+        var queueAttributes = new SqsAttributes(
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
+            type: SqsType.Fifo
+            );
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
-            sqsType: SnsSqsType.Fifo
-        );
+            messagePumpType: MessagePumpType.Reactor,
+            queueAttributes: queueAttributes, 
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -55,7 +62,9 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         _sender = new SnsMessageProducer(_awsConnection, 
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, 
+                Topic = routingKey, 
+                TopicAttributes = topicAttributes 
             });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
@@ -82,7 +91,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         Task.Delay(5000);
 
         //inspect the dlq
-        GetDLQCount(_dlqChannelName + ".fifo").Should().Be(1);
+        Assert.Equal(1, GetDLQCount(_dlqChannelName + ".fifo"));
     }
 
     private int GetDLQCount(string queueName)

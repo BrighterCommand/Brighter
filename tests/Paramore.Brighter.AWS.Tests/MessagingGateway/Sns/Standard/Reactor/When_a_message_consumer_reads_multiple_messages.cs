@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -12,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
+public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -22,7 +21,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SQSBufferedConsumerTests()
+    public SqsBufferedConsumerTests()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
@@ -34,10 +33,12 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(_topicName);
             
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName:new ChannelName(channelName),
-            routingKey:routingKey,
+            subscriptionName: new SubscriptionName(channelName),
+            channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey,
             bufferSize: BufferSize,
+            messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create
         ));
             
@@ -98,10 +99,10 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             //retrieve  messages
             var messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                 
-            messages.Length.Should().BeLessThanOrEqualTo(outstandingMessageCount);
-                
+            Assert.True(messages.Length <= outstandingMessageCount);
+
             //should not receive more than buffer in one hit
-            messages.Length.Should().BeLessThanOrEqualTo(BufferSize);
+            Assert.True(messages.Length <= BufferSize);
 
             var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
             foreach (var message in moreMessages)
@@ -117,7 +118,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
         } while ((iteration <= 5) && (messagesReceivedCount <  MessageCount));
     
 
-        messagesReceivedCount.Should().Be(4);
+        Assert.Equal(4, messagesReceivedCount);
 
     }
         

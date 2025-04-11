@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Data.Common;
-using System.Transactions;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,11 +6,10 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
-using Polly.Caching;
 
 namespace GreetingsSender
 {
-    class Program
+    static class Program
     {
         static void Main(string[] args)
         {

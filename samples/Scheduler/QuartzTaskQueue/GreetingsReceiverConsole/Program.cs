@@ -55,22 +55,28 @@ public class Program
                 var subscriptions = new Subscription[]
                 {
                     new SqsSubscription<GreetingEvent>(
-                        new SubscriptionName("paramore.example.greeting"),
-                        new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                        new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                        subscriptionName: new SubscriptionName("paramore.example.greeting"),
+                        channelName: new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                        routingKey:new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                        channelType: ChannelType.PubSub,
                         bufferSize: 10,
                         timeOut: TimeSpan.FromMilliseconds(20),
-                        lockTimeout: 30,
-                        messagePumpType: MessagePumpType.Reactor),
-                    new SqsSubscription<FarewellEvent>(new SubscriptionName("paramore.example.farewell"),
-                        new ChannelName(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                        new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                        messagePumpType: MessagePumpType.Reactor,
+                        queueAttributes: new SqsAttributes(
+                            lockTimeout: TimeSpan.FromSeconds(30)
+                            )),
+                    new SqsSubscription<FarewellEvent>(
+                        subscriptionName:new SubscriptionName("paramore.example.farewell"),
+                        channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                        routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                        channelType: ChannelType.PubSub,
                         bufferSize: 10,
                         timeOut: TimeSpan.FromMilliseconds(20),
-                        lockTimeout: 30,
-                        sqsType: SnsSqsType.Fifo,
-                        snsAttributes: new SnsAttributes { Type = SnsSqsType.Fifo },
-                        messagePumpType: MessagePumpType.Reactor)
+                        messagePumpType: MessagePumpType.Reactor,
+                        queueAttributes: new SqsAttributes(
+                            lockTimeout: TimeSpan.FromSeconds(30),
+                            type: SqsType.Fifo
+                        ))
                 };
 
                 //create the gateway

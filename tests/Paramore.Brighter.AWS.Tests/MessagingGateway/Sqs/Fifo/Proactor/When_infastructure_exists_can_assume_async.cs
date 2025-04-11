@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -12,7 +11,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class AwsAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
@@ -20,7 +19,7 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTestsAsync()
+    public AwsAssumeInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -30,14 +29,19 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(queueName);
 
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(
+            type: SqsType.Fifo
+        );
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
-            channelName: new ChannelName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint);
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -54,20 +58,12 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            name: new SubscriptionName(queueName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Assume,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint);
+        subscription.MakeChannels = OnMissingChannel.Assume;
 
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Assume, SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Assume)
+        );
 
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(true));
     }
@@ -82,7 +78,7 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 
         //Assert
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         //clear the queue
         await _consumer.AcknowledgeAsync(message);

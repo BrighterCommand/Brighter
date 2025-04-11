@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
@@ -31,7 +29,7 @@ public class LargeMessagePaylodUnwrapTests
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public void When_unwrapping_a_large_message()
     {
@@ -40,8 +38,8 @@ public class LargeMessagePaylodUnwrapTests
         var contents = DataGenerator.CreateString(6000);
         var myCommand = new MyLargeCommand(1) { Value = contents };
         var commandAsJson = JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
-        
-        var stream = new MemoryStream();                                                                               
+
+        var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
         writer.Write(commandAsJson);
         writer.Flush();
@@ -62,10 +60,10 @@ public class LargeMessagePaylodUnwrapTests
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
         var transformedMessage = transformPipeline.Unwrap(message, new RequestContext());
-        
+
         //assert
         //contents should be from storage
-        transformedMessage.Value.Should().Be(contents);
-        _inMemoryStorageProvider.HasClaim(id).Should().BeFalse();
+        Assert.Equal(contents, transformedMessage.Value);
+        Assert.False(_inMemoryStorageProvider.HasClaim(id));
     }
 }

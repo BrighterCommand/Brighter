@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    internal class HeaderNames
+    internal static class HeaderNames
     {
         /// <summary>
         /// The bag for user defined contents

@@ -27,7 +27,7 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Outbox.DynamoDB;
 
-internal class DispatchedMessagesQueryResult
+internal sealed class DispatchedMessagesQueryResult
 {
     public IEnumerable<MessageItem> Messages { get; private set; }
     public string PaginationToken { get; private set; }

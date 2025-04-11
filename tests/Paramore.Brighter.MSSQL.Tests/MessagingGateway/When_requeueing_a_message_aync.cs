@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             //clear the queue
             await channel.AcknowledgeAsync(requeuedMessage);
 
-            requeuedMessage.Body.Value.Should().Be(message.Body.Value);
+            Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
         }
         
         public void Dispose()

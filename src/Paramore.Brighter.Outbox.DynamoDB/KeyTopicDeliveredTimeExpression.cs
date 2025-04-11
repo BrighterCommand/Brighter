@@ -4,14 +4,12 @@ using Amazon.DynamoDBv2.DocumentModel;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
-    internal class KeyTopicDeliveredTimeExpression
+    internal sealed class KeyTopicDeliveredTimeExpression
     {
-        private readonly Expression _expression;
-
-        public KeyTopicDeliveredTimeExpression()
+        private readonly Expression _expression = new()
         {
-            _expression = new Expression { ExpressionStatement = "Topic = :v_Topic and DeliveryTime < :v_SinceTime" };
-        }
+            ExpressionStatement = "Topic = :v_Topic and DeliveryTime < :v_SinceTime"
+        };
 
         public override string ToString()
         {
@@ -20,11 +18,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         public Expression Generate(string topicName, DateTimeOffset sinceTime)
         {
-            var values = new Dictionary<string, DynamoDBEntry>();
-            values.Add(":v_Topic", topicName);
-            values.Add(":v_SinceTime", sinceTime.Ticks);
-
-            _expression.ExpressionAttributeValues = values;
+            _expression.ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>(capacity: 2)
+            {
+                { ":v_Topic", topicName },
+                { ":v_SinceTime", sinceTime.Ticks }
+            };
 
             return _expression;
         }

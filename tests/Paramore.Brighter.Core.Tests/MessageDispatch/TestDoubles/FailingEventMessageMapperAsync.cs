@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
-    internal class FailingEventMessageMapperAsync : IAmAMessageMapperAsync<MyFailingMapperEvent>
+    internal sealed class FailingEventMessageMapperAsync : IAmAMessageMapperAsync<MyFailingMapperEvent>
     {
         public IRequestContext Context { get; set; }
 

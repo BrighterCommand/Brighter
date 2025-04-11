@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -40,8 +39,9 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
         //how are we consuming
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             //don't block the redrive policy from owning retry management
             requeueCount: -1,
@@ -49,11 +49,13 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Reactor,
             //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
-            redrivePolicy: new RedrivePolicy
-            (
-                deadLetterQueueName: new ChannelName(_dlqChannelName),
-                maxReceiveCount: 2
-            ));
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy
+                (
+                    deadLetterQueueName: new ChannelName(_dlqChannelName)!,
+                    maxReceiveCount: 2
+                ))
+            );
 
         //what do we send
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
@@ -103,7 +105,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
         _messagePump = new Reactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry,
-            null, new InMemoryRequestContextFactory(), _channel)
+            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };
@@ -151,7 +153,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         //inspect the dlq
-        GetDLQCount(_dlqChannelName).Should().Be(1);
+        Assert.Equal(1, GetDLQCount(_dlqChannelName));
     }
 
     public void Dispose()

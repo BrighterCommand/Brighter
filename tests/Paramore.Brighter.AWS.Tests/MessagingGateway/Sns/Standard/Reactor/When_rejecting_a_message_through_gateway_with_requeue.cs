@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -30,11 +29,12 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         var routingKey = new RoutingKey(topicName);
             
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey, 
             messagePumpType: MessagePumpType.Reactor,
-            routingKey: routingKey
-        );
+            makeChannels: OnMissingChannel.Create);
             
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -70,7 +70,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         //clear the queue
         _channel.Acknowledge(message);
 
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
     }
 
     public void Dispose()

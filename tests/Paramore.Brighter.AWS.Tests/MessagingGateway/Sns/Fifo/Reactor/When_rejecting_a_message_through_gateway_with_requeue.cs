@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -29,14 +28,18 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            messagePumpType: MessagePumpType.Reactor,
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            sqsType: SnsSqsType.Fifo
-        );
+            messagePumpType: MessagePumpType.Reactor, 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo),
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create
+            );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -54,7 +57,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, TopicAttributes = topicAttributes
             });
     }
 
@@ -76,7 +79,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         //clear the queue
         _channel.Acknowledge(message);
 
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
     }
 
     public void Dispose()

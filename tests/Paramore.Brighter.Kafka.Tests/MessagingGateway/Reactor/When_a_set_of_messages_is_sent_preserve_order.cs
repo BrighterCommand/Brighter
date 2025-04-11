@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -70,23 +69,23 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
             //Now read messages in order
             var firstMessage = ConsumeMessages(consumer);
             var message = firstMessage.First();
-            message.Id.Should().Be(msgId);
+            Assert.Equal(msgId, message.Id);
             consumer.Acknowledge(message);
 
             var secondMessage = ConsumeMessages(consumer);
             message = secondMessage.First();
-            message.Id.Should().Be(msgId2);
-            consumer.Acknowledge(message);               
-                
+            Assert.Equal(msgId2, message.Id);
+            consumer.Acknowledge(message);
+
             var thirdMessages = ConsumeMessages(consumer);
-            message = thirdMessages .First();
-            message.Id.Should().Be(msgId3);
-            consumer.Acknowledge(message);               
-                
+            message = thirdMessages.First();
+            Assert.Equal(msgId3, message.Id);
+            consumer.Acknowledge(message);
+
             var fourthMessage = ConsumeMessages(consumer);
-            message = fourthMessage .First();
-            message.Id.Should().Be(msgId4);
-            consumer.Acknowledge(message);               
+            message = fourthMessage.First();
+            Assert.Equal(msgId4, message.Id);
+            consumer.Acknowledge(message);
  
         }
         finally
@@ -145,7 +144,7 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
                     BootStrapServers = ["localhost:9092"]
                 })
             .Create(new KafkaSubscription<MyCommand>(
-                name: new SubscriptionName("Paramore.Brighter.Tests"),
+                subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),
                 channelName: new ChannelName(_queueName),
                 routingKey: new RoutingKey(_topic),
                 groupId: _kafkaGroupId,

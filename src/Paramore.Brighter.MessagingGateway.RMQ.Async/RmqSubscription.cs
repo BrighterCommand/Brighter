@@ -63,12 +63,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// A null value, the default, is infinite
         /// </summary>
         public TimeSpan? Ttl { get; }
+        
+        /// <inheritdoc />
+        public override Type ChannelFactoryType => typeof(ChannelFactory); 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
@@ -90,7 +93,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="maxQueueLength">The maximum number of messages in a queue before we reject messages; defaults to no limit</param>
         public RmqSubscription(
             Type dataType, 
-            SubscriptionName? name = null, 
+            SubscriptionName? subscriptionName = null, 
             ChannelName? channelName = null, 
             RoutingKey? routingKey = null, 
             int bufferSize = 1, 
@@ -110,7 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             int? maxQueueLength = null) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
             DeadLetterChannelName = deadLetterChannelName;
@@ -126,7 +129,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
@@ -146,7 +149,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public RmqSubscription(
-            SubscriptionName? name = null,
+            SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
             int bufferSize = 1,
@@ -165,7 +168,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null)
-            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
+            : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
                 unacceptableMessageLimit, isDurable, messagePumpType, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels, emptyChannelDelay, channelFailureDelay)
         { }
 

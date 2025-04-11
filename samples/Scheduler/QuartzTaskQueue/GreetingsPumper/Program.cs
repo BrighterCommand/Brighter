@@ -16,7 +16,7 @@ using Serilog;
 
 namespace GreetingsPumper;
 
-class Program
+static class Program
 {
     private static async Task Main(string[] args)
     {
@@ -68,7 +68,7 @@ class Program
                                 {
                                     Topic =
                                         new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                                    SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                                    TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
                                 }
                             ]
                         ).Create();
@@ -97,7 +97,7 @@ class Program
         await host.RunAsync();
     }
 
-    internal class RunCommandProcessor(IAmACommandProcessor commandProcessor, ILogger<RunCommandProcessor> logger)
+    internal sealed class RunCommandProcessor(IAmACommandProcessor commandProcessor, ILogger<RunCommandProcessor> logger)
         : BackgroundService
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

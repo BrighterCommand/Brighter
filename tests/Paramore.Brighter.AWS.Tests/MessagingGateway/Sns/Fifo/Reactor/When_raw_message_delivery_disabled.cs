@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -10,7 +9,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
@@ -25,24 +23,29 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var bufferSize = 10;
 
         //Set rawMessageDelivery to false
         _channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            makeChannels: OnMissingChannel.Create,
             messagePumpType: MessagePumpType.Reactor,
-            rawMessageDelivery: false,
-            sqsType: SnsSqsType.Fifo));
+            queueAttributes: new SqsAttributes(
+                rawMessageDelivery: false,
+                type: SqsType.Fifo), 
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                MakeChannels = OnMissingChannel.Create, 
+                TopicAttributes = topicAttributes
             });
     }
 
@@ -74,18 +77,19 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
         _channel.Acknowledge(messageReceived);
 
         //assert
-        messageReceived.Id.Should().Be(messageToSent.Id);
-        messageReceived.Header.Topic.Should().Be(messageToSent.Header.Topic.ToValidSNSTopicName(true));
-        messageReceived.Header.MessageType.Should().Be(messageToSent.Header.MessageType);
-        messageReceived.Header.CorrelationId.Should().Be(messageToSent.Header.CorrelationId);
-        messageReceived.Header.ReplyTo.Should().Be(messageToSent.Header.ReplyTo);
-        messageReceived.Header.ContentType.Should().Be(messageToSent.Header.ContentType);
-        messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
-        messageReceived.Body.Value.Should().Be(messageToSent.Body.Value);
+        Assert.Equal(messageToSent.Id, messageReceived.Id);
+        Assert.Equal(messageToSent.Header.Topic.ToValidSNSTopicName(true), messageReceived.Header.Topic);
+        Assert.Equal(messageToSent.Header.MessageType, messageReceived.Header.MessageType);
+        Assert.Equal(messageToSent.Header.CorrelationId, messageReceived.Header.CorrelationId);
+        Assert.Equal(messageToSent.Header.ReplyTo, messageReceived.Header.ReplyTo);
+        Assert.Equal(messageToSent.Header.ContentType, messageReceived.Header.ContentType);
+        Assert.Contains(customHeaderItem.Key, messageReceived.Header.Bag);
+        Assert.Equal(customHeaderItem.Value, messageReceived.Header.Bag[customHeaderItem.Key]);
+        Assert.Equal(messageToSent.Body.Value, messageReceived.Body.Value);
 
-        messageReceived.Header.PartitionKey.Should().Be(messageGroupId);
-        messageReceived.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
-        messageReceived.Header.Bag[HeaderNames.DeduplicationId].Should().Be(deduplicationId);
+        Assert.Equal(messageGroupId, messageReceived.Header.PartitionKey);
+        Assert.Contains(HeaderNames.DeduplicationId, messageReceived.Header.Bag);
+        Assert.Equal(deduplicationId, messageReceived.Header.Bag[HeaderNames.DeduplicationId]);
     }
 
     public void Dispose()

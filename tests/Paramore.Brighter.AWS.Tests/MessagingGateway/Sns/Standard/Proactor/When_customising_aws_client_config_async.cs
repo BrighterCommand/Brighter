@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -28,11 +27,11 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            messagePumpType: MessagePumpType.Proactor,
-            routingKey: routingKey
-        );
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Proactor);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -55,8 +54,11 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
                 new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("async_pub"));
         });
 
-        _messageProducer = new SnsMessageProducer(publishAwsConnection,
-            new SnsPublication { Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SnsMessageProducer(
+            publishAwsConnection,
+            new SnsPublication { Topic = new RoutingKey(topicName), 
+                MakeChannels = OnMissingChannel.Create }
+            );                                                                                      
     }
 
     [Fact]
@@ -70,14 +72,15 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         //clear the queue
+        Assert.NotEqual(MessageType.MT_NONE, message.Header.MessageType);
         await _channel.AcknowledgeAsync(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
-        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("async_sub");
-        InterceptingDelegatingHandler.RequestCount["async_sub"].Should().BeGreaterThan(0);
-
-        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("async_pub");
-        InterceptingDelegatingHandler.RequestCount["async_pub"].Should().BeGreaterThan(0);
+        Assert.Contains("async_pub", InterceptingDelegatingHandler.RequestCount);
+        Assert.True((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0));
+        
+        Assert.Contains("async_pub", InterceptingDelegatingHandler.RequestCount);
+        Assert.True((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0));
     }
 
     public void Dispose()

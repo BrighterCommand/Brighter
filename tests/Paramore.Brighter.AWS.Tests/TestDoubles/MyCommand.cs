@@ -26,9 +26,8 @@ using System;
 
 namespace Paramore.Brighter.AWS.Tests.TestDoubles
 {
-    internal class MyCommand : Command
+    internal sealed class MyCommand() : Command(Guid.NewGuid())
     {
-        public string Value { get; set; }
-        public MyCommand() :base(Guid.NewGuid()) {}
+        public string Value { get; set; } = string.Empty;
     }
 }

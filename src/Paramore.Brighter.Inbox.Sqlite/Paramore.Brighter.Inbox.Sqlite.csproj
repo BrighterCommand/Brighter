@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 </Project>
