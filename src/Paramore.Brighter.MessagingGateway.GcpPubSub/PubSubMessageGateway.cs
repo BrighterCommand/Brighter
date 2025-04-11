@@ -1,98 +1,134 @@
-﻿using Google.Cloud.PubSub.V1;
+﻿using System.Data.Common;
+using Google.Cloud.PubSub.V1;
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-public class PubSubMessageGateway
+/// <summary>
+/// The Pub/Sub message gateway
+/// </summary>
+/// <param name="connection">The <see cref="GcpMessagingGatewayConnection"/>.</param>
+public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
 {
-    public PubSubMessageGateway(GcpMessagingGatewayConnection connection)
-    {
-        Connection = connection;
-    }
-
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PubSubMessageGateway>();
-    protected GcpMessagingGatewayConnection Connection { get; }
 
+    /// <summary>
+    /// The <see cref="GcpMessagingGatewayConnection"/>
+    /// </summary>
+    protected GcpMessagingGatewayConnection Connection { get; } = connection;
 
-    internal async Task EnsureTopicExistAsync(TopicAttributes publication)
+    internal async Task EnsureTopicExistAsync(TopicAttributes publication, OnMissingChannel makeChannel)
     {
         var topicName = TopicName.FromProjectTopic(publication.ProjectId ?? Connection.ProjectId, publication.Name);
-        if (publication.MakeChannels == OnMissingChannel.Assume)
+        if (makeChannel == OnMissingChannel.Assume)
         {
             return;
         }
 
         var publisher = await PublisherServiceApiClient.CreateAsync();
-        if (await DoesTopicExistAsync(publisher, topicName.ProjectId, topicName.TopicId))
+        if (makeChannel == OnMissingChannel.Validate)
         {
-            return;
-        }
+            if (await DoesTopicExistAsync(publisher, topicName))
+            {
+                return;
+            }
 
-        if (publication.MakeChannels == OnMissingChannel.Validate)
-        {
             // TODO: Change exception
             throw new(
                 $"Topic validation error: could not find topic {topicName}. Did you want Brighter to create infrastructure?");
         }
 
-        var topic = new Topic { TopicName = topicName, State = Topic.Types.State.Active };
-
-        if (publication.StorePolicy != null)
+        if (await DoesTopicExistAsync(publisher, topicName))
         {
-            topic.MessageStoragePolicy = publication.StorePolicy;
+            await UpdateTopicAsync(publisher, topicName, publication);
+        }
+        else
+        {
+            await CreateTopicAsync(publisher, topicName, publication);
         }
 
-        if (publication.MessageRetentionDuration != null)
+        return;
+
+        static async Task CreateTopicAsync(PublisherServiceApiClient publisher, TopicName topicName,
+            TopicAttributes publication)
         {
-            topic.MessageRetentionDuration = Duration.FromTimeSpan(publication.MessageRetentionDuration.Value);
+            await publisher.CreateTopicAsync(CreateTopic(topicName, publication));
         }
 
-        if (!string.IsNullOrEmpty(publication.KmsKeyName))
+        static async Task UpdateTopicAsync(PublisherServiceApiClient publisher, TopicName topicName,
+            TopicAttributes publication)
         {
-            topic.KmsKeyName = publication.KmsKeyName;
+            var mask = new FieldMask();
+            mask.Paths.Add("message_store_policy");
+            mask.Paths.Add("message_retention_duration");
+            mask.Paths.Add("kms_key_name");
+            mask.Paths.Add("schema_settings");
+            mask.Paths.Add("label");
+            mask.Paths.Add("state");
+
+            var topic = new UpdateTopicRequest { Topic = CreateTopic(topicName, publication), UpdateMask = mask };
+            await publisher.UpdateTopicAsync(topic);
         }
 
-        if (publication.SchemaSettings != null)
+        static Topic CreateTopic(TopicName topicName, TopicAttributes publication)
         {
-            topic.SchemaSettings = publication.SchemaSettings;
-        }
+            var topic = new Topic { TopicName = topicName, State = Topic.Types.State.Active };
 
-        topic.Labels.Add("Source", "Brighter");
-
-        foreach (var label in publication.Labels)
-        {
-            topic.Labels[label.Key] = label.Value;
-        }
-
-        await publisher.CreateTopicAsync(topic);
-    }
-
-    private static async Task<bool> DoesTopicExistAsync(PublisherServiceApiClient client, string projectId,
-        string topicId)
-    {
-        var topics = client.ListTopicsAsync(new ListTopicsRequest { Project = projectId });
-        foreach (var topic in await topics.ReadPageAsync(100))
-        {
-            if (topic.TopicName.TopicId == topicId)
+            if (publication.StorePolicy != null)
             {
-                return true;
+                topic.MessageStoragePolicy = publication.StorePolicy;
             }
-        }
 
-        return false;
+            if (publication.MessageRetentionDuration != null)
+            {
+                topic.MessageRetentionDuration = Duration.FromTimeSpan(publication.MessageRetentionDuration.Value);
+            }
+
+            if (!string.IsNullOrEmpty(publication.KmsKeyName))
+            {
+                topic.KmsKeyName = publication.KmsKeyName;
+            }
+
+            if (publication.SchemaSettings != null)
+            {
+                topic.SchemaSettings = publication.SchemaSettings;
+            }
+
+            topic.Labels.Add("Source", "Brighter");
+
+            foreach (var label in publication.Labels)
+            {
+                topic.Labels[label.Key] = label.Value;
+            }
+
+            return topic;
+        }
     }
 
+    private static async Task<bool> DoesTopicExistAsync(PublisherServiceApiClient client, TopicName topicName)
+    {
+        try
+        {
+            var topic = await client.GetTopicAsync(topicName);
+            return topic != null;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+            return false;
+        }
+    }
 
-    internal async Task EnsureSubscriptionExistsAsync(PubSubSubscription subscription)
+    internal async Task EnsureSubscriptionExistsAsync(PullPubSubSubscription subscription)
     {
         if (subscription.MakeChannels == OnMissingChannel.Assume)
         {
             return;
         }
 
-        subscription.TopicAttributes ??= new TopicAttributes { MakeChannels = subscription.MakeChannels };
+        subscription.TopicAttributes ??= new TopicAttributes();
 
         subscription.TopicAttributes.ProjectId ??= Connection.ProjectId;
         if (string.IsNullOrEmpty(subscription.TopicAttributes.Name))
@@ -100,83 +136,153 @@ public class PubSubMessageGateway
             subscription.TopicAttributes.Name = subscription.ChannelName.Value;
         }
 
-        await EnsureTopicExistAsync(subscription.TopicAttributes!);
+        await EnsureTopicExistAsync(subscription.TopicAttributes!, subscription.MakeChannels);
 
         var subscriptionName = Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(
             subscription.ProjectId ?? Connection.ProjectId,
-            subscription.ChannelName.Value);
+            subscription.Name.Value);
+
 
         var client = await SubscriberServiceApiClient.CreateAsync();
-        var gpcSubscription = await client.GetSubscriptionAsync(subscriptionName);
-        if (gpcSubscription != null)
-        {
-            return;
-        }
-
         if (subscription.MakeChannels == OnMissingChannel.Validate)
         {
+            if (await DoesSubscriptionExists(client, subscriptionName))
+            {
+                return;
+            }
+
+            // TODO: Update exception type
             throw new Exception("No subscription found");
         }
 
-        gpcSubscription = new Google.Cloud.PubSub.V1.Subscription
+        if (await DoesSubscriptionExists(client, subscriptionName))
         {
-            TopicAsTopicName =
-                TopicName.FromProjectTopic(subscription.TopicAttributes.ProjectId,
-                    subscription.TopicAttributes.Name!),
-            SubscriptionName = subscriptionName,
-            AckDeadlineSeconds = subscription.AckDeadlineSeconds,
-            RetainAckedMessages = subscription.RetainAckedMessages,
-            EnableMessageOrdering = subscription.EnableMessageOrdering,
-            EnableExactlyOnceDelivery = subscription.EnableExactlyOnceDelivery,
-            State = Google.Cloud.PubSub.V1.Subscription.Types.State.Active
-        };
-
-        if (subscription.MessageRetentionDuration != null)
+            await UpdateSubscriptionAsync(client,
+                Connection.ProjectId,
+                subscriptionName,
+                subscription);
+        }
+        else
         {
-            gpcSubscription.MessageRetentionDuration =
-                Duration.FromTimeSpan(subscription.MessageRetentionDuration.Value);
+            await CreateSubscriptionAsync(client,
+                Connection.ProjectId,
+                subscriptionName,
+                subscription);
         }
 
-        if (subscription.Storage != null)
+        return;
+
+        static async Task CreateSubscriptionAsync(SubscriberServiceApiClient client,
+            string projectId,
+            Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
+            PullPubSubSubscription subscription)
         {
-            gpcSubscription.CloudStorageConfig = subscription.Storage;
+            await client.CreateSubscriptionAsync(CreateSubscription(projectId, subscriptionName, subscription));
         }
 
-        if (subscription.ExpirationPolicy != null)
+        static async Task UpdateSubscriptionAsync(SubscriberServiceApiClient client,
+            string projectId,
+            Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
+            PullPubSubSubscription subscription)
         {
-            gpcSubscription.ExpirationPolicy = subscription.ExpirationPolicy;
-        }
-
-        if (!string.IsNullOrEmpty(subscription.DeadLetterTopic))
-        {
-            if (!TopicName.TryParse(subscription.DeadLetterTopic, false, out var deadLetterTopic))
+            var request = new UpdateSubscriptionRequest
             {
-                deadLetterTopic = TopicName.FromProjectTopic(subscription.ProjectId ?? Connection.ProjectId,
-                    subscription.DeadLetterTopic);
+                Subscription = CreateSubscription(projectId, subscriptionName, subscription),
+                UpdateMask = new FieldMask()
+            };
+
+            request.UpdateMask.Paths.Add("ack_deadline_seconds");
+            request.UpdateMask.Paths.Add("retain_acked_messages");
+            request.UpdateMask.Paths.Add("enable_message_ordering");
+            request.UpdateMask.Paths.Add("enable_exactly_once_delivery");
+            request.UpdateMask.Paths.Add("state");
+            request.UpdateMask.Paths.Add("message_retention_duration");
+            request.UpdateMask.Paths.Add("expiration_policy");
+            request.UpdateMask.Paths.Add("dead_letter_topic");
+            request.UpdateMask.Paths.Add("dead_letter_policy");
+            request.UpdateMask.Paths.Add("retry_policy");
+            request.UpdateMask.Paths.Add("labels");
+
+            await client.UpdateSubscriptionAsync(request);
+        }
+
+        static Google.Cloud.PubSub.V1.Subscription CreateSubscription(string projectId,
+            Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
+            PullPubSubSubscription subscription)
+        {
+            var gpcSubscription = new Google.Cloud.PubSub.V1.Subscription
+            {
+                TopicAsTopicName =
+                    TopicName.FromProjectTopic(subscription.TopicAttributes!.ProjectId ?? projectId,
+                        subscription.TopicAttributes.Name),
+                SubscriptionName = subscriptionName,
+                AckDeadlineSeconds = subscription.AckDeadlineSeconds,
+                RetainAckedMessages = subscription.RetainAckedMessages,
+                EnableMessageOrdering = subscription.EnableMessageOrdering,
+                EnableExactlyOnceDelivery = subscription.EnableExactlyOnceDelivery,
+                State = Google.Cloud.PubSub.V1.Subscription.Types.State.Active
+            };
+
+            if (subscription.MessageRetentionDuration != null)
+            {
+                gpcSubscription.MessageRetentionDuration =
+                    Duration.FromTimeSpan(subscription.MessageRetentionDuration.Value);
             }
 
-            gpcSubscription.DeadLetterPolicy = new DeadLetterPolicy
+            if (subscription.Storage != null)
             {
-                MaxDeliveryAttempts = subscription.RequeueCount, 
-                DeadLetterTopic = deadLetterTopic.ToString()
-            };
-        }
+                gpcSubscription.CloudStorageConfig = subscription.Storage;
+            }
 
-        if (subscription.RequeueDelay != TimeSpan.Zero)
-        {
-            gpcSubscription.RetryPolicy = new RetryPolicy
+            if (subscription.ExpirationPolicy != null)
             {
-                MinimumBackoff = Duration.FromTimeSpan(subscription.RequeueDelay),
-                MaximumBackoff = Duration.FromTimeSpan(subscription.MaxRequeueDelay)
-            };
+                gpcSubscription.ExpirationPolicy = subscription.ExpirationPolicy;
+            }
+
+            if (!string.IsNullOrEmpty(subscription.DeadLetterTopic))
+            {
+                if (!TopicName.TryParse(subscription.DeadLetterTopic, false, out var deadLetterTopic))
+                {
+                    deadLetterTopic = TopicName.FromProjectTopic(subscription.ProjectId ?? projectId,
+                        subscription.DeadLetterTopic);
+                }
+
+                gpcSubscription.DeadLetterPolicy = new DeadLetterPolicy
+                {
+                    MaxDeliveryAttempts = subscription.RequeueCount, DeadLetterTopic = deadLetterTopic.ToString()
+                };
+            }
+
+            if (subscription.RequeueDelay != TimeSpan.Zero)
+            {
+                gpcSubscription.RetryPolicy = new RetryPolicy
+                {
+                    MinimumBackoff = Duration.FromTimeSpan(subscription.RequeueDelay),
+                    MaximumBackoff = Duration.FromTimeSpan(subscription.MaxRequeueDelay)
+                };
+            }
+
+            gpcSubscription.Labels.Add("Source", "Brighter");
+            foreach (var label in subscription.TopicAttributes.Labels)
+            {
+                gpcSubscription.Labels[label.Key] = label.Value;
+            }
+
+            return gpcSubscription;
         }
 
-        gpcSubscription.Labels.Add("Source", "Brighter");
-        foreach (var label in subscription.TopicAttributes.Labels)
+        static async Task<bool> DoesSubscriptionExists(SubscriberServiceApiClient client,
+            Google.Cloud.PubSub.V1.SubscriptionName name)
         {
-            gpcSubscription.Labels[label.Key] = label.Value;
+            try
+            {
+                var sub = await client.GetSubscriptionAsync(name);
+                return sub != null;
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+            {
+                return false;
+            }
         }
-
-        await client.CreateSubscriptionAsync(gpcSubscription);
     }
 }

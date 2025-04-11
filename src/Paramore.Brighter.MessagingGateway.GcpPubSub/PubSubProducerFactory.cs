@@ -40,22 +40,16 @@ public class PubSubProducerFactory : PubSubMessageGateway, IAmAMessageProducerFa
                 throw new ConfigurationException("Missing topic on Publication");
             }
 
-            await EnsureTopicExistAsync(TopicAttributes.FromPubSubPublication(publication));
-            var publisher = await new PublisherClientBuilder
-            {
-                Credential = new ComputeCredential(),
-                TopicName = TopicName.FromProjectTopic(publication.ProjectId ?? _connection.ProjectId, publication.Topic),
-                Endpoint = publication.Endpoint,
-                Settings = new PublisherClient.Settings
-                {
-                    EnableMessageOrdering = publication.EnableMessageOrdering,
-                    BatchingSettings = publication.BatchSettings,
-                    EnableCompression = publication.EnableCompression,
-                    CompressionBytesThreshold = publication.CompressBytesThreshold
-                }
-            }.BuildAsync();
+            await EnsureTopicExistAsync(publication.TopicAttributes, publication.MakeChannels);
 
-            producers[publication.Topic] = new PubSubProducer(publisher, publication);
+            var builder = new PublisherServiceApiClientBuilder();
+            
+            _connection.PublishConfiguration?.Invoke(builder);
+
+            var publisher = await builder.BuildAsync(); 
+            
+            var topicName = TopicName.FromProjectTopic(publication.TopicAttributes.ProjectId ?? Connection.ProjectId, publication.TopicAttributes.Name);
+            producers[publication.Topic] = new PubSubProducer(publisher, topicName, publication);
         }
 
         return producers;

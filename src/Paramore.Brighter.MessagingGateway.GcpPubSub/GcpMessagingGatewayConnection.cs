@@ -1,4 +1,5 @@
 ﻿using Google.Apis.Auth.OAuth2;
+using Google.Cloud.PubSub.V1;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -16,4 +17,14 @@ public class GcpMessagingGatewayConnection
     /// The Google Cloud credentials
     /// </summary>
     public ICredential? Credential { get; set; }
+    
+    /// <summary>
+    /// The <see cref="Google.Cloud.PubSub.V1.PublisherClientBuilder"/> configuration
+    /// </summary>
+    public Action<PublisherServiceApiClientBuilder>? PublishConfiguration { get; set; }
+    
+    /// <summary>
+    /// The <see cref="SubscriberClientBuilder"/> configuration
+    /// </summary>
+    public Action<SubscriberServiceApiClientBuilder>? SubscribeConfiguration { get; set; }
 }

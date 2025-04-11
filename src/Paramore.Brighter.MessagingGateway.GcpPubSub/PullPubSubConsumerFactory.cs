@@ -21,7 +21,7 @@ public class PullPubSubConsumerFactory : PubSubMessageGateway, IAmAMessageConsum
     /// <inheritdoc />
     public IAmAMessageConsumerSync Create(Subscription subscription)
     {
-        if (subscription is not PubSubSubscription pubSubSubscription)
+        if (subscription is not PullPubSubSubscription pubSubSubscription)
         {
             throw new ConfigurationException(
                 "We are expection a PubSubSubscription or PubSubSubscription<T> as parameter");
@@ -33,7 +33,7 @@ public class PullPubSubConsumerFactory : PubSubMessageGateway, IAmAMessageConsum
     /// <inheritdoc />
     public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
     {
-        if (subscription is not PubSubSubscription pubSubSubscription)
+        if (subscription is not PullPubSubSubscription pubSubSubscription)
         {
             throw new ConfigurationException(
                 "We are expection a PubSubSubscription or PubSubSubscription<T> as parameter");
@@ -42,12 +42,15 @@ public class PullPubSubConsumerFactory : PubSubMessageGateway, IAmAMessageConsum
         return BrighterAsyncContext.Run(async () => await CreateAsync(pubSubSubscription));
     }
 
-    private async Task<PullPubSubConsumer> CreateAsync(PubSubSubscription subscription)
+    private async Task<PullPubSubConsumer> CreateAsync(PullPubSubSubscription subscription)
     {
         await EnsureSubscriptionExistsAsync(subscription);
-        new SubscriberServiceApiClientBuilder()
-            .Build();
-        var client = await SubscriberServiceApiClient.CreateAsync();
+
+
+        var builder = new SubscriberServiceApiClientBuilder();
+        _connection.SubscribeConfiguration?.Invoke(builder);
+
+        var client = await builder.BuildAsync();
 
         return new PullPubSubConsumer(client,
             Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(

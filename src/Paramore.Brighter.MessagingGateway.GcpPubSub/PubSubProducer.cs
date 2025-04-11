@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Google.Api.Gax.Grpc;
 using Google.Cloud.PubSub.V1;
 using Google.Protobuf;
-using Google.Protobuf.Collections;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
@@ -13,8 +13,11 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// </summary>
 /// <param name="client">The <see cref="PublisherClient"/>.</param>
 /// <param name="publication">The <see cref="PubSubPublication"/>.</param>
-public class PubSubProducer(PublisherClient client, PubSubPublication publication)
-    : IAmAMessageProducerAsync, IAmAMessageProducerSync
+public class PubSubProducer(
+    PublisherServiceApiClient client,
+    TopicName topicName,
+    PubSubPublication publication)
+    : IAmAMessageProducerAsync, IAmAMessageProducerSync, IAmABulkMessageProducerAsync
 {
     /// <inheritdoc />
     public Publication Publication => publication;
@@ -24,6 +27,38 @@ public class PubSubProducer(PublisherClient client, PubSubPublication publicatio
 
     /// <inheritdoc />
     public IAmAMessageScheduler? Scheduler { get; set; }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var msg = messages.ToArray();
+        if (msg.Length == 0)
+        {
+            yield break;
+        }
+
+        foreach (var chuck in msg.Chunk(publication.BatchSize))
+        {
+            var pubSubMessages = new List<PubsubMessage>();
+            foreach (var message in chuck)
+            {
+                pubSubMessages.Add(Parser.ToPubSubMessage(message));
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message);
+            }
+
+            await client.PublishAsync(
+                new PublishRequest { TopicAsTopicName = topicName, Messages = { pubSubMessages } },
+                CallSettings.FromCancellationToken(cancellationToken));
+
+            yield return chuck.Select(x => x.Id).ToArray();
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public Task SendAsync(Message message, CancellationToken cancellationToken = default)
@@ -37,7 +72,8 @@ public class PubSubProducer(PublisherClient client, PubSubPublication publicatio
         {
             var pubSubMessage = Parser.ToPubSubMessage(message);
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message);
-            await client.PublishAsync(pubSubMessage);
+            await client.PublishAsync(new PublishRequest { TopicAsTopicName = topicName, Messages = { pubSubMessage } },
+                CallSettings.FromCancellationToken(cancellationToken));
         }
         else if (Scheduler is IAmAMessageSchedulerAsync scheduler)
         {
@@ -47,43 +83,6 @@ public class PubSubProducer(PublisherClient client, PubSubPublication publicatio
         {
             throw new InvalidOperationException("Scheduler must be an IAmAMessageSchedulerAsync");
         }
-    }
-
-    private static void AddHeaders(MapField<string, string> headers, Message message)
-    {
-        headers.Add(HeaderNames.Id, message.Header.MessageId);
-        headers.Add(HeaderNames.Topic, message.Header.Topic);
-        headers.Add(HeaderNames.HandledCount, message.Header.HandledCount.ToString());
-        headers.Add(HeaderNames.MessageType, message.Header.MessageType.ToString());
-        headers.Add(HeaderNames.Timestamp, Convert.ToString(message.Header.TimeStamp)!);
-
-        if (!string.IsNullOrEmpty(message.Header.ContentType))
-        {
-            headers.Add(HeaderNames.ContentType, message.Header.ContentType!);
-        }
-
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            headers.Add(HeaderNames.CorrelationId, message.Header.CorrelationId);
-        }
-
-        if (!string.IsNullOrEmpty(message.Header.ReplyTo))
-        {
-            headers.Add(HeaderNames.ReplyTo, message.Header.ReplyTo!);
-        }
-
-        if (!string.IsNullOrEmpty(message.Header.Subject))
-        {
-            headers.Add(HeaderNames.Subject, message.Header.Subject!);
-        }
-
-        message.Header.Bag.Each(header =>
-        {
-            if (!headers.ContainsKey(header.Key))
-            {
-                headers.Add(header.Key, header.Value.ToString()!);
-            }
-        });
     }
 
     /// <inheritdoc />
@@ -97,11 +96,8 @@ public class PubSubProducer(PublisherClient client, PubSubPublication publicatio
     /// <inheritdoc />
     public void Dispose()
     {
-        client.DisposeAsync()
-            .GetAwaiter().GetResult();
     }
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-        => await client.DisposeAsync();
+    public ValueTask DisposeAsync() => new();
 }

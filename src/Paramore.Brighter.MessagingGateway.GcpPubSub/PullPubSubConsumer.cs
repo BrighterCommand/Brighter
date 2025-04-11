@@ -12,17 +12,16 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// <param name="client">The subscriber api.</param>
 /// <param name="subscriptionName">The subscription name</param>
 /// <param name="batchSize">The pull batch size</param>
-/// <param name="hasDql">flag indicating it it has a dead letter queue</param>
+/// <param name="hasDql">flag indicating it has a dead letter queue</param>
 /// <param name="timeProvider">The <see cref="System.TimeProvider"/></param>
-public class PullPubSubConsumer(
+public partial class PullPubSubConsumer(
     SubscriberServiceApiClient client,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     int batchSize,
     bool hasDql,
     TimeProvider timeProvider) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private static readonly ILogger Logger = ApplicationLogging.CreateLogger<PullPubSubConsumer>();
-
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PullPubSubConsumer>();
 
     /// <inheritdoc />
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
@@ -31,19 +30,14 @@ public class PullPubSubConsumer(
         {
             return;
         }
-
         try
         {
             await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
-            Logger.LogInformation(
-                "PullPubSubConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
+            Log.AcknowledgeSuccess(s_logger, message.Id, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,
-                "PullPubSubConsumer: Error during acknowledging the message {Id} with the receipt handle {ReceiptHandle} on the subscription {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
+            Log.AcknowledgeError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             throw;
         }
     }
@@ -55,13 +49,9 @@ public class PullPubSubConsumer(
         {
             return;
         }
-
         try
         {
-            Logger.LogInformation(
-                "PullPubSubConsumer: Rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
-
+            Log.RejectMessage(s_logger, message.Id, ackId, subscriptionName.ToString());
             if (hasDql)
             {
                 await client.ModifyAckDeadlineAsync(subscriptionName, [ackId], 0, cancellationToken);
@@ -73,9 +63,7 @@ public class PullPubSubConsumer(
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,
-                "PullPubSubConsumer: Error during rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
+            Log.RejectError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             throw;
         }
     }
@@ -85,27 +73,21 @@ public class PullPubSubConsumer(
     {
         try
         {
-            Logger.LogInformation("PullPubSubConsumer: Purging the subscription {ChannelName}",
-                subscriptionName.ToString());
-
+            Log.PurgeStart(s_logger, subscriptionName.ToString());
             await client.SeekAsync(
-                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)), },
+                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) },
                 cancellationToken);
-
-            Logger.LogInformation("PullPubSubConsumer: Purged the subscription {ChannelName}",
-                subscriptionName.ToString());
+            Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "PullPubSubConsumer: Error during purging the subscription {ChannelName}",
-                subscriptionName.ToString());
+            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
 
     /// <inheritdoc />
-    public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null,
-        CancellationToken cancellationToken = default)
+    public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         PullResponse response;
         try
@@ -113,7 +95,6 @@ public class PullPubSubConsumer(
             response = await client.PullAsync(
                 new PullRequest { SubscriptionAsSubscriptionName = subscriptionName, MaxMessages = batchSize },
                 cancellationToken);
-
             if (response.ReceivedMessages.Count == 0)
             {
                 return [new Message()];
@@ -121,46 +102,35 @@ public class PullPubSubConsumer(
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {
-            Logger.LogDebug("PullPubSubConsumer: Could not determine number of messages to retrieve");
-            throw new ChannelFailureException("Error connection to Pub/Sub, see inner exception for details",
-                rcpException);
+            Log.ReceiveConnectionError(s_logger);
+            throw new ChannelFailureException("Error connecting to Pub/Sub, see inner exception for details", rcpException);
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "PullPubSubConsumer: There was an error listening to queue {ChannelName} ",
-                subscriptionName.ToString());
+            Log.ReceiveError(s_logger, e, subscriptionName.ToString());
             throw;
         }
-
-        return response.ReceivedMessages
-            .Select(Parser.ToBrighterMessage)
-            .ToArray();
+        return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
     /// <inheritdoc />
-    public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
-        CancellationToken cancellationToken = default)
+    public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
         {
             return false;
         }
-
         try
         {
-            Logger.LogInformation("PullPubSubConsumer: re-queueing the message {Id}", message.Id);
-
-            // The requeue policy is defined by subscription, during it creating
+            Log.RequeueStart(s_logger, message.Id);
+            // The requeue policy is defined by subscription, during its creation
             await client.ModifyAckDeadlineAsync(subscriptionName, [ackId], 0, cancellationToken);
-
-            Logger.LogInformation("PullPubSubConsumer: re-queued the message {Id}", message.Id);
+            Log.RequeueComplete(s_logger, message.Id);
             return true;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,
-                "PullPubSubConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
+            Log.RequeueError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             return false;
         }
     }
@@ -172,19 +142,14 @@ public class PullPubSubConsumer(
         {
             return;
         }
-
         try
         {
             client.Acknowledge(subscriptionName, [ackId]);
-            Logger.LogInformation(
-                "PullPubSubConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
+            Log.AcknowledgeSuccess(s_logger, message.Id, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,
-                "PullPubSubConsumer: Error during acknowledging the message {Id} with the receipt handle {ReceiptHandle} on the subscription {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
+            Log.AcknowledgeError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             throw;
         }
     }
@@ -196,13 +161,9 @@ public class PullPubSubConsumer(
         {
             return;
         }
-
         try
         {
-            Logger.LogInformation(
-                "PullPubSubConsumer: Rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
-
+            Log.RejectMessage(s_logger, message.Id, ackId, subscriptionName.ToString());
             if (hasDql)
             {
                 client.ModifyAckDeadline(subscriptionName, [ackId], 0);
@@ -214,9 +175,7 @@ public class PullPubSubConsumer(
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,
-                "PullPubSubConsumer: Error during rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
+            Log.RejectError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             throw;
         }
     }
@@ -226,23 +185,17 @@ public class PullPubSubConsumer(
     {
         try
         {
-            Logger.LogInformation("PullPubSubConsumer: Purging the subscription {ChannelName}",
-                subscriptionName.ToString());
-
+            Log.PurgeStart(s_logger, subscriptionName.ToString());
             client.Seek(
                 new SeekRequest
                 {
-                    Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)
-                    )
+                    Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
                 });
-
-            Logger.LogInformation("PullPubSubConsumer: Purged the subscription {ChannelName}",
-                subscriptionName.ToString());
+            Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "PullPubSubConsumer: Error during purging the subscription {ChannelName}",
-                subscriptionName.ToString());
+            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
@@ -255,9 +208,9 @@ public class PullPubSubConsumer(
         {
             response = client.Pull(new PullRequest
             {
-                SubscriptionAsSubscriptionName = subscriptionName, MaxMessages = batchSize
+                SubscriptionAsSubscriptionName = subscriptionName,
+                MaxMessages = batchSize
             });
-
             if (response.ReceivedMessages.Count == 0)
             {
                 return [new Message()];
@@ -265,20 +218,15 @@ public class PullPubSubConsumer(
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {
-            Logger.LogDebug("PullPubSubConsumer: Could not determine number of messages to retrieve");
-            throw new ChannelFailureException("Error connection to Pub/Sub, see inner exception for details",
-                rcpException);
+            Log.ReceiveConnectionError(s_logger);
+            throw new ChannelFailureException("Error connecting to Pub/Sub, see inner exception for details", rcpException);
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "PullPubSubConsumer: There was an error listening to queue {ChannelName} ",
-                subscriptionName.ToString());
+            Log.ReceiveError(s_logger, e, subscriptionName.ToString());
             throw;
         }
-
-        return response.ReceivedMessages
-            .Select(Parser.ToBrighterMessage)
-            .ToArray();
+        return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
     /// <inheritdoc />
@@ -288,22 +236,17 @@ public class PullPubSubConsumer(
         {
             return false;
         }
-
         try
         {
-            Logger.LogInformation("PullPubSubConsumer: re-queueing the message {Id}", message.Id);
-
-            // The requeue policy is defined by subscription, during it creating
-            client.ModifyAckDeadlineAsync(subscriptionName, [ackId], 0);
-
-            Logger.LogInformation("PullPubSubConsumer: re-queued the message {Id}", message.Id);
+            Log.RequeueStart(s_logger, message.Id);
+            // The requeue policy is defined by subscription, during its creation
+            client.ModifyAckDeadline(subscriptionName, [ackId], 0);
+            Log.RequeueComplete(s_logger, message.Id);
             return true;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,
-                "PullPubSubConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
-                message.Id, ackId, subscriptionName.ToString());
+            Log.RequeueError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             return false;
         }
     }
@@ -314,9 +257,50 @@ public class PullPubSubConsumer(
         return new ValueTask();
     }
 
-
     /// <inheritdoc />
     public void Dispose()
     {
+    }
+
+    /// <summary>
+    /// Internal logging class
+    /// </summary>
+    internal static partial class Log
+    {
+        [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
+        public static partial void AcknowledgeSuccess(ILogger logger, string id, string receiptHandle, string subscriptionName);
+
+        [LoggerMessage(LogLevel.Error, "PullPubSubConsumer: Error during acknowledging the message {Id} with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
+        public static partial void AcknowledgeError(ILogger logger, Exception ex, string id, string receiptHandle, string subscriptionName);
+
+        [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: Rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
+        public static partial void RejectMessage(ILogger logger, string id, string receiptHandle, string subscriptionName);
+
+        [LoggerMessage(LogLevel.Error, "PullPubSubConsumer: Error during rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
+        public static partial void RejectError(ILogger logger, Exception ex, string id, string receiptHandle, string subscriptionName);
+
+        [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: Purging the subscription {SubscriptionName}")]
+        public static partial void PurgeStart(ILogger logger, string subscriptionName);
+
+        [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: Purged the subscription {SubscriptionName}")]
+        public static partial void PurgeComplete(ILogger logger, string subscriptionName);
+
+        [LoggerMessage(LogLevel.Error, "PullPubSubConsumer: Error during purging the subscription {SubscriptionName}")]
+        public static partial void PurgeError(ILogger logger, Exception ex, string subscriptionName);
+
+        [LoggerMessage(LogLevel.Debug, "PullPubSubConsumer: Could not determine number of messages to retrieve")]
+        public static partial void ReceiveConnectionError(ILogger logger);
+
+        [LoggerMessage(LogLevel.Error, "PullPubSubConsumer: There was an error listening to queue {SubscriptionName}")]
+        public static partial void ReceiveError(ILogger logger, Exception ex, string subscriptionName);
+
+        [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: re-queueing the message {Id}")]
+        public static partial void RequeueStart(ILogger logger, string id);
+
+        [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: re-queued the message {Id}")]
+        public static partial void RequeueComplete(ILogger logger, string id);
+
+        [LoggerMessage(LogLevel.Error, "PullPubSubConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
+        public static partial void RequeueError(ILogger logger, Exception ex, string id, string receiptHandle, string subscriptionName);
     }
 }
