@@ -40,17 +40,17 @@
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.0.1" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.4" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.4" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.4" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.3.0" />
@@ -97,7 +97,7 @@
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="8.1.0" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
-    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.3" />
+    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.4" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <PackageVersion Include="System.Net.Security" Version="4.3.2" />
