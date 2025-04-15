@@ -3,12 +3,12 @@
 /// <summary>
 /// The Google Cloud Pub/Sub publication
 /// </summary>
-public class PubSubPublication : Publication
+public class TopicPublication : Publication
 {
     /// <summary>
     /// The attributes of the topic
     /// </summary>
-    public required TopicAttributes TopicAttributes { get; init; }
+    public TopicAttributes? TopicAttributes { get; set; }
 
     /// <summary>
     /// The max batch size for publish

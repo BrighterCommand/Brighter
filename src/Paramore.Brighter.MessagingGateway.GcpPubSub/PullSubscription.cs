@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// Google Cloud Pub/Sub subscription settings. Configure these properties after creating an instance
 /// to define the desired Pub/Sub behavior when the subscription is provisioned or used.
 /// </remarks>
-public class PullPubSubSubscription : Subscription
+public class PullSubscription : Subscription
 {
     /// <summary>
     /// Gets or sets the Google Cloud Project ID where the subscription resides or will be created.
@@ -124,13 +124,13 @@ public class PullPubSubSubscription : Subscription
     public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
 
     /// <inheritdoc />
-    public override Type ChannelFactoryType => typeof(PullPubSubConsumerFactory);
+    public override Type ChannelFactoryType => typeof(PullConsumerFactory);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PullPubSubSubscription"/> class, configuring base Brighter subscription properties.
+    /// Initializes a new instance of the <see cref="PullSubscription"/> class, configuring base Brighter subscription properties.
     /// </summary>
     /// <param name="dataType">The type of the message payload.</param>
-    /// <param name="name">The name of the subscription (logical name in Brighter).</param>
+    /// <param name="subscriptionName">The name of the subscription (logical name in Brighter).</param>
     /// <param name="channelName">The name of the channel (often corresponds to the physical Pub/Sub subscription ID).</param>
     /// <param name="routingKey">The routing key (often corresponds to the Pub/Sub topic ID).</param>
     /// <param name="bufferSize">The size of the buffer for messages read from the channel.</param>
@@ -149,14 +149,14 @@ public class PullPubSubSubscription : Subscription
     /// Google Cloud Pub/Sub specific settings (like <see cref="ProjectId"/>, <see cref="AckDeadlineSeconds"/>, <see cref="EnableMessageOrdering"/>, etc.)
     /// must be configured by setting the corresponding properties on the instance after creation. These settings are typically used
     /// during channel provisioning (<paramref name="makeChannels"/>  = <see cref="OnMissingChannel.Create"/> or <see cref="OnMissingChannel.Validate"/>)
-    /// or by the <see cref="PullPubSubConsumerFactory"/> when creating the consumer.
+    /// or by the <see cref="PullConsumerFactory"/> when creating the consumer.
     /// </remarks>
-    public PullPubSubSubscription(Type dataType, SubscriptionName? name = null, ChannelName? channelName = null,
+    public PullSubscription(Type dataType, SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
         RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
-        TimeSpan? channelFailureDelay = null) : base(dataType, name, channelName, routingKey, bufferSize,
+        TimeSpan? channelFailureDelay = null) : base(dataType, subscriptionName, channelName, routingKey, bufferSize,
         noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
         makeChannels, emptyChannelDelay, channelFailureDelay)
     {
@@ -164,7 +164,7 @@ public class PullPubSubSubscription : Subscription
 }
 
 /// <summary>
-/// Provides a generic version of <see cref="PullPubSubSubscription"/> for configuring a Google Cloud Pub/Sub
+/// Provides a generic version of <see cref="PullSubscription"/> for configuring a Google Cloud Pub/Sub
 /// pull subscription for a specific message type <typeparamref name="T"/>.
 /// </summary>
 /// <typeparam name="T">The type of the message (<see cref="IRequest"/>) that this subscription handles. Must be a reference type.</typeparam>
@@ -172,13 +172,13 @@ public class PullPubSubSubscription : Subscription
 /// This class simplifies subscription configuration by automatically setting the <c>DataType</c> property based on <typeparamref name="T"/>.
 /// Like its base class, configure Google Cloud Pub/Sub specific properties on the instance after creation.
 /// </remarks>
-public class PullPubSubSubscription<T> : PullPubSubSubscription
+public class PullSubscription<T> : PullSubscription
     where T : class, IRequest
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="PullPubSubSubscription{T}"/> class, configuring base Brighter subscription properties.
+    /// Initializes a new instance of the <see cref="PullSubscription{T}"/> class, configuring base Brighter subscription properties.
     /// </summary>
-    /// <param name="name">The name of the subscription (logical name in Brighter).</param>
+    /// <param name="subscriptionName">The name of the subscription (logical name in Brighter).</param>
     /// <param name="channelName">The name of the channel (often corresponds to the physical Pub/Sub subscription ID).</param>
     /// <param name="routingKey">The routing key (often corresponds to the Pub/Sub topic ID).</param>
     /// <param name="bufferSize">The size of the buffer for messages read from the channel.</param>
@@ -197,15 +197,15 @@ public class PullPubSubSubscription<T> : PullPubSubSubscription
     /// Google Cloud Pub/Sub specific settings (like <see cref="ProjectId"/>, <see cref="AckDeadlineSeconds"/>, <see cref="EnableMessageOrdering"/>, etc.)
     /// must be configured by setting the corresponding properties on the instance after creation. These settings are typically used
     /// during channel provisioning (<paramref name="makeChannels"/>  = <see cref="OnMissingChannel.Create"/> or <see cref="OnMissingChannel.Validate"/>)
-    /// or by the <see cref="PullPubSubConsumerFactory"/> when creating the consumer.
+    /// or by the <see cref="PullConsumerFactory"/> when creating the consumer.
     /// </remarks>
-    public PullPubSubSubscription(SubscriptionName? name = null, ChannelName? channelName = null,
+    public PullSubscription(SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
         RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null)
-        : base(typeof(T), name, channelName, routingKey, bufferSize,
+        : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
             channelFactory,
             makeChannels, emptyChannelDelay, channelFailureDelay)

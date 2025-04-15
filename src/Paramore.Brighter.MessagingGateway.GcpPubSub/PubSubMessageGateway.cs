@@ -1,5 +1,4 @@
-﻿using System.Data.Common;
-using Google.Cloud.PubSub.V1;
+﻿using Google.Cloud.PubSub.V1;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
@@ -28,7 +27,8 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
             return;
         }
 
-        var publisher = await PublisherServiceApiClient.CreateAsync();
+        var publisher = await Connection.CreatePublisherServiceApiClientAsync();
+
         if (makeChannel == OnMissingChannel.Validate)
         {
             if (await DoesTopicExistAsync(publisher, topicName))
@@ -121,7 +121,7 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
         }
     }
 
-    internal async Task EnsureSubscriptionExistsAsync(PullPubSubSubscription subscription)
+    internal async Task EnsureSubscriptionExistsAsync(PullSubscription subscription)
     {
         if (subscription.MakeChannels == OnMissingChannel.Assume)
         {
@@ -129,21 +129,21 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
         }
 
         subscription.TopicAttributes ??= new TopicAttributes();
-
-        subscription.TopicAttributes.ProjectId ??= Connection.ProjectId;
         if (string.IsNullOrEmpty(subscription.TopicAttributes.Name))
         {
-            subscription.TopicAttributes.Name = subscription.ChannelName.Value;
+            subscription.TopicAttributes.Name = subscription.RoutingKey;
         }
 
-        await EnsureTopicExistAsync(subscription.TopicAttributes!, subscription.MakeChannels);
+        await EnsureTopicExistAsync(subscription.TopicAttributes, subscription.MakeChannels);
 
-        var subscriptionName = Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(
-            subscription.ProjectId ?? Connection.ProjectId,
-            subscription.Name.Value);
+        if (!Google.Cloud.PubSub.V1.SubscriptionName.TryParse(subscription.ChannelName.Value, out var subscriptionName))
+        {
+            subscriptionName =
+                Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(
+                    subscription.ProjectId ?? Connection.ProjectId, subscription.ChannelName.Value);
+        }
 
-
-        var client = await SubscriberServiceApiClient.CreateAsync();
+        var client = await Connection.CreateSubscriberServiceApiClientAsync();
         if (subscription.MakeChannels == OnMissingChannel.Validate)
         {
             if (await DoesSubscriptionExists(client, subscriptionName))
@@ -175,7 +175,7 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
         static async Task CreateSubscriptionAsync(SubscriberServiceApiClient client,
             string projectId,
             Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-            PullPubSubSubscription subscription)
+            PullSubscription subscription)
         {
             await client.CreateSubscriptionAsync(CreateSubscription(projectId, subscriptionName, subscription));
         }
@@ -183,7 +183,7 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
         static async Task UpdateSubscriptionAsync(SubscriberServiceApiClient client,
             string projectId,
             Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-            PullPubSubSubscription subscription)
+            PullSubscription subscription)
         {
             var request = new UpdateSubscriptionRequest
             {
@@ -208,7 +208,7 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
 
         static Google.Cloud.PubSub.V1.Subscription CreateSubscription(string projectId,
             Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-            PullPubSubSubscription subscription)
+            PullSubscription subscription)
         {
             var gpcSubscription = new Google.Cloud.PubSub.V1.Subscription
             {

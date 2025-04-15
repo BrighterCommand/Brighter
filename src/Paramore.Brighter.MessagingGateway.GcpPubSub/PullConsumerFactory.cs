@@ -6,14 +6,14 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// <summary>
 /// The Pull-based Pub/Sub consumer factory
 /// </summary>
-public class PullPubSubConsumerFactory : PubSubMessageGateway, IAmAMessageConsumerFactory
+public class PullConsumerFactory : PubSubMessageGateway, IAmAMessageConsumerFactory
 {
     private readonly GcpMessagingGatewayConnection _connection;
 
     /// <summary>
     /// The Pull-based Pub/Sub consumer factory
     /// </summary>
-    public PullPubSubConsumerFactory(GcpMessagingGatewayConnection connection) : base(connection)
+    public PullConsumerFactory(GcpMessagingGatewayConnection connection) : base(connection)
     {
         _connection = connection;
     }
@@ -21,10 +21,10 @@ public class PullPubSubConsumerFactory : PubSubMessageGateway, IAmAMessageConsum
     /// <inheritdoc />
     public IAmAMessageConsumerSync Create(Subscription subscription)
     {
-        if (subscription is not PullPubSubSubscription pubSubSubscription)
+        if (subscription is not PullSubscription pubSubSubscription)
         {
             throw new ConfigurationException(
-                "We are expection a PubSubSubscription or PubSubSubscription<T> as parameter");
+                "We are expecting a PubSubSubscription or PubSubSubscription<T> as parameter");
         }
 
         return BrighterAsyncContext.Run(async () => await CreateAsync(pubSubSubscription));
@@ -33,26 +33,20 @@ public class PullPubSubConsumerFactory : PubSubMessageGateway, IAmAMessageConsum
     /// <inheritdoc />
     public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
     {
-        if (subscription is not PullPubSubSubscription pubSubSubscription)
+        if (subscription is not PullSubscription pubSubSubscription)
         {
             throw new ConfigurationException(
-                "We are expection a PubSubSubscription or PubSubSubscription<T> as parameter");
+                "We are expecting a PubSubSubscription or PubSubSubscription<T> as parameter");
         }
 
         return BrighterAsyncContext.Run(async () => await CreateAsync(pubSubSubscription));
     }
 
-    private async Task<PullPubSubConsumer> CreateAsync(PullPubSubSubscription subscription)
+    private async Task<SubscriptionConsumer> CreateAsync(PullSubscription subscription)
     {
         await EnsureSubscriptionExistsAsync(subscription);
 
-
-        var builder = new SubscriberServiceApiClientBuilder();
-        _connection.SubscribeConfiguration?.Invoke(builder);
-
-        var client = await builder.BuildAsync();
-
-        return new PullPubSubConsumer(client,
+        return new SubscriptionConsumer(_connection,
             Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(
                 subscription.ProjectId ?? _connection.ProjectId, subscription.ChannelName.Value),
             subscription.BufferSize,

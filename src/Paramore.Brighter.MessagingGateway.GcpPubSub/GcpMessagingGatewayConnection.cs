@@ -17,14 +17,42 @@ public class GcpMessagingGatewayConnection
     /// The Google Cloud credentials
     /// </summary>
     public ICredential? Credential { get; set; }
-    
+
     /// <summary>
     /// The <see cref="Google.Cloud.PubSub.V1.PublisherClientBuilder"/> configuration
     /// </summary>
     public Action<PublisherServiceApiClientBuilder>? PublishConfiguration { get; set; }
-    
+
     /// <summary>
     /// The <see cref="SubscriberClientBuilder"/> configuration
     /// </summary>
     public Action<SubscriberServiceApiClientBuilder>? SubscribeConfiguration { get; set; }
+    
+    public PublisherServiceApiClient CreatePublisherServiceApiClient()
+    {
+        var builder = new PublisherServiceApiClientBuilder { Credential = Credential };
+        PublishConfiguration?.Invoke(builder);
+        return builder.Build();
+    }
+
+    internal async Task<PublisherServiceApiClient> CreatePublisherServiceApiClientAsync()
+    {
+        var builder = new PublisherServiceApiClientBuilder { Credential = Credential };
+        PublishConfiguration?.Invoke(builder);
+        return await builder.BuildAsync();
+    }
+    
+    internal SubscriberServiceApiClient CreateSubscriberServiceApiClient()
+    {
+        var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
+        SubscribeConfiguration?.Invoke(builder);
+        return builder.Build();
+    }
+    
+    internal async Task<SubscriberServiceApiClient> CreateSubscriberServiceApiClientAsync()
+    {
+        var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
+        SubscribeConfiguration?.Invoke(builder);
+        return await builder.BuildAsync();
+    }
 }

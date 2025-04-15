@@ -7,18 +7,18 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// <summary>
 /// The Google Cloud PubSub producer factory.
 /// </summary>
-public class PubSubProducerFactory : PubSubMessageGateway, IAmAMessageProducerFactory
+public class TopicProducerFactory : PubSubMessageGateway, IAmAMessageProducerFactory
 {
     private readonly GcpMessagingGatewayConnection _connection;
-    private readonly IEnumerable<PubSubPublication> _publications;
+    private readonly IEnumerable<TopicPublication> _publications;
 
     /// <summary>
     /// The Google Cloud PubSub producer factory.
     /// </summary>
     /// <param name="connection">The <see cref="GcpMessagingGatewayConnection"/>.</param>
-    /// <param name="publications">The collection of <see cref="PubSubPublication"/>.</param>
-    public PubSubProducerFactory(GcpMessagingGatewayConnection connection,
-        IEnumerable<PubSubPublication> publications) : base(connection)
+    /// <param name="publications">The collection of <see cref="TopicPublication"/>.</param>
+    public TopicProducerFactory(GcpMessagingGatewayConnection connection,
+        IEnumerable<TopicPublication> publications) : base(connection)
     {
         _connection = connection;
         _publications = publications;
@@ -40,16 +40,14 @@ public class PubSubProducerFactory : PubSubMessageGateway, IAmAMessageProducerFa
                 throw new ConfigurationException("Missing topic on Publication");
             }
 
+            publication.TopicAttributes ??= new TopicAttributes();
+            if (string.IsNullOrEmpty(publication.TopicAttributes.Name))
+            {
+                publication.TopicAttributes.Name = publication.Topic;
+            }
+
             await EnsureTopicExistAsync(publication.TopicAttributes, publication.MakeChannels);
-
-            var builder = new PublisherServiceApiClientBuilder();
-            
-            _connection.PublishConfiguration?.Invoke(builder);
-
-            var publisher = await builder.BuildAsync(); 
-            
-            var topicName = TopicName.FromProjectTopic(publication.TopicAttributes.ProjectId ?? Connection.ProjectId, publication.TopicAttributes.Name);
-            producers[publication.Topic] = new PubSubProducer(publisher, topicName, publication);
+            producers[publication.Topic] = new TopicProducer(_connection, publication);
         }
 
         return producers;
