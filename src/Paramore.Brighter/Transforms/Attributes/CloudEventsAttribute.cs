@@ -86,12 +86,17 @@ public class CloudEventsAttribute : WrapWithAttribute
     public string? Subject { get; set; }
 
     /// <summary>
+    /// The <see cref="CloudEventFormat"/>.
+    /// </summary>
+    public CloudEventFormat Format { get; set; } = CloudEventFormat.Binary;
+
+    /// <summary>
     /// Passes the parameters to the <see cref="CloudEventsTransformer"/> to set the Cloud Events headers
     /// </summary>
     /// <returns></returns>
     public override object?[] InitializerParams()
     {
-        return [Source, Type, SpecVersion, DataContentType, DataSchema, Subject];
+        return [Source, Type, SpecVersion, DataContentType, DataSchema, Subject, Format];
     }
 
     /// <summary>

@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transforms.Transformers;
@@ -27,6 +30,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
     private string? _dataContentType;
     private Uri? _dataSchema;
     private string? _subject;
+    private CloudEventFormat _format;
 
     /// <summary>
     /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
@@ -70,6 +74,11 @@ public class CloudEventsTransformer : IAmAMessageTransform
         {
             _subject = subject;
         }
+
+        if (initializerList[6] is CloudEventFormat format)
+        {
+            _format = format;
+        }
     }
 
     public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
@@ -84,9 +93,104 @@ public class CloudEventsTransformer : IAmAMessageTransform
         message.Header.Subject = _subject ?? publication.Subject;
         message.Header.ContentType = _dataContentType ?? publication.ContentType;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
+
+        if (_format == CloudEventFormat.Json)
+        {
+            var cloudEvent = new CloudEventMessage
+            {
+                Id = message.Id,
+                SpecVersion = message.Header.SpecVersion,
+                Source = message.Header.Source,
+                Type = message.Header.Type,
+                DataContentType = message.Header.ContentType,
+                DateSchema = message.Header.DataSchema,
+                Subject = message.Header.Subject,
+                Time = message.Header.TimeStamp,
+                Data = JsonSerializer.Deserialize<JsonElement>(message.Body.Value)
+            };
+
+            message.Body = new MessageBody(JsonSerializer.Serialize(cloudEvent, JsonSerialisationOptions.Options));
+            message.Header.ContentType = "application/cloudevents+json";
+        }
+
         return message;
     }
 
     public Message Unwrap(Message message)
-        => message;
+    {
+        if (_format == CloudEventFormat.Json)
+        {
+            var cloudEvents =
+                JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Value, JsonSerialisationOptions.Options);
+            if (cloudEvents != null)
+            {
+                var bag = cloudEvents.AdditionalProperties ?? [];
+                foreach (KeyValuePair<string, object> pair in message.Header.Bag)
+                {
+                    bag[pair.Key] = pair.Value;
+                }
+                
+                var header = new MessageHeader
+                {
+                    MessageId = cloudEvents.Id,
+                    SpecVersion = cloudEvents.SpecVersion,
+                    Source = cloudEvents.Source,
+                    Type = cloudEvents.Type,
+                    ContentType = cloudEvents.DataContentType,
+                    DataSchema = cloudEvents.DateSchema,
+                    Subject = cloudEvents.Subject,
+                    TimeStamp = cloudEvents.Time ?? DateTimeOffset.UtcNow,
+                    CorrelationId = message.Header.CorrelationId,
+                    DataRef = message.Header.DataRef,
+                    Delayed = message.Header.Delayed,
+                    HandledCount = message.Header.HandledCount,
+                    MessageType = message.Header.MessageType,
+                    PartitionKey = message.Header.PartitionKey,
+                    ReplyTo = message.Header.ReplyTo,
+                    Topic = message.Header.Topic,
+                    TraceParent = message.Header.TraceParent,
+                    TraceState = message.Header.TraceState,
+                    Bag = bag 
+                };
+
+                var body = new MessageBody(cloudEvents.Data.ToString());
+                return new Message(header, body);
+            }
+        }
+
+        return message;
+    }
+
+    public class CloudEventMessage
+    {
+        [JsonPropertyName("id")] 
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("specversion")] 
+        public string SpecVersion { get; set; } = "1.0";
+
+        [JsonPropertyName("source")]
+        public Uri Source { get; set; } = new(MessageHeader.DefaultSource);
+
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = string.Empty;
+
+        [JsonPropertyName("datacontenttype")]
+        public string? DataContentType { get; set; }
+
+        [JsonPropertyName("dataschema")]
+        public Uri? DateSchema { get; set; }
+
+        [JsonPropertyName("subject")]
+        public string? Subject { get; set; }
+
+        [JsonPropertyName("time")]
+        public DateTimeOffset? Time { get; set; }
+        
+        [JsonExtensionData]
+        public Dictionary<string, object>? AdditionalProperties { get; set; }
+
+        [JsonPropertyName("data")]
+        public JsonElement Data { get; set; }
+    }
 }
