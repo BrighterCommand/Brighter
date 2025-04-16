@@ -360,7 +360,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>False as no requeue support on Kafka</returns>
         public bool Requeue(Message message, int delayMilliseconds)
         {
-            return false;
+            return true;
         }
         
         private void CheckHasPartitions()
