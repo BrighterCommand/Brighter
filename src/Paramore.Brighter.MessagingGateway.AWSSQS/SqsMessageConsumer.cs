@@ -167,10 +167,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        public bool Reject(Message message)
         {
             if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
-                return;
+                return false;
 
             var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
 
@@ -193,12 +193,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle).Wait();
                     }
                 }
+
+                return true;
             }
             catch (Exception exception)
             {
                 s_logger.LogError(exception, "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
                 throw;
             }
+
+            return false;
         }
 
         /// <summary>

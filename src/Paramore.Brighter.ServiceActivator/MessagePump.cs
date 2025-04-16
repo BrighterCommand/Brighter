@@ -288,12 +288,12 @@ namespace Paramore.Brighter.ServiceActivator
             _unacceptableMessageCount++;
         }
 
-        private void RejectMessage(Message message)
+        private bool RejectMessage(Message message)
         {
             s_logger.LogWarning("MessagePump: Rejecting message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
             IncrementUnacceptableMessageLimit();
 
-            Channel.Reject(message);
+            return Channel.Reject(message);
         }
 
         /// <summary>
@@ -321,8 +321,7 @@ namespace Paramore.Brighter.ServiceActivator
                         Channel.Name,
                         Thread.CurrentThread.ManagedThreadId);
 
-                    RejectMessage(message);
-                    return false;
+                    return RejectMessage(message);
                 }
             }
 

@@ -54,11 +54,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        public bool Reject(Message message)
          {
              s_logger.LogInformation(
                  "MsSqlMessagingConsumer: rejecting message with topic {Topic} and id {Id}, NOT IMPLEMENTED",
                  message.Header.Topic, message.Id.ToString());
+             return false;
          }
 
         /// <summary>
