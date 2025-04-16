@@ -178,16 +178,15 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         {
             return false;
         }
- 
+
 
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <exception cref="System.NotImplementedException"></exception>
-        public void Reject(Message message)
-        {
-        }
+        public bool Reject(Message message)
+            => false;
 
 
         private void DeleteMessage(RestMSPipe pipe, Message message)

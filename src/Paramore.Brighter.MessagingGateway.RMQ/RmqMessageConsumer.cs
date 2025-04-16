@@ -222,7 +222,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        public bool Reject(Message message)
         {
             try
             {
@@ -230,12 +230,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 s_logger.LogInformation("RmqMessageConsumer: NoAck message {Id} with delivery tag {DeliveryTag}", message.Id, message.DeliveryTag);
                 //if we have a DLQ, this will force over to the DLQ
                 Channel.BasicReject(message.DeliveryTag, false);
+                return true;
             }
             catch (Exception exception)
             {
                 s_logger.LogError(exception, "RmqMessageConsumer: Error try to NoAck message {Id}", message.Id);
                 throw;
             }
+
+            return false;
         }
 
         /// <summary>

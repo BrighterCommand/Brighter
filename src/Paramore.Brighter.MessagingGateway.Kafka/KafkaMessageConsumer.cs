@@ -346,9 +346,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Rejects the specified message. This is just a commit of the offset to move past the record without processing it
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        public bool Reject(Message message)
         {
             Acknowledge(message);
+            return true;
         }
 
         /// <summary>
@@ -359,7 +360,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>False as no requeue support on Kafka</returns>
         public bool Requeue(Message message, int delayMilliseconds)
         {
-            return false;
+            return true;
         }
         
         private void CheckHasPartitions()

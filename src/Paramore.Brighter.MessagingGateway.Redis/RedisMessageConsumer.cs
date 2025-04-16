@@ -152,9 +152,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// This a 'do nothing operation' as we have already popped
         /// </summary>
         /// <param name="message"></param>
-        public void Reject(Message message)
+        public bool Reject(Message message)
         {
             _inflight.Remove(message.Id);
+            return true;
         }
 
         /// <summary>
