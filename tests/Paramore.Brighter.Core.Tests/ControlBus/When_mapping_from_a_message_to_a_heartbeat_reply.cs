@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -34,6 +34,11 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             Assert.Equal(_routingKey, _request.SendersAddress.Topic);
             // Should set the sender correlation_id
             Assert.Equal(_correlationId, _request.SendersAddress.CorrelationId);
+
+            // Reply should have the same correlation id as the original message
+            Assert.NotEqual(Reply.SenderCorrelationIdOrDefault(_request.SendersAddress), Guid.Empty);
+            Assert.Equal(_request.CorrelationId, Reply.SenderCorrelationIdOrDefault(_request.SendersAddress));
+
             // Should set the hostName
             Assert.Equal("Test.Hostname", _request.HostName);
             // Should contain the consumers
