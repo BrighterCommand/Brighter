@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Paramore.Brighter
 {
@@ -12,18 +12,86 @@ namespace Paramore.Brighter
     public class Reply : Command, IResponse
     {
         /// <summary>
-        /// Use this correlation id so that sender knows what we are replying to
+        /// Gets or sets the unique identifier used to correlate this reply with a specific request.
         /// </summary>
-        public Guid CorrelationId { get; }
+        /// <remarks>
+        /// This property is typically used to track and match replies to their originating requests,
+        /// ensuring proper communication flow in distributed systems.
+        /// </remarks>
+        public Guid CorrelationId { get; set; }
+
         /// <summary>
         /// The channel that we should reply to the sender on.
         /// </summary>
         public ReplyAddress SendersAddress { get; private set; }
 
-        public Reply(ReplyAddress sendersAddress)
-            : base(Guid.NewGuid())
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Reply"/> class.
+        /// </summary>
+        /// <param name="id">The unique identifier for the reply.</param>
+        /// <param name="sendersAddress">The <see cref="ReplyAddress"/> representing the sender's address for the reply.</param>
+        /// <param name="correlationId">The correlation identifier used to associate the reply with a specific request.</param>
+        public Reply(string id, ReplyAddress sendersAddress, Guid correlationId)
+            : base(id)
         {
             SendersAddress = sendersAddress;
+            CorrelationId = correlationId;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Reply"/> class.
+        /// </summary>
+        /// <param name="id">The unique identifier for the reply, represented as a <see cref="Guid"/>.</param>
+        /// <param name="sendersAddress">The <see cref="ReplyAddress"/> representing the sender's address for the reply.</param>
+        /// <param name="correlationId">The correlation identifier used to associate the reply with a specific request.</param>
+        public Reply(Guid id, ReplyAddress sendersAddress, Guid correlationId)
+            : this(id.ToString(), sendersAddress, correlationId)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Reply"/> class.
+        /// </summary>
+        /// <param name="id">The unique identifier for the reply.</param>
+        /// <param name="sendersAddress">The <see cref="ReplyAddress"/> representing the sender's address for the reply.</param>
+        public Reply(string id, ReplyAddress sendersAddress)
+            : this(id, sendersAddress, SenderCorrelationIdOrDefault(sendersAddress))
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Reply"/> class.
+        /// </summary>
+        /// <param name="id">The unique identifier for the reply.</param>
+        /// <param name="sendersAddress">The <see cref="ReplyAddress"/> representing the sender's address for the reply.</param>
+        public Reply(Guid id, ReplyAddress sendersAddress)
+            : this(id.ToString(), sendersAddress, SenderCorrelationIdOrDefault(sendersAddress))
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Reply"/> class.
+        /// </summary>
+        /// <param name="sendersAddress">The <see cref="ReplyAddress"/> representing the sender's address for the reply.</param>
+        public Reply(ReplyAddress sendersAddress)
+            : this(Guid.NewGuid(), sendersAddress)
+        {
+        }
+
+        /// <summary>
+        /// Retrieves the correlation ID from the provided <see cref="ReplyAddress"/> if it is valid; 
+        /// otherwise, generates a new <see cref="Guid"/>.
+        /// </summary>
+        /// <param name="sendersAddress">The <see cref="ReplyAddress"/> containing the correlation ID.</param>
+        /// <returns>
+        /// A <see cref="Guid"/> representing the correlation ID from the <paramref name="sendersAddress"/> 
+        /// if it is valid; otherwise, a newly generated <see cref="Guid"/>.
+        /// </returns>
+        public static Guid SenderCorrelationIdOrDefault(ReplyAddress sendersAddress)
+        {
+            return sendersAddress is not null && Guid.TryParse(sendersAddress.CorrelationId, out Guid correlationId)
+                ? correlationId
+                : Guid.NewGuid();
         }
     }
 }

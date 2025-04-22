@@ -36,17 +36,25 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
 
             //Should put the reply to as the topic
             Assert.Equal(new RoutingKey(TOPIC), _message.Header.Topic);
+            
             //Should put the correlation_id in the header
             Assert.Equal(_correlationId, _message.Header.CorrelationId);
+
+            // Should put the correlation_id in the reply
+            Assert.Equal(_correlationId, _request.CorrelationId.ToString());
+
+            // Reply correlation id should be set to the sender's address correlation id
+            Assert.Equal(_request.CorrelationId, Reply.SenderCorrelationIdOrDefault(_request.SendersAddress));
+
             //Should put the connections into the body
             Assert.Contains("\"consumerName\":\"Test.Consumer1\"", _message.Body.Value);
             Assert.Contains("\"state\":\"Open", _message.Body.Value);
             Assert.Contains("\"consumerName\":\"More.Consumers2\"", _message.Body.Value);
             Assert.Contains("\"state\":\"Shut", _message.Body.Value);
+            
 
             //Should put the hostname in the message body
             Assert.Contains("\"hostName\":\"Test.Hostname\"", _message.Body.Value);
-
         }
     }
 }
