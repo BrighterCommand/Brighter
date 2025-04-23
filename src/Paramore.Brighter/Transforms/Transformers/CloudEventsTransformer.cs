@@ -103,7 +103,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
                 Source = message.Header.Source,
                 Type = message.Header.Type,
                 DataContentType = message.Header.ContentType,
-                DateSchema = message.Header.DataSchema,
+                DataSchema = message.Header.DataSchema,
                 Subject = message.Header.Subject,
                 Time = message.Header.TimeStamp,
                 Data = JsonSerializer.Deserialize<JsonElement>(message.Body.Value)
@@ -137,7 +137,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
                     Source = cloudEvents.Source,
                     Type = cloudEvents.Type,
                     ContentType = cloudEvents.DataContentType,
-                    DataSchema = cloudEvents.DateSchema,
+                    DataSchema = cloudEvents.DataSchema,
                     Subject = cloudEvents.Subject,
                     TimeStamp = cloudEvents.Time ?? DateTimeOffset.UtcNow,
                     CorrelationId = message.Header.CorrelationId,
@@ -179,7 +179,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
         public string? DataContentType { get; set; }
 
         [JsonPropertyName("dataschema")]
-        public Uri? DateSchema { get; set; }
+        public Uri? DataSchema { get; set; }
 
         [JsonPropertyName("subject")]
         public string? Subject { get; set; }

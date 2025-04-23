@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Core.Tests.CloudEvents.TestDoubles;
+namespace Paramore.Brighter.Core.Tests.JsonMapper.TestDoubles;
 
-public class MyCommand() : Command(Guid.NewGuid())
+public class MyEvent() : Event(Guid.NewGuid())
 {
     public string Value { get; set; }
 }
