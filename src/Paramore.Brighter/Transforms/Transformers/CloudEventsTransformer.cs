@@ -38,11 +38,13 @@ public class CloudEventsTransformer : IAmAMessageTransform
     /// <value>The context.</value>
     public IRequestContext? Context { get; set; }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         //no op as we have no unmanaged resources
     }
 
+    /// <inheritdoc />
     public void InitializeWrapFromAttributeParams(params object?[] initializerList)
     {
         if (initializerList[0] is string source)
@@ -81,10 +83,12 @@ public class CloudEventsTransformer : IAmAMessageTransform
         }
     }
 
+    /// <inheritdoc />
     public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
     {
     }
 
+    /// <inheritdoc />
     public Message Wrap(Message message, Publication publication)
     {
         message.Header.Source = _source ?? publication.Source;
@@ -94,102 +98,158 @@ public class CloudEventsTransformer : IAmAMessageTransform
         message.Header.ContentType = _dataContentType ?? publication.ContentType;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
 
-        if (_format == CloudEventFormat.Json)
+        if (_format == CloudEventFormat.Binary)
         {
-            var cloudEvent = new CloudEventMessage
-            {
-                Id = message.Id,
-                SpecVersion = message.Header.SpecVersion,
-                Source = message.Header.Source,
-                Type = message.Header.Type,
-                DataContentType = message.Header.ContentType,
-                DataSchema = message.Header.DataSchema,
-                Subject = message.Header.Subject,
-                Time = message.Header.TimeStamp,
-                Data = JsonSerializer.Deserialize<JsonElement>(message.Body.Value)
-            };
-
-            message.Body = new MessageBody(JsonSerializer.Serialize(cloudEvent, JsonSerialisationOptions.Options));
-            message.Header.ContentType = "application/cloudevents+json";
+            return message;
         }
+
+        var cloudEvent = new CloudEventMessage
+        {
+            Id = message.Id,
+            SpecVersion = message.Header.SpecVersion,
+            Source = message.Header.Source,
+            Type = message.Header.Type,
+            DataContentType = message.Header.ContentType,
+            DataSchema = message.Header.DataSchema,
+            Subject = message.Header.Subject,
+            Time = message.Header.TimeStamp,
+            Data = JsonSerializer.Deserialize<JsonElement>(message.Body.Value)
+        };
+
+        message.Body = new MessageBody(JsonSerializer.Serialize(cloudEvent, JsonSerialisationOptions.Options));
+        message.Header.ContentType = "application/cloudevents+json";
 
         return message;
     }
 
+    /// <inheritdoc />
     public Message Unwrap(Message message)
     {
-        if (_format == CloudEventFormat.Json)
+        if (_format == CloudEventFormat.Binary)
         {
-            var cloudEvents =
-                JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Value, JsonSerialisationOptions.Options);
-            if (cloudEvents != null)
-            {
-                var bag = cloudEvents.AdditionalProperties ?? [];
-                foreach (KeyValuePair<string, object> pair in message.Header.Bag)
-                {
-                    bag[pair.Key] = pair.Value;
-                }
-                
-                var header = new MessageHeader
-                {
-                    MessageId = cloudEvents.Id,
-                    SpecVersion = cloudEvents.SpecVersion,
-                    Source = cloudEvents.Source,
-                    Type = cloudEvents.Type,
-                    ContentType = cloudEvents.DataContentType,
-                    DataSchema = cloudEvents.DataSchema,
-                    Subject = cloudEvents.Subject,
-                    TimeStamp = cloudEvents.Time ?? DateTimeOffset.UtcNow,
-                    CorrelationId = message.Header.CorrelationId,
-                    DataRef = message.Header.DataRef,
-                    Delayed = message.Header.Delayed,
-                    HandledCount = message.Header.HandledCount,
-                    MessageType = message.Header.MessageType,
-                    PartitionKey = message.Header.PartitionKey,
-                    ReplyTo = message.Header.ReplyTo,
-                    Topic = message.Header.Topic,
-                    TraceParent = message.Header.TraceParent,
-                    TraceState = message.Header.TraceState,
-                    Bag = bag 
-                };
-
-                var body = new MessageBody(cloudEvents.Data.ToString());
-                return new Message(header, body);
-            }
+            return message;
         }
 
-        return message;
+        var cloudEvents = JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Value, JsonSerialisationOptions.Options);
+
+        if (cloudEvents == null)
+        {
+            return message;
+        }
+
+        var bag = cloudEvents.AdditionalProperties ?? [];
+        foreach (KeyValuePair<string, object> pair in message.Header.Bag)
+        {
+            bag[pair.Key] = pair.Value;
+        }
+
+        var header = new MessageHeader
+        {
+            MessageId = cloudEvents.Id,
+            SpecVersion = cloudEvents.SpecVersion,
+            Source = cloudEvents.Source,
+            Type = cloudEvents.Type,
+            ContentType = cloudEvents.DataContentType,
+            DataSchema = cloudEvents.DataSchema,
+            Subject = cloudEvents.Subject,
+            TimeStamp = cloudEvents.Time ?? DateTimeOffset.UtcNow,
+            CorrelationId = message.Header.CorrelationId,
+            DataRef = message.Header.DataRef,
+            Delayed = message.Header.Delayed,
+            HandledCount = message.Header.HandledCount,
+            MessageType = message.Header.MessageType,
+            PartitionKey = message.Header.PartitionKey,
+            ReplyTo = message.Header.ReplyTo,
+            Topic = message.Header.Topic,
+            TraceParent = message.Header.TraceParent,
+            TraceState = message.Header.TraceState,
+            Bag = bag
+        };
+
+        var body = new MessageBody(cloudEvents.Data.ToString());
+        return new Message(header, body);
     }
 
+    /// <summary>
+    /// Represents a CloudEvent message envelope, adhering to the CloudEvents specification.
+    /// This class uses <see cref="JsonElement"/> for the 'data' payload, providing flexibility
+    /// in handling various JSON structures without strong typing at this level.
+    /// </summary>
     public class CloudEventMessage
     {
-        [JsonPropertyName("id")] 
+        /// <summary>
+        /// Gets or sets the unique identifier for the event.
+        /// Complies with the 'id' attribute of the CloudEvents specification.
+        /// Defaults to an empty string.
+        /// </summary>
+        [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
 
-        [JsonPropertyName("specversion")] 
+        /// <summary>
+        /// Gets or sets the specification version of the CloudEvents specification which the event uses.
+        /// Complies with the 'specversion' attribute.
+        /// Defaults to "1.0".
+        /// </summary>
+        [JsonPropertyName("specversion")]
         public string SpecVersion { get; set; } = "1.0";
 
+        /// <summary>
+        /// Gets or sets the source of the event.
+        /// Complies with the 'source' attribute, identifying the context in which an event happened.
+        /// Defaults to the <see cref="MessageHeader.DefaultSource"/>.
+        /// </summary>
         [JsonPropertyName("source")]
         public Uri Source { get; set; } = new(MessageHeader.DefaultSource);
 
+        /// <summary>
+        /// Gets or sets the type of the event.
+        /// Complies with the 'type' attribute, describing the kind of event related to the originating occurrence.
+        /// Defaults to an empty string.
+        /// </summary>
         [JsonPropertyName("type")]
         public string Type { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Gets or sets the content type of the 'data' payload.
+        /// Complies with the optional 'datacontenttype' attribute.
+        /// Examples include "application/json", "application/xml", etc.
+        /// </summary>
         [JsonPropertyName("datacontenttype")]
         public string? DataContentType { get; set; }
 
+        /// <summary>
+        /// Gets or sets the schema URI for the 'data' payload.
+        /// Complies with the optional 'dataschema' attribute, providing a link to the schema definition.
+        /// </summary>
         [JsonPropertyName("dataschema")]
         public Uri? DataSchema { get; set; }
 
+        /// <summary>
+        /// Gets or sets the subject of the event in the context of the event producer.
+        /// Complies with the optional 'subject' attribute.
+        /// </summary>
         [JsonPropertyName("subject")]
         public string? Subject { get; set; }
 
+        /// <summary>
+        /// Gets or sets the timestamp when the occurrence took place.
+        /// Complies with the optional 'time' attribute.
+        /// </summary>
         [JsonPropertyName("time")]
         public DateTimeOffset? Time { get; set; }
-        
+
+        /// <summary>
+        /// Gets or sets a dictionary for any additional CloudEvents attributes not explicitly defined in this class.
+        /// Uses the <see cref="JsonExtensionDataAttribute"/> for serialization and deserialization of these properties.
+        /// </summary>
         [JsonExtensionData]
         public Dictionary<string, object>? AdditionalProperties { get; set; }
 
+        /// <summary>
+        /// Gets or sets the event data payload as a <see cref="JsonElement"/>.
+        /// Complies with the 'data' attribute.
+        /// This allows for deferred deserialization or direct manipulation of the JSON data.
+        /// </summary>
         [JsonPropertyName("data")]
         public JsonElement Data { get; set; }
     }

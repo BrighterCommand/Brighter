@@ -28,6 +28,7 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
         => Task.FromResult(MapToRequest(message));
 
     /// <inheritdoc />
+    [CloudEvents(0)]
     public Message MapToMessage(TRequest request, Publication publication)
     {
         MessageType messageType = request switch

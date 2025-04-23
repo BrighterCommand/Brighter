@@ -104,5 +104,10 @@ namespace Paramore.Brighter
         /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
         /// </summary>
         public string Type { get; set; } = "goparamore.io.Paramore.Brighter.Message";
+        
+        /// <summary>
+        /// Gets or sets a dictionary for any additional CloudEvents attributes not explicitly defined in this class.
+        /// </summary>
+        public Dictionary<string, object>? CloudEventsAdditionalProperties { get; set; }
     }
 }
