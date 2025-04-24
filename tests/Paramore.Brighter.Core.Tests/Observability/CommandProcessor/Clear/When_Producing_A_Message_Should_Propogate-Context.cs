@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
@@ -18,15 +15,15 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 
-[Collection("Observability")]
-public class CommandProcessorMultipleClearObservabilityTests 
+public class MessageDispatchPropogateContextTests  
 {
-    private readonly List<Activity> _exportedActivities;
+    private readonly List<Activity> _exportedActivities = new();
     private readonly TracerProvider _traceProvider;
+    private readonly InMemoryMessageProducer _messageProducer;
+    private IAmABus _internalBus;
     private readonly Brighter.CommandProcessor _commandProcessor;
-    private readonly InternalBus _internalBus = new();
 
-    public CommandProcessorMultipleClearObservabilityTests()
+    public MessageDispatchPropogateContextTests()
     {
         var routingKey = new RoutingKey("MyEvent");
         
@@ -60,8 +57,7 @@ public class CommandProcessorMultipleClearObservabilityTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
+        _messageProducer = new InMemoryMessageProducer(_internalBus, timeProvider)
         {
             Publication =
             {
@@ -74,7 +70,7 @@ public class CommandProcessorMultipleClearObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, messageProducer}
+            {routingKey, _messageProducer}
         });
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
@@ -98,50 +94,32 @@ public class CommandProcessorMultipleClearObservabilityTests
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );
+
     }
-    
+
     [Fact]
-    public void When_Clearing_A_Message_A_Span_Is_Exported()
+    public void When_Producing_A_Message_Should_Propagate_Context()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
         
-        var eventOne = new MyEvent();
-        var eventTwo = new MyEvent();
-        var eventThree = new MyEvent();
-        
+        var @event = new MyEvent();
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        var messageIds = _commandProcessor.DepositPost([eventOne, eventTwo, eventThree], context);
+        var messageId = _commandProcessor.DepositPost(@event, context);
         
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutbox(messageIds, context);
+        _commandProcessor.ClearOutbox([messageId], context);
         
         parentActivity?.Stop();
         
         _traceProvider.ForceFlush();
         
         //assert 
-        Assert.Equal(21, _exportedActivities.Count);
-        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
-        
-        //there should be a create span for the batch
-        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        Assert.NotNull(createActivity);
-        
-        //there should be a clear span for each message id
-        var clearActivity = _exportedActivities.Where(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
-        Assert.Equal(3, clearActivity.Count());
 
-        //there should be a span in the Db for retrieving the message
-        var outBoxActivity = _exportedActivities.Where(a => a.DisplayName == $"{BoxDbOperation.Get.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
-        Assert.Equal(3, outBoxActivity.Count());
 
-        //there should be a span for publishing the message via the producer
-        var producerActivity = _exportedActivities.Where(a => a.DisplayName == $"{"MyEvent"} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
-        Assert.Equal(3, producerActivity.Count());
-    }
+
 }

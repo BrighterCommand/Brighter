@@ -127,7 +127,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         
         //assert 
         Assert.Equal(21, _exportedActivities.Count);
-        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
         
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
