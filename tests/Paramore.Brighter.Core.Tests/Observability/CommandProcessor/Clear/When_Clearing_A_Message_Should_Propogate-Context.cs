@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
@@ -17,18 +19,18 @@ namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 
 public class MessageDispatchPropogateContextTests  
 {
-    private readonly List<Activity> _exportedActivities = new();
+    private readonly List<Activity> _exportedActivities = [];
     private readonly TracerProvider _traceProvider;
-    private readonly InMemoryMessageProducer _messageProducer;
-    private IAmABus _internalBus;
+    private readonly InternalBus _internalBus = new();
     private readonly Brighter.CommandProcessor _commandProcessor;
+    private readonly RoutingKey _routingKey;
+    private readonly OutboxProducerMediator<Message, CommittableTransaction> _mediator;
 
     public MessageDispatchPropogateContextTests()
     {
-        var routingKey = new RoutingKey("MyEvent");
+        _routingKey = new RoutingKey("MyEvent");
         
         var builder = Sdk.CreateTracerProviderBuilder();
-        _exportedActivities = new List<Activity>();
 
         _traceProvider = builder
             .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
@@ -44,36 +46,36 @@ public class MessageDispatchPropogateContextTests
         
         var retryPolicy = Policy
             .Handle<Exception>()
-            .Retry();
+            .RetryAsync();
         
-        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            null,
+            new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-        _messageProducer = new InMemoryMessageProducer(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
         {
             Publication =
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
-                Topic = routingKey,
+                Topic = _routingKey,
                 Type = nameof(MyEvent),
             }
         };
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, _messageProducer}
+            {_routingKey, messageProducer}
         });
         
-        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+         _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
             policyRegistry, 
             messageMapperRegistry, 
@@ -89,7 +91,7 @@ public class MessageDispatchPropogateContextTests
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
-            bus,
+            _mediator,
             new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
@@ -98,28 +100,34 @@ public class MessageDispatchPropogateContextTests
     }
 
     [Fact]
-    public void When_Producing_A_Message_Should_Propagate_Context()
+    public async Task When_Producing_A_Message_Should_Propagate_Context()
     {
         //arrange
-        var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
+        var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessageDispatchPropogateContextTests");
+
         var @event = new MyEvent();
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        var messageId = _commandProcessor.DepositPost(@event, context);
-        
+        var messageId = await _commandProcessor.DepositPostAsync(@event, context);
+
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutbox([messageId], context);
+        await _mediator.ClearOutstandingFromOutboxAsync(3, TimeSpan.Zero, false, context);
+
+        await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         
         parentActivity?.Stop();
         
         _traceProvider.ForceFlush();
-        
+
         //assert 
+        var messages = _internalBus.Stream(_routingKey);
+        var message = messages.FirstOrDefault(m => m.Id == messageId);
+        Assert.NotNull(message);
+        Assert.NotNull(message.Header.TraceParent);
+        Assert.NotNull(message.Header.TraceState);
 
-
-
+    }
 }
