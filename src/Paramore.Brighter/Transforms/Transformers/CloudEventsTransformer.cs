@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transforms.Transformers;
@@ -22,8 +24,10 @@ namespace Paramore.Brighter.Transforms.Transformers;
 ///      subject => sets the subject for <see cref="MessageHeader"/>
 ///      time => sets the timestamp for <see cref="MessageHeader"/>
 /// </summary>
-public class CloudEventsTransformer : IAmAMessageTransform
+public partial class CloudEventsTransformer : IAmAMessageTransform
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CloudEventsTransformer>();
+
     private Uri? _source;
     private string? _type;
     private string? _specVersion;
@@ -98,7 +102,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
         message.Header.ContentType = _dataContentType ?? publication.ContentType;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
 
-        foreach (var additional in  publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>())
+        foreach (var additional in publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>())
         {
             if (!message.Header.Bag.ContainsKey(additional.Key))
             {
@@ -111,24 +115,38 @@ public class CloudEventsTransformer : IAmAMessageTransform
             return message;
         }
 
-        var cloudEvent = new CloudEventMessage
+        try
         {
-            Id = message.Id,
-            SpecVersion = message.Header.SpecVersion,
-            Source = message.Header.Source,
-            Type = message.Header.Type,
-            DataContentType = message.Header.ContentType,
-            DataSchema = message.Header.DataSchema,
-            Subject = message.Header.Subject,
-            Time = message.Header.TimeStamp,
-            AdditionalProperties = message.Header.Bag,
-            Data = JsonSerializer.Deserialize<JsonElement>(message.Body.Value)
-        };
+            JsonElement? data = null;
+            if (message.Body.Value.Length > 0)
+            {
+                data = JsonSerializer.Deserialize<JsonElement>(message.Body.Value);
+            }
+            
+            var cloudEvent = new CloudEventMessage
+            {
+                Id = message.Id,
+                SpecVersion = message.Header.SpecVersion,
+                Source = message.Header.Source,
+                Type = message.Header.Type,
+                DataContentType = message.Header.ContentType,
+                DataSchema = message.Header.DataSchema,
+                Subject = message.Header.Subject,
+                Time = message.Header.TimeStamp,
+                AdditionalProperties = message.Header.Bag,
+                Data = data 
+            };
 
-        message.Body = new MessageBody(JsonSerializer.Serialize(cloudEvent, JsonSerialisationOptions.Options));
-        message.Header.ContentType = "application/cloudevents+json";
+            message.Body = new MessageBody(JsonSerializer.Serialize(cloudEvent, JsonSerialisationOptions.Options));
+            message.Header.ContentType = "application/cloudevents+json";
 
-        return message;
+            return message;
+        }
+        catch (JsonException e)
+        {
+            Log.ErrorDuringDeserializerAJsonOnWrap(s_logger, e);
+            return message;
+        }
     }
 
     /// <inheritdoc />
@@ -139,43 +157,51 @@ public class CloudEventsTransformer : IAmAMessageTransform
             return message;
         }
 
-        var cloudEvents = JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Value, JsonSerialisationOptions.Options);
-        if (cloudEvents == null)
+        try
         {
+            var cloudEvents = JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Value, JsonSerialisationOptions.Options);
+            if (cloudEvents == null)
+            {
+                return message;
+            }
+
+            var bag = new Dictionary<string, object>(cloudEvents.AdditionalProperties ?? new Dictionary<string, object>());
+            foreach (KeyValuePair<string, object> pair in message.Header.Bag)
+            {
+                bag[pair.Key] = pair.Value;
+            }
+
+            var header = new MessageHeader
+            {
+                MessageId = cloudEvents.Id,
+                SpecVersion = cloudEvents.SpecVersion,
+                Source = cloudEvents.Source,
+                Type = cloudEvents.Type,
+                ContentType = cloudEvents.DataContentType,
+                DataSchema = cloudEvents.DataSchema,
+                Subject = cloudEvents.Subject,
+                TimeStamp = cloudEvents.Time ?? DateTimeOffset.UtcNow,
+                CorrelationId = message.Header.CorrelationId,
+                DataRef = message.Header.DataRef,
+                Delayed = message.Header.Delayed,
+                HandledCount = message.Header.HandledCount,
+                MessageType = message.Header.MessageType,
+                PartitionKey = message.Header.PartitionKey,
+                ReplyTo = message.Header.ReplyTo,
+                Topic = message.Header.Topic,
+                TraceParent = message.Header.TraceParent,
+                TraceState = message.Header.TraceState,
+                Bag = bag
+            };
+
+            var body = new MessageBody(cloudEvents.Data?.ToString());
+            return new Message(header, body);
+        }
+        catch(JsonException ex)
+        {
+            Log.ErrorDuringDeserializerOnUnwrap(s_logger, ex);
             return message;
         }
-
-        var bag = new Dictionary<string, object>(cloudEvents.AdditionalProperties ?? new Dictionary<string, object>());
-        foreach (KeyValuePair<string, object> pair in message.Header.Bag)
-        {
-            bag[pair.Key] = pair.Value;
-        }
-
-        var header = new MessageHeader
-        {
-            MessageId = cloudEvents.Id,
-            SpecVersion = cloudEvents.SpecVersion,
-            Source = cloudEvents.Source,
-            Type = cloudEvents.Type,
-            ContentType = cloudEvents.DataContentType,
-            DataSchema = cloudEvents.DataSchema,
-            Subject = cloudEvents.Subject,
-            TimeStamp = cloudEvents.Time ?? DateTimeOffset.UtcNow,
-            CorrelationId = message.Header.CorrelationId,
-            DataRef = message.Header.DataRef,
-            Delayed = message.Header.Delayed,
-            HandledCount = message.Header.HandledCount,
-            MessageType = message.Header.MessageType,
-            PartitionKey = message.Header.PartitionKey,
-            ReplyTo = message.Header.ReplyTo,
-            Topic = message.Header.Topic,
-            TraceParent = message.Header.TraceParent,
-            TraceState = message.Header.TraceState,
-            Bag = bag
-        };
-
-        var body = new MessageBody(cloudEvents.Data.ToString());
-        return new Message(header, body);
     }
 
     /// <summary>
@@ -190,6 +216,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
         /// Complies with the 'id' attribute of the CloudEvents specification.
         /// Defaults to an empty string.
         /// </summary>
+        [JsonRequired]
         [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
 
@@ -198,6 +225,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
         /// Complies with the 'specversion' attribute.
         /// Defaults to "1.0".
         /// </summary>
+        [JsonRequired]
         [JsonPropertyName("specversion")]
         public string SpecVersion { get; set; } = "1.0";
 
@@ -206,6 +234,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
         /// Complies with the 'source' attribute, identifying the context in which an event happened.
         /// Defaults to the <see cref="MessageHeader.DefaultSource"/>.
         /// </summary>
+        [JsonRequired]
         [JsonPropertyName("source")]
         public Uri Source { get; set; } = new(MessageHeader.DefaultSource);
 
@@ -214,6 +243,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
         /// Complies with the 'type' attribute, describing the kind of event related to the originating occurrence.
         /// Defaults to an empty string.
         /// </summary>
+        [JsonRequired]
         [JsonPropertyName("type")]
         public string Type { get; set; } = string.Empty;
 
@@ -259,6 +289,15 @@ public class CloudEventsTransformer : IAmAMessageTransform
         /// This allows for deferred deserialization or direct manipulation of the JSON data.
         /// </summary>
         [JsonPropertyName("data")]
-        public JsonElement Data { get; set; }
+        public JsonElement? Data { get; set; }
+    }
+
+    internal static partial class Log
+    {
+        [LoggerMessage(LogLevel.Error, "Error during deserialization a JSON on wrap")]
+        public static partial void ErrorDuringDeserializerAJsonOnWrap(ILogger logger, Exception ex);
+
+        [LoggerMessage(LogLevel.Error, "Error during deserialization a Cloud Event JSON on unwrap")]
+        public static partial void ErrorDuringDeserializerOnUnwrap(ILogger logger, Exception ex);
     }
 }
