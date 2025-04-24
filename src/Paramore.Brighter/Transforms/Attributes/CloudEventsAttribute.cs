@@ -86,8 +86,15 @@ public class CloudEventsAttribute : WrapWithAttribute
     public string? Subject { get; set; }
 
     /// <summary>
-    /// The <see cref="CloudEventFormat"/>.
+    /// Gets or sets the format of the CloudEvent message, using the <see cref="CloudEventFormat"/> enumeration.
+    /// Defaults to <see cref="CloudEventFormat.Binary"/>.
     /// </summary>
+    /// <remarks>
+    /// When the format is set to <see cref="CloudEventFormat.Json"/>, be aware that this can potentially introduce a performance overhead in certain scenarios.
+    /// This is because Brighter might deserialize the incoming message into its internal representation and then serialize it again into the CloudEvent JSON structure.
+    /// Consider the performance implications of JSON serialization and deserialization, especially for high-throughput systems or large message payloads.
+    /// For optimal performance, particularly when dealing with binary data or when the original message format should be preserved, using <see cref="CloudEventFormat.Binary"/> is generally recommended.
+    /// </remarks>
     public CloudEventFormat Format { get; set; } = CloudEventFormat.Binary;
 
     /// <summary>

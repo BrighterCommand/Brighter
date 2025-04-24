@@ -153,7 +153,7 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
         /// Uses the <see cref="JsonExtensionDataAttribute"/> for serialization and deserialization of these properties.
         /// </summary>
         [JsonExtensionData]
-        public Dictionary<string, object>? AdditionalProperties { get; set; }
+        public IDictionary<string, object>? AdditionalProperties { get; set; }
 
         /// <summary>
         /// Gets or sets the event data payload.

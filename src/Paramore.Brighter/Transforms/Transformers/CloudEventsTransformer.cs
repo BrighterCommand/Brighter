@@ -98,6 +98,14 @@ public class CloudEventsTransformer : IAmAMessageTransform
         message.Header.ContentType = _dataContentType ?? publication.ContentType;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
 
+        foreach (var additional in  publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>())
+        {
+            if (!message.Header.Bag.ContainsKey(additional.Key))
+            {
+                message.Header.Bag[additional.Key] = additional.Value;
+            }
+        }
+
         if (_format == CloudEventFormat.Binary)
         {
             return message;
@@ -113,6 +121,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
             DataSchema = message.Header.DataSchema,
             Subject = message.Header.Subject,
             Time = message.Header.TimeStamp,
+            AdditionalProperties = message.Header.Bag,
             Data = JsonSerializer.Deserialize<JsonElement>(message.Body.Value)
         };
 
@@ -131,13 +140,12 @@ public class CloudEventsTransformer : IAmAMessageTransform
         }
 
         var cloudEvents = JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Value, JsonSerialisationOptions.Options);
-
         if (cloudEvents == null)
         {
             return message;
         }
 
-        var bag = cloudEvents.AdditionalProperties ?? [];
+        var bag = new Dictionary<string, object>(cloudEvents.AdditionalProperties ?? new Dictionary<string, object>());
         foreach (KeyValuePair<string, object> pair in message.Header.Bag)
         {
             bag[pair.Key] = pair.Value;
@@ -243,7 +251,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
         /// Uses the <see cref="JsonExtensionDataAttribute"/> for serialization and deserialization of these properties.
         /// </summary>
         [JsonExtensionData]
-        public Dictionary<string, object>? AdditionalProperties { get; set; }
+        public IDictionary<string, object>? AdditionalProperties { get; set; }
 
         /// <summary>
         /// Gets or sets the event data payload as a <see cref="JsonElement"/>.
