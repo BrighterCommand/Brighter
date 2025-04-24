@@ -23,7 +23,7 @@ public class CommandProcessorClearObservabilityTests
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
-    private readonly InMemoryProducer _producer;
+    private readonly InMemoryMessageProducer _messageProducer;
     private readonly InternalBus _internalBus = new();
 
     public CommandProcessorClearObservabilityTests()
@@ -60,7 +60,7 @@ public class CommandProcessorClearObservabilityTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        _producer = new InMemoryProducer(_internalBus, timeProvider)
+        _messageProducer = new InMemoryMessageProducer(_internalBus, timeProvider)
         {
             Publication =
             {
@@ -73,7 +73,7 @@ public class CommandProcessorClearObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, _producer}
+            {routingKey, _messageProducer}
         });
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
@@ -174,10 +174,10 @@ public class CommandProcessorClearObservabilityTests
         Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.ConversationId && t.Value as string == message.Header.CorrelationId));
         
         Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.CeMessageId && (string)t.Value == message.Id));
-        Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.CeSource && (Uri)t.Value == _producer.Publication.Source));
+        Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.CeSource && (Uri)t.Value == _messageProducer.Publication.Source));
         Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.CeVersion && (string)t.Value == "1.0"));
-        Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == _producer.Publication.Subject));
-        Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == _producer.Publication.Type));
+        Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == _messageProducer.Publication.Subject));
+        Assert.True(producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == _messageProducer.Publication.Type));
         
         //there should be an event in the producer for producing the message
         var produceEvent = producerActivity.Events.Single(e => e.Name ==$"{"MyEvent"} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
@@ -193,10 +193,10 @@ public class CommandProcessorClearObservabilityTests
         Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.ConversationId && (string)t.Value == message.Header.CorrelationId));
         
         Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeMessageId && (string)t.Value == message.Id));
-        Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeSource && (Uri)t.Value == _producer.Publication.Source));
+        Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeSource && (Uri)t.Value == _messageProducer.Publication.Source));
         Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeVersion && (string)t.Value == "1.0"));
-        Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == _producer.Publication.Subject));
-        Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == _producer.Publication.Type));
+        Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == _messageProducer.Publication.Subject));
+        Assert.True(produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == _messageProducer.Publication.Type));
         
         //There should be  a span event to mark as dispatched
         var markAsDispatchedActivity = _exportedActivities.Single(a => a.DisplayName == $"{BoxDbOperation.MarkDispatched.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");

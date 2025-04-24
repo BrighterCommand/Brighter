@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var routingKey = new RoutingKey(Topic);
             
-            InMemoryProducer producer = new(_internalBus, timeProvider) {Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}};
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider) {Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}};
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             {
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
             };
-            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, producer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, messageProducer},});
 
             var tracer = new BrighterTracer(timeProvider);
             _spyOutbox = new SpyOutbox() {Tracer = tracer};

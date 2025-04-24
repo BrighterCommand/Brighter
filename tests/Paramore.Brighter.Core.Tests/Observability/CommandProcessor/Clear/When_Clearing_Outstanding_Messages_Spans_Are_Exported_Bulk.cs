@@ -63,7 +63,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var routingKey = new RoutingKey(_topic);
-        InMemoryProducer producer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
         {
             Publication =
             {
@@ -76,7 +76,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, producer}
+            {routingKey, messageProducer}
         });
         
         _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(

@@ -61,7 +61,7 @@ public class CommandProcessorMultipleClearObservabilityTests
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
         
-        InMemoryProducer producer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
         {
             Publication =
             {
@@ -74,7 +74,7 @@ public class CommandProcessorMultipleClearObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, producer}
+            {routingKey, messageProducer}
         });
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(

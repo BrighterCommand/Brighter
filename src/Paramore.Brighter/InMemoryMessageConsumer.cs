@@ -30,7 +30,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter;
 
 /// <summary>
-/// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="Paramore.Brighter.InMemoryProducer"/>
+/// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
 /// and <see cref="Paramore.Brighter.InternalBus"/> to provide an in-memory message bus for a modular monolith.
 /// If you set an ackTimeout then the consumer will requeue the message if it is not acknowledged
 /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
@@ -47,7 +47,7 @@ public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsu
     private ITimer? _requeueTimer;
 
     /// <summary>
-    /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="Paramore.Brighter.InMemoryProducer"/>
+    /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
     /// and <see cref="Paramore.Brighter.InternalBus"/> to provide an in-memory message bus for a modular monolith.
     /// If you set an <paramref name="ackTimeout"/> then the consumer will requeue the message if it is not acknowledged
     /// within the timeout. This is controlled by a background thread that checks the messages in the locked list

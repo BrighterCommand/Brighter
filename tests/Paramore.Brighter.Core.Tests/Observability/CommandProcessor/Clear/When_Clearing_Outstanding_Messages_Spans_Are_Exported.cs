@@ -64,7 +64,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
 
         var routingKey = new RoutingKey(_topic);
         
-        InMemoryProducer producer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
         {
             Publication =
             {
@@ -77,7 +77,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, producer}
+            {routingKey, messageProducer}
         });
         
         _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
