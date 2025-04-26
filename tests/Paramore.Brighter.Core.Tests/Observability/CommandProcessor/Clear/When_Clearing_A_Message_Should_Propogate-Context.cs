@@ -112,7 +112,8 @@ public class MessageDispatchPropogateContextTests
         var messageId = await _commandProcessor.DepositPostAsync(@event, context);
 
         //reset the parent span as deposit and clear are siblings
-        Baggage.SetBaggage("test", "test");
+        Baggage.SetBaggage("key", "value");
+        Baggage.SetBaggage("key2", "value2");
         
         context.Span = parentActivity;
         await _commandProcessor.ClearOutboxAsync([messageId], context);
@@ -129,7 +130,7 @@ public class MessageDispatchPropogateContextTests
         Assert.NotNull(message);
         Assert.NotNull(message.Header.TraceParent);
         //? What is tracestate 
-        Assert.NotNull(message.Header.TraceState);
+        Assert.Equal("key=value,key2=value2", message.Header.TraceState.ToString());
 
     }
 }
