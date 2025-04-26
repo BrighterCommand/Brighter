@@ -21,6 +21,7 @@ THE SOFTWARE. */
 
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -35,7 +36,7 @@ namespace Paramore.Brighter.Observability;
 /// TraceState allows multiple tracing systems to operate together by storing vendor-specific trace information.
 /// Each entry consists of a key-value pair where the key identifies the vendor and the value contains vendor-specific trace data.
 /// </remarks>
-public class TraceState
+public class TraceState : IEnumerable<KeyValuePair<string, string?>>
 {
     private readonly Dictionary<string, string> _entries = new();
     private const int MaxKeyValuePairs = 32;
@@ -72,6 +73,24 @@ public class TraceState
 
         _entries[key] = value;
     }
+    
+    /// <summary>
+    /// Returns an enumerator that iterates through the trace state entries.
+    /// </summary>
+    /// <returns>An enumerator for the trace state entries.</returns>
+    public IEnumerator<KeyValuePair<string, string?>> GetEnumerator()
+    {
+        return _entries.GetEnumerator();
+    }
+
+    /// <summary>
+    /// Returns an enumerator that iterates through the trace state entries.
+    /// </summary>
+    /// <returns>An enumerator for the trace state entries.</returns>
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
 
     /// <summary>
     /// Adds trace state entries from a baggage string in the W3C trace-context format.
@@ -104,4 +123,3 @@ public class TraceState
         return string.Join(",", _entries.Select(kvp => $"{kvp.Key}={kvp.Value}"));
     }
 }
-

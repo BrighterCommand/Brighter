@@ -39,7 +39,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
     /// <param name="timeProvider"></param>
-    public class InMemoryMessageProducer(IAmABus bus, TimeProvider timeProvider)
+    public sealed class InMemoryMessageProducer(IAmABus bus, TimeProvider timeProvider)
         : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         private ITimer? _requeueTimer;

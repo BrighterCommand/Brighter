@@ -34,9 +34,9 @@ namespace Paramore.Brighter;
 /// and <see cref="Paramore.Brighter.InternalBus"/> to provide an in-memory message bus for a modular monolith.
 /// If you set an ackTimeout then the consumer will requeue the message if it is not acknowledged
 /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
-/// and requeues them if they have been locked for longer than the timeout.
+/// and re-queues them if they have been locked for longer than the timeout.
 /// </summary>
-public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
     private readonly ConcurrentDictionary<string, LockedMessage> _lockedMessages = new();
     private readonly RoutingKey _topic;
@@ -244,13 +244,13 @@ public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsu
         }
     }
 
-    protected virtual void DisposeCore()
+    private void DisposeCore()
     {
         _lockTimer.Dispose();
         _requeueTimer?.Dispose();
     }
-    
-    protected virtual async ValueTask DisposeAsyncCore()
+
+    private async ValueTask DisposeAsyncCore()
     {
         await _lockTimer.DisposeAsync().ConfigureAwait(false);
         if (_requeueTimer != null) await _requeueTimer.DisposeAsync().ConfigureAwait(false);

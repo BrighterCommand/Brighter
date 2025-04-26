@@ -1,4 +1,4 @@
-﻿using Paramore.Brighter.Observability;
+﻿﻿using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Trace;
@@ -32,5 +32,29 @@ public class TraceStateTests
         
         //Assert
         Assert.Equal("key3=value3,key1=value1,key2=value2", traceState.ToString()); 
+    }
+
+    [Fact]
+    public void When_Enumerating_TraceState()
+    {
+        //Arrange
+        var traceState = new TraceState();
+        traceState.Add("key1", "value1");
+        traceState.Add("key2", "value2");
+        
+        //Act
+        
+        //Assert
+        Assert.Collection(traceState,
+            entry =>
+            {
+                Assert.Equal("key1", entry.Key);
+                Assert.Equal("value1", entry.Value);
+            },
+            entry =>
+            {
+                Assert.Equal("key2", entry.Key);
+                Assert.Equal("value2", entry.Value);
+            });
     }
 }
