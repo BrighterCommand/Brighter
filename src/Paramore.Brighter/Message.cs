@@ -38,6 +38,7 @@ namespace Paramore.Brighter
         /// Tag name for the delivery tag header   
         /// </summary>
         public const string DeliveryTagHeaderName = "DeliveryTag";
+        
         /// <summary>
         /// Tag name for the redelivered header
         /// </summary>
@@ -48,6 +49,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The header.</value>
         public MessageHeader Header { get; init; }
+        
         /// <summary>
         /// Gets the body.
         /// </summary>
@@ -81,10 +83,7 @@ namespace Paramore.Brighter
         /// Gets the identifier of the message.
         /// </summary>
         /// <value>The identifier.</value>
-        public string Id
-        {
-            get { return Header.MessageId; }
-        }
+        public string Id => Header.MessageId;
 
         /// <summary>
         /// RMQ: Is the message persistent
@@ -132,9 +131,30 @@ namespace Paramore.Brighter
             Header.ContentType = string.IsNullOrEmpty(Header.ContentType) ? Body.ContentType: Header.ContentType;
         }
 
+        /// <summary>
+        /// Determines if the message has been requeued a number of times greater than a threshold
+        /// </summary>
+        /// <remarks>Generally used to send the message to a DLQ to prevent a poision pill</remarks>
+        /// <param name="requeueCount">The threshold to determine if the count exceeds</param>
+        /// <returns></returns>
         public bool HandledCountReached(int requeueCount)
         {
             return Header.HandledCount >= requeueCount;
+        }
+
+        /// <summary>
+        /// Propogates the trace context for the message, when being sent across a trace boundary.
+        /// We set this value in the headers of the message
+        /// </summary>
+        /// <param name="message">The message to set the trace context into</param>
+        /// <param name="key">A key representing the value to set</param>
+        /// <param name="value">The value to set </param>
+        public static void PropogateContext(Message message, string key, string? value)
+        {
+            if (key == "traceparent")
+                message.Header.TraceParent = value;
+            else if (key == "baggage")
+                message.Header.TraceState.LoadBaggage(value);
         }
 
         /// <summary>

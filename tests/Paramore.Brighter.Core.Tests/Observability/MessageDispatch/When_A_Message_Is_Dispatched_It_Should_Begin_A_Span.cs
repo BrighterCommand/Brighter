@@ -103,10 +103,12 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             };
             
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
-
+            var traceState = new TraceState();
+            traceState.LoadBaggage(externalActivity?.TraceStateString);
+            
             var header = new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT)
             {
-                TraceParent = externalActivity?.Id, TraceState = externalActivity?.TraceStateString
+                TraceParent = externalActivity?.Id, TraceState = traceState 
             };
             
             externalActivity?.Stop();

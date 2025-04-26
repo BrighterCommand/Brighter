@@ -112,9 +112,10 @@ public class MessageDispatchPropogateContextTests
         var messageId = await _commandProcessor.DepositPostAsync(@event, context);
 
         //reset the parent span as deposit and clear are siblings
+        Baggage.SetBaggage("test", "test");
         
         context.Span = parentActivity;
-        await _mediator.ClearOutstandingFromOutboxAsync(3, TimeSpan.Zero, false, context);
+        await _commandProcessor.ClearOutboxAsync([messageId], context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         
@@ -127,6 +128,7 @@ public class MessageDispatchPropogateContextTests
         var message = messages.FirstOrDefault(m => m.Id == messageId);
         Assert.NotNull(message);
         Assert.NotNull(message.Header.TraceParent);
+        //? What is tracestate 
         Assert.NotNull(message.Header.TraceState);
 
     }
