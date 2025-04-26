@@ -103,20 +103,19 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             };
             
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
-            var traceState = new TraceState { { "mykey", "myvalue" } };
-
-            var header = new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT)
-            {
-                TraceParent = externalActivity?.Id, TraceState = traceState 
-            };
-            
-            externalActivity?.Stop();
+            Baggage.SetBaggage( "mykey", "myvalue" );
 
             _message = new Message(
-                header, 
+                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT), 
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
             
+            var contextPropogator = new TextContextPropogator();
+            contextPropogator.PropogateContext(externalActivity?.Context, _message);
+            
+            externalActivity?.Stop();
+
+           
             channel.Enqueue(_message);
             var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
             channel.Enqueue(quitMessage);
@@ -139,6 +138,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 );
             Assert.NotNull(createActivity);
             Assert.Equal(_message.Header.TraceParent, createActivity!.ParentId);
+            Assert.Contains(Baggage.Current.GetBaggage(), b => b.Key == "mykey" && b.Value == "myvalue");
             Assert.Contains(createActivity.Tags, t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" });
             Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic);
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey);

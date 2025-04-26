@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Paramore.Brighter;
+namespace Paramore.Brighter.Observability;
 
 /// <summary>
 /// Used with OTel to propogate the current context to a message.

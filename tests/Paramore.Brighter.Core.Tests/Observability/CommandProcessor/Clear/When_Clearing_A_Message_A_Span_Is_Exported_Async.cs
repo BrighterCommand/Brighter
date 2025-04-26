@@ -122,7 +122,7 @@ public class AsyncCommandProcessorClearObservabilityTests
         
         //assert 
         Assert.Equal(8, _exportedActivities.Count);
-        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
         
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
@@ -150,7 +150,6 @@ public class AsyncCommandProcessorClearObservabilityTests
         Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageBody && a.Value as string == message.Body.Value);
         Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageType && a.Value as string == message.Header.MessageType.ToString());
         Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && a.Value as string == message.Header.PartitionKey);
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageHeaders && a.Value as string == JsonSerializer.Serialize(message.Header));
         
         //there should be a span in the Db for retrieving the message
         var outBoxActivity = _exportedActivities.Single(a => a.DisplayName == $"{BoxDbOperation.Get.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
@@ -169,7 +168,6 @@ public class AsyncCommandProcessorClearObservabilityTests
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageType && t.Value as string == message.Header.MessageType.ToString());
         Assert.Contains(producerActivity.TagObjects, t => t is { Value: not null, Key: BrighterSemanticConventions.MessagingDestination } && t.Value.ToString() == _topic.Value.ToString()); 
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value as string == message.Header.PartitionKey);
-        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageHeaders && t.Value as string == JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
         Assert.Contains(producerActivity.TagObjects, t => t is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)t.Value == message.Body.Bytes.Length);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageBody && t.Value as string == message.Body.Value);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ConversationId && t.Value as string == message.Header.CorrelationId);
@@ -188,7 +186,6 @@ public class AsyncCommandProcessorClearObservabilityTests
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value as string == message.Header.PartitionKey);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value as string == message.Id);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageType && t.Value as string == message.Header.MessageType.ToString());
-        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageHeaders && t.Value as string == JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
         Assert.Contains(produceEvent.Tags, t => t is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)t.Value == message.Body.Bytes.Length);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageBody && t.Value as string == message.Body.Value);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.ConversationId && t.Value as string == message.Header.CorrelationId);

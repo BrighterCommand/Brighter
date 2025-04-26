@@ -2,7 +2,7 @@
 using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
 
-namespace Paramore.Brighter;
+namespace Paramore.Brighter.Observability;
 
 /// <summary>
 /// Propogates the current trace context to a message using the OTel text map propogator.
