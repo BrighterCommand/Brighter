@@ -43,7 +43,6 @@ namespace Paramore.Brighter
         : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         private ITimer? _requeueTimer;
-        private readonly IAmAContextPropogator _amAContextPropogator = new TextContextPropogator();
 
         /// <summary>
         /// The publication that describes what the Producer is for
@@ -94,8 +93,6 @@ namespace Paramore.Brighter
         public Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
-            _amAContextPropogator.PropogateContext(Span?.Context, message);
-
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
@@ -118,7 +115,6 @@ namespace Paramore.Brighter
             foreach (var msg in msgs)
             {
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg);
-                _amAContextPropogator.PropogateContext(Span?.Context, msg);
                 bus.Enqueue(msg);
                 OnMessagePublished?.Invoke(true, msg.Id);
                 yield return [msg.Id];
@@ -132,7 +128,6 @@ namespace Paramore.Brighter
         public void Send(Message message)
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
-            _amAContextPropogator.PropogateContext(Span?.Context, message);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
         }

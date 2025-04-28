@@ -721,5 +721,7 @@ public class BrighterTracer : IAmABrighterTracer
         };
 
         span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}", DateTimeOffset.UtcNow, tags));
+
+        new TextContextPropogator().PropogateContext(span?.Context, message);
     }
 }
