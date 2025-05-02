@@ -46,18 +46,18 @@ public class MessageDispatchPropogateContextTests
         
         var retryPolicy = Policy
             .Handle<Exception>()
-            .RetryAsync();
+            .Retry();
         
-        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
-            null,
-            new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
-        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
+            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+            null);
+        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
         InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
         {
@@ -109,14 +109,14 @@ public class MessageDispatchPropogateContextTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        var messageId = await _commandProcessor.DepositPostAsync(@event, context);
+        var messageId = _commandProcessor.DepositPost(@event, context);
 
         //reset the parent span as deposit and clear are siblings
         Baggage.SetBaggage("key", "value");
         Baggage.SetBaggage("key2", "value2");
         
         context.Span = parentActivity;
-        await _commandProcessor.ClearOutboxAsync([messageId], context);
+        _commandProcessor.ClearOutbox([messageId], context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         
