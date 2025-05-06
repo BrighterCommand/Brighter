@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            InMemoryProducer producer = new(_internalBus, timeProvider)
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
             {
                 Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
             };
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, producer }, });
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, messageProducer }, });
 
             var externalBus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,

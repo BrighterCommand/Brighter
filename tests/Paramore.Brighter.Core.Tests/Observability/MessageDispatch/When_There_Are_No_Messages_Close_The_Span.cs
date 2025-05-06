@@ -91,7 +91,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
         _traceProvider.ForceFlush();
             
         Assert.Equal(3, _exportedActivities.Count);
-        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
+        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter"); 
         
         var emptyMessageActivity = _exportedActivities.FirstOrDefault(a => 
             a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}" 

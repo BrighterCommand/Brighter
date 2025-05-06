@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" VersionOverride="6.8.1" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
   </ItemGroup>
 
 </Project>

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -233,7 +234,7 @@ namespace Paramore.Brighter
         /// In .NET it is set from Activity.Current.Id
         /// </summary>
         public string? TraceParent { get; set; }
-        
+
         /// <summary>
         /// OPTIONAL
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md">Cloud Events Spec</see>
@@ -243,7 +244,7 @@ namespace Paramore.Brighter
         /// in multiple distributed tracing graphs.
         /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
         /// </summary>
-        public string? TraceState { get; set; }
+        public TraceState TraceState { get; set; } = new();
 
         /// <summary>
         /// REQUIRED

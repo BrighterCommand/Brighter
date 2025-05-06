@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var myCommand = new MyCommand{ Value = "Hello World"};
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(_internalBus, timeProvider){Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}};
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider){Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}};
 
             _message = new Message(
                 new MessageHeader(myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { _routingKey, producer },
+                    { _routingKey, messageProducer },
                 });
 
             var policyRegistry = new PolicyRegistry
