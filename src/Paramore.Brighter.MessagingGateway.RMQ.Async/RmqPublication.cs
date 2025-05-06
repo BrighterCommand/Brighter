@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.MessagingGateway.RMQ.Async
+﻿using System;
+
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
     public class RmqPublication : Publication
     {
@@ -8,5 +10,12 @@
         /// Any sweeper will then resend.
         /// </summary>
         public int WaitForConfirmsTimeOutInMilliseconds { get; set; } = 500;
+    }
+
+
+    public class RmqPublication<T> : RmqPublication 
+       where T: class, IRequest
+    {
+        public override Type? RequestType { get; set; } = typeof(T);
     }
 }

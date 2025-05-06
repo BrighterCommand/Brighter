@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 
+using System;
 using Azure.Messaging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -36,4 +37,10 @@ public class AzureServiceBusPublication : Publication
     /// Use a Service Bus Queue instead of a Topic
     /// </summary>
     public bool UseServiceBusQueue = false;
+}
+
+public class AzureServiceBusPublication<T> : AzureServiceBusPublication
+    where T: class, IRequest
+{
+    public override Type? RequestType { get; set; } = typeof(T);
 }
