@@ -64,23 +64,20 @@ namespace GreetingsSender
 
                 var producerRegistry = new SnsProducerRegistryFactory(
                     awsConnection,
-                    new SnsPublication[]
-                    {
-                        new()
+                    [
+                        new SnsPublication<GreetingEvent>
                         {
-                            Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            RequestType = typeof(GreetingEvent)
+                            Topic = new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                         },
-                        new()
+                        new SnsPublication<FarewellEvent>
                         {
-                            Topic = new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                            RequestType = typeof(FarewellEvent),
+                            Topic = new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
                             TopicAttributes = new SnsAttributes
                             {
                                 Type = SqsType.Fifo
                             }
                         }
-                    }
+                    ]
                 ).Create();
 
                 serviceCollection

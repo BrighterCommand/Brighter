@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
 /// <summary>
@@ -79,3 +81,17 @@ public class SnsPublication : Publication
     /// </remarks>
    public string? TopicArn { get; set; } 
 }
+
+/// <summary>
+/// Creates a publication for an SNS Topic
+/// </summary>
+/// <remarks>
+///  You should provide either the Arn, for a topic created in advance, or the attributes to create a topic
+/// or find it from a name. 
+/// </remarks>
+public class SnsPublication<T> : SnsPublication 
+    where T: class, IRequest
+{
+    public override Type? RequestType { get; set; } = typeof(T);
+}
+
