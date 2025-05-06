@@ -156,7 +156,6 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.CeMessageId && t.Value == _message.Id);
             Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.HandledCount && Convert.ToInt32(t.Value) == _message.Header.HandledCount); 
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.ReplyTo && t.Value == _message.Header.ReplyTo);
-
         }
     }
 }
