@@ -78,7 +78,7 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
-            new FindPublicationByRequestType(),
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 

@@ -86,7 +86,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
-            new FindPublicationByRequestType(),
+            new FindPublicationByPublicationTopicOrRequestType(),
             outbox,
             maxOutStandingMessages: -1
         );

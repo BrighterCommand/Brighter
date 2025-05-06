@@ -62,7 +62,7 @@ namespace Paramore.Brighter
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
                 outbox: outbox,
-                publicationFinder: publicationFinder ?? new FindPublicationByRequestType()
+                publicationFinder: publicationFinder ?? new FindPublicationByPublicationTopicOrRequestType()
                 ); 
             
             return new ControlBusSender(

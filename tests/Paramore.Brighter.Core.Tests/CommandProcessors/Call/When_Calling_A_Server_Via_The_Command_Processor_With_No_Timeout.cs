@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                new FindPublicationByRequestType(),
+                new FindPublicationByPublicationTopicOrRequestType(),
                 new InMemoryOutbox( timeProvider) {Tracer = tracer}
             );
 

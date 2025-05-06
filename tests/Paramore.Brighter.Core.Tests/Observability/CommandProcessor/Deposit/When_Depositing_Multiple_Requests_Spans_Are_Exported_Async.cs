@@ -77,7 +77,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
-            new FindPublicationByRequestType(),
+            new FindPublicationByPublicationTopicOrRequestType(),
             outbox,
             maxOutStandingMessages: -1
         );

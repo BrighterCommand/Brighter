@@ -50,7 +50,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         public const string HEARTBEAT = "heartbeat";
 
-        private IAmAPublicationFinder _publicationFinder = new FindPublicationByRequestType();
+        private IAmAPublicationFinder _publicationFinder = new FindPublicationByPublicationTopicOrRequestType();
         private IAmAChannelFactory? _channelFactory;
         private IDispatcher? _dispatcher;
         private IAmAProducerRegistryFactory? _producerRegistryFactory;

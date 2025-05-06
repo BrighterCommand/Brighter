@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 outbox: _outbox,
                 maxOutStandingMessages:3,
                 maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250),
-                publicationFinder: new FindPublicationByRequestType()
+                publicationFinder: new FindPublicationByPublicationTopicOrRequestType()
             );  
             
             _commandProcessor = CommandProcessorBuilder.StartNew()

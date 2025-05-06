@@ -129,7 +129,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <remarks>
         /// <para>
-        /// By default, Brighter uses the <see cref="FindPublicationByRequestType"/> implementation
+        /// By default, Brighter uses the <see cref="FindPublicationByPublicationTopicOrRequestType"/> implementation
         /// of <see cref="IAmAPublicationFinder"/> to locate the <see cref="Publication"/>
         /// configuration for a given request type. This default implementation finds publications
         /// based on a direct match with the request's concrete type.
@@ -145,7 +145,7 @@ namespace Paramore.Brighter
         /// </list>
         /// </para>
         /// <para>
-        /// If this property is not explicitly set, the default <see cref="FindPublicationByRequestType"/>
+        /// If this property is not explicitly set, the default <see cref="FindPublicationByPublicationTopicOrRequestType"/>
         /// will be used.
         /// </para>
         /// </remarks>

@@ -58,7 +58,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                new FindPublicationByRequestType(),
+                new FindPublicationByPublicationTopicOrRequestType(),
                 outbox
             );
 
@@ -136,7 +136,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                new FindPublicationByRequestType(),
+                new FindPublicationByPublicationTopicOrRequestType(),
                 outbox
             );
 
@@ -213,7 +213,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                new FindPublicationByRequestType(),
+                new FindPublicationByPublicationTopicOrRequestType(),
                 outbox
             );
 
@@ -299,7 +299,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                new FindPublicationByRequestType(),
+                new FindPublicationByPublicationTopicOrRequestType(),
                 outbox
             );
 
