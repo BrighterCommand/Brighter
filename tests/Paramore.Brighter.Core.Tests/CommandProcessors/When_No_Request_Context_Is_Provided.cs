@@ -139,6 +139,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByRequestType(),
             fakeOutbox
         );
 
@@ -186,6 +187,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByRequestType(),
             fakeOutbox
         );
 
@@ -234,6 +236,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByRequestType(),
             fakeOutbox
         );
 
@@ -286,6 +289,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByRequestType(),
             fakeOutbox
         );
 

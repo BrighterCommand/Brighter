@@ -102,6 +102,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByRequestType(),
                 _spyOutbox
             );
 

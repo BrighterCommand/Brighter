@@ -87,6 +87,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByRequestType(),
             outbox,
             maxOutStandingMessages: -1
         );

@@ -77,6 +77,7 @@ public class CommandProcessorDepositObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByRequestType(),
             _outbox,
             maxOutStandingMessages: -1
         );
