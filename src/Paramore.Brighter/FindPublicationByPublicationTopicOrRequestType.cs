@@ -62,6 +62,7 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
             _ => throw new ConfigurationException("Only one producer per request type is supported. Have you added the request type to multiple Publications?")
         };
     }
+    
 
     private static RoutingKey? GetRoutingKey(Type requestType)
     {

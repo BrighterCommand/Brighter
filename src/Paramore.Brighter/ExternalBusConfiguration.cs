@@ -122,34 +122,6 @@ namespace Paramore.Brighter
         /// The Message Scheduler Factory.
         /// </summary>
         IAmAMessageSchedulerFactory? MessageSchedulerFactory { get; set; }
-
-        /// <summary>
-        /// An optional property that allows you to specify a custom implementation of
-        /// <see cref="IAmAPublicationFinder"/> to be used by the message producer.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// By default, Brighter uses the <see cref="FindPublicationByPublicationTopicOrRequestType"/> implementation
-        /// of <see cref="IAmAPublicationFinder"/> to locate the <see cref="Publication"/>
-        /// configuration for a given request type. This default implementation finds publications
-        /// based on a direct match with the request's concrete type.
-        /// </para>
-        /// <para>
-        /// However, if you need more sophisticated logic for determining how messages are published,
-        /// you can provide your own implementation of <see cref="IAmAPublicationFinder"/> via this property.
-        /// This allows you to customize the publication selection process based on factors such as:
-        /// <list type="bullet">
-        ///     <item>Attributes on the request message.</item>
-        ///     <item>The current user's context or permissions.</item>
-        ///     <item>External configuration or runtime conditions.</item>
-        /// </list>
-        /// </para>
-        /// <para>
-        /// If this property is not explicitly set, the default <see cref="FindPublicationByPublicationTopicOrRequestType"/>
-        /// will be used.
-        /// </para>
-        /// </remarks>
-        IAmAPublicationFinder? PublicationFinder { get; set; }
         
         /// <summary>
         /// The Request Scheduler Factory.
@@ -287,9 +259,6 @@ namespace Paramore.Brighter
         /// The default will be in-memory
         /// </remarks>
         public IAmAMessageSchedulerFactory? MessageSchedulerFactory { get; set; }
-
-        /// <inheritdoc /> 
-        public IAmAPublicationFinder? PublicationFinder { get; set; }
 
         /// <summary>
         /// The Request Scheduler Factory.

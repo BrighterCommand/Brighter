@@ -23,15 +23,15 @@ namespace GreetingsSender
             var producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 asbClientProvider,
                 [
-                    new AzureServiceBusPublication<GreetingEvent>
+                    new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.event"),
                     },
-                    new AzureServiceBusPublication<AddGreetingCommand>
+                    new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.addGreetingCommand"),
                     },
-                    new AzureServiceBusPublication<GreetingAsyncEvent>
+                    new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.Asyncevent"),
                     }
