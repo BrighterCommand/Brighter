@@ -46,7 +46,8 @@ namespace Paramore.Brighter
         public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, 
             IAmAProducerRegistry producerRegistry,
             BrighterTracer tracer,
-            IAmARequestSchedulerFactory? requestSchedulerFactory = null)
+            IAmARequestSchedulerFactory? requestSchedulerFactory = null,
+            IAmAPublicationFinder? publicationFinder = null)
             where T : Message
         {
             var mapper = new MessageMapperRegistry(
@@ -60,7 +61,8 @@ namespace Paramore.Brighter
                 mapperRegistry: mapper,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
-                outbox: outbox
+                outbox: outbox,
+                publicationFinder: publicationFinder ?? new FindPublicationByRequestType()
                 ); 
             
             return new ControlBusSender(

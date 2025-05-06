@@ -452,6 +452,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),
                 Tracer(serviceProvider),
+                busConfiguration.PublicationFinder,
                 outbox,
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,

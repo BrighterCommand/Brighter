@@ -50,6 +50,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         public const string HEARTBEAT = "heartbeat";
 
+        private IAmAPublicationFinder _publicationFinder = new FindPublicationByRequestType();
         private IAmAChannelFactory? _channelFactory;
         private IDispatcher? _dispatcher;
         private IAmAProducerRegistryFactory? _producerRegistryFactory;
@@ -65,6 +66,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         public INeedAProducerRegistryFactory Dispatcher(IDispatcher dispatcher)
         {
             _dispatcher = dispatcher;
+            return this;
+        }
+
+        public INeedAProducerRegistryFactory PublishFinder(IAmAPublicationFinder publicationFinder)
+        {
+            _publicationFinder = publicationFinder;
             return this;
         }
 
@@ -165,7 +172,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
                 tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
-                outbox: outbox
+                outbox: outbox,
+                publicationFinder: _publicationFinder
             );
 
             if (_dispatcher is null) throw new ArgumentException("Dispatcher must not be null");
@@ -286,6 +294,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
     public interface INeedAProducerRegistryFactory
     {
+        INeedAProducerRegistryFactory PublishFinder(IAmAPublicationFinder publicationFinder);
         INeedAChannelFactory ProducerRegistryFactory(IAmAProducerRegistryFactory producerRegistryFactory);
     }
 
