@@ -23,12 +23,7 @@ public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connecti
         }
         
         return new PostgresMessageConsumer(
-            connection.Configuration.ConnectionString,
-            postgresSubscription.SchemaName ?? connection.Configuration.SchemaName ?? "public",
-            postgresSubscription.QueueStoreTable ?? connection.Configuration.QueueStoreTable,
-            postgresSubscription.ChannelName.Value,
-            postgresSubscription.BufferSize,
-            postgresSubscription.VisibleTimeout,
-            postgresSubscription.TableWithLargeMessage);
+            connection.Configuration,
+            postgresSubscription);
     }
 }

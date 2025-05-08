@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.PostgreSql;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -16,17 +17,22 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// Implements both synchronous and asynchronous interfaces for consuming messages.
 /// </summary>
 public partial class PostgresMessageConsumer(
-    string connectionString,
-    string schemaName,
-    string tableName,
-    string queueName,
-    int bufferSize, 
-    TimeSpan visibleTimeout,
-    bool hasLargeMessage
+    RelationalDatabaseConfiguration configuration,
+    PostgresSubscription subscription 
     ) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageConsumer>();
-    private readonly PostgreSqlConnectionProvider _connectionProvider = new(new RelationalDatabaseConfiguration(connectionString));
+    private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
+
+    private string SchemaName => subscription.SchemaName ?? configuration.SchemaName ?? "public";
+    private string TableName => subscription.QueueStoreTable ?? configuration.QueueStoreTable;
+    private string QueueName => subscription.ChannelName.Value;
+    private bool BinaryMessagePayload => subscription.BinaryMessagePayload ?? configuration.BinaryMessagePayload;
+    private int BufferSize => subscription.BufferSize;
+    private TimeSpan VisibleTimeout => subscription.VisibleTimeout;
+    private bool HasLargeMessage => subscription.TableWithLargeMessage;
+    
+    private NpgsqlDbType DbType => BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json;
 
     /// <inheritdoc />
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
@@ -40,14 +46,14 @@ public partial class PostgresMessageConsumer(
         {
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{schemaName}\".\"{tableName}\" WHERE \"id\" = $1";
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             await command.ExecuteNonQueryAsync(cancellationToken);
-            Log.DeletedMessage(s_logger, message.Id, receiptHandle, queueName);
+            Log.DeletedMessage(s_logger, message.Id, receiptHandle, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, queueName);
+            Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
             throw;
         }
     }
@@ -62,15 +68,15 @@ public partial class PostgresMessageConsumer(
 
         try
         {
-            Log.RejectingMessage(s_logger, message.Id, receiptHandle, queueName);
+            Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{schemaName}\".\"{tableName}\" WHERE \"id\" = $1";
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
         }
         catch (Exception exception)
         {
-            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, queueName);
+            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
             throw;
         }
     }
@@ -80,18 +86,18 @@ public partial class PostgresMessageConsumer(
     {
         try
         {
-            Log.PurgingQueue(s_logger, tableName);
+            Log.PurgingQueue(s_logger, TableName);
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE \"{schemaName}\".\"{tableName}\" WHERE \"queue\" = $1";
-            command.Parameters.Add(new NpgsqlParameter { Value = queueName });
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"queue\" = $1";
+            command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
             await command.ExecuteNonQueryAsync(cancellationToken);
             
-            Log.PurgedQueue(s_logger, queueName);
+            Log.PurgedQueue(s_logger, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorPurgingQueue(s_logger, exception, queueName);
+            Log.ErrorPurgingQueue(s_logger, exception, QueueName);
             throw;
         }
         
@@ -102,7 +108,7 @@ public partial class PostgresMessageConsumer(
     {
         try
         {
-            Log.RetrievingNextMessage(s_logger, queueName);
+            Log.RetrievingNextMessage(s_logger, QueueName);
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             if (timeOut != null && timeOut != TimeSpan.Zero)
@@ -111,27 +117,27 @@ public partial class PostgresMessageConsumer(
             }
             
             command.CommandText = $"""
-                                   UPDATE "{schemaName}"."{tableName}" queue
+                                   UPDATE "{SchemaName}"."{TableName}" queue
                                    SET
-                                       "visible_timeout" = CURRENT_TIMESTAMP() + $1
+                                       "visible_timeout" = CURRENT_TIMESTAMP + $1
                                    WHERE "id" IN ( 
                                        SELECT "id"
-                                       FROM "{schemaName}"."{tableName}" 
-                                       WHERE "queue" = $2 AND "visible_timeout" <= CURRENT_TIMESTAMP()
+                                       FROM "{SchemaName}"."{TableName}" 
+                                       WHERE "queue" = $2 AND "visible_timeout" <= CURRENT_TIMESTAMP
                                        ORDER BY "id"
-                                       LIMIT {bufferSize}
+                                       LIMIT {BufferSize}
                                        FOR UPDATE SKIP LOCKED 
                                    )
                                    RETURNING *
                                    """;
 
-            command.Parameters.Add(new NpgsqlParameter { Value = visibleTimeout });
-            command.Parameters.Add(new NpgsqlParameter { Value = queueName });
+            command.Parameters.Add(new NpgsqlParameter { Value = VisibleTimeout });
+            command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
             var reader = await command.ExecuteReaderAsync(cancellationToken);
-            var messages = new List<Message>(bufferSize);
+            var messages = new List<Message>(BufferSize);
             while (await reader.ReadAsync(cancellationToken))
             {
-                if (hasLargeMessage)
+                if (HasLargeMessage)
                 {
                     messages.Add(ToMessage(reader));
                 }
@@ -142,11 +148,16 @@ public partial class PostgresMessageConsumer(
                 }
             }
 
+            if (messages.Count == 0)
+            {
+                messages.Add(new Message());
+            }
+
             return messages.ToArray();
         }
         catch (Exception exception)
         {
-            Log.ErrorListeningToQueue(s_logger, exception, queueName);
+            Log.ErrorListeningToQueue(s_logger, exception, QueueName);
             throw;
         }
     }
@@ -166,8 +177,9 @@ public partial class PostgresMessageConsumer(
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
 
-            command.CommandText = $"UPDATE \"{schemaName}\".\"{tableName}\" SET \"visible_timeout\" = CURRENT_TIMESTAMP() + $1 WHERE \"id\" = $2";
-            command.Parameters.Add(new NpgsqlParameter { Value = visibleTimeout });
+            command.CommandText = $"UPDATE \"{SchemaName}\".\"{TableName}\" SET \"visible_timeout\" = CURRENT_TIMESTAMP + $1, \"content\" = $2 WHERE \"id\" = $3";
+            command.Parameters.Add(new NpgsqlParameter { Value = delay ?? TimeSpan.Zero });
+            command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = DbType});
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             await command.ExecuteNonQueryAsync(cancellationToken);
             
@@ -177,7 +189,7 @@ public partial class PostgresMessageConsumer(
         }
         catch (Exception exception)
         {
-            Log.ErrorRequeueingMessage(s_logger, exception, message.Id, receiptHandle, queueName);
+            Log.ErrorRequeueingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
             return false;
         }
     }
@@ -195,14 +207,14 @@ public partial class PostgresMessageConsumer(
         {
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{schemaName}\".\"{tableName}\" WHERE \"id\" = $1";
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             command.ExecuteNonQuery();
-            Log.DeletedMessage(s_logger, message.Id, receiptHandle, queueName);
+            Log.DeletedMessage(s_logger, message.Id, receiptHandle, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, queueName);
+            Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
             throw;
         }
     }
@@ -217,17 +229,17 @@ public partial class PostgresMessageConsumer(
 
         try
         {
-            Log.RejectingMessage(s_logger, message.Id, receiptHandle, queueName);
+            Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
 
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{schemaName}\".\"{tableName}\" WHERE \"id\" = $1";
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             command.ExecuteNonQuery();       
         }
         catch (Exception exception)
         {
-            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, queueName);
+            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
             throw;
         }       
     }
@@ -237,17 +249,17 @@ public partial class PostgresMessageConsumer(
     {
         try
         {
-            Log.PurgingQueue(s_logger, queueName);
+            Log.PurgingQueue(s_logger, QueueName);
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE \"{schemaName}\".\"{tableName}\" WHERE \"queue\" = $1";
-            command.Parameters.Add(new NpgsqlParameter { Value = queueName });
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"queue\" = $1";
+            command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
             command.ExecuteNonQuery();
-            Log.PurgedQueue(s_logger, queueName);
+            Log.PurgedQueue(s_logger, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorPurgingQueue(s_logger, exception, queueName);
+            Log.ErrorPurgingQueue(s_logger, exception, QueueName);
             throw;
         }
     }
@@ -257,7 +269,7 @@ public partial class PostgresMessageConsumer(
     {
         try
         {
-            Log.RetrievingNextMessage(s_logger, queueName);
+            Log.RetrievingNextMessage(s_logger, QueueName);
             
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
@@ -267,34 +279,39 @@ public partial class PostgresMessageConsumer(
             }
 
             command.CommandText = $"""
-                                   UPDATE "{schemaName}"."{tableName}" queue
+                                   UPDATE "{SchemaName}"."{TableName}" queue
                                    SET
-                                       "visible_timeout" = CURRENT_TIMESTAMP() + $1
+                                       "visible_timeout" = CURRENT_TIMESTAMP + $1
                                    WHERE "id" IN ( 
                                        SELECT "id"
-                                       FROM "{schemaName}"."{tableName}" 
-                                       WHERE "queue" = $2 AND "visible_timeout" <= CURRENT_TIMESTAMP()
+                                       FROM "{SchemaName}"."{TableName}" 
+                                       WHERE "queue" = $2 AND "visible_timeout" <= CURRENT_TIMESTAMP
                                        ORDER BY "id"
-                                       LIMIT {bufferSize}
+                                       LIMIT {BufferSize}
                                        FOR UPDATE SKIP LOCKED 
                                    )
                                    RETURNING *
                                    """;
 
-            command.Parameters.Add(new NpgsqlParameter { Value = visibleTimeout });
-            command.Parameters.Add(new NpgsqlParameter { Value = queueName });
+            command.Parameters.Add(new NpgsqlParameter { Value = VisibleTimeout });
+            command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
             var reader = command.ExecuteReader();
-            var messages = new List<Message>(bufferSize);
+            var messages = new List<Message>(BufferSize);
             while (reader.Read())
             {
-                messages.Add(hasLargeMessage ? ToLargeMessage(reader) : ToMessage(reader));
+                messages.Add(HasLargeMessage ? ToLargeMessage(reader) : ToMessage(reader));
+            }
+            
+            if (messages.Count == 0)
+            {
+                messages.Add(new Message());
             }
 
             return messages.ToArray();
         }
         catch (Exception exception)
         {
-            Log.ErrorListeningToQueue(s_logger, exception, queueName);
+            Log.ErrorListeningToQueue(s_logger, exception, QueueName);
             throw;
         }
     }
@@ -314,9 +331,10 @@ public partial class PostgresMessageConsumer(
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
 
-            command.CommandText = $"UPDATE \"{schemaName}\".\"{tableName}\" SET \"visible_timeout\" = CURRENT_TIMESTAMP() + $1 WHERE \"id\" = $2";
+            command.CommandText = $"UPDATE \"{SchemaName}\".\"{TableName}\" SET \"visible_timeout\" = CURRENT_TIMESTAMP + $1, \"content\" = $2 WHERE \"id\" = $3";
 
             command.Parameters.Add(new NpgsqlParameter { Value = delay ?? TimeSpan.Zero });
+            command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = DbType });
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             command.ExecuteNonQuery();
             
@@ -326,7 +344,7 @@ public partial class PostgresMessageConsumer(
         }
         catch (Exception exception)
         {
-            Log.ErrorRequeueingMessage(s_logger, exception, message.Id, receiptHandle, queueName);
+            Log.ErrorRequeueingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
             return false;
         }
     }

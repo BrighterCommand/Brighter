@@ -23,7 +23,7 @@ public partial class PostgresMessageProducer(
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageProducer>();
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
 
-    private string SchemaName => publication.SchemaName ?? configuration.SchemaName ?? "publication";
+    private string SchemaName => publication.SchemaName ?? configuration.SchemaName ?? "public";
     private string TableName => publication.QueueStoreTable ?? configuration.QueueStoreTable;
     private string QueueName => publication.Topic!.Value;
     private bool BinaryMessagePayload => publication.BinaryMessagePayload ?? configuration.BinaryMessagePayload;
@@ -52,7 +52,7 @@ public partial class PostgresMessageProducer(
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
 
-        command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP(), $1, $2) RETURNING \"id\"";
+        command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP, $1, $2) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = await command.ExecuteScalarAsync(cancellationToken);
@@ -79,7 +79,7 @@ public partial class PostgresMessageProducer(
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
 
-        command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP() + $1, $2, $3) RETURNING \"id\"";
+        command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP + $1, $2, $3) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = delay.Value });
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
@@ -101,7 +101,7 @@ public partial class PostgresMessageProducer(
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP(), $1, $2) RETURNING \"id\"";
+        command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP, $1, $2) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = command.ExecuteScalar();
@@ -128,7 +128,7 @@ public partial class PostgresMessageProducer(
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
 
-        command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP() + $1, $2, $3) RETURNING \"id\"";
+        command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP + $1, $2, $3) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = delay.Value });
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
