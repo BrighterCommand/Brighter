@@ -63,9 +63,19 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="rhs">The RHS.</param>
         /// <returns>The result of the conversion.</returns>
-        public static implicit operator string? (ChannelName rhs)
+        public static implicit operator string?(ChannelName rhs)
         {
             return rhs?.ToString();
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.String"/> to <see cref="ChannelName"/>.
+        /// </summary>
+        /// <param name="rhs">The RHS.</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator ChannelName(string rhs)
+        {
+            return new ChannelName(rhs);
         }
 
         /// <summary>
