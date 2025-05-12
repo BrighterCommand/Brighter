@@ -318,7 +318,7 @@ namespace Paramore.Brighter.Tranformers.AWS
                 var createBucketResponse = await client.PutBucketAsync(bucketRequest);
                 if (createBucketResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException($"Could not create {bucketName} on {region}");
             });
-
+            
             await asyncRetryPolicy.ExecuteAsync(async () =>
             {
                 var rules = new List<LifecycleRule>();

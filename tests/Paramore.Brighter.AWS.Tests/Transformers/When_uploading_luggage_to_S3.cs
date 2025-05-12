@@ -51,7 +51,7 @@ public class S3LuggageUploadTests : IDisposable
             httpClientFactory: _httpClientFactory,       
             stsClient: _stsClient,
 #pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-            bucketRegion: S3Region.EUW1,
+            bucketRegion: S3Region.EUWest1,
 #pragma warning restore CS0618
             tags: new List<Tag> {new Tag{Key = "BrighterTests", Value = "S3LuggageUploadTests"}},
             acl: S3CannedACL.Private,

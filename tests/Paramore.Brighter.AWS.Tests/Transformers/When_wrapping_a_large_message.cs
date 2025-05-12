@@ -58,7 +58,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                     httpClientFactory: httpClientFactory,
                     stsClient: stsClient, 
 #pragma warning disable CS0618 // It is obsolete, but we want the string value here not the replacement one
-                    bucketRegion: S3Region.EUW1,
+                    bucketRegion: S3Region.EUWest1,
 #pragma warning restore CS0618
                     tags: [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
                     acl: S3CannedACL.Private,
