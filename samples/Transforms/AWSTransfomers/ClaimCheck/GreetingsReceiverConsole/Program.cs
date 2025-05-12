@@ -89,7 +89,7 @@ namespace GreetingsReceiverConsole
                             options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
                             options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";
 #pragma warning disable CS0618 // Continue to use as it maps to a correct string identifier, which the replacement does not                    
-                            options.BucketRegion = S3Region.EUW1;
+                            options.BucketRegion = S3Region.EUWest1;
 #pragma warning restore CS0618 // Preserve obsolete warnings                    
                              options.StoreCreation = S3LuggageStoreCreation.ValidateExists;
                         });
