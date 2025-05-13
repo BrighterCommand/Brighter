@@ -14,6 +14,7 @@ using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
+using Baggage = OpenTelemetry.Baggage;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 

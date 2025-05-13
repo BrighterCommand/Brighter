@@ -153,8 +153,10 @@ namespace Paramore.Brighter
         {
             if (key == "traceparent")
                 message.Header.TraceParent = value;
+            else if (key == "tracestate")
+                message.Header.TraceState = value;
             else if (key == "baggage")
-                message.Header.TraceState.LoadBaggage(value);
+                message.Header.Baggage.LoadBaggage(value);
         }
 
         /// <summary>

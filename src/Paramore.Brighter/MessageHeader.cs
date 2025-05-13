@@ -95,7 +95,15 @@ namespace Paramore.Brighter
         /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Bag { get; set; } = new();
+        
+        /// <summary>
+        /// The Baggage header is a W3C standard and is used to convey user-defined request or workflow information across systems.
+        /// It is not intended for telemetry data, but rather for user-defined metadata about a trace.
+        /// Each entry consists of a key-value pair where the key identifies the vendor and the value contains user-defined request or workflow data.
+        /// Whereas the <see cref="Bag"/> property is used for extended header attributes, the Baggage property is specifically for W3C Baggage.
+        /// </summary>
+        public Baggage Baggage { get; set; } = new();
         
         /// <summary>
         /// OPTIONAL [Cloud Events] REQUIRED [Brighter]
@@ -244,7 +252,7 @@ namespace Paramore.Brighter
         /// in multiple distributed tracing graphs.
         /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
         /// </summary>
-        public TraceState TraceState { get; set; } = new();
+        public string? TraceState { get; set; }
 
         /// <summary>
         /// REQUIRED

@@ -9,7 +9,7 @@ public class TraceStateTests
     public void When_Adding_TraceState()
     {
         // Arrange
-        var traceState = new TraceState();
+        var traceState = new Baggage();
         
         //act
         traceState.Add("key1", "value1");
@@ -23,7 +23,7 @@ public class TraceStateTests
     public void When_Adding_TraceState_From_Baggage()
     {
         //Arrange
-        var traceState = new TraceState();
+        var traceState = new Baggage();
         var baggage = "key1=value1,key2=value2";
         
         //Act
@@ -38,7 +38,7 @@ public class TraceStateTests
     public void When_Enumerating_TraceState()
     {
         //Arrange
-        var traceState = new TraceState();
+        var traceState = new Baggage();
         traceState.Add("key1", "value1");
         traceState.Add("key2", "value2");
         

@@ -153,7 +153,7 @@ public class BrighterTracer : IAmABrighterTracer
         var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
         var parentId = message.Header.TraceParent;
-        var traceContext = message.Header.TraceState;
+        var baggage = message.Header.Baggage;
         var now = _timeProvider.GetUtcNow();
 
         var tags = new ActivityTagsCollection()
@@ -187,8 +187,8 @@ public class BrighterTracer : IAmABrighterTracer
             startTime: now);
         
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-            traceContext.Add("correlationId", message.Header.CorrelationId);
-        Baggage.SetBaggage(traceContext);
+            baggage.Add("correlationId", message.Header.CorrelationId);
+        OpenTelemetry.Baggage.SetBaggage(baggage);
         
         Activity.Current = activity;
 

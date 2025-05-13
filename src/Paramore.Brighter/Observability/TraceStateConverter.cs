@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter.Observability;
 
-public class TraceStateConverter : JsonConverter<TraceState>
+public class TraceStateConverter : JsonConverter<Baggage>
 {
-    public override TraceState Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override Baggage Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType != JsonTokenType.StartArray)
         {
@@ -60,7 +60,7 @@ public class TraceStateConverter : JsonConverter<TraceState>
             }
         }
 
-        var traceState = new TraceState();
+        var traceState = new Baggage();
         foreach (var item in items)
         {
             traceState.Add(item.Key, item.Value);
@@ -68,7 +68,7 @@ public class TraceStateConverter : JsonConverter<TraceState>
         return traceState;
     }
 
-    public override void Write(Utf8JsonWriter writer, TraceState value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Baggage value, JsonSerializerOptions options)
     {
         writer.WriteStartArray();
 

@@ -18,6 +18,6 @@ public class TextContextPropogator : IAmAContextPropogator
     public void PropogateContext(ActivityContext? context, Message message)
     {
         var propogator = Propagators.DefaultTextMapPropagator;
-        propogator.Inject( new PropagationContext(context ?? default, Baggage.Current), message, Message.PropogateContext );
+        propogator.Inject( new PropagationContext(context ?? default, OpenTelemetry.Baggage.Current), message, Message.PropogateContext );
     }
 }

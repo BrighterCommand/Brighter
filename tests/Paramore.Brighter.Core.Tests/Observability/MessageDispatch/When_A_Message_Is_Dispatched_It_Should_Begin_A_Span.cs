@@ -36,6 +36,7 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Xunit;
+using Baggage = OpenTelemetry.Baggage;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 {

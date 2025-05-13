@@ -21,7 +21,6 @@ THE SOFTWARE. */
 
 #endregion
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -29,14 +28,14 @@ using System.Text.RegularExpressions;
 namespace Paramore.Brighter.Observability;
 
 /// <summary>
-/// Represents the W3C trace-context TraceState header, which conveys vendor-specific trace information across systems.
-/// Implementation follows the W3C specification: https://w3c.github.io/trace-context/#tracestate-header
+/// Represents the W3C Baggage header, which conveys user-defined request or workflow information across systems.
+/// Implementation follows the W3C specification: https://www.w3.org/TR/baggage/
 /// </summary>
 /// <remarks>
-/// TraceState allows multiple tracing systems to operate together by storing vendor-specific trace information.
-/// Each entry consists of a key-value pair where the key identifies the vendor and the value contains vendor-specific trace data.
+/// Each entry consists of a key-value pair where the key identifies the vendor and the value contains user-defined request or workflow data.
+/// Note that baggage entries are not intended for telemetry data, but rather for user-defined metadata about a trace.
 /// </remarks>
-public class TraceState : IEnumerable<KeyValuePair<string, string?>>
+public class Baggage : IEnumerable<KeyValuePair<string, string?>>
 {
     private readonly Dictionary<string, string> _entries = new();
     private const int MaxKeyValuePairs = 32;
@@ -93,7 +92,7 @@ public class TraceState : IEnumerable<KeyValuePair<string, string?>>
     }
 
     /// <summary>
-    /// Adds trace state entries from a baggage string in the W3C trace-context format.
+    /// Adds baggage entries in the W3C baggage format.
     /// </summary>
     /// <param name="baggage">A string containing comma-separated key-value pairs in the format "key1=value1,key2=value2"</param>
     /// <exception cref="ArgumentException">Thrown when the baggage string is invalid or contains invalid key-value pairs.</exception>
@@ -108,7 +107,7 @@ public class TraceState : IEnumerable<KeyValuePair<string, string?>>
         {
             var keyValue = pair.Split(['='], 2);
             if (keyValue.Length != 2)
-                throw new ArgumentException($"Invalid baggage format: {pair}", nameof(baggage));
+                throw new ArgumentException($"Invalid tracestate format: {pair}", nameof(baggage));
 
             Add(keyValue[0], keyValue[1]);
         }
