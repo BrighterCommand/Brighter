@@ -130,10 +130,14 @@ public class BrighterTracer : IAmABrighterTracer
             links: links,
             startTime: now);
         
+        Propogate(parentActivity, activity);
+
         Activity.Current = activity;
 
         return activity;
     }
+
+ 
 
     /// <summary>
     /// Create a span when we consume a message from a queue or stream
@@ -154,6 +158,7 @@ public class BrighterTracer : IAmABrighterTracer
         var kind = ActivityKind.Consumer;
         var parentId = message.Header.TraceParent;
         var baggage = message.Header.Baggage;
+        var traceState = message.Header.TraceState;
         var now = _timeProvider.GetUtcNow();
 
         var tags = new ActivityTagsCollection()
@@ -185,6 +190,11 @@ public class BrighterTracer : IAmABrighterTracer
             parentId: parentId,
             tags: tags,
             startTime: now);
+
+        if (activity == null)
+            return Activity.Current;
+        
+        activity.TraceStateString = traceState;
         
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
             baggage.Add("correlationId", message.Header.CorrelationId);
@@ -229,6 +239,8 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             startTime: now);
         
+        Propogate(parentActivity, activity);
+        
         Activity.Current = activity;
 
         return activity;
@@ -271,6 +283,8 @@ public class BrighterTracer : IAmABrighterTracer
             links: links,
             startTime: now);
         
+        Propogate(parentActivity, activity);
+        
         Activity.Current = activity;
 
         return activity;
@@ -310,6 +324,8 @@ public class BrighterTracer : IAmABrighterTracer
             parentId: parentId,
             tags: tags,
             startTime: now);
+        
+        Propogate(parentActivity, activity);
         
         Activity.Current = activity;
 
@@ -360,6 +376,8 @@ public class BrighterTracer : IAmABrighterTracer
             parentId: parentId,
             tags: tags,
             startTime: now);
+        
+        Propogate(parentActivity, activity);
         
         Activity.Current = activity;
 
@@ -507,6 +525,8 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             startTime: now);
         
+        Propogate(parentActivity, activity);
+        
         Activity.Current = activity;
 
         return activity; 
@@ -554,8 +574,7 @@ public class BrighterTracer : IAmABrighterTracer
             {
                 if (hs.Key != handlerName)
                 {
-                    //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released  
-                    //handlerspan.AddLink(new ActivityLink(handlerspan.Value.Context));
+                    hs.Value.AddLink(new ActivityLink(hs.Value.Context));
                 }
             }
         }
@@ -723,5 +742,32 @@ public class BrighterTracer : IAmABrighterTracer
         span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}", DateTimeOffset.UtcNow, tags));
 
         new TextContextPropogator().PropogateContext(span?.Context, message);
+    }
+
+    private static void Propogate(Activity? parentActivity, Activity? activity)
+    {
+        PropogateTraceString(parentActivity, activity);
+        PropogateBaggage(parentActivity, activity);
+    }
+    
+    private static void PropogateTraceString(Activity? parentActivity, Activity? activity)
+    {
+        if (activity == null)
+            return ;
+
+        if (parentActivity != null && !string.IsNullOrEmpty(parentActivity.TraceStateString))
+            activity.TraceStateString = parentActivity.TraceStateString;
+    }
+
+    private static void PropogateBaggage(Activity? parentActivity, Activity? activity)
+    {
+        if (activity == null)
+            return;
+
+        if (parentActivity != null && parentActivity.Baggage.Any())
+        {
+            foreach (var baggageItem in parentActivity!.Baggage)
+                activity.SetBaggage(baggageItem.Key, baggageItem.Value);
+        }
     }
 }

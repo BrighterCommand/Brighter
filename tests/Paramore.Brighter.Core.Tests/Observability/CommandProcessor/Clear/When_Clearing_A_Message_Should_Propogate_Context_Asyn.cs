@@ -105,6 +105,9 @@ public class AsyncMessageDispatchPropogateContextTests
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessageDispatchPropogateContextTests");
+        var traceStateString = parentActivity.TraceStateString ?? "";
+        traceStateString += "test=value";
+        parentActivity.TraceStateString = traceStateString;
 
         var @event = new MyEvent();
         var context = new RequestContext { Span = parentActivity };
@@ -131,6 +134,7 @@ public class AsyncMessageDispatchPropogateContextTests
         Assert.NotNull(message);
         Assert.NotNull(message.Header.TraceParent);
         //? What is tracestate 
+        Assert.Equal(traceStateString, message.Header.TraceState);
         Assert.Equal("key=value,key2=value2", message.Header.Baggage.ToString());
 
     }

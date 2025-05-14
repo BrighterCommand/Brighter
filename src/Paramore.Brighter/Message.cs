@@ -151,12 +151,18 @@ namespace Paramore.Brighter
         /// <param name="value">The value to set </param>
         public static void PropogateContext(Message message, string key, string? value)
         {
-            if (key == "traceparent")
-                message.Header.TraceParent = value;
-            else if (key == "tracestate")
-                message.Header.TraceState = value;
-            else if (key == "baggage")
-                message.Header.Baggage.LoadBaggage(value);
+            switch (key)
+            {
+                case "traceparent":
+                    message.Header.TraceParent = value;
+                    break;
+                case "tracestate":
+                    message.Header.TraceState = value;
+                    break;
+                case "baggage":
+                    message.Header.Baggage.LoadBaggage(value);
+                    break;
+            }
         }
 
         /// <summary>
