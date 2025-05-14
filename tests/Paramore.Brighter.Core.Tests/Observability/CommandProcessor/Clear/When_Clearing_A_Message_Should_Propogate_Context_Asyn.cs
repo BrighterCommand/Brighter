@@ -131,7 +131,7 @@ public class AsyncMessageDispatchPropogateContextTests
         Assert.NotNull(message);
         Assert.NotNull(message.Header.TraceParent);
         //? What is tracestate 
-        Assert.Equal("key=value,key2=value2", message.Header.TraceState.ToString());
+        Assert.Equal("key=value,key2=value2", message.Header.Baggage.ToString());
 
     }
 }
