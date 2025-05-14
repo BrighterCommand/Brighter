@@ -108,18 +108,20 @@ public class AsyncMessageDispatchPropogateContextTests
         var traceStateString = parentActivity.TraceStateString ?? "";
         traceStateString += "test=value";
         parentActivity.TraceStateString = traceStateString;
+        
+        Baggage.SetBaggage("key", "value");
+        Baggage.SetBaggage("key2", "value2");
+
 
         var @event = new MyEvent();
         var context = new RequestContext { Span = parentActivity };
 
         //act
         var messageId = await _commandProcessor.DepositPostAsync(@event, context);
-
-        //reset the parent span as deposit and clear are siblings
-        Baggage.SetBaggage("key", "value");
-        Baggage.SetBaggage("key2", "value2");
         
+        //reset the parent span as deposit and clear are siblings
         context.Span = parentActivity;
+        
         await _commandProcessor.ClearOutboxAsync([messageId], context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
