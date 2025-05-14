@@ -33,6 +33,8 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor
                 .Build();
 
             _parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("RmqMessageProducerTests");
+
+            _parentActivity!.TraceStateString = "brighter=00f067aa0ba902b7,congo=t61rcWkgMzE";
             
             Baggage.SetBaggage("key", "value");
             Baggage.SetBaggage("key2", "value2");
@@ -74,7 +76,8 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor
                 .FirstOrDefault(e => e.Name == $"{_message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
             
             Assert.NotNull(_message.Header.TraceParent);
-            Assert.Equal("key=value,key2=value2", _message.Header.TraceState.ToString());
+            Assert.Equal("brighter=00f067aa0ba902b7,congo=t61rcWkgMzE", _message.Header.TraceState);
+            Assert.Equal("key=value,key2=value2", _message.Header.Baggage.ToString());
         }
 
         public void Dispose()
