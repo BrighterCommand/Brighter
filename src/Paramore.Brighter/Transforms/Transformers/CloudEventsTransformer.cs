@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Transforms.Attributes;
@@ -24,7 +26,7 @@ namespace Paramore.Brighter.Transforms.Transformers;
 ///      subject => sets the subject for <see cref="MessageHeader"/>
 ///      time => sets the timestamp for <see cref="MessageHeader"/>
 /// </summary>
-public partial class CloudEventsTransformer : IAmAMessageTransform
+public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageTransformAsync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CloudEventsTransformer>();
 
@@ -48,7 +50,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform
         //no op as we have no unmanaged resources
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IAmAMessageTransform.InitializeWrapFromAttributeParams" />
     public void InitializeWrapFromAttributeParams(params object?[] initializerList)
     {
         if (initializerList[0] is string source)
@@ -87,9 +89,20 @@ public partial class CloudEventsTransformer : IAmAMessageTransform
         }
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IAmAMessageTransform.InitializeUnwrapFromAttributeParams" />
     public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
     {
+    }
+
+    /// <inheritdoc />
+    public Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(Wrap(message, publication));
+    }
+
+    public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(Unwrap(message));
     }
 
     /// <inheritdoc />
@@ -137,7 +150,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform
                 Data = data 
             };
 
-            message.Body = new MessageBody(JsonSerializer.Serialize(cloudEvent, JsonSerialisationOptions.Options));
+            message.Body = new MessageBody(JsonSerializer.SerializeToUtf8Bytes(cloudEvent, JsonSerialisationOptions.Options));
             message.Header.ContentType = "application/cloudevents+json";
 
             return message;
@@ -159,7 +172,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform
 
         try
         {
-            var cloudEvents = JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Value, JsonSerialisationOptions.Options);
+            var cloudEvents = JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Bytes, JsonSerialisationOptions.Options);
             if (cloudEvents == null)
             {
                 return message;

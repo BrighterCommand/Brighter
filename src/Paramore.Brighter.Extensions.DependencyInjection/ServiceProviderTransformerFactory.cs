@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public IAmAMessageTransform Create(Type transformerType)
         {
-            return (IAmAMessageTransform) _serviceProvider.GetService(transformerType);
+            return (IAmAMessageTransform) _serviceProvider.GetRequiredService(transformerType);
         }
 
         /// <summary>
