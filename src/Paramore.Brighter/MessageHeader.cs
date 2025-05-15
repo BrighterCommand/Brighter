@@ -300,7 +300,10 @@ namespace Paramore.Brighter
             Uri? dataSchema = null,
             string? subject = null,
             int handledCount = 0,
-            TimeSpan? delayed = null)
+            TimeSpan? delayed = null,
+            string? traceParent = null,
+            string? traceState = null,
+            string? baggage = null)
         {
             MessageId = messageId;
             Topic = topic;
@@ -317,6 +320,9 @@ namespace Paramore.Brighter
             ReplyTo = replyTo ?? string.Empty;
             DataSchema = dataSchema;
             Subject = subject;
+            TraceParent = traceParent;
+            TraceState = traceState;
+            Baggage.LoadBaggage(baggage);
         }
 
         /// <summary>

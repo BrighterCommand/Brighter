@@ -106,5 +106,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// The cloud event subject
         /// </summary>
         public const string CLOUD_EVENTS_SOURCE = "cloudEvents:source";
+        
+        /// <summary>
+        /// The cloud events traceparent, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_PARENT = "cloudEvents:traceparent";
+
+        /// <summary>
+        /// The cloud events tracestate, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_STATE = "cloudevents:tracestate";
+
+        /// <summary>
+        /// The W3C baggage
+        /// </summary>
+        public const string W3C_BAGGAGE = "baggage";
     }
 }

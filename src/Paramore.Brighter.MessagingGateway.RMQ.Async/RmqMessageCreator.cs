@@ -63,6 +63,9 @@ internal sealed partial class RmqMessageCreator
             var dataSchema = ReadDataSchema(headers);
             var subject = ReadSubject(headers);
             var specVersion = ReadSpecVersion(headers);
+            var traceParent = ReadTraceParent(headers);
+            var traceState = ReadTraceState(headers);
+            var baggage = ReadBaggage(headers);
 
             if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
             {
@@ -353,6 +356,40 @@ internal sealed partial class RmqMessageCreator
         }
 
         return new HeaderResult<Uri?>(null, true);
+    }
+    
+    private static HeaderResult<string?> ReadTraceParent(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, out var traceParent)
+            && traceParent is byte[] traceParentArray)
+        {
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
+        }
+
+        return new HeaderResult<string?>(string.Empty, true);
+    }
+
+    private static HeaderResult<string?> ReadTraceState(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out var traceParent)
+            && traceParent is byte[] traceParentArray)
+        {
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
+        }
+
+        return new HeaderResult<string?>(string.Empty, true);
+
+    }
+
+    private static HeaderResult<string?> ReadBaggage(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.W3C_BAGGAGE, out var traceParent)
+            && traceParent is byte[] traceParentArray)
+        {
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
+        }
+
+        return new HeaderResult<string?>(string.Empty, true); 
     }
 
     private static object ParseHeaderValue(object? value)
