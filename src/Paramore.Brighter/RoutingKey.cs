@@ -92,6 +92,17 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Performs an implicit conversion from <see cref="System.String"/> to <see cref="RoutingKey"/>.
+        /// </summary>
+        /// <param name="rhs">The RHS.</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator RoutingKey(string rhs)
+        {
+            return new RoutingKey(rhs);
+        }
+
+
+        /// <summary>
         /// Do the routing key name's match?
         /// </summary>
         /// <param name="other">The other.</param>
