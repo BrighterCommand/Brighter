@@ -236,7 +236,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        public bool Reject(Message message)
         {
             //Only Reject if ReceiveMode is Peek
             if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
@@ -253,6 +253,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     _serviceBusReceiver.DeadLetter(lockToken).Wait();
                     if(_subscriptionConfiguration.RequireSession)
                         _serviceBusReceiver.Close();
+                    return true;
                 }
                 catch (Exception ex)
                 {
@@ -264,6 +265,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 s_logger.LogWarning("Dead Lettering Message with Id {Id} is not possible due to receive Mode being set to {ReceiveMode}", message.Id, _receiveMode);
             }
+
+            return false;
         }
 
         /// <summary>
