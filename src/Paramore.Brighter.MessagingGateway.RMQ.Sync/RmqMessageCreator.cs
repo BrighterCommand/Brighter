@@ -44,6 +44,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
+            var timeStamp = HeaderResult<DateTimeOffset>.Empty();
+            var handledCount = HeaderResult<int>.Empty();
+            var delay = HeaderResult<TimeSpan>.Empty();
+            var redelivered = HeaderResult<bool>.Empty();
+            var deliveryTag = HeaderResult<ulong>.Empty();
+            var messageType = HeaderResult<MessageType>.Empty();
+            var replyTo = HeaderResult<string>.Empty();
+            var traceParent = HeaderResult<string>.Empty();
+            var traceState = HeaderResult<string>.Empty();
+            var baggage = HeaderResult<string>.Empty();
             var deliveryMode = fromQueue.BasicProperties.DeliveryMode;
 
             Message message;
@@ -51,21 +61,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 topic = ReadTopic(fromQueue, headers);
                 messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
-                var timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
-                var handledCount = ReadHandledCount(headers);
-                var delay = ReadDelay(headers);
-                var redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
-                var deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
-                var messageType = ReadMessageType(headers);
-                var replyTo = ReadReplyTo(fromQueue.BasicProperties);
+                timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
+                handledCount = ReadHandledCount(headers);
+                delay = ReadDelay(headers);
+                redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
+                deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
+                messageType = ReadMessageType(headers);
+                replyTo = ReadReplyTo(fromQueue.BasicProperties);
                 var source = ReadSource(headers);
                 var type = ReadType(headers);
                 var dataSchema = ReadDataSchema(headers);
-                var traceParent = ReadTraceParent(headers);
-                var traceState = ReadTraceState(headers);
-                var baggage = ReadBaggage(headers);
+                traceParent = ReadTraceParent(headers);
+                traceState = ReadTraceState(headers);
+                baggage = ReadBaggage(headers);
                 var subject = ReadSubject(headers);
-                var specVersion = ReadSpecVersion(headers);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
                     return FailureMessage(topic, messageId);
@@ -76,10 +85,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     messageType.Result,
                     source: source.Result,
                     type: type.Result,
-                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTimeOffset.UtcNow,
+                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                     correlationId: "",
                     replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
-                    contentType: fromQueue.BasicProperties.Type ?? "plain/text",
+                    contentType: fromQueue.BasicProperties.Type,
                     handledCount: handledCount.Result,
                     dataSchema: dataSchema.Result,
                     subject: subject.Result,
@@ -87,13 +96,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     traceParent: traceParent.Result,
                     traceState: traceState.Result,
                     baggage: baggage.Result
-                )
-                {
-                    SpecVersion = specVersion.Result 
-                };;
+                );
 
                 //this effectively transfers ownership of our buffer 
-                message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type ?? "plain/text"));
+                message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type));
 
                 headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
 
@@ -344,17 +350,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
 
             return new HeaderResult<Uri?>(null, true);
-        }
-        
-        private static HeaderResult<string> ReadSpecVersion(IDictionary<string, object?> headers)
-        {
-            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, out var specVersion)
-                && specVersion is byte[] specVersionArray)
-            {
-                return new HeaderResult<string>(Encoding.UTF8.GetString(specVersionArray), true);
-            }
-
-            return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
         }
 
         private static HeaderResult<string?> ReadTraceParent(IDictionary<string, object?> headers)
