@@ -39,7 +39,7 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
 {
     private readonly Dictionary<string, string> _entries = new();
     private const int MaxKeyValuePairs = 32;
-    private static readonly Regex KeyRegex = new("^[a-z0-9][a-z0-9_\\-*/]{0,255}$", RegexOptions.Compiled);
+    private static readonly Regex KeyRegex = new("^[a-zA-Z0-9][a-zA-Z0-9_\\-*/]{0,255}$", RegexOptions.Compiled);
     private static readonly Regex ValueRegex = new("^[\\x20-\\x2b\\x2d-\\x3c\\x3e-\\x7e]{0,255}[\\x21-\\x2b\\x2d-\\x3c\\x3e-\\x7e]$", RegexOptions.Compiled);
 
     /// <summary>
@@ -122,3 +122,4 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
         return string.Join(",", _entries.Select(kvp => $"{kvp.Key}={kvp.Value}"));
     }
 }
+

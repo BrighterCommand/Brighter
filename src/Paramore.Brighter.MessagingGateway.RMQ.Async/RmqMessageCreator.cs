@@ -61,11 +61,11 @@ internal sealed partial class RmqMessageCreator
             var source = ReadSource(headers);
             var type = ReadType(headers);
             var dataSchema = ReadDataSchema(headers);
-            var subject = ReadSubject(headers);
-            var specVersion = ReadSpecVersion(headers);
             var traceParent = ReadTraceParent(headers);
             var traceState = ReadTraceState(headers);
             var baggage = ReadBaggage(headers);
+            var subject = ReadSubject(headers);
+            var specVersion = ReadSpecVersion(headers);
 
             if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
             {
@@ -79,14 +79,17 @@ internal sealed partial class RmqMessageCreator
                     messageType.Result,
                     source: source.Result,
                     type: type.Result,
-                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                    correlationId: "", 
+                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTimeOffset.UtcNow,
+                    correlationId: "",
                     replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
-                    contentType: fromQueue.BasicProperties.Type ??  "plain/text",
+                    contentType: fromQueue.BasicProperties.Type ?? "plain/text",
                     handledCount: handledCount.Result,
                     dataSchema: dataSchema.Result,
                     subject: subject.Result,
-                    delayed: delay.Result
+                    delayed: delay.Result,
+                    traceParent: traceParent.Result,
+                    traceState: traceState.Result,
+                    baggage: baggage.Result
                 )
                 {
                     SpecVersion = specVersion.Result 

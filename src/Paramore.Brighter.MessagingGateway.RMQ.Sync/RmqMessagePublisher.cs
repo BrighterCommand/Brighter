@@ -107,17 +107,22 @@ internal sealed partial class RmqMessagePublisher
             };
             
             if (!string.IsNullOrEmpty(message.Header.Subject))
-            {
                 headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject!);
-            }
         
             if (message.Header.DataSchema != null)
-            {
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
-            }
 
             if (message.Header.CorrelationId != string.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
+            
+            if (!string.IsNullOrEmpty(message.Header.TraceParent))
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent!);
+            
+            if (!string.IsNullOrEmpty(message.Header.TraceState))
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState!);
+            
+            if (message.Header.Baggage.Any())
+                headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString());
 
             message.Header.Bag.Each(header =>
             {
@@ -185,6 +190,15 @@ internal sealed partial class RmqMessagePublisher
 
             if (message.Header.CorrelationId != string.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
+            
+            if (!string.IsNullOrEmpty(message.Header.TraceParent))
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent!);
+            
+            if (!string.IsNullOrEmpty(message.Header.TraceState))
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState!);
+            
+            if (message.Header.Baggage.Any())
+                headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString());
 
             message.Header.Bag.Each((header) =>
             {
