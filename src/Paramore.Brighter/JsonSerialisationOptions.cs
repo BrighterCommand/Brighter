@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Serialization;
 
 namespace Paramore.Brighter
@@ -34,6 +35,7 @@ namespace Paramore.Brighter
             opts.Converters.Add(new SubscriptionNameConverter());
             opts.Converters.Add(new RoutingKeyConvertor());
             opts.Converters.Add(new ChannelNameConverter());
+            opts.Converters.Add(new TraceStateConverter());
 
             Options = opts;
         }

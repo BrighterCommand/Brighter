@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var myCommand = new MyCommand{ Value = "Hello World"};
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(_bus, timeProvider)
+            InMemoryMessageProducer messageProducer = new(_bus, timeProvider)
             {
                 Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
             };
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { Topic, producer },
+                { Topic, messageProducer },
             });
 
             var tracer = new BrighterTracer();

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -94,7 +95,15 @@ namespace Paramore.Brighter
         /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Bag { get; set; } = new();
+        
+        /// <summary>
+        /// The Baggage header is a W3C standard and is used to convey user-defined request or workflow information across systems.
+        /// It is not intended for telemetry data, but rather for user-defined metadata about a trace.
+        /// Each entry consists of a key-value pair where the key identifies the vendor and the value contains user-defined request or workflow data.
+        /// Whereas the <see cref="Bag"/> property is used for extended header attributes, the Baggage property is specifically for W3C Baggage.
+        /// </summary>
+        public Baggage Baggage { get; set; } = new();
         
         /// <summary>
         /// OPTIONAL [Cloud Events] REQUIRED [Brighter]
@@ -233,7 +242,7 @@ namespace Paramore.Brighter
         /// In .NET it is set from Activity.Current.Id
         /// </summary>
         public string? TraceParent { get; set; }
-        
+
         /// <summary>
         /// OPTIONAL
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md">Cloud Events Spec</see>
@@ -291,7 +300,10 @@ namespace Paramore.Brighter
             Uri? dataSchema = null,
             string? subject = null,
             int handledCount = 0,
-            TimeSpan? delayed = null)
+            TimeSpan? delayed = null,
+            string? traceParent = null,
+            string? traceState = null,
+            string? baggage = null)
         {
             MessageId = messageId;
             Topic = topic;
@@ -308,6 +320,9 @@ namespace Paramore.Brighter
             ReplyTo = replyTo ?? string.Empty;
             DataSchema = dataSchema;
             Subject = subject;
+            TraceParent = traceParent;
+            TraceState = traceState;
+            Baggage.LoadBaggage(baggage);
         }
 
         /// <summary>

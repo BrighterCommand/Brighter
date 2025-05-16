@@ -61,7 +61,7 @@ public class CommandProcessorMultipleClearObservabilityTests
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
         
-        InMemoryProducer producer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
         {
             Publication =
             {
@@ -74,7 +74,7 @@ public class CommandProcessorMultipleClearObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, producer}
+            {routingKey, messageProducer}
         });
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
@@ -126,7 +126,7 @@ public class CommandProcessorMultipleClearObservabilityTests
         
         //assert 
         Assert.Equal(21, _exportedActivities.Count);
-        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
         
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");

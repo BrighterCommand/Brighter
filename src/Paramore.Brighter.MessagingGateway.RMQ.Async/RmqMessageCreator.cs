@@ -61,6 +61,9 @@ internal sealed partial class RmqMessageCreator
             var source = ReadSource(headers);
             var type = ReadType(headers);
             var dataSchema = ReadDataSchema(headers);
+            var traceParent = ReadTraceParent(headers);
+            var traceState = ReadTraceState(headers);
+            var baggage = ReadBaggage(headers);
             var subject = ReadSubject(headers);
             var specVersion = ReadSpecVersion(headers);
 
@@ -76,14 +79,17 @@ internal sealed partial class RmqMessageCreator
                     messageType.Result,
                     source: source.Result,
                     type: type.Result,
-                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                    correlationId: "", 
+                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTimeOffset.UtcNow,
+                    correlationId: "",
                     replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
-                    contentType: fromQueue.BasicProperties.Type ??  "plain/text",
+                    contentType: fromQueue.BasicProperties.Type ?? "plain/text",
                     handledCount: handledCount.Result,
                     dataSchema: dataSchema.Result,
                     subject: subject.Result,
-                    delayed: delay.Result
+                    delayed: delay.Result,
+                    traceParent: traceParent.Result,
+                    traceState: traceState.Result,
+                    baggage: baggage.Result
                 )
                 {
                     SpecVersion = specVersion.Result 
@@ -353,6 +359,40 @@ internal sealed partial class RmqMessageCreator
         }
 
         return new HeaderResult<Uri?>(null, true);
+    }
+    
+    private static HeaderResult<string?> ReadTraceParent(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, out var traceParent)
+            && traceParent is byte[] traceParentArray)
+        {
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
+        }
+
+        return new HeaderResult<string?>(string.Empty, true);
+    }
+
+    private static HeaderResult<string?> ReadTraceState(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out var traceParent)
+            && traceParent is byte[] traceParentArray)
+        {
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
+        }
+
+        return new HeaderResult<string?>(string.Empty, true);
+
+    }
+
+    private static HeaderResult<string?> ReadBaggage(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.W3C_BAGGAGE, out var traceParent)
+            && traceParent is byte[] traceParentArray)
+        {
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
+        }
+
+        return new HeaderResult<string?>(string.Empty, true); 
     }
 
     private static object ParseHeaderValue(object? value)

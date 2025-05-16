@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Producer;
 
-public class InMemoryProducerTests
+public class InMemoryMessageProducerTests
 {
     [Fact]
     public void When_adding_messages_to_the_producer()
@@ -14,7 +14,7 @@ public class InMemoryProducerTests
         const string topic = "test_topic";
         var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(topic), MessageType.MT_DOCUMENT), new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryProducer(bus, new FakeTimeProvider());
+        var producer = new InMemoryMessageProducer(bus, new FakeTimeProvider());
 
         // act
         producer.Send(message);

@@ -33,13 +33,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var routingKey = new RoutingKey("MyCommand");
 
-            InMemoryProducer producer = new(_internalBus, timeProvider)
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
             {
                 Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
             };
 
             var routingKeyTwo = new RoutingKey("MyCommand2");
-            InMemoryProducer producerTwo = new(_internalBus, timeProvider)
+            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider)
             {
                 Publication = {Topic = routingKeyTwo, RequestType = typeof(MyCommand)}
             };
@@ -70,8 +70,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, producer },
-                { routingKeyTwo, producerTwo }
+                { routingKey, messageProducer },
+                { routingKeyTwo, messageProducerTwo }
             });
 
             var tracer = new BrighterTracer();

@@ -67,6 +67,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var dataSchema = ReadDataSchema(consumeResult.Message.Headers);
                 var type = ReadType(consumeResult.Message.Headers);
                 var source = ReadSource(consumeResult.Message.Headers);
+                var traceParent = ReadTraceParent(consumeResult.Message.Headers);
+                var traceState = ReadTraceState(consumeResult.Message.Headers);
+                var baggage = ReadBaggage(consumeResult.Message.Headers);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success))
                 {
@@ -88,7 +91,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         handledCount: handledCount.Success ? handledCount.Result : 0,
                         dataSchema: dataSchema.Result,
                         subject: subject.Result,
-                        delayed: delay.Success ? delay.Result : TimeSpan.Zero
+                        delayed: delay.Success ? delay.Result : TimeSpan.Zero,
+                        traceParent: traceParent.Result,
+                        traceState: traceState.Result,
+                        baggage: baggage.Result
                     );
 
                     message = new Message(messageHeader,
@@ -205,16 +211,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out var lastHeader))
             {
                 //Additional testing for a non unixtimestamp string
-                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.InvariantInfo,
-                        DateTimeStyles.AdjustToUniversal, out DateTime timestamp))
+                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTime timestamp))
                 {
                     return new HeaderResult<DateTimeOffset>(timestamp, true);
                 }
 
                 try
                 {
-                    return new HeaderResult<DateTimeOffset>(
-                        DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(lastHeader, 0)).DateTime, true);
+                    return new HeaderResult<DateTimeOffset>(DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(lastHeader, 0)).DateTime, true);
                 }
                 catch (Exception)
                 {
@@ -317,6 +321,48 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     ? new HeaderResult<Uri>(dataSchema, true)
                     : new HeaderResult<Uri>(new Uri("http://goparamore.io"), true));
 
+        private static HeaderResult<string> ReadTraceParent(Headers headers)
+        {
+            return ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TRACE_PARENT)
+                .Map(s =>
+                {
+                    if (string.IsNullOrEmpty(s))
+                    {
+                        return new HeaderResult<string>(string.Empty, true);
+                    }
+
+                    return new HeaderResult<string>(s, true);
+                });
+        }
+
+        private static HeaderResult<string> ReadTraceState(Headers headers)
+        {
+            return ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TRACE_STATE)
+                .Map(s =>
+                {
+                    if (string.IsNullOrEmpty(s))
+                    {
+                        return new HeaderResult<string>(string.Empty, true);
+                    }
+
+                    return new HeaderResult<string>(s, true);
+                });
+        }
+
+        private static HeaderResult<string> ReadBaggage(Headers headers)
+        {
+            return ReadHeader(headers, HeaderNames.W3C_BAGGAGE)
+                .Map(s =>
+                {
+                    if (string.IsNullOrEmpty(s))
+                    {
+                        return new HeaderResult<string>(string.Empty, true);
+                    }
+
+                    return new HeaderResult<string>(s, true);
+                });
+        }
+
         private static HeaderResult<string> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
         {
             if (headers.TryGetLastBytesIgnoreCase(key, out byte[] lastHeader))
@@ -383,4 +429,3 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
     }
 }
-

@@ -39,7 +39,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
     /// <param name="timeProvider"></param>
-    public class InMemoryProducer(IAmABus bus, TimeProvider timeProvider)
+    public sealed class InMemoryMessageProducer(IAmABus bus, TimeProvider timeProvider)
         : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         private ITimer? _requeueTimer;
@@ -93,7 +93,6 @@ namespace Paramore.Brighter
         public Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
-
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
@@ -173,20 +172,5 @@ namespace Paramore.Brighter
             
             return Task.CompletedTask;
         }
-
-
-        private void SendNoDelay(Message message)
-        {
-            try
-            {
-                Send(message);
-            }
-            finally
-            {
-                _requeueTimer?.Dispose();
-            }
-        }
-
- 
     }
 }

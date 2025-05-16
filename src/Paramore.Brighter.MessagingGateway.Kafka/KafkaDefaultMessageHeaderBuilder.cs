@@ -67,12 +67,28 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString().ToByteArray());
             }
+            
+            if (!string.IsNullOrEmpty(message.Header.TraceParent))
+            {
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent.ToByteArray());
+            }
+            
+            if (!string.IsNullOrEmpty(message.Header.TraceState))
+            {
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState.ToByteArray());
+            }
+            
+            if (message.Header.Baggage.Any())
+            {
+                headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString().ToByteArray());
+            }
                             
             if (!string.IsNullOrEmpty(message.Header.ContentType))
             {
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, message.Header.ContentType.ToByteArray());
             }
            
+            
             var timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
             if (message.Header.TimeStamp.DateTime != default)
             {
@@ -113,6 +129,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     {
                         case string stringValue:
                             headers.Add(header.Key, stringValue.ToByteArray());
+                            break;
+                        case DateTimeOffset dateTimeOffsetValue:
+                            headers.Add(header.Key, dateTimeOffsetValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
                             break;
                         case DateTime dateTimeValue:
                             headers.Add(header.Key, dateTimeValue.ToString(CultureInfo.InvariantCulture).ToByteArray());

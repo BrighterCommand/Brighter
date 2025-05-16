@@ -900,7 +900,7 @@ namespace Paramore.Brighter
                             //mark dispatch handled by a callback - set in constructor
                             await RetryAsync(
                                     async _ =>
-                                        await producerAsync.SendAsync(message)
+                                        await producerAsync.SendAsync(message, cancellationToken)
                                             .ConfigureAwait(continueOnCapturedContext),
                                     requestContext,
                                     continueOnCapturedContext,
@@ -910,7 +910,7 @@ namespace Paramore.Brighter
                         else
                         {
                             var sent = await RetryAsync(
-                                    async _ => await producerAsync.SendAsync(message)
+                                    async _ => await producerAsync.SendAsync(message, cancellationToken)
                                         .ConfigureAwait(continueOnCapturedContext),
                                     requestContext,
                                     continueOnCapturedContext,
@@ -1051,7 +1051,9 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
-            var result = await _policyRegistry.Get<AsyncPolicy>(CommandProcessor.RETRYPOLICYASYNC)
+            var policy = _policyRegistry.Get<AsyncPolicy>(CommandProcessor.RETRYPOLICYASYNC);
+            
+            var result = await policy
                 .ExecuteAndCaptureAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
 
