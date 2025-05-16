@@ -189,7 +189,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
                 from i in ti.GetInterfaces()
-                where i == typeof(IAmAMessageTransformAsync)
+                where typeof(IAmAMessageTransformAsync).IsAssignableFrom(i) || typeof(IAmAMessageTransform).IsAssignableFrom(i)
                 select new { TransformType = ti };
 
             foreach (var transform in transforms)

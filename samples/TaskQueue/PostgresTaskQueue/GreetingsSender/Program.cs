@@ -81,6 +81,6 @@ public static class Program
         var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
         commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
-        commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
+        commandProcessor.PostAsync(new FarewellEvent("Ian says: See you later!")).GetAwaiter().GetResult();
     }
 }

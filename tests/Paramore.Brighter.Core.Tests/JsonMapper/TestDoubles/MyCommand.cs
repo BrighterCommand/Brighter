@@ -22,36 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using Greetings.Ports.Commands;
-using MessagePack;
-using Paramore.Brighter;
-using Paramore.Brighter.Extensions;
+using System;
 
-namespace Greetings.Ports.Mappers
+namespace Paramore.Brighter.Core.Tests.JsonMapper.TestDoubles;
+
+public class MyCommand() : Command(Guid.NewGuid())
 {
-    public class FarewellEventMessageMapper : IAmAMessageMapper<FarewellEvent>
-    {
-        public IRequestContext Context { get; set; }
-
-        public Message MapToMessage(FarewellEvent request, Publication publication)
-        {
-
-            var header = new MessageHeader(
-                messageId: request.Id,
-                topic: publication.Topic,
-                messageType: request.RequestToMessageType(),
-                contentType: "application/vnd.msgpack");
-
-            var body = new MessageBody(MessagePackSerializer.Serialize(request), "MessagePack");
-            var message = new Message(header, body);
-            return message;
-        }
-
-        public FarewellEvent MapToRequest(Message message)
-        {
-            var farewellCommand = MessagePackSerializer.Deserialize<FarewellEvent>(message.Body.Bytes);
-
-            return farewellCommand;
-        }
-    }
+    public string Value { get; set; }
 }
