@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     //These enums map to Confluent's ProducerConfig values, we just don't want a dependency on that in our interface
@@ -143,5 +145,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Populate this property to override the default implementation of header builder.
         /// </summary>
         public IKafkaMessageHeaderBuilder MessageHeaderBuilder { get; set; } = KafkaDefaultMessageHeaderBuilder.Instance;
+    }
+
+    public class KafkaPublication<T> : KafkaPublication
+        where T: class, IRequest
+    {
+         public override Type RequestType { get; set; } = typeof(T);
     }
 }
