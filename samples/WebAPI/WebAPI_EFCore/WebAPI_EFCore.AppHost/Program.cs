@@ -10,6 +10,8 @@ var mysql = builder.AddMySql("mysql")
 
 var greetingsDb = mysql.AddDatabase("Greetings");
 
+var rabbitmq = builder.AddRabbitMQ("messaging");
+
 var migrationService = builder.AddProject<Projects.MigrationService>("migration")
     .WithReference(greetingsDb)
     .WaitFor(greetingsDb)
@@ -18,6 +20,7 @@ var migrationService = builder.AddProject<Projects.MigrationService>("migration"
 
 builder.AddProject<Projects.GreetingsWeb>("web")
     .WithReference(greetingsDb)
+    .WithReference(rabbitmq)
     .WaitFor(migrationService)
     .WithEnvironment(DatabaseGlobals.DATABASE_TYPE_ENV, DatabaseGlobals.MYSQL)
     .WithEnvironment(MessagingGlobals.BRIGHTER_TRANSPORT, MessagingGlobals.RMQ);
