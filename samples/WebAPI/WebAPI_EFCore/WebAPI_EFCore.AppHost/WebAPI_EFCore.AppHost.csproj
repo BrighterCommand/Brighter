@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.2.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>1847f0a0-bf84-4f19-a232-47adf6aba7e9</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.MySql" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\GreetingsWeb\GreetingsWeb.csproj" />
+    <ProjectReference Include="..\Greetings_Sweeper\Greetings_Sweeper.csproj" />
+    <ProjectReference Include="..\MigrationService\MigrationService.csproj" />
+    <ProjectReference Include="..\SalutationAnalytics\SalutationAnalytics.csproj" />
+    <ProjectReference Include="..\WebAPI_EFCore.ServiceDefaults\WebAPI_EFCore.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -9,7 +9,12 @@ using TransportMaker;
 
 JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables("BRIGHTER_");
+
+// Add service defaults & Aspire client integrations.
+builder.AddServiceDefaults();
+builder.AddMySqlDataSource(connectionName: "Greetings");
 
 var transport = builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
 if (string.IsNullOrEmpty(transport))
@@ -18,8 +23,10 @@ if (string.IsNullOrEmpty(transport))
 MessagingTransport messagingTransport =
     ConfigureTransport.TransportType(transport);
 
+var connectionString = builder.Configuration.GetConnectionString("Greetings");
+
 RelationalDatabaseConfiguration outboxConfiguration = new(
-    ConnectionResolver.DbConnectionString(builder.Configuration, ApplicationType.Greetings),
+    connectionString,
     binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
 );
 
@@ -47,6 +54,7 @@ builder.Services.AddBrighter(options =>
 });
 
 WebApplication app = builder.Build();
+
 
 app.MapHealthChecks("/health");
 app.MapHealthChecks("/health/detail", new HealthCheckOptions

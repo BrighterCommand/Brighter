@@ -25,7 +25,7 @@ namespace GreetingsApp.Handlers
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
-            return await _uow.People
+            return await _uow.Person
                 .Where(p => p.Name == query.Name)
                 .Select(p => new FindPersonResult(p))
                 .SingleAsync(cancellationToken);

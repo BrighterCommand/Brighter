@@ -7,7 +7,7 @@ namespace GreetingsApp.EntityGateway
     {
         public GreetingsEntityGateway(DbContextOptions<GreetingsEntityGateway> options) : base(options) { }
 
-        public DbSet<Person> People { get; set; }
+        public DbSet<Person> Person { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
