@@ -6,6 +6,7 @@
   <ItemGroup>
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.2.1" />
     <PackageVersion Include="Aspire.Hosting.MySql" Version="9.2.1" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="9.2.1" />
     <PackageVersion Include="Aspire.MySqlConnector" Version="9.2.1" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.407.23, 4)" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.406.11, 4)" />
