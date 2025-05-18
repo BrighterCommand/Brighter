@@ -24,12 +24,12 @@ public class SqlInitialCreate : Migration
         var greeting = Create.Table("Greeting")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
             .WithColumn("Message").AsString()
-            .WithColumn("Recipient_Id").AsInt32();
+            .WithColumn("RecipientId").AsInt32();
 
         if (_configuration.DbType != "Sqlite")
         {
             Create.ForeignKey()
-                .FromTable("Greeting").ForeignColumn("Recipient_Id")
+                .FromTable("Greeting").ForeignColumn("RecipientId")
                 .ToTable("Person").PrimaryColumn("Id");
         }
     }
