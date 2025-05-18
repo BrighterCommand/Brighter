@@ -23,7 +23,7 @@ namespace GreetingsApp.Handlers
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default)
         {
-            var person = await _uow.People
+            var person = await _uow.Person
                 .Include(p => p.Greetings)
                 .Where(p => p.Name == deletePerson.Name)
                 .SingleAsync(cancellationToken);

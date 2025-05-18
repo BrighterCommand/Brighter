@@ -37,7 +37,7 @@ namespace GreetingsApp.Handlers
             await _provider.GetTransactionAsync(cancellationToken);
             try
             {
-                var person = await _uow.People
+                var person = await _uow.Person
                     .Where(p => p.Name == addGreeting.Name)
                     .SingleAsync(cancellationToken);
 

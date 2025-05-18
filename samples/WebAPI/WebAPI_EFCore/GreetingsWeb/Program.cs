@@ -35,7 +35,7 @@ app.MapGet("/greetings/{name}", async (string name, IQueryProcessor queryProcess
         ? Results.Ok(greetings)
         : Results.NotFound());
 
-app.MapPost("/greetings/new", async (string name, NewGreeting newGreeting, IAmACommandProcessor commandProcessor, IQueryProcessor queryProcessor) =>
+app.MapPost("/greetings/{name}/new", async (string name, NewGreeting newGreeting, IAmACommandProcessor commandProcessor, IQueryProcessor queryProcessor) =>
 {
     await commandProcessor.SendAsync(new AddGreeting(name, newGreeting.Greeting));
 
