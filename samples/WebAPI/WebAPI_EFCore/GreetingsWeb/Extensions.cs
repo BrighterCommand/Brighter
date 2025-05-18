@@ -28,8 +28,9 @@ public static class Extensions
             ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
             
             var outboxConfiguration = new RelationalDatabaseConfiguration(
-                ConnectionResolver.DbConnectionString(configuration, ApplicationType.Greetings),
-                binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
+                configuration.GetConnectionString("Greetings"),
+                "Greetings", 
+                binaryMessagePayload:messagingTransport == MessagingTransport.Kafka
             );
             
             string dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
@@ -79,7 +80,7 @@ public static class Extensions
 
         public static void ConfigureEfCore(this IServiceCollection services, ConfigurationManager configuration)
         {
-            string connectionString = ConnectionResolver.DbConnectionString(configuration, ApplicationType.Greetings);
+            string connectionString = configuration.GetConnectionString("Greetings");
             string configDbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
             
             if (string.IsNullOrWhiteSpace(configDbType))

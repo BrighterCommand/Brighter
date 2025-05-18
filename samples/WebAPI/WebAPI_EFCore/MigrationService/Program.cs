@@ -5,7 +5,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHostedService<Worker>();
 
 
-builder.AddMySqlDataSource(connectionName: "Greetings");
+//builder.AddMySqlDataSource(connectionName: "Greetings");
 builder.AddServiceDefaults();
 //builder.Services.AddFluentMigratorCore();
 

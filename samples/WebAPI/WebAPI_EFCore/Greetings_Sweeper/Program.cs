@@ -23,8 +23,10 @@ if (string.IsNullOrEmpty(transport))
 MessagingTransport messagingTransport =
     ConfigureTransport.TransportType(transport);
 
+var connectionString = builder.Configuration.GetConnectionString("Greetings");
+
 RelationalDatabaseConfiguration outboxConfiguration = new(
-    ConnectionResolver.DbConnectionString(builder.Configuration, ApplicationType.Greetings),
+    connectionString,
     binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
 );
 

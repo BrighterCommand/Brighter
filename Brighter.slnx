@@ -1,0 +1,975 @@
+﻿<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="Mixed Platforms" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/samples/" />
+  <Folder Name="/samples/CommandProcessor/">
+    <Project Path="samples\CommandProcessor\HelloWorldAsync\HelloWorldAsync.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\CommandProcessor\HelloWorldInternalBus\HelloWorldInternalBus.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\CommandProcessor\HelloWorld\HelloWorld.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/Scheduler/" />
+  <Folder Name="/samples/Scheduler/Aws/">
+    <Project Path="samples\Scheduler\AwsTaskQueue\GreetingsPumper\GreetingsPumper.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Scheduler\AwsTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Scheduler\AwsTaskQueue\Greetings\Greetings.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/Scheduler/Quartz/">
+    <Project Path="samples\Scheduler\QuartzTaskQueue\GreetingsPumper\GreetingsPumper.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Scheduler\QuartzTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Scheduler\QuartzTaskQueue\Greetings\Greetings.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/TaskQueue/">
+    <File Path="samples\TaskQueue\README.md" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/ASBTaskQueue/">
+    <Project Path="samples\TaskQueue\ASBTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\ASBTaskQueue\GreetingsScopedReceiverConsole\GreetingsScopedReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\ASBTaskQueue\GreetingsSender.Web\GreetingsSender.Web.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\ASBTaskQueue\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\ASBTaskQueue\GreetingsWorker\GreetingsWorker.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\ASBTaskQueue\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/TaskQueue/AWSTaskQueue/">
+    <Project Path="samples\TaskQueue\AWSTaskQueue\GreetingsPumper\GreetingsPumper.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\AWSTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\AWSTaskQueue\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\AWSTaskQueue\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/TaskQueue/KafkaSchemaRegistry/">
+    <Project Path="samples\TaskQueue\KafkaSchemaRegistry\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\KafkaSchemaRegistry\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\KafkaSchemaRegistry\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/TaskQueue/KafkaTaskQueue/">
+    <Project Path="samples\TaskQueue\KafkaTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\KafkaTaskQueue\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\KafkaTaskQueue\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/TaskQueue/MsSqlMessagingGateway/">
+    <Project Path="samples\TaskQueue\MsSqlMessagingGateway\CompetingReceiverConsole\CompetingReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\MsSqlMessagingGateway\CompetingSender\CompetingSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\MsSqlMessagingGateway\Events\Events.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\MsSqlMessagingGateway\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\MsSqlMessagingGateway\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <File Path="samples\TaskQueue\MsSqlMessagingGateway\BrighterSqlQueue.sql" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/MultiBus/">
+    <Project Path="samples\TaskQueue\MultiBus\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\MultiBus\GreetingsSender\GreetingsSender.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\MultiBus\Greetings\Greetings.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/TaskQueue/RedisTaskQueue/">
+    <Project Path="samples\TaskQueue\RedisTaskQueue\GreetingsReceiver\GreetingsReceiver.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\RedisTaskQueue\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\RedisTaskQueue\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/TaskQueue/RMQRequestReply/">
+    <Project Path="samples\TaskQueue\RMQRequestReply\GreetingsClient\GreetingsClient.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\RMQRequestReply\GreetingsServer\GreetingsServer.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\RMQRequestReply\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/TaskQueue/RMQTaskQueue/">
+    <Project Path="samples\TaskQueue\RMQTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\RMQTaskQueue\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\TaskQueue\RMQTaskQueue\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/Transforms/" />
+  <Folder Name="/samples/Transforms/ClaimCheck/">
+    <Project Path="samples\Transforms\AWSTransfomers\ClaimCheck\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Transforms\AWSTransfomers\ClaimCheck\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Transforms\AWSTransfomers\ClaimCheck\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/Transforms/CloudEvents/">
+    <Project Path="samples\Transforms\AWSTransfomers\CloudEvents\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Transforms\AWSTransfomers\CloudEvents\GreetingsSender\GreetingsSender.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Transforms\AWSTransfomers\CloudEvents\Greetings\Greetings.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/Transforms/Compression/">
+    <Project Path="samples\Transforms\AWSTransfomers\Compression\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Transforms\AWSTransfomers\Compression\GreetingsSender\GreetingsSender.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\Transforms\AWSTransfomers\Compression\Greetings\Greetings.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/WebAPI/" />
+  <Folder Name="/samples/WebAPI/WebAPI_Common/">
+    <Project Path="samples\WebAPI\WebAPI_Common\DbMaker\DbMaker.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Common\Greetings_Migrations\Greetings_Migrations.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Common\Salutations_Migrations\Salutations_Migrations.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Common\TransportMaker\TransportMaker.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <File Path="samples\WebAPI\WebAPI_Common\README.md" />
+  </Folder>
+  <Folder Name="/samples/WebAPI/WebAPI_Dapper/">
+    <Project Path="samples\WebAPI\WebAPI_Dapper\GreetingsApp\GreetingsApp.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dapper\GreetingsWeb\GreetingsWeb.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dapper\Greetings_Sweeper\Greetings_Sweeper.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dapper\SalutationAnalytics\SalutationAnalytics.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dapper\SalutationApp\SalutationApp.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dapper\Salutation_Sweeper\Salutation_Sweeper.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <File Path="samples\WebAPI\WebAPI_Dapper\README.md" />
+    <File Path="samples\WebAPI\WebAPI_Dapper\tests.http" />
+  </Folder>
+  <Folder Name="/samples/WebAPI/WebAPI_Dynamo/">
+    <Project Path="samples\WebAPI\WebAPI_Dynamo\GreetingsApp\GreetingsApp.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dynamo\GreetingsWeb\GreetingsWeb.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dynamo\Greetings_Sweeper\Greetings_Sweeper.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dynamo\SalutationAnalytics\SalutationAnalytics.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_Dynamo\SalutationApp\SalutationApp.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <File Path="samples\WebAPI\WebAPI_Dynamo\README.md" />
+    <File Path="samples\WebAPI\WebAPI_Dynamo\tests.http" />
+  </Folder>
+  <Folder Name="/samples/WebAPI/WebAPI_EFCore/">
+    <Project Path="samples\WebAPI\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_EFCore\GreetingsWeb\GreetingsWeb.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_EFCore\Greetings_Sweeper\Greetings_Sweeper.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_EFCore\MigrationService\MigrationService.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_EFCore\SalutationAnalytics\SalutationAnalytics.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_EFCore\SalutationApp\SalutationApp.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_EFCore\WebAPI_EFCore.AppHost\WebAPI_EFCore.AppHost.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="samples\WebAPI\WebAPI_EFCore\WebAPI_EFCore.ServiceDefaults\WebAPI_EFCore.ServiceDefaults.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <File Path="samples\WebAPI\WebAPI_EFCore\README.md" />
+    <File Path="samples\WebAPI\WebAPI_EFCore\tests.http" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="src\Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests\Paramore.Brighter.AWS.Tests\Paramore.Brighter.AWS.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.AWSScheduler.Tests\Paramore.Brighter.AWSScheduler.Tests.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.Azure.Tests\Paramore.Brighter.Azure.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.AzureServiceBus.Tests\Paramore.Brighter.AzureServiceBus.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.Core.Tests\Paramore.Brighter.Core.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.DynamoDB.Tests\Paramore.Brighter.DynamoDB.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.Extensions.Tests\Paramore.Brighter.Extensions.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.Hangfire.Tests\Paramore.Brighter.Hangfire.Tests.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.InMemory.Tests\Paramore.Brighter.InMemory.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.Kafka.Tests\Paramore.Brighter.Kafka.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.MongoDb.Tests\Paramore.Brighter.MongoDb.Tests.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.MQTT.Tests\Paramore.Brighter.MQTT.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.MSSQL.Tests\Paramore.Brighter.MSSQL.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.MySQL.Tests\Paramore.Brighter.MySQL.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.PostgresSQL.Tests\Paramore.Brighter.PostgresSQL.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.Quartz.Tests\Paramore.Brighter.Quartz.Tests.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.Redis.Tests\Paramore.Brighter.Redis.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.RMQ.Async.Tests\Paramore.Brighter.RMQ.Async.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.RMQ.Sync.Tests\Paramore.Brighter.RMQ.Sync.Tests.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Brighter.Sqlite.Tests\Paramore.Brighter.Sqlite.Tests.csproj">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <Project Path="tests\Paramore.Test.Helpers\Paramore.Test.Helpers.csproj" Type="Classic C#">
+      <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+      <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+      <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+      <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+    </Project>
+    <File Path="tests\README.md" />
+  </Folder>
+  <Project Path="src\Paramore.Brighter.Archive.Azure\Paramore.Brighter.Archive.Azure.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Inbox.DynamoDB\Paramore.Brighter.Inbox.DynamoDB.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Inbox.MongoDb\Paramore.Brighter.Inbox.MongoDb.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Inbox.MsSql\Paramore.Brighter.Inbox.MsSql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Inbox.MySql\Paramore.Brighter.Inbox.MySql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Inbox.Postgres\Paramore.Brighter.Inbox.Postgres.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Inbox.Sqlite\Paramore.Brighter.Inbox.Sqlite.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Locking.Azure\Paramore.Brighter.Locking.Azure.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Locking.DynamoDB\Paramore.Brighter.Locking.DynamoDB.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Locking.MongoDb\Paramore.Brighter.Locking.MongoDb.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Locking.MySql\Paramore.Brighter.Locking.MySql.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Locking.PostgresSql\Paramore.Brighter.Locking.PostgresSql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessageScheduler.Aws\Paramore.Brighter.MessageScheduler.Aws.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessageScheduler.Azure\Paramore.Brighter.MessageScheduler.Azure.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessageScheduler.Hangfire\Paramore.Brighter.MessageScheduler.Hangfire.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessageScheduler.Quartz\Paramore.Brighter.MessageScheduler.Quartz.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessagingGateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessagingGateway.MQTT\Paramore.Brighter.MessagingGateway.MQTT.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessagingGateway.MsSql\Paramore.Brighter.MessagingGateway.MsSql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessagingGateway.Redis\Paramore.Brighter.MessagingGateway.Redis.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessagingGateway.RMQ.Async\Paramore.Brighter.MessagingGateway.RMQ.Async.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MessagingGateway.RMQ.Sync\Paramore.Brighter.MessagingGateway.RMQ.Sync.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MongoDb\Paramore.Brighter.MongoDb.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MsSql.Azure\Paramore.Brighter.MsSql.Azure.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MsSql.EntityFrameworkCore\Paramore.Brighter.MsSql.EntityFrameworkCore.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MySql.EntityFrameworkCore\Paramore.Brighter.MySql.EntityFrameworkCore.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Outbox.DynamoDB\Paramore.Brighter.Outbox.DynamoDB.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Outbox.Hosting\Paramore.Brighter.Outbox.Hosting.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Outbox.MongoDb\Paramore.Brighter.Outbox.MongoDb.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Outbox.PostgreSql\Paramore.Brighter.Outbox.PostgreSql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.PostgreSql.EntityFrameworkCore\Paramore.Brighter.PostgreSql.EntityFrameworkCore.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.ServiceActivator.Control.Api\Paramore.Brighter.ServiceActivator.Control.Api.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.ServiceActivator.Control\Paramore.Brighter.ServiceActivator.Control.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.ServiceActivator.Extensions.Diagnostics\Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.ServiceActivator.Extensions.Hosting\Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Tranformers.AWS\Paramore.Brighter.Tranformers.AWS.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter.Transformers.Azure\Paramore.Brighter.Transformers.Azure.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+  <Project Path="src\Paramore.Brighter\Paramore.Brighter.csproj">
+    <Configuration Solution="Debug|Mixed Platforms" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|Mixed Platforms" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
+</Solution>
