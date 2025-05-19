@@ -134,7 +134,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             MessageId = message.Id.ToString();
             MessageType = message.Header.MessageType.ToString();
             PartitionKey = message.Header.PartitionKey;
-            ReplyTo = message.Header.ReplyTo;
+            ReplyTo = message.Header.ReplyTo?.Value;
             Topic = message.Header.Topic;
             TopicShard = $"{Topic}_{shard}";
             ExpiresAt = expiresAt;

@@ -49,22 +49,44 @@ public class SnsMessagePublisher
 
     public async Task<string?> PublishAsync(Message message)
     {
-        var messageString = message.Body.Value;
-        var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);
+        var publishRequest = CreatePublishRequest(message);
         
-        if (_sqsType == SqsType.Fifo)
+        var response = await _client.PublishAsync(publishRequest);
+        if (response.HttpStatusCode is System.Net.HttpStatusCode.OK or System.Net.HttpStatusCode.Created
+            or System.Net.HttpStatusCode.Accepted)
         {
-            publishRequest.MessageGroupId = message.Header.PartitionKey;
-            if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
-            {
-                publishRequest.MessageDeduplicationId = (string)deduplicationId;
-            }
+            return response.MessageId;
         }
 
-        // Combine cloud event headers into a single JSON object
-        string cloudEventHeadersJson = CreateCloudEventHeadersJson(message);
+        return null;
+    }
 
-        // We can set up to 10 attributes; we use a single JSON object as the cloud event headers; we can set nine others directly
+    private PublishRequest CreatePublishRequest(Message message)
+    {
+        var publishRequest = new PublishRequest(_topicArn, message.Body.Value, message.Header.Subject);
+        
+        ConfigureFifoSettings(_sqsType, message, publishRequest);
+
+        var cloudEventHeadersJson = CreateCloudEventHeadersJson(message);
+        publishRequest.MessageAttributes = BuildMessageAttributes(message, cloudEventHeadersJson);
+
+        return publishRequest;
+    }
+
+    private void ConfigureFifoSettings(SqsType sqsType, Message message, PublishRequest request)
+    {
+        if (sqsType != SqsType.Fifo)
+            return;
+        
+        request.MessageGroupId = message.Header.PartitionKey;
+        if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
+        {
+            request.MessageDeduplicationId = (string)deduplicationId;
+        }
+    }
+
+    private Dictionary<string, MessageAttributeValue> BuildMessageAttributes(Message message, string cloudEventHeadersJson)
+    {
         var messageAttributes = new Dictionary<string, MessageAttributeValue>
         {
             [HeaderNames.Id] = new (){ StringValue = message.Header.MessageId, DataType = "String" },
@@ -75,28 +97,19 @@ public class SnsMessagePublisher
             [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRcf3339()), DataType = "String" },
         };
 
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+        if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
             messageAttributes[HeaderNames.CorrelationId] = new MessageAttributeValue 
                 { StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String" };
         
-        if (!string.IsNullOrEmpty(message.Header.ReplyTo))
+        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
             messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue { StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String" });
         
-        //we have to add some attributes into our bag, to prevent overloading the message attributes
         message.Header.Bag[HeaderNames.HandledCount] = message.Header.HandledCount.ToString(CultureInfo.InvariantCulture);
 
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new MessageAttributeValue { StringValue = Convert.ToString(bagJson), DataType = "String" };
-        publishRequest.MessageAttributes = messageAttributes;
 
-        var response = await _client.PublishAsync(publishRequest);
-        if (response.HttpStatusCode is System.Net.HttpStatusCode.OK or System.Net.HttpStatusCode.Created
-            or System.Net.HttpStatusCode.Accepted)
-        {
-            return response.MessageId;
-        }
-
-        return null;
+        return messageAttributes;
     }
 
     private static string CreateCloudEventHeadersJson(Message message)

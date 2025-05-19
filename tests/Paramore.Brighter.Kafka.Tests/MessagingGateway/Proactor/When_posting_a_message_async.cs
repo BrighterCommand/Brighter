@@ -82,7 +82,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
                 PartitionKey = _partitionKey,
                 ContentType = "application/json",
                 Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
-                ReplyTo = "com.brightercommand.replyto",
+                ReplyTo = new RoutingKey("com.brightercommand.replyto"),
                 CorrelationId = Guid.NewGuid().ToString(),
                 Delayed = TimeSpan.FromMilliseconds(10),
                 HandledCount = 2,

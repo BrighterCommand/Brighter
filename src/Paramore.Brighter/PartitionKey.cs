@@ -49,5 +49,15 @@ namespace Paramore.Brighter
         /// An empty partition key indicates that no specific partitioning is required for the message.
         /// </remarks>
         public static PartitionKey Empty => new("");
+
+        /// <summary>
+        /// Determines whether the specified partition key is null or empty.
+        /// </summary>
+        /// <param name="partitionKey">The partition key</param>
+        /// <returns></returns>
+        public static bool IsNullOrEmpty(PartitionKey? partitionKey)
+        {
+            return (partitionKey == null || partitionKey.Value == string.Empty);    
+        }
     }
 }

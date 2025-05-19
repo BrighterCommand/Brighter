@@ -31,6 +31,7 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -45,77 +46,119 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageCreator>();
 
+        private sealed class MessageCreationResult
+        {
+            public HeaderResult<RoutingKey> Topic { get; set; }
+            public HeaderResult<string> MessageId { get; set; }
+            public HeaderResult<MessageType> MessageType { get; set; }
+            public HeaderResult<DateTimeOffset> TimeStamp { get; set; }
+            public HeaderResult<string> CorrelationId { get; set; }
+            public HeaderResult<string> PartitionKey { get; set; }
+            public HeaderResult<string> ReplyTo { get; set; }
+            public HeaderResult<string> ContentType { get; set; }
+            public HeaderResult<TimeSpan> Delay { get; set; }
+            public HeaderResult<int> HandledCount { get; set; }
+            public HeaderResult<string> Subject { get; set; }
+            public HeaderResult<Uri> DataSchema { get; set; }
+            public HeaderResult<string> Type { get; set; }
+            public HeaderResult<Uri> Source { get; set; }
+            public HeaderResult<string> TraceParent { get; set; }
+            public HeaderResult<string> TraceState { get; set; }
+            public HeaderResult<string> BaggageHeader { get; set; }
+            public Baggage Baggage { get; set; } = new Baggage();
+        }
+
         public Message CreateMessage(ConsumeResult<string, byte[]> consumeResult)
         {
-            var topic = HeaderResult<RoutingKey>.Empty();
-            var messageId = HeaderResult<string>.Empty();
-
-            Message message;
             try
             {
-                topic = ReadTopic(consumeResult.Topic);
-                messageId = ReadMessageId(consumeResult.Message.Headers);
-                var timeStamp = ReadTimeStamp(consumeResult.Message.Headers);
-                var messageType = ReadMessageType(consumeResult.Message.Headers);
-                var correlationId = ReadCorrelationId(consumeResult.Message.Headers);
-                var partitionKey = ReadPartitionKey(consumeResult.Message);
-                var replyTo = ReadReplyTo(consumeResult.Message.Headers);
-                var contentType = ReadContentType(consumeResult.Message.Headers);
-                var delay = ReadDelay(consumeResult.Message.Headers);
-                var handledCount = ReadHandledCount(consumeResult.Message.Headers);
-                var subject = ReadSubject(consumeResult.Message.Headers);
-                var dataSchema = ReadDataSchema(consumeResult.Message.Headers);
-                var type = ReadType(consumeResult.Message.Headers);
-                var source = ReadSource(consumeResult.Message.Headers);
-                var traceParent = ReadTraceParent(consumeResult.Message.Headers);
-                var traceState = ReadTraceState(consumeResult.Message.Headers);
-                var baggage = ReadBaggage(consumeResult.Message.Headers);
-
-                if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success))
-                {
-                    message = FailureMessage(topic, messageId);
-                }
-                else
-                {
-                    var messageHeader = new MessageHeader(
-                        messageId: messageId.Result,
-                        topic: topic.Result,
-                        messageType.Result,
-                        source: source.Result,
-                        type: type.Result,
-                        timeStamp: timeStamp.Success ? timeStamp.Result : DateTimeOffset.UtcNow,
-                        correlationId: correlationId.Success ? correlationId.Result : "",
-                        replyTo: replyTo.Success ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
-                        contentType: contentType.Success ? contentType.Result : "plain/text",
-                        partitionKey: partitionKey.Success ? partitionKey.Result : consumeResult.Message.Key,
-                        handledCount: handledCount.Success ? handledCount.Result : 0,
-                        dataSchema: dataSchema.Result,
-                        subject: subject.Result,
-                        delayed: delay.Success ? delay.Result : TimeSpan.Zero,
-                        traceParent: traceParent.Result,
-                        traceState: traceState.Result,
-                        baggage: baggage.Result
-                    );
-
-                    message = new Message(messageHeader,
-                        new MessageBody(consumeResult.Message.Value, messageHeader.ContentType ?? ContentType.TextPlain));
-
-                    if (!message.Header.Bag.ContainsKey(HeaderNames.PARTITION_OFFSET))
-                        message.Header.Bag.Add(HeaderNames.PARTITION_OFFSET, consumeResult.TopicPartitionOffset);
-
-                    consumeResult.Message.Headers.Each(header =>
-                    {
-                        ReadBagEntry(header, message);
-                    });
-                }
+                var headerResults = ReadAllHeaders(consumeResult);
+                return CreateMessageFromHeaders(headerResults, consumeResult);
             }
             catch (Exception e)
             {
                 Log.FailedToCreateMessageFromKafkaOffset(s_logger, e);
-                message = FailureMessage(topic, messageId);
+                return FailureMessage(HeaderResult<RoutingKey>.Empty(), HeaderResult<string>.Empty());
+            }
+        }
+
+        private MessageCreationResult ReadAllHeaders(ConsumeResult<string, byte[]> consumeResult)
+        {
+            var result = new MessageCreationResult
+            {
+                Topic = ReadTopic(consumeResult.Topic),
+                MessageId = ReadMessageId(consumeResult.Message.Headers),
+                TimeStamp = ReadTimeStamp(consumeResult.Message.Headers),
+                MessageType = ReadMessageType(consumeResult.Message.Headers),
+                CorrelationId = ReadCorrelationId(consumeResult.Message.Headers),
+                PartitionKey = ReadPartitionKey(consumeResult.Message),
+                ReplyTo = ReadReplyTo(consumeResult.Message.Headers),
+                ContentType = ReadContentType(consumeResult.Message.Headers),
+                Delay = ReadDelay(consumeResult.Message.Headers),
+                HandledCount = ReadHandledCount(consumeResult.Message.Headers),
+                Subject = ReadSubject(consumeResult.Message.Headers),
+                DataSchema = ReadDataSchema(consumeResult.Message.Headers),
+                Type = ReadType(consumeResult.Message.Headers),
+                Source = ReadSource(consumeResult.Message.Headers),
+                TraceParent = ReadTraceParent(consumeResult.Message.Headers),
+                TraceState = ReadTraceState(consumeResult.Message.Headers),
+                BaggageHeader = ReadBaggage(consumeResult.Message.Headers)
+            };
+
+            if (result.BaggageHeader.Success)
+                result.Baggage.LoadBaggage(result.BaggageHeader.Result);
+
+            return result;
+        }
+
+        private Message CreateMessageFromHeaders(MessageCreationResult headers, ConsumeResult<string, byte[]> consumeResult)
+        {
+            if (!(headers.Topic.Success && headers.MessageId.Success && headers.MessageType.Success && headers.TimeStamp.Success))
+            {
+                return FailureMessage(headers.Topic, headers.MessageId);
             }
 
+            var message = SuccessMessage(headers, consumeResult);
+            AddPartitionOffset(message, consumeResult);
+            AddCustomHeaders(message, consumeResult.Message.Headers);
+            
             return message;
+        }
+
+        private Message SuccessMessage(MessageCreationResult headers, ConsumeResult<string, byte[]> consumeResult)
+        {
+            var messageHeader = new MessageHeader(
+                messageId: headers.MessageId.Result,
+                topic: headers.Topic.Result,
+                headers.MessageType.Result,
+                source: headers.Source.Result,
+                type: headers.Type.Result,
+                timeStamp: headers.TimeStamp.Success ? headers.TimeStamp.Result : DateTimeOffset.UtcNow,
+                correlationId: headers.CorrelationId.Success ? headers.CorrelationId.Result : "",
+                replyTo: headers.ReplyTo.Success ? new RoutingKey(headers.ReplyTo.Result) : RoutingKey.Empty,
+                contentType: headers.ContentType.Success ? headers.ContentType.Result : "plain/text",
+                partitionKey: headers.PartitionKey.Success ? headers.PartitionKey.Result : consumeResult.Message.Key,
+                handledCount: headers.HandledCount.Success ? headers.HandledCount.Result : 0,
+                dataSchema: headers.DataSchema.Result,
+                subject: headers.Subject.Result,
+                delayed: headers.Delay.Success ? headers.Delay.Result : TimeSpan.Zero,
+                traceParent: headers.TraceParent.Result,
+                traceState: headers.TraceState.Result,
+                baggage: headers.Baggage
+            );
+
+            return new Message(messageHeader, new MessageBody(consumeResult.Message.Value, messageHeader.ContentType ?? ContentType.TextPlain));
+        }
+
+        private void AddPartitionOffset(Message message, ConsumeResult<string, byte[]> consumeResult)
+        {
+            if (!message.Header.Bag.ContainsKey(HeaderNames.PARTITION_OFFSET))
+                message.Header.Bag.Add(HeaderNames.PARTITION_OFFSET, consumeResult.TopicPartitionOffset);
+        }
+
+        private void AddCustomHeaders(Message message, Headers headers)
+        {
+            headers.Each(header => ReadBagEntry(header, message));
         }
 
         private Message FailureMessage(HeaderResult<RoutingKey> topic, HeaderResult<string> messageId)

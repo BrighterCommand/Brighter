@@ -26,6 +26,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
@@ -54,7 +55,8 @@ public class RmqMessageProducerSendMessageTestsAsync : IDisposable, IAsyncDispos
         var delayed = TimeSpan.FromSeconds(30);
         var traceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
         var traceState = "congo=t61rcWkgMzE";
-        var baggage = "userId=alice";
+        var baggage = new Baggage();
+        baggage.LoadBaggage("userId=alice");
 
         _message = new Message(
             new MessageHeader(

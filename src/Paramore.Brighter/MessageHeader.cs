@@ -185,7 +185,7 @@ namespace Paramore.Brighter
         /// do not have to filter replies intended for other listeners.
         /// </summary>
         /// <value>The reply to.</value>
-        public string? ReplyTo { get; set; }
+        public RoutingKey? ReplyTo { get; set; }
         
         /// <summary>
         /// OPTIONAL
@@ -306,7 +306,7 @@ namespace Paramore.Brighter
             TimeSpan? delayed = null,
             TraceParent? traceParent = null,
             TraceState? traceState = null,
-            string? baggage = null)
+            Baggage? baggage = null)
         {
             MessageId = messageId;
             Topic = topic;
@@ -324,7 +324,7 @@ namespace Paramore.Brighter
             Subject = subject;
             TraceParent = traceParent;
             TraceState = traceState;
-            Baggage.LoadBaggage(baggage);
+            Baggage = baggage ?? new Baggage();
         }
 
         /// <summary>

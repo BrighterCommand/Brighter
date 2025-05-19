@@ -56,5 +56,15 @@ namespace Paramore.Brighter
         /// Represents the standard "application/octet-stream" content type.
         /// </summary>
         public static ContentType OctetStream => new("application/octet");
+
+        /// <summary>
+        /// Determines if the provided ContentType is null or empty.
+        /// </summary>
+        /// <param name="contentType">The content type under test</param>
+        /// <returns></returns>
+        public static bool IsNullOrEmpty(ContentType? contentType)
+        {
+           return contentType == null || string.IsNullOrEmpty(contentType.Value);
+        }
     }
 }

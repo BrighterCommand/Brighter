@@ -18,6 +18,14 @@ namespace Paramore.Brighter
         public string Value { get; }
 
         /// <summary>
+        /// Gets an empty Id instance.
+        /// </summary>
+        /// <remarks>
+        ///  Should be used to indicate a lack of value or an uninitialized state.
+        /// </remarks>
+        public static Id? Empty { get; } = new(string.Empty);
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Id"/> class.
         /// </summary>
         /// <param name="value">The string value of the identifier</param>
@@ -34,6 +42,16 @@ namespace Paramore.Brighter
         public static Id Create(string? value)
         {
             return new Id(value ?? Guid.NewGuid().ToString());
+        }
+       
+        /// <summary>
+        /// Returns true if the Id is null or empty.
+        /// </summary>
+        /// <param name="id">The id to test</param>
+        /// <returns></returns>
+        public static bool IsNullOrEmpty(Id? id)
+        {
+            return id == null || string.IsNullOrEmpty(id.Value);
         }
 
         /// <summary>

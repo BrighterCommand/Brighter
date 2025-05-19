@@ -138,25 +138,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     new HeaderResult<string>(string.Empty, false)
                 );
             
-            //Read Message Id
             var messageId = ReadMessageId(headers);
-            //Read TimeStamp
             var timeStamp = ReadTimeStamp(headers);
-            //Read Topic
             var topic = ReadTopic(headers);
-            //Read MessageType
             var messageType = ReadMessageType(headers);
-           //Read HandledCount
             var handledCount = ReadHandledCount(headers);
-            //Read DelayedMilliseconds
             var delayed = ReadDelay(headers);
-            //Read MessageBag
             var bag = ReadMessageBag(headers);
-            //reply to
             var replyTo = ReadReplyTo(headers);
-            //content type
             var contentType = ReadContentType(headers);
-            //correlation id
             var correlationId = ReadCorrelationId(headers);
             
             //TODO:CLOUD_EVENTS parse from headers
@@ -172,25 +162,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     topic:topic.Result, 
                     messageType:messageType.Result,
                     source: null,
-                    type: "",
+                    type: string.Empty,
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                    correlationId: "",
+                    correlationId: correlationId.Success ? correlationId.Result : Id.Empty,
                     replyTo: new RoutingKey(replyTo.Result),
-                    contentType: "",
+                    contentType: contentType.Success ? contentType.Result : ContentType.TextPlain,
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: null,
                     delayed: delayed.Result);
-
-                if (replyTo.Success)
-                {
-                    messageHeader.ReplyTo = replyTo.Result;
-                }
-
-                if (contentType.Success)
-                {
-                    messageHeader.ContentType = contentType.Result;
-                }
 
                 if (bag.Success)
                 {
@@ -198,11 +178,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     {
                         messageHeader.Bag.Add(key, headers[key]);
                     }
-                }
-
-                if (correlationId.Success)
-                {
-                    messageHeader.CorrelationId = correlationId.Result;
                 }
 
                 return messageHeader;

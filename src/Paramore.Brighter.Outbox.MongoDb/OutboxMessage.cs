@@ -34,7 +34,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
         MessageId = message.Id;
         MessageType = message.Header.MessageType.ToString();
         PartitionKey = message.Header.PartitionKey;
-        ReplyTo = message.Header.ReplyTo;
+        ReplyTo = message.Header.ReplyTo?.Value;
         Topic = message.Header.Topic;
         ExpireAfterSeconds = expireAfterSeconds;
     }

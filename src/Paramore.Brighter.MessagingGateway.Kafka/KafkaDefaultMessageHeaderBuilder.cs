@@ -41,129 +41,125 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public Headers Build(Message message)
         {
-            var headers = new Headers
-            {
-                // Cloud event
-                new Header(HeaderNames.CLOUD_EVENTS_ID, message.Header.MessageId.Value.ToByteArray()),
-                new Header(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, message.Header.SpecVersion.ToByteArray()),
-                new Header(HeaderNames.CLOUD_EVENTS_TYPE, message.Header.Type.ToByteArray()),
-                new Header(HeaderNames.CLOUD_EVENTS_SOURCE, message.Header.Source.ToString().ToByteArray()),
-                new Header(HeaderNames.CLOUD_EVENTS_TIME, message.Header.TimeStamp.ToRcf3339().ToByteArray()),
-                
-                // Brighter custom headers
-                new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
-                new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()),
-                
-                // Backward compatibility with old brighter version
-                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.Value.ToByteArray()),
-            };
+            var headers = new Headers();
             
+            AddCloudEventHeaders(headers, message);
+            AddConditionalHeaders(headers, message);
+            AddStandardHeaders(headers, message);
+            AddBagHeaders(headers, message);
+
+            return headers;
+        }
+
+        private void AddCloudEventHeaders(Headers headers, Message message)
+        {
+            headers.Add(new Header(HeaderNames.CLOUD_EVENTS_ID, message.Header.MessageId.Value.ToByteArray()));
+            headers.Add(new Header(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, message.Header.SpecVersion.ToByteArray()));
+            headers.Add(new Header(HeaderNames.CLOUD_EVENTS_TYPE, message.Header.Type.ToByteArray()));
+            headers.Add(new Header(HeaderNames.CLOUD_EVENTS_SOURCE, message.Header.Source.ToString().ToByteArray()));
+            headers.Add(new Header(HeaderNames.CLOUD_EVENTS_TIME, message.Header.TimeStamp.ToRcf3339().ToByteArray()));
+            
+            // Brighter custom headers
+            headers.Add(new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()));
+            headers.Add(new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()));
+            headers.Add(new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.Value.ToByteArray()));
+        }
+
+        private void AddConditionalHeaders(Headers headers, Message message)
+        {
             if (!string.IsNullOrEmpty(message.Header.Subject))
-            {
                 headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject.ToByteArray());
-            }
             
             if (message.Header.DataSchema != null)
-            {
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString().ToByteArray());
-            }
             
-            if (!string.IsNullOrEmpty(message.Header.TraceParent))
-            {
+            if (!TraceParent.IsNullOrEmpty(message.Header.TraceParent))
                 headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent.Value.ToByteArray());
-            }
             
-            if (!string.IsNullOrEmpty(message.Header.TraceState))
-            {
+            if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
                 headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState.Value.ToByteArray());
-            }
             
             if (message.Header.Baggage.Any())
-            {
                 headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString().ToByteArray());
-            }
                             
             if (!string.IsNullOrEmpty(message.Header.ContentType))
-            {
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
-            }
-           
-            
-            var timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
-            if (message.Header.TimeStamp.DateTime != default)
-            {
-                timeStampAsString = message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture);
-            }
+        }
 
-            headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
+        private void AddStandardHeaders(Headers headers, Message message)
+        {
+            AddTimestampHeader(headers, message);
             
-            if (!string.IsNullOrEmpty(message.Header.ContentType))
-            {
+            if (!ContentType.IsNullOrEmpty(message.Header.ContentType))
                 headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
-            }
             
-            if (message.Header.CorrelationId != string.Empty)
-            {
+            if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.Value.ToByteArray());
-            }
 
-            if (!string.IsNullOrEmpty(message.Header.PartitionKey))
-            {
+            if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
                 headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.Value.ToByteArray());
-            }
 
-            if (!string.IsNullOrEmpty(message.Header.ReplyTo))
-            {
-                headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
-            }
+            if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
+                headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.Value.ToByteArray());
 
             headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.Delayed.TotalMilliseconds.ToString(CultureInfo.InvariantCulture).ToByteArray());
             headers.Add(HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString().ToByteArray());
+        }
 
+        private void AddTimestampHeader(Headers headers, Message message)
+        {
+            var timeStampAsString = message.Header.TimeStamp.DateTime != default
+                ? message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture)
+                : DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
+            
+            headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
+        }
 
+        private void AddBagHeaders(Headers headers, Message message)
+        {
             message.Header.Bag
                 .Where(x => !BrighterDefinedHeaders.HeadersToReset.Contains(x.Key))
-                .Each(header =>
-                {
-                    switch (header.Value)
-                    {
-                        case string stringValue:
-                            headers.Add(header.Key, stringValue.ToByteArray());
-                            break;
-                        case DateTimeOffset dateTimeOffsetValue:
-                            headers.Add(header.Key, dateTimeOffsetValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
-                            break;
-                        case DateTime dateTimeValue:
-                            headers.Add(header.Key, dateTimeValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
-                            break;
-                        case Guid guidValue:
-                            headers.Add(header.Key, guidValue.ToString().ToByteArray());
-                            break;
-                        case bool boolValue:
-                            headers.Add(header.Key, boolValue.ToString().ToByteArray());
-                            break;
-                        case int intValue:
-                            headers.Add(header.Key, intValue.ToString().ToByteArray());
-                            break;
-                        case double doubleValue:
-                            headers.Add(header.Key, doubleValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
-                            break;
-                        case float floatValue:
-                            headers.Add(header.Key, floatValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
-                            break;
-                        case long longValue:
-                            headers.Add(header.Key, longValue.ToString().ToByteArray());
-                            break;
-                        case byte[] byteArray:
-                            headers.Add(header.Key, byteArray);
-                            break;
-                        default:
-                            headers.Add(header.Key, header.Value.ToString().ToByteArray());
-                            break;
-                    }
-                });
+                .Each(header => AddBagHeader(headers, header.Key, header.Value));
+        }
 
-            return headers;
+        private void AddBagHeader(Headers headers, string key, object value)
+        {
+            switch (value)
+            {
+                case string stringValue:
+                    headers.Add(key, stringValue.ToByteArray());
+                    break;
+                case DateTimeOffset dateTimeOffsetValue:
+                    headers.Add(key, dateTimeOffsetValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
+                    break;
+                case DateTime dateTimeValue:
+                    headers.Add(key, dateTimeValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
+                    break;
+                case Guid guidValue:
+                    headers.Add(key, guidValue.ToString().ToByteArray());
+                    break;
+                case bool boolValue:
+                    headers.Add(key, boolValue.ToString().ToByteArray());
+                    break;
+                case int intValue:
+                    headers.Add(key, intValue.ToString().ToByteArray());
+                    break;
+                case double doubleValue:
+                    headers.Add(key, doubleValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
+                    break;
+                case float floatValue:
+                    headers.Add(key, floatValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
+                    break;
+                case long longValue:
+                    headers.Add(key, longValue.ToString().ToByteArray());
+                    break;
+                case byte[] byteArray:
+                    headers.Add(key, byteArray);
+                    break;
+                default:
+                    headers.Add(key, value.ToString().ToByteArray());
+                    break;
+            }
         }
     }
 }

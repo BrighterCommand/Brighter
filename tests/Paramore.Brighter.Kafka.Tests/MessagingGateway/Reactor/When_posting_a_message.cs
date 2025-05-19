@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
+using Paramore.Brighter.Observability;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -79,7 +80,8 @@ public class KafkaMessageProducerSendTests : IDisposable
         var schema = new Uri("http://schema.com");
         const string traceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
         const string traceState = "congo=t61rcWkgMzE";
-        const string baggage = "userId=alice,serverNode=DF:28,isProduction=false";
+        var baggage = new Baggage();
+        baggage.LoadBaggage("userId=alice,serverNode=DF:28,isProduction=false");
         var delayMilliseconds = TimeSpan.FromMilliseconds(5000);
 
         var header = new MessageHeader(

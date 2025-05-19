@@ -60,7 +60,7 @@ public class KafkaDefaultMessageHeaderBuilderTests
         Assert.Equal(message.Header.CorrelationId.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.CORRELATION_ID));
         Assert.Equal(message.Header.PartitionKey.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.PARTITIONKEY));
         Assert.Equal(message.Header.ContentType.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.CONTENT_TYPE));
-        Assert.Equal(message.Header.ReplyTo.ToByteArray(), headers.GetLastBytes(HeaderNames.REPLY_TO));
+        Assert.Equal(message.Header.ReplyTo.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.REPLY_TO));
         Assert.Equal(message.Header.Delayed.TotalMilliseconds.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.DELAYED_MILLISECONDS));
         Assert.Equal(message.Header.HandledCount.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.HANDLED_COUNT));
         Assert.Equal(message.Header.Type.ToByteArray(), headers.GetLastBytes(HeaderNames.CLOUD_EVENTS_TYPE));

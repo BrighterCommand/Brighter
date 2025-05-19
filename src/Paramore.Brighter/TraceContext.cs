@@ -43,6 +43,16 @@ namespace Paramore.Brighter
         /// <param name="value"></param>
         /// <returns></returns>
         public static implicit operator TraceParent(string value) => new(value);
+
+        /// <summary>
+        /// Determines if the TraceParent is null or empty.
+        /// </summary>
+        /// <param name="traceParent">The traceparent to check</param>
+        /// <returns></returns>
+        public static bool IsNullOrEmpty(TraceParent? traceParent)
+        {
+           return traceParent == null || string.IsNullOrEmpty(traceParent.Value);
+        }
     }
 
     /// <summary>
@@ -91,5 +101,15 @@ namespace Paramore.Brighter
         /// <param name="value"></param>
         /// <returns></returns>
         public static implicit operator TraceState(string value) => new(value);
+
+        /// <summary>
+        /// Determines if the TraceState is null or empty.
+        /// </summary>
+        /// <param name="traceState">The traceState</param>
+        /// <returns></returns>
+        public static bool IsNullOrEmpty(TraceState? traceState)
+        {
+            return traceState == null || string.IsNullOrEmpty(traceState.Value);
+        }
     }
 }
