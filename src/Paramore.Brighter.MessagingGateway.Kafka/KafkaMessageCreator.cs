@@ -98,7 +98,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     );
 
                     message = new Message(messageHeader,
-                        new MessageBody(consumeResult.Message.Value, messageHeader.ContentType ?? "plain/text"));
+                        new MessageBody(consumeResult.Message.Value, messageHeader.ContentType ?? ContentType.TextPlain));
 
                     if (!message.Header.Bag.ContainsKey(HeaderNames.PARTITION_OFFSET))
                         message.Header.Bag.Add(HeaderNames.PARTITION_OFFSET, consumeResult.TopicPartitionOffset);

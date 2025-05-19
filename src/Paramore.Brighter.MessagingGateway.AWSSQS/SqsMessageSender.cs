@@ -120,7 +120,7 @@ public partial class SqsMessageSender
         var cloudEventHeaders = new Dictionary<string, string>
         {
             [HeaderNames.Id] = Convert.ToString(message.Header.MessageId),
-            [HeaderNames.DataContentType] = message.Header.ContentType ?? "plain/text",
+            [HeaderNames.DataContentType] = message.Header.ContentType ?? ContentType.TextPlain,
             [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
             [HeaderNames.Type] = message.Header.Type,

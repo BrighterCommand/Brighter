@@ -96,7 +96,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteContentType(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.CONTENT_TYPE, messageHeader.ContentType ?? "text/plain");
+            headers.Add(HeaderNames.CONTENT_TYPE, messageHeader.ContentType ?? ContentType.TextPlain);
         }
 
         private void WriteCorrelationId(MessageHeader messageHeader, Dictionary<string, string> headers)
