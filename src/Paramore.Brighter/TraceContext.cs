@@ -78,7 +78,18 @@ namespace Paramore.Brighter
             Value = value;
         }
 
+        /// <summary>
+        /// Converts the TraceState instance to a string.
+        /// </summary>
+        /// <param name="state"></param>
+        /// <returns></returns>
         public static implicit operator string(TraceState state) => state.Value;
+        
+        /// <summary>
+        /// Converts a string to a TraceState instance.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public static implicit operator TraceState(string value) => new(value);
     }
 }
