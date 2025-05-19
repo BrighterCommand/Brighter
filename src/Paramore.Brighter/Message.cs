@@ -83,7 +83,7 @@ namespace Paramore.Brighter
         /// Gets the identifier of the message.
         /// </summary>
         /// <value>The identifier.</value>
-        public string Id => Header.MessageId;
+        public Id Id => Header.MessageId;
 
         /// <summary>
         /// RMQ: Is the message persistent
@@ -151,6 +151,9 @@ namespace Paramore.Brighter
         /// <param name="value">The value to set </param>
         public static void PropogateContext(Message message, string key, string? value)
         {
+            if (value is null)
+                return;
+            
             switch (key)
             {
                 case "traceparent":

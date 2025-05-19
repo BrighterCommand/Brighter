@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var headers = new Headers
             {
                 // Cloud event
-                new Header(HeaderNames.CLOUD_EVENTS_ID, message.Header.MessageId.ToByteArray()),
+                new Header(HeaderNames.CLOUD_EVENTS_ID, message.Header.MessageId.Value.ToByteArray()),
                 new Header(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, message.Header.SpecVersion.ToByteArray()),
                 new Header(HeaderNames.CLOUD_EVENTS_TYPE, message.Header.Type.ToByteArray()),
                 new Header(HeaderNames.CLOUD_EVENTS_SOURCE, message.Header.Source.ToString().ToByteArray()),
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()),
                 
                 // Backward compatibility with old brighter version
-                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
+                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.Value.ToByteArray()),
             };
             
             if (!string.IsNullOrEmpty(message.Header.Subject))
@@ -70,12 +70,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             if (!string.IsNullOrEmpty(message.Header.TraceParent))
             {
-                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent.ToByteArray());
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent.Value.ToByteArray());
             }
             
             if (!string.IsNullOrEmpty(message.Header.TraceState))
             {
-                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState.ToByteArray());
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState.Value.ToByteArray());
             }
             
             if (message.Header.Baggage.Any())
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             
             if (!string.IsNullOrEmpty(message.Header.ContentType))
             {
-                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, message.Header.ContentType.ToByteArray());
+                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
             }
            
             
@@ -99,17 +99,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             if (!string.IsNullOrEmpty(message.Header.ContentType))
             {
-                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.ToByteArray());
+                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
             }
             
             if (message.Header.CorrelationId != string.Empty)
             {
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToByteArray());
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.Value.ToByteArray());
             }
 
             if (!string.IsNullOrEmpty(message.Header.PartitionKey))
             {
-                headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.ToByteArray());
+                headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.Value.ToByteArray());
             }
 
             if (!string.IsNullOrEmpty(message.Header.ReplyTo))

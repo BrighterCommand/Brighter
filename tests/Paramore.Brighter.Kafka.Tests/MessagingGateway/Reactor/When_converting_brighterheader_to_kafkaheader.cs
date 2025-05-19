@@ -54,12 +54,12 @@ public class KafkaDefaultMessageHeaderBuilderTests
 
         //known properties
         Assert.Equal(message.Header.MessageType.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.MESSAGE_TYPE));
-        Assert.Equal(message.Header.MessageId.ToByteArray(), headers.GetLastBytes(HeaderNames.MESSAGE_ID));
+        Assert.Equal(message.Header.MessageId.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.MESSAGE_ID));
         Assert.Equal(message.Header.Topic.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.TOPIC));
         Assert.Equal(message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture).ToByteArray(), headers.GetLastBytes(HeaderNames.TIMESTAMP));
-        Assert.Equal(message.Header.CorrelationId.ToByteArray(), headers.GetLastBytes(HeaderNames.CORRELATION_ID));
-        Assert.Equal(message.Header.PartitionKey.ToByteArray(), headers.GetLastBytes(HeaderNames.PARTITIONKEY));
-        Assert.Equal(message.Header.ContentType.ToByteArray(), headers.GetLastBytes(HeaderNames.CONTENT_TYPE));
+        Assert.Equal(message.Header.CorrelationId.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.CORRELATION_ID));
+        Assert.Equal(message.Header.PartitionKey.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.PARTITIONKEY));
+        Assert.Equal(message.Header.ContentType.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.CONTENT_TYPE));
         Assert.Equal(message.Header.ReplyTo.ToByteArray(), headers.GetLastBytes(HeaderNames.REPLY_TO));
         Assert.Equal(message.Header.Delayed.TotalMilliseconds.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.DELAYED_MILLISECONDS));
         Assert.Equal(message.Header.HandledCount.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.HANDLED_COUNT));

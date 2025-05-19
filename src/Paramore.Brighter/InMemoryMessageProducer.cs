@@ -62,7 +62,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
-        public event Action<bool, string>? OnMessagePublished;
+        public event Action<bool, Id>? OnMessagePublished;
 
         /// <summary>
         /// Dispose of the producer
@@ -107,8 +107,10 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">A cancellation token to end the operation</param>
         /// <returns></returns>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<Id[]> SendAsync(
+            IEnumerable<Message> messages,
+            [EnumeratorCancellation] CancellationToken cancellationToken
+            )
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             var msgs = messages as Message[] ?? messages.ToArray();

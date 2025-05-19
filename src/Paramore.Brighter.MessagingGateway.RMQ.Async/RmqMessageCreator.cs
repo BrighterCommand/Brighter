@@ -361,26 +361,26 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<Uri?>(null, true);
     }
     
-    private static HeaderResult<string?> ReadTraceParent(IDictionary<string, object?> headers)
+    private static HeaderResult<TraceParent?> ReadTraceParent(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, out var traceParent)
             && traceParent is byte[] traceParentArray)
         {
-            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
+            return new HeaderResult<TraceParent?>(Encoding.UTF8.GetString(traceParentArray), true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<TraceParent?>(string.Empty, true);
     }
 
-    private static HeaderResult<string?> ReadTraceState(IDictionary<string, object?> headers)
+    private static HeaderResult<TraceState?> ReadTraceState(IDictionary<string, object?> headers)
     {
-        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out var traceParent)
-            && traceParent is byte[] traceParentArray)
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out var traceState)
+            && traceState is byte[] traceParentArray)
         {
-            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
+            return new HeaderResult<TraceState?>(Encoding.UTF8.GetString(traceParentArray), true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<TraceState?>(string.Empty, true);
 
     }
 

@@ -187,14 +187,14 @@ public class BrighterTracer : IAmABrighterTracer
         var activity = ActivitySource.StartActivity(
             name: spanName,
             kind: kind,
-            parentId: parentId,
+            parentId: parentId?.Value ,
             tags: tags,
             startTime: now);
 
         if (activity == null)
             return Activity.Current;
         
-        activity.TraceStateString = traceState;
+        activity.TraceStateString = traceState?.Value;
         
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
             baggage.Add("correlationId", message.Header.CorrelationId);

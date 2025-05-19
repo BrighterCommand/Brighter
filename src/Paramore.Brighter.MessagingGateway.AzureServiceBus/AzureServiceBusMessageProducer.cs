@@ -126,7 +126,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// <param name="cancellationToken">The Cancellation Token.</param>
     /// <returns>List of Messages successfully sent.</returns>
     /// <exception cref="NotImplementedException"></exception>
-    public async IAsyncEnumerable<string[]> SendAsync(
+    public async IAsyncEnumerable<Id[]> SendAsync(
         IEnumerable<Message> messages,
         [EnumeratorCancellation] CancellationToken cancellationToken
     )

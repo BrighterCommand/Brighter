@@ -288,7 +288,7 @@ namespace Paramore.Brighter
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
         public void ClearOutbox(
-            string[] posts,
+            Id[] posts,
             RequestContext requestContext,
             Dictionary<string, object>? args = null
         )
@@ -345,7 +345,7 @@ namespace Paramore.Brighter
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
         public async Task ClearOutboxAsync(
-            IEnumerable<string> posts,
+            IEnumerable<Id> posts,
             RequestContext requestContext,
             bool continueOnCapturedContext = true,
             Dictionary<string, object>? args = null,

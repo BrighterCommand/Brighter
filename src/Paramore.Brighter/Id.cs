@@ -1,3 +1,5 @@
+using System;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -22,6 +24,16 @@ namespace Paramore.Brighter
         public Id(string value)
         {
             Value = value;
+        }
+
+        /// <summary>
+        /// /// Creates a new Id instance with a new GUID if the provided value is null or empty.
+        /// </summary>
+        /// <param name="value">The value of the Id, pass null for a random GUID </param>
+        /// <returns></returns>
+        public static Id Create(string? value)
+        {
+            return new Id(value ?? Guid.NewGuid().ToString());
         }
 
         /// <summary>
