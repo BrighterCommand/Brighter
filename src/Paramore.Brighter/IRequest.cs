@@ -38,6 +38,6 @@ namespace Paramore.Brighter
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        string Id { get; set; }
+        Id Id { get; set; }
     }
 }

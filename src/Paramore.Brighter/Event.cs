@@ -38,13 +38,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The identifier.</value>
         [NJsonSchema.Annotations.NotNull]
-        public string Id { get; set; }
+        public Id Id { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Event"/> class.
         /// </summary>
         /// <param name="id">The identifier.</param>
-        public Event(string id)
+        public Event(Id id)
         {
             Id = id;
         }
@@ -55,7 +55,7 @@ namespace Paramore.Brighter
         /// <param name="id">The identifier.</param>
         public Event(Guid id)
         {
-            Id = id.ToString();
+            Id = new Id(id.ToString());
         }
     }
 }

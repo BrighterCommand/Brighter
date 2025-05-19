@@ -1,0 +1,45 @@
+namespace Paramore.Brighter
+{
+    /// <summary>
+    /// Represents a value type for identifiers, providing stronger typing than primitive strings.
+    /// Used as a base type for various identifiers in the system.
+    /// </summary>
+    /// <remarks>
+    /// Id wraps a string value and provides implicit conversion operators to maintain compatibility
+    /// with existing string-based code while offering better type safety and domain semantics.
+    /// </remarks>
+    public record Id
+    {
+        /// <summary>
+        /// Gets the string representation of the identifier.
+        /// </summary>
+        public string Value { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Id"/> class.
+        /// </summary>
+        /// <param name="value">The string value of the identifier</param>
+        public Id(string value)
+        {
+            Value = value;
+        }
+
+        /// <summary>
+        /// Implicitly converts an Id to its string representation.
+        /// </summary>
+        /// <param name="id">The Id to convert</param>
+        public static implicit operator string(Id id) => id.Value;
+
+        /// <summary>
+        /// Implicitly converts a string to an Id.
+        /// </summary>
+        /// <param name="value">The string to convert</param>
+        public static implicit operator Id(string value) => new(value);
+
+        /// <summary>
+        /// Returns the string representation of the identifier.
+        /// </summary>
+        /// <returns>The identifier's string value</returns>
+        public override string ToString() => Value;
+    }
+}

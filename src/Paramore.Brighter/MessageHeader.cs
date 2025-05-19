@@ -114,15 +114,15 @@ namespace Paramore.Brighter
         /// though Cloud Events does not.
         /// Default value is "text/plain"
         /// </summary>
-        public string? ContentType { get; set; }
+        public ContentType ContentType { get; set; } = ContentType.TextPlain;
 
         /// <summary>
         /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,
         /// allows the originator to match responses to requests
         /// </summary>
         /// <value>The correlation identifier.</value>
-        public string CorrelationId { get; set; } = string.Empty;
-        
+        public Id CorrelationId { get; set; } = new("");
+
         /// <summary>
         /// OPTIONAL
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
@@ -161,8 +161,8 @@ namespace Paramore.Brighter
         /// Consumers MAY assume that Events with identical source and id are duplicates.
         /// </summary>
         /// <value>The identifier.</value>
-        public string MessageId { get; init; } = string.Empty;
-        
+        public Id MessageId { get; init; } = new("");
+
         /// <summary>
         /// REQUIRED
         /// Gets the type of the message (command, event). Internal usage, Used when routing the message to a handler
@@ -176,7 +176,7 @@ namespace Paramore.Brighter
         /// If we are working with consistent hashing to distribute writes across multiple channels according to the
         /// hash value of a partition key then we need to be able to set that key, so that we can distribute writes effectively.
         /// </summary>
-        public string PartitionKey { get; set; } = "";
+        public PartitionKey PartitionKey { get; set; } = PartitionKey.Empty;
         
         /// <summary>
         /// OPTIONAL
@@ -241,7 +241,7 @@ namespace Paramore.Brighter
         ///     - trace-flags
         /// In .NET it is set from Activity.Current.Id
         /// </summary>
-        public string? TraceParent { get; set; }
+        public TraceParent? TraceParent { get; set; }
 
         /// <summary>
         /// OPTIONAL
@@ -252,7 +252,7 @@ namespace Paramore.Brighter
         /// in multiple distributed tracing graphs.
         /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
         /// </summary>
-        public string? TraceState { get; set; }
+        public TraceState? TraceState { get; set; }
 
         /// <summary>
         /// REQUIRED
@@ -268,7 +268,7 @@ namespace Paramore.Brighter
         /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'
         /// </summary>
         public MessageHeader() { }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
         /// </summary>
@@ -286,38 +286,40 @@ namespace Paramore.Brighter
         /// <param name="subject">Describes the subject of the event in the context of the event producer</param>
         /// <param name="handledCount">The number of attempts to handle this message</param>
         /// <param name="delayed">The delay in milliseconds to this message (usually to retry)</param>
+        /// <param name="traceParent">The traceparent for this message; follows the W3C standard</param>
+        /// <param name="traceState">The tracestate for this message; follows the W3C standard</param>
+        /// <param name="baggage">The baggage for this message; follows the W3C standard</param>
         public MessageHeader(
-            string messageId,
+            Id messageId,
             RoutingKey topic,
             MessageType messageType,
             Uri? source = null,
             string? type = null,
             DateTimeOffset? timeStamp = null,
-            string? correlationId = null,
+            Id? correlationId = null,
             RoutingKey? replyTo = null,
-            string contentType = "text/plain",
-            string partitionKey = "",
+            ContentType? contentType = null,
+            PartitionKey? partitionKey = null,
             Uri? dataSchema = null,
             string? subject = null,
             int handledCount = 0,
             TimeSpan? delayed = null,
-            string? traceParent = null,
-            string? traceState = null,
+            TraceParent? traceParent = null,
+            TraceState? traceState = null,
             string? baggage = null)
         {
             MessageId = messageId;
             Topic = topic;
             MessageType = messageType;
             if (source != null) Source = source;
-            Type = type  ?? "goparamore.io.Paramore.Brighter.Message";
+            Type = type ?? DefaultType;
             TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
             HandledCount = handledCount;
             Delayed = delayed ?? TimeSpan.Zero;
-            CorrelationId = correlationId ?? string.Empty;
+            CorrelationId = correlationId ?? new Id(string.Empty);
             ReplyTo = replyTo ?? RoutingKey.Empty;
-            ContentType = contentType;
-            PartitionKey = partitionKey;
-            ReplyTo = replyTo ?? string.Empty;
+            ContentType = contentType ?? ContentType.TextPlain;
+            PartitionKey = partitionKey ?? PartitionKey.Empty;
             DataSchema = dataSchema;
             Subject = subject;
             TraceParent = traceParent;
@@ -339,8 +341,8 @@ namespace Paramore.Brighter
                 delayed : TimeSpan.Zero,
                 correlationId: CorrelationId,
                 replyTo : new RoutingKey($"{ReplyTo}"),
-                contentType : $"{ContentType}",
-                partitionKey : $"{PartitionKey}"
+                contentType : ContentType,
+                partitionKey : PartitionKey
             );
 
             foreach (var item in Bag)

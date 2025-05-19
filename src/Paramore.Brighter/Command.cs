@@ -31,17 +31,18 @@ namespace Paramore.Brighter
     /// </summary>
     public class Command : ICommand
     {
+        /// <summary>
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
         [NJsonSchema.Annotations.NotNull]
-        public string Id { get; set; }
-
+        public Id Id { get; set; }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="Command"/> class.
         /// </summary>
         /// <param name="id">The identifier.</param>
-        public Command(string id)
+        public Command(Id id)
         {
             Id = id;
         }
@@ -52,7 +53,7 @@ namespace Paramore.Brighter
         /// <param name="id">The identifier</param>
         public Command(Guid id)
         {
-           Id = id.ToString(); 
+           Id = new Id(id.ToString()); 
         }
     }
 }
