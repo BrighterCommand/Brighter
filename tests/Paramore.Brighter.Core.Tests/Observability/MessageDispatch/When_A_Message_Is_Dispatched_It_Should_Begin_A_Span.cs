@@ -142,7 +142,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             Assert.Contains(Baggage.Current.GetBaggage(), b => b.Key == "mykey" && b.Value == "myvalue");
             Assert.Contains(createActivity.Tags, t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" });
             Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic);
-            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey.Value);
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value == _message.Id);
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageType && t.Value == _message.Header.MessageType.ToString());
             Assert.Contains(createActivity.TagObjects, t => t.Value != null && t.Key == BrighterSemanticConventions.MessageBodySize && Convert.ToInt32(t.Value) == _message.Body.Bytes.Length);

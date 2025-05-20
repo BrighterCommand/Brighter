@@ -117,7 +117,7 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
             { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.RequestId, request.Id },
+            { BrighterSemanticConventions.RequestId, request.Id.Value },
             { BrighterSemanticConventions.RequestType, request.GetType().Name },
             { BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request, JsonSerialisationOptions.Options) }
         };
@@ -156,9 +156,9 @@ public class BrighterTracer : IAmABrighterTracer
     {
         var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
-        var parentId = message.Header.TraceParent;
-        var baggage = message.Header.Baggage;
-        var traceState = message.Header.TraceState;
+        var parentId = message.Header.TraceParent?.Value;
+        var baggage = message.Header.Baggage.ToString();
+        var traceState = message.Header.TraceState?.Value;
         var now = _timeProvider.GetUtcNow();
 
         var tags = new ActivityTagsCollection()
@@ -166,15 +166,15 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
             { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
+            { BrighterSemanticConventions.MessageId, message.Id.Value },
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
             { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
+            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value },
             { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.CeMessageId, message.Id },
+            { BrighterSemanticConventions.CeMessageId, message.Id.Value },
             { BrighterSemanticConventions.CeSource, message.Header.Source },
             { BrighterSemanticConventions.CeVersion, "1.0"},
             { BrighterSemanticConventions.CeSubject, message.Header.Subject },
@@ -187,18 +187,18 @@ public class BrighterTracer : IAmABrighterTracer
         var activity = ActivitySource.StartActivity(
             name: spanName,
             kind: kind,
-            parentId: parentId?.Value ,
+            parentId: parentId ,
             tags: tags,
             startTime: now);
 
         if (activity == null)
             return Activity.Current;
         
-        activity.TraceStateString = traceState?.Value;
+        activity.TraceStateString = traceState;
         
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-            baggage.Add("correlationId", message.Header.CorrelationId);
-        OpenTelemetry.Baggage.SetBaggage(baggage);
+            message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
+        OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
         
         Activity.Current = activity;
 
@@ -505,17 +505,17 @@ public class BrighterTracer : IAmABrighterTracer
         if (message is not null)
         {
             //OTel specification attributes
-            tags.Add(BrighterSemanticConventions.MessageId, message.Id);
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
-            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
             tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
             tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options ));
-            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId); 
+            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value); 
             
             //cloud events attributes
-            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id);
+            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
         }
 
         var activity = ActivitySource.StartActivity(
@@ -630,9 +630,9 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MapperName, mapperName },
             { BrighterSemanticConventions.MapperType, isAsync ? "async" : "sync" },
             { BrighterSemanticConventions.IsSink, isSink },
-            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessageId, message.Id.Value },
             { BrighterSemanticConventions.MessagingDestination, publication.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
             { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) }
@@ -669,12 +669,12 @@ public class BrighterTracer : IAmABrighterTracer
         {
             { BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction },
             { BrighterSemanticConventions.OutboxType, outBoxType },
-            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessageId, message.Id.Value },
             { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
             { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
         };
 
@@ -724,15 +724,15 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
             { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
             { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
+            { BrighterSemanticConventions.MessageId, message.Id.Value },
             { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
+            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value },
             
-            { BrighterSemanticConventions.CeMessageId, message.Id },
+            { BrighterSemanticConventions.CeMessageId, message.Id.Value },
             { BrighterSemanticConventions.CeSource, message.Header.Source },
             { BrighterSemanticConventions.CeVersion, "1.0"},
             { BrighterSemanticConventions.CeSubject, message.Header.Subject },

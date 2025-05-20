@@ -36,6 +36,10 @@ namespace Paramore.Brighter
             opts.Converters.Add(new RoutingKeyConvertor());
             opts.Converters.Add(new ChannelNameConverter());
             opts.Converters.Add(new BaggageConverter());
+            opts.Converters.Add(new IdConverter());
+            opts.Converters.Add(new PartitionKeyConverter());
+            opts.Converters.Add(new TraceStateConverter());
+            opts.Converters.Add(new TraceParentConverter());
 
             Options = opts;
         }

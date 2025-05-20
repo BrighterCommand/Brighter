@@ -134,7 +134,7 @@ public class CommandProcessorClearObservabilityTests
         var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
         Assert.NotNull(clearActivity);
         Assert.Contains(clearActivity.Tags, t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" });
-        Assert.Contains(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value == messageId);
+        Assert.Contains(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value == messageId.Value);
 
         var events = clearActivity.Events.ToList();
         
@@ -143,12 +143,12 @@ public class CommandProcessorClearObservabilityTests
         var depositEvent = events.Single(e => e.Name == BoxDbOperation.Get.ToSpanName());
         Assert.Contains(depositEvent.Tags, a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false);
         Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.OutboxType && a.Value as string == "sync");
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageId && a.Value as string == message.Id);
+        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageId && a.Value as string == message.Id.Value);
         Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestination && a.Value?.ToString() == message.Header.Topic.Value);
         Assert.Contains(depositEvent.Tags, a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length);
         Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageBody && a.Value as string == message.Body.Value);
         Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageType && a.Value as string == message.Header.MessageType.ToString());
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && a.Value as string == message.Header.PartitionKey);
+        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && a.Value as string == message.Header.PartitionKey.Value);
         
         //there should be a span in the Db for retrieving the message
         var outBoxActivity = _exportedActivities.Single(a => a.DisplayName == $"{BoxDbOperation.Get.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
@@ -163,15 +163,15 @@ public class CommandProcessorClearObservabilityTests
         Assert.Equal(ActivityKind.Producer, producerActivity.Kind);
         
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingOperationType && t.Value as string == CommandProcessorSpanOperation.Publish.ToSpanName());
-        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageId && t.Value as string == message.Id);
+        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageId && t.Value as string == message.Id.Value);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageType && t.Value as string == message.Header.MessageType.ToString());
         Assert.Contains(producerActivity.TagObjects, t => t is { Value: not null, Key: BrighterSemanticConventions.MessagingDestination } && t.Value.ToString() == "MyEvent"); 
-        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value as string == message.Header.PartitionKey);
+        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value as string == message.Header.PartitionKey.Value);
         Assert.Contains(producerActivity.TagObjects, t => t is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)t.Value == message.Body.Bytes.Length);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageBody && t.Value as string == message.Body.Value);
-        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ConversationId && t.Value as string == message.Header.CorrelationId);
+        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ConversationId && t.Value as string == message.Header.CorrelationId.Value);
         
-        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeMessageId && (string)t.Value == message.Id);
+        Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeMessageId && (string)t.Value == message.Id.Value);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeSource && (Uri)t.Value == _messageProducer.Publication.Source);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeVersion && (string)t.Value == "1.0");
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == _messageProducer.Publication.Subject);
@@ -182,14 +182,14 @@ public class CommandProcessorClearObservabilityTests
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingOperationType && (string)t.Value == CommandProcessorSpanOperation.Publish.ToSpanName());
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingSystem && (string)t.Value == MessagingSystem.InternalBus.ToMessagingSystemName());          
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestination && (RoutingKey)t.Value == "MyEvent");
-        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == message.Header.PartitionKey);
-        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id);
+        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == message.Header.PartitionKey.Value);
+        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id.Value);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageType && (string)t.Value == message.Header.MessageType.ToString());
         Assert.Contains(produceEvent.Tags, t => t is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)t.Value == message.Body.Bytes.Length);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageBody && (string)t.Value == message.Body.Value);
-        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.ConversationId && (string)t.Value == message.Header.CorrelationId);
+        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.ConversationId && (string)t.Value == message.Header.CorrelationId.Value);
         
-        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeMessageId && (string)t.Value == message.Id);
+        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeMessageId && (string)t.Value == message.Id.Value);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeSource && (Uri)t.Value == _messageProducer.Publication.Source);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeVersion && (string)t.Value == "1.0");
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == _messageProducer.Publication.Subject);
