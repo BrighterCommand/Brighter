@@ -13,13 +13,13 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the string representation of the content type.
         /// </summary>
-        public string Value { get; }
+        public string? Value { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContentType"/> class.
         /// </summary>
         /// <param name="value">The content type string in RFC 2046 format (e.g., "text/plain")</param>
-        public ContentType(string value)
+        public ContentType(string? value)
         {
             Value = value;
         }
@@ -28,7 +28,7 @@ namespace Paramore.Brighter
         /// Implicitly converts a ContentType to its string representation.
         /// </summary>
         /// <param name="contentType">The ContentType to convert</param>
-        public static implicit operator string(ContentType contentType) => contentType.Value;
+        public static implicit operator string(ContentType contentType) => contentType?.Value ?? string.Empty;
 
         /// <summary>
         /// Implicitly converts a string to a ContentType.
@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// Returns the string representation of the content type.
         /// </summary>
         /// <returns>The content type string value</returns>
-        public override string ToString() => Value;
+        public override string ToString() => Value ?? string.Empty;
 
         /// <summary>
         /// Represents the standard "text/plain" content type.
