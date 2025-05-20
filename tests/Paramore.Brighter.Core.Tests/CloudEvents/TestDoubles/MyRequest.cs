@@ -26,7 +26,8 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents.TestDoubles;
 
-public class MyCommand() : Command(Guid.NewGuid())
+public class MyRequest : IRequest
 {
     public string Value { get; set; }
+    public string Id { get; set; } = Guid.NewGuid().ToString();
 }

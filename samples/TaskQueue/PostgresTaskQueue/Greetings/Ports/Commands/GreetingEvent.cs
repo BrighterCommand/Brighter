@@ -1,6 +1,6 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,10 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter;
 
-namespace Paramore.Brighter.Core.Tests.CloudEvents.TestDoubles;
-
-public class MyCommand() : Command(Guid.NewGuid())
+namespace Greetings.Ports.Commands
 {
-    public string Value { get; set; }
+    public class GreetingEvent : Event
+    {
+        public GreetingEvent() : base(Guid.NewGuid()) { }
+
+        public GreetingEvent(string greeting) : base(Guid.NewGuid())
+        {
+            Greeting = greeting;
+        }
+
+        public string Greeting { get; set; }
+    }
 }
