@@ -30,16 +30,7 @@ namespace Paramore.Brighter;
 
 public class ChannelNameConverter : JsonConverter<ChannelName>
 {
-    public override ChannelName Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        switch (reader.TokenType)
-        {
-            case JsonTokenType.String:
-                return new ChannelName(reader.GetString()!);
-            default:
-                throw new JsonException($"Unable to convert Json Type {reader.TokenType} to String, Supported Types are String, Number.");
-        }        
-    }
+    public override ChannelName Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => new(reader.GetString()!);
 
     public override void Write(Utf8JsonWriter writer, ChannelName? value, JsonSerializerOptions options)
     {

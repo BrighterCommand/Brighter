@@ -23,39 +23,40 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json.Serialization;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter;
+
+/// <summary>
+/// Class Event
+/// An event is an indicator to interested parties that 'something has happened'. We expect zero to many receivers as it is one-to-many communication i.e. publish-subscribe
+/// An event is usually fire-and-forget, because we do not know it is received.
+/// </summary>
+public class Event : IEvent
 {
     /// <summary>
-    /// Class Event
-    /// An event is an indicator to interested parties that 'something has happened'. We expect zero to many receivers as it is one-to-many communication i.e. publish-subscribe
-    /// An event is usually fire-and-forget, because we do not know it is received.
+    /// Gets or sets the identifier.
     /// </summary>
-    public class Event : IEvent
-    {
-        /// <summary>
-        /// Gets or sets the identifier.
-        /// </summary>
-        /// <value>The identifier.</value>
-        [NJsonSchema.Annotations.NotNull]
-        public Id Id { get; set; }
+    /// <value>The identifier.</value>
+    [NJsonSchema.Annotations.NotNull]
+    [JsonConverter(typeof(IdConverter))]
+    public Id Id { get; set; }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Event"/> class.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        public Event(Id id)
-        {
-            Id = id;
-        }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Event"/> class.
+    /// </summary>
+    /// <param name="id">The identifier.</param>
+    public Event(Id id)
+    {
+        Id = id;
+    }
         
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Event"/> class.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        public Event(Guid id)
-        {
-            Id = new Id(id.ToString());
-        }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Event"/> class.
+    /// </summary>
+    /// <param name="id">The identifier.</param>
+    public Event(Guid id)
+    {
+        Id = new Id(id.ToString());
     }
 }

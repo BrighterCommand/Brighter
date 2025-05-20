@@ -23,37 +23,38 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json.Serialization;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter;
+
+/// <summary>
+/// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
+/// </summary>
+public class Command : ICommand
 {
     /// <summary>
-    /// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
+    /// Gets or sets the identifier.
     /// </summary>
-    public class Command : ICommand
-    {
-        /// <summary>
-        /// Gets or sets the identifier.
-        /// </summary>
-        /// <value>The identifier.</value>
-        [NJsonSchema.Annotations.NotNull]
-        public Id Id { get; set; }
+    /// <value>The identifier.</value>
+    [NJsonSchema.Annotations.NotNull]
+    [JsonConverter(typeof(IdConverter))]
+    public Id Id { get; set; }
         
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        public Command(Id id)
-        {
-            Id = id;
-        }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Command"/> class.
+    /// </summary>
+    /// <param name="id">The identifier.</param>
+    public Command(Id id)
+    {
+        Id = id;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class. 
-        /// </summary>
-        /// <param name="id">The identifier</param>
-        public Command(Guid id)
-        {
-           Id = new Id(id.ToString()); 
-        }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Command"/> class. 
+    /// </summary>
+    /// <param name="id">The identifier</param>
+    public Command(Guid id)
+    {
+        Id = new Id(id.ToString()); 
     }
 }

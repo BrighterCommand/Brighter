@@ -179,7 +179,7 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.CeVersion, "1.0"},
             { BrighterSemanticConventions.CeSubject, message.Header.Subject },
             { BrighterSemanticConventions.CeType, message.Header.Type},
-            { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo },
+            { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value },
             { BrighterSemanticConventions.HandledCount, message.Header.HandledCount }
             
         };

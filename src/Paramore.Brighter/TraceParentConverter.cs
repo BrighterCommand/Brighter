@@ -30,16 +30,7 @@ namespace Paramore.Brighter;
 
 public class TraceParentConverter : JsonConverter<TraceParent>
 {
-    public override TraceParent Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        switch (reader.TokenType)
-        {
-            case JsonTokenType.String:
-                return new TraceParent(reader.GetString()!);
-            default:
-                throw new JsonException($"Unable to convert Json Type {reader.TokenType} to String, Supported Types are String.");
-        }        
-    }
+    public override TraceParent Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => new TraceParent(reader.GetString()!);
 
     public override void Write(Utf8JsonWriter writer, TraceParent? value, JsonSerializerOptions options)
     {
