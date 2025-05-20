@@ -31,9 +31,8 @@ namespace Paramore.Brighter;
 /// Represents a collection of routing keys used for message routing in a messaging system.
 /// This class provides an enumerable container for multiple <see cref="RoutingKey"/> instances.
 /// </summary>
-public class RoutingKeys(
-    /// <param name="routingKeys">An array of routing keys to initialize the collection</param>
-    params RoutingKey[] routingKeys) : IEnumerable<RoutingKey>
+/// <param name="routingKeys">An array of routing keys to initialize the collection</param>
+public class RoutingKeys(params RoutingKey[] routingKeys) : IEnumerable<RoutingKey>
 {
     private readonly IEnumerable<RoutingKey> _routingKeys = routingKeys;
 
