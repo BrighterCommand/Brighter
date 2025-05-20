@@ -11,8 +11,9 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
 [Trait("Fragile", "CI")]
+[Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RMQMessageConsumerRetryDLQTests : IDisposable
 {
     private readonly IAmAMessagePump _messagePump;

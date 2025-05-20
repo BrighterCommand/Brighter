@@ -91,6 +91,66 @@ internal sealed partial class RmqMessagePublisher
             var messageId = message.Id;
             var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.DeliveryTag.ToString() : null;
 
+            Dictionary<string, object> headers = AddCloudEventHeaders(message);
+
+            AddUserDefinedHeaders(message, delay, headers, deliveryTag);
+            
+            AddDeliveryHeaders(delay, headers, deliveryTag);
+
+            _channel.BasicPublish(
+                _connection.Exchange.Name,
+                message.Header.Topic,
+                false,
+                CreateBasicProperties(
+                    messageId, 
+                    message.Header.TimeStamp, 
+                    message.Body.ContentType, 
+                    message.Header.ContentType ?? ContentType.TextPlain, 
+                    message.Header.ReplyTo ?? string.Empty,
+                    message.Persist,
+                    headers),
+                message.Body.Bytes);
+        }
+
+        /// <summary>
+        /// Requeues the message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="queueName">The queue name.</param>
+        /// <param name="timeOut">Delay. Set to TimeSpan.Zero for not delay</param>
+        public void RequeueMessage(Message message, ChannelName queueName, TimeSpan timeOut)
+        {
+            var messageId = Guid.NewGuid().ToString() ;
+            const string deliveryTag = "1";
+
+            Log.RequeueMessageInformation(s_logger, message.Id, deliveryTag, messageId, 1);
+
+            Dictionary<string, object> headers = AddCloudEventHeaders(message);
+
+            AddUserDefinedHeaders(message, timeOut, headers, deliveryTag);
+            
+            AddDeliveryHeaders(TimeSpan.Zero, headers, deliveryTag);
+
+            AddOriginalMessageIdOnRepublish(message, headers);
+
+            // To send it to the right queue use the default (empty) exchange
+            _channel.BasicPublish(
+                string.Empty,
+                queueName.Value,
+                false,
+                CreateBasicProperties(
+                    messageId, 
+                    message.Header.TimeStamp, 
+                    message.Body.ContentType, 
+                    message.Header.ContentType ?? ContentType.TextPlain, 
+                    message.Header.ReplyTo ?? string.Empty,
+                    message.Persist,
+                    headers),
+                message.Body.Bytes);
+        }
+ 
+        private static Dictionary<string, object> AddCloudEventHeaders(Message message)
+        {
             var headers = new Dictionary<string, object>
             {
                 // Cloud event
@@ -123,110 +183,31 @@ internal sealed partial class RmqMessagePublisher
             
             if (message.Header.Baggage.Any())
                 headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString());
-
+            return headers;
+        }
+        
+        private static void AddOriginalMessageIdOnRepublish(Message message, Dictionary<string, object> headers)
+        {
+            if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
+                headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id.Value);
+        }
+        
+        private static void AddUserDefinedHeaders(Message message, TimeSpan? delay, Dictionary<string, object> headers, string? deliveryTag)
+        {
             message.Header.Bag.Each(header =>
             {
                 if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
             });
 
+        }
+
+        private static void AddDeliveryHeaders(TimeSpan? delay, Dictionary<string, object> headers, string? deliveryTag)
+        {
             if (!string.IsNullOrEmpty(deliveryTag))
                 headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag!);
 
             if (delay > TimeSpan.Zero)
                 headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.TotalMilliseconds);
-
-            _channel.BasicPublish(
-                _connection.Exchange.Name,
-                message.Header.Topic,
-                false,
-                CreateBasicProperties(
-                    messageId, 
-                    message.Header.TimeStamp, 
-                    message.Body.ContentType, 
-                    message.Header.ContentType ?? ContentType.TextPlain, 
-                    message.Header.ReplyTo ?? string.Empty,
-                    message.Persist,
-                    headers),
-                message.Body.Bytes);
-        }
-
-       /// <summary>
-        /// Requeues the message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="queueName">The queue name.</param>
-        /// <param name="timeOut">Delay. Set to TimeSpan.Zero for not delay</param>
-        public void RequeueMessage(Message message, ChannelName queueName, TimeSpan timeOut)
-        {
-            var messageId = Guid.NewGuid().ToString() ;
-            const string deliveryTag = "1";
-
-            Log.RequeueMessageInformation(s_logger, message.Id, deliveryTag, messageId, 1);
-
-            var headers = new Dictionary<string, object>
-            {
-                // Cloud event
-                [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId,
-                [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
-                [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
-                [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
-                [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRcf3339(),
-
-                // Brighter custom headers
-                [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
-                [HeaderNames.TOPIC] = message.Header.Topic.Value,
-                [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
-             };
-            
-            if (!string.IsNullOrEmpty(message.Header.Subject))
-            {
-                headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject!);
-            }
-        
-            if (message.Header.DataSchema != null)
-            {
-                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
-            }
-
-            if (message.Header.CorrelationId != string.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
-            
-            if (!string.IsNullOrEmpty(message.Header.TraceParent?.Value))
-                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent!);
-            
-            if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
-                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState!);
-            
-            if (message.Header.Baggage.Any())
-                headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString());
-
-            message.Header.Bag.Each((header) =>
-            {
-                if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
-            });
-
-            headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
-
-            if (timeOut > TimeSpan.Zero)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, timeOut.TotalMilliseconds);
-
-            if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
-                headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id);
-
-            // To send it to the right queue use the default (empty) exchange
-            _channel.BasicPublish(
-                string.Empty,
-                queueName.Value,
-                false,
-                CreateBasicProperties(
-                    messageId, 
-                    message.Header.TimeStamp, 
-                    message.Body.ContentType, 
-                    message.Header.ContentType ?? ContentType.TextPlain, 
-                    message.Header.ReplyTo ?? string.Empty,
-                    message.Persist,
-                    headers),
-                message.Body.Bytes);
         }
 
         private IBasicProperties CreateBasicProperties(string id, DateTimeOffset timeStamp, string type, string contentType,
