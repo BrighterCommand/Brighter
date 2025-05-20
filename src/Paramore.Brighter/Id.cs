@@ -23,7 +23,7 @@ namespace Paramore.Brighter
         /// <remarks>
         ///  Should be used to indicate a lack of value or an uninitialized state.
         /// </remarks>
-        public static Id? Empty { get; } = new(string.Empty);
+        public static Id Empty { get; } = new(string.Empty);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Id"/> class.
