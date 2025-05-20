@@ -94,7 +94,7 @@ internal sealed partial class RmqMessagePublisher
             var headers = new Dictionary<string, object>
             {
                 // Cloud event
-                [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId,
+                [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId.Value,
                 [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
                 [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
                 [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
@@ -113,13 +113,13 @@ internal sealed partial class RmqMessagePublisher
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
 
             if (message.Header.CorrelationId != string.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId?.Value!);
             
             if (!string.IsNullOrEmpty(message.Header.TraceParent?.Value))
-                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent!);
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent?.Value!);
             
             if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
-                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState!);
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState?.Value!);
             
             if (message.Header.Baggage.Any())
                 headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString());
@@ -268,7 +268,7 @@ internal sealed partial class RmqMessagePublisher
             return value switch
             {
                 null or string _ or byte[] _ or int _ or uint _ or decimal _ or AmqpTimestamp _ or IDictionary _
-                    or IList _ or byte _ or sbyte _ or double _ or float _ or long _ or short _ or bool _ => true,
+                    or IList _ or byte _ or sbyte _ or double _ or float _ or long _ or short _ or bool _  => true,
                 _ => false
             };
         }

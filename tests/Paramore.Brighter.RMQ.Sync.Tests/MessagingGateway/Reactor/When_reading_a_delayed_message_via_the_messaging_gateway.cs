@@ -89,6 +89,8 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
     [Fact]
     public void When_requeing_a_failed_message_with_delay()
     {
+        //NOTE: This test will fail if RMQ is not configured to support delay
+        
         //send & receive a message
         _messageProducer.Send(_message);
         var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
@@ -101,13 +103,13 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
         //now requeue with a delay
         _message.Header.UpdateHandledCount();
         _messageConsumer.Requeue(_message, TimeSpan.FromMilliseconds(1000));
-
+        
         //receive and assert
-        var message2 = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
-        Assert.Equal(MessageType.MT_COMMAND, message2.Header.MessageType);
-        Assert.Equal(1, message2.Header.HandledCount);
+        var secondMessage = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
+        Assert.Equal(MessageType.MT_COMMAND, secondMessage.Header.MessageType);
+        Assert.Equal(1, secondMessage.Header.HandledCount);
 
-        _messageConsumer.Acknowledge(message2);
+        _messageConsumer.Acknowledge(secondMessage);
     }
 
     public void Dispose()
