@@ -43,14 +43,41 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var headers = new Headers();
             
+            AddBrighterHeaders(headers, message);
             AddCloudEventHeaders(headers, message);
-            AddConditionalHeaders(headers, message);
-            AddStandardHeaders(headers, message);
-            AddBagHeaders(headers, message);
+            AddUserDefinedBagHeaders(headers, message);
 
             return headers;
         }
 
+        private static void AddBrighterHeaders(Headers headers, Message message)
+        {
+            headers.Add(new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()));
+            headers.Add(new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()));
+            headers.Add(new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.Value.ToByteArray()));
+            
+            var timeStampAsString = message.Header.TimeStamp.DateTime != default
+                ? message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture)
+                : DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
+            
+            headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
+            
+            if (!ContentType.IsNullOrEmpty(message.Header.ContentType))
+                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
+            
+            if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.Value.ToByteArray());
+
+            if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+                headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.Value.ToByteArray());
+
+            if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
+                headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.Value.ToByteArray());
+
+            headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.Delayed.TotalMilliseconds.ToString(CultureInfo.InvariantCulture).ToByteArray());
+            headers.Add(HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString().ToByteArray());
+        }
+        
         private void AddCloudEventHeaders(Headers headers, Message message)
         {
             headers.Add(new Header(HeaderNames.CLOUD_EVENTS_ID, message.Header.MessageId.Value.ToByteArray()));
@@ -59,13 +86,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             headers.Add(new Header(HeaderNames.CLOUD_EVENTS_SOURCE, message.Header.Source.ToString().ToByteArray()));
             headers.Add(new Header(HeaderNames.CLOUD_EVENTS_TIME, message.Header.TimeStamp.ToRcf3339().ToByteArray()));
             
-            // Brighter custom headers
-            headers.Add(new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()));
-            headers.Add(new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()));
-            headers.Add(new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.Value.ToByteArray()));
+            AddCLoudEventsOptionalHeaders(headers, message);
         }
 
-        private void AddConditionalHeaders(Headers headers, Message message)
+        private void AddCLoudEventsOptionalHeaders(Headers headers, Message message)
         {
             if (!string.IsNullOrEmpty(message.Header.Subject))
                 headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject.ToByteArray());
@@ -86,43 +110,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
         }
 
-        private void AddStandardHeaders(Headers headers, Message message)
-        {
-            AddTimestampHeader(headers, message);
-            
-            if (!ContentType.IsNullOrEmpty(message.Header.ContentType))
-                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
-            
-            if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.Value.ToByteArray());
-
-            if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
-                headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.Value.ToByteArray());
-
-            if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
-                headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.Value.ToByteArray());
-
-            headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.Delayed.TotalMilliseconds.ToString(CultureInfo.InvariantCulture).ToByteArray());
-            headers.Add(HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString().ToByteArray());
-        }
-
-        private void AddTimestampHeader(Headers headers, Message message)
-        {
-            var timeStampAsString = message.Header.TimeStamp.DateTime != default
-                ? message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture)
-                : DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
-            
-            headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
-        }
-
-        private void AddBagHeaders(Headers headers, Message message)
+        private void AddUserDefinedBagHeaders(Headers headers, Message message)
         {
             message.Header.Bag
                 .Where(x => !BrighterDefinedHeaders.HeadersToReset.Contains(x.Key))
-                .Each(header => AddBagHeader(headers, header.Key, header.Value));
+                .Each(header => AddUserDefinedBagHeader(headers, header.Key, header.Value));
         }
 
-        private void AddBagHeader(Headers headers, string key, object value)
+        private void AddUserDefinedBagHeader(Headers headers, string key, object value)
         {
             switch (value)
             {
