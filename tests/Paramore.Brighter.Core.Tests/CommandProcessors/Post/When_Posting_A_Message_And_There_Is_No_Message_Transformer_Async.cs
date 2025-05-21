@@ -71,6 +71,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 null,
                 _tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 _outbox)
             );               
 

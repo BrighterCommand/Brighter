@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -55,8 +56,7 @@ namespace GreetingsSender
 
             var producerRegistry = new RmqProducerRegistryFactory(
                 rmqConnection,
-                new RmqPublication[]
-                {
+                [
                     new()
                     {
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
@@ -71,7 +71,7 @@ namespace GreetingsSender
                         Topic = new RoutingKey("farewell.event"),
                         RequestType = typeof(FarewellEvent)
                     }
-                }).Create();
+                ]).Create();
             
             serviceCollection
                 .AddBrighter()
@@ -81,6 +81,7 @@ namespace GreetingsSender
                     configure.MaxOutStandingMessages = 5;
                     configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                 })
+                .UsePublicationFinder<CustomPublicationFinder>()
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -89,6 +90,28 @@ namespace GreetingsSender
 
             commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
             commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
+        }
+    }
+
+    public class CustomPublicationFinder : FindPublicationByPublicationTopicOrRequestType
+    {
+        private static readonly Dictionary<Type, string> s_typeRouteMapper = new()
+        {
+            [typeof(GreetingEvent)] = "greeting.event",
+            [typeof(FarewellEvent)] = "farewell.event"
+        };
+
+        public override Publication Find<TRequest>(IAmAProducerRegistry registry)
+        {
+            if (s_typeRouteMapper.TryGetValue(typeof(TRequest), out var topic))
+            {
+                // If you have a tenant topic you could have this 
+                // MAP: [typeof(A), "some-topic-{tenant}"
+                // topic.Replace("{tenant}", tenantContext.Tenant)
+                return registry.LookupBy(topic).Publication;
+            }
+            
+            return base.Find<TRequest>(registry);
         }
     }
 }

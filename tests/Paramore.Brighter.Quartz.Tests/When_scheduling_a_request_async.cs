@@ -79,6 +79,7 @@ public class QuartzSchedulerRequestAsyncTests
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             trace,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 

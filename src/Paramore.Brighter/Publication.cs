@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The type of the request that we expect to publish on this channel
         /// </summary>
-        public Type? RequestType { get; set; }
+        public virtual Type? RequestType { get; set; }
         
         /// <summary>
         /// REQUIRED
@@ -126,5 +126,16 @@ namespace Paramore.Brighter
         /// </para>
         /// </remarks> 
         public IDictionary<string, object>? CloudEventsAdditionalProperties { get; set; }
+    }
+
+    /// <summary>
+    /// Contains configuration that is generic to producers - similar to Subscription for consumers
+    /// Unlike <see cref="Subscription"/>, as it is passed to a constructor it is by convention over enforced at compile time
+    /// Platform specific configuration goes into a <see cref="IAmGatewayConfiguration"/> derived class
+    /// </summary>
+    public class Publication<T> : Publication
+        where T: class, IRequest
+    {
+        public override Type? RequestType { get; set; } = typeof(T);
     }
 }

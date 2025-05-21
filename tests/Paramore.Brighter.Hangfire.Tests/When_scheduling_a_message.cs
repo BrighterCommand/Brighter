@@ -68,6 +68,7 @@ public class HangfireSchedulerMessageTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             trace,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 

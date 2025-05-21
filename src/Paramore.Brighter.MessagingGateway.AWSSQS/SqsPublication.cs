@@ -63,3 +63,12 @@ public class SqsPublication : Publication
     /// </remarks>    
     public SqsAttributes? QueueAttributes { get; }
 }
+
+/// <summary>
+/// The SQS Message publication
+/// </summary>
+public class SqsPublication<T> : SqsPublication 
+    where T: class, IRequest
+{
+    public override Type? RequestType { get; set; } = typeof(T);
+}
