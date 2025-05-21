@@ -16,7 +16,8 @@ public class ClaimCheckSmallPayloadTests
     {
         //arrange
         InMemoryStorageProvider store = new();
-        _transformer = new ClaimCheckTransformer(store: store);
+        InMemoryStorageProviderAsync storeAsync = new();
+        _transformer = new ClaimCheckTransformer(store, storeAsync);
 
         //set the threshold to 5K
         _transformer.InitializeWrapFromAttributeParams(5);
@@ -34,8 +35,8 @@ public class ClaimCheckSmallPayloadTests
         var luggageCheckedMessage = _transformer.Wrap(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //assert
-        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _);
-
+        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _);
         Assert.False(hasLuggage);
+        Assert.Null(luggageCheckedMessage.Header.DataRef);
     }
 }

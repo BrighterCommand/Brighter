@@ -67,7 +67,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 .GetResult();
 
             var messageTransformerFactory =
-                new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+                new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
             _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
         }
@@ -102,7 +102,8 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                     new JsonSerializerOptions(JsonSerializerDefaults.General)))
             );
 
-            message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
+            message.Header.DataRef = id;
+            message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
 
             //act
             var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();

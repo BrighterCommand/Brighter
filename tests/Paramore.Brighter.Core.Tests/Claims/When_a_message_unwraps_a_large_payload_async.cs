@@ -13,13 +13,13 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 public class AsyncRetrieveClaimLargePayloadTests
 {
     private readonly InMemoryStorageProviderAsync _store;
-    private readonly ClaimCheckTransformerAsync _transformerAsync;
+    private readonly ClaimCheckTransformer _transformerAsync;
     private readonly string _contents;
 
     public AsyncRetrieveClaimLargePayloadTests()
     {
         _store = new InMemoryStorageProviderAsync();
-        _transformerAsync = new ClaimCheckTransformerAsync(store: _store);
+        _transformerAsync = new ClaimCheckTransformer(new InMemoryStorageProvider(), _store);
         //delete the luggage from the store after claiming it
         _transformerAsync.InitializeUnwrapFromAttributeParams(false);
         _contents = DataGenerator.CreateString(6000);
@@ -40,7 +40,9 @@ public class AsyncRetrieveClaimLargePayloadTests
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
-            message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
+
+        message.Header.DataRef = id;
+        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
 
         //act
         var unwrappedMessage = await _transformerAsync.UnwrapAsync(message);
@@ -48,7 +50,8 @@ public class AsyncRetrieveClaimLargePayloadTests
         //assert
         Assert.Equal(_contents, unwrappedMessage.Body.Value);
         //clean up
-        Assert.False(message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _));
+        Assert.Null(message.Header.DataRef);
+        Assert.False(message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _));
         Assert.False(await _store.HasClaimAsync(id));
     }
 }

@@ -29,7 +29,7 @@ public class LargeMessagePayloadWrapTests
 
         _inMemoryStorageProvider = new InMemoryStorageProvider();
         var messageTransformerFactory = new SimpleMessageTransformerFactory(
-            _ => new ClaimCheckTransformer(_inMemoryStorageProvider));
+            _ => new ClaimCheckTransformer(_inMemoryStorageProvider, new InMemoryStorageProviderAsync()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }

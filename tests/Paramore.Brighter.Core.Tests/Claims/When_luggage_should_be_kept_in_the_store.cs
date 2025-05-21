@@ -17,7 +17,7 @@ public class RetrieveClaimLeaveLuggage
     public RetrieveClaimLeaveLuggage()
     {
         _store = new InMemoryStorageProvider();
-        _transformer = new ClaimCheckTransformer(store: _store);
+        _transformer = new ClaimCheckTransformer(_store, new InMemoryStorageProviderAsync());
         _transformer.InitializeUnwrapFromAttributeParams(true);
 
         _contents = DataGenerator.CreateString(6000);
@@ -38,13 +38,14 @@ public class RetrieveClaimLeaveLuggage
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody($"Claim Check {id}"));
-        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
+        message.Header.DataRef = id;
+        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
 
         //act
-        var unwrappedMessage = _transformer.Unwrap(message);
+        _ = _transformer.Unwrap(message);
 
         //assert
-        bool hasLuggage = message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _);
+        bool hasLuggage = message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _);
         Assert.True(hasLuggage);
         Assert.True(_store.HasClaim(id));
     }

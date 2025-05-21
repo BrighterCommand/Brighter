@@ -40,9 +40,9 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// <param name="configure"></param>
         public static void AddS3LuggageStore(this IServiceCollection services, Action<S3LuggageOptions> configure)
         {
-            services.TryAddSingleton<IAmAStorageProviderAsync>(sp =>
+            services.TryAddSingleton(provider =>
             {
-                var httpClientFactory = sp.GetService<IHttpClientFactory>();
+                var httpClientFactory = provider.GetService<IHttpClientFactory>();
                
                 var options = new S3LuggageOptions(httpClientFactory);
 
@@ -58,10 +58,14 @@ namespace Paramore.Brighter.Tranformers.AWS
                         tags: options.Tags,
                         acl: options.ACLs,
                         abortFailedUploadsAfterDays: options.TimeToAbortFailedUploads,
-                        deleteGoodUploadsAfterDays: options.TimeToDeleteGoodUploads)
+                        deleteGoodUploadsAfterDays: options.TimeToDeleteGoodUploads,
+                        bucketAddressTemplate: options.BucketAddressTemplate)
                     .GetAwaiter()
                     .GetResult();
             });
+            
+            services.TryAddSingleton<IAmAStorageProvider>(provider => provider.GetRequiredService<S3LuggageStore>());
+            services.TryAddSingleton<IAmAStorageProviderAsync>(provider => provider.GetRequiredService<S3LuggageStore>());
         }
     }
 }

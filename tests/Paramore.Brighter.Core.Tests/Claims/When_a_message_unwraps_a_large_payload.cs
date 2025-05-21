@@ -16,7 +16,7 @@ public class RetrieveClaimLargePayloadTests
     public RetrieveClaimLargePayloadTests()
     {
         _store = new InMemoryStorageProvider();
-        _transformerAsync = new ClaimCheckTransformer(store: _store);
+        _transformerAsync = new ClaimCheckTransformer(_store, new InMemoryStorageProviderAsync());
         //delete the luggage from the store after claiming it
         _transformerAsync.InitializeUnwrapFromAttributeParams(false);
         _contents = DataGenerator.CreateString(6000);
@@ -44,8 +44,10 @@ public class RetrieveClaimLargePayloadTests
 
         //assert
         Assert.Equal(_contents, unwrappedMessage.Body.Value);
+        
         //clean up
-        Assert.False(message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _));
+        Assert.Null(message.Header.DataRef);
+        Assert.False(message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _));
         Assert.False(_store.HasClaim(id));
     }
 }

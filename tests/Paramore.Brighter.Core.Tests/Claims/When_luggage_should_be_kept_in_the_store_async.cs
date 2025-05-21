@@ -11,13 +11,13 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 public class AsyncRetrieveClaimLeaveLuggage
 {
     private readonly InMemoryStorageProviderAsync _store;
-    private readonly ClaimCheckTransformerAsync _transformerAsync;
+    private readonly ClaimCheckTransformer _transformerAsync;
     private readonly string _contents;
 
     public AsyncRetrieveClaimLeaveLuggage()
     {
         _store = new InMemoryStorageProviderAsync();
-        _transformerAsync = new ClaimCheckTransformerAsync(store: _store);
+        _transformerAsync = new ClaimCheckTransformer(new InMemoryStorageProvider(), _store);
         _transformerAsync.InitializeUnwrapFromAttributeParams(true);
 
         _contents = DataGenerator.CreateString(6000);
@@ -38,13 +38,14 @@ public class AsyncRetrieveClaimLeaveLuggage
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
-        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
+        message.Header.DataRef = id;
+        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
 
         //act
         var unwrappedMessage = await _transformerAsync.UnwrapAsync(message);
 
         //assert
-        bool hasLuggage = message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _);
+        bool hasLuggage = message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _);
         Assert.True(hasLuggage);
         Assert.True(await _store.HasClaimAsync(id));
     }

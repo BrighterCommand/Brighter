@@ -67,7 +67,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 .GetAwaiter()
                 .GetResult();
 
-            var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+            var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
             _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
@@ -82,8 +82,9 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
             //assert
-            Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK));
-            _id = (string)message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
+            Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
+            Assert.NotNull(message.Header.DataRef);
+            _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
             Assert.Equal($"Claim Check {_id}", message.Body.Value);
             
             Assert.True((await _luggageStore.HasClaimAsync(_id)));

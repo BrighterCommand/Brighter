@@ -29,7 +29,7 @@ public class AsyncLargeMessagePayloadWrapTests
 
         _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(
-            _ => new ClaimCheckTransformerAsync(_inMemoryStorageProviderAsync));
+            _ => new ClaimCheckTransformer(new InMemoryStorageProvider(), _inMemoryStorageProviderAsync));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand") };
 
@@ -44,8 +44,9 @@ public class AsyncLargeMessagePayloadWrapTests
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
         //assert
-        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK));
-        var id = (string) message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
+        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
+        Assert.Equal(message.Header.DataRef, message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]);
+        var id = (string) message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equal($"Claim Check {id}", message.Body.Value);
         Assert.True(await _inMemoryStorageProviderAsync.HasClaimAsync(id));
     }

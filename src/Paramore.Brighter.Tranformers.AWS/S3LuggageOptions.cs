@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             StoreCreation = S3LuggageStoreCreation.CreateIfMissing;
             ACLs = S3CannedACL.Private;
             HttpClientFactory = httpClientFactory;
-            Tags = new List<Tag> { new Tag { Key = "Creator", Value = " Brighter Luggage Store" } };
+            Tags = [new Tag { Key = "Creator", Value = " Brighter Luggage Store" }];
             TimeToAbortFailedUploads = 1;
             TimeToDeleteGoodUploads = 7;
         }
@@ -126,5 +126,14 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// How long to keep good uploads in days, before deleting them
         /// </summary>
         public int TimeToDeleteGoodUploads { get; set; }
+
+        /// <summary>
+        /// The bucket address template
+        /// </summary>
+        /// <remarks>
+        /// If you are using an S3 compatible storage provided,
+        /// please update this endpoint if you want to Brighter to create your bucket
+        /// </remarks>
+        public string BucketAddressTemplate { get; set; } = "https://{BucketName}.s3.{BucketRegion}.amazonaws.com";
     }
 }

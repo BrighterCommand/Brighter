@@ -35,7 +35,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
             null);
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }                                                                             
@@ -67,8 +67,9 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
-
+        message.Header.DataRef = id;
+        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id; 
+         
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
         var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());

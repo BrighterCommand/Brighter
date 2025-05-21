@@ -37,6 +37,7 @@ using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 using Paramore.Brighter.Transforms.Storage;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
@@ -66,7 +67,7 @@ namespace Paramore.Brighter.Tranformers.AWS
         AssumeExists
     }
 
-    public partial class S3LuggageStore : IAmAStorageProviderAsync, IDisposable
+    public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAsync, IDisposable
     {
         private string _accountId;
         private string _bucketName;
@@ -78,7 +79,7 @@ namespace Paramore.Brighter.Tranformers.AWS
 
         static S3LuggageStore()
         {
-            string pattern = @"(?!(^xn--|.+-s3alias$))^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$";
+            const string pattern = "(?!(^xn--|.+-s3alias$))^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$";
             s_validBucketNameRx = new Regex(pattern, RegexOptions.Compiled);
         }
 
@@ -110,6 +111,7 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// <param name="abortFailedUploadsAfterDays">After what delay (in days) should we delete failed uploads. Default is 1</param>
         /// <param name="deleteGoodUploadsAfterDays">After what delay (in days) should we delete successful uploads. Default is 3, -1 is do not auto-delete</param>
         /// <param name="luggagePrefix">What prefix should the deletion policy be applied to: defaults to BRIGHTER_CHECKED_LUGGAGE</param>
+        /// <param name="bucketAddressTemplate">The bucket address template</param>
         public static async Task<S3LuggageStore> CreateAsync(IAmazonS3 client,
             string bucketName,
             S3LuggageStoreCreation storeCreation = S3LuggageStoreCreation.AssumeExists,
@@ -121,7 +123,8 @@ namespace Paramore.Brighter.Tranformers.AWS
             AsyncRetryPolicy policy = null,
             int abortFailedUploadsAfterDays = 1,
             int deleteGoodUploadsAfterDays = 3,
-            string luggagePrefix = "BRIGHTER_CHECKED_LUGGAGE")
+            string luggagePrefix = "BRIGHTER_CHECKED_LUGGAGE", 
+            string bucketAddressTemplate = "https://{BucketName}.s3.{BucketRegion}.amazonaws.com")
         {
             if (client == null) throw new ArgumentNullException(nameof(client), "We need a valid S3 client to connect to AWS, but was null");
             if (string.IsNullOrEmpty(bucketName))
@@ -162,7 +165,7 @@ namespace Paramore.Brighter.Tranformers.AWS
                 try
                 {
                     luggageStore._accountId = await GetAccountIdAsync(stsClient);
-                    var bucketExists = await BucketExistsAsync(httpClientFactory, luggageStore._accountId, bucketName, bucketRegion);
+                    var bucketExists = await BucketExistsAsync(httpClientFactory, luggageStore._accountId, bucketName, bucketRegion, bucketAddressTemplate);
 
                     if (!bucketExists)
                     {
@@ -197,6 +200,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             ReleaseUnmanagedResources();
         }
 
+        /// <inheritdoc />
         public async Task DeleteAsync(string claimCheck, CancellationToken cancellationToken = default)
         {
             var request = new DeleteObjectRequest { BucketName = _bucketName, Key = claimCheck };
@@ -207,6 +211,7 @@ namespace Paramore.Brighter.Tranformers.AWS
                 Log.CouldNotDeleteLuggage(s_logger, claimCheck, _bucketName);
         }
 
+        /// <inheritdoc />
         public async Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default)
         {
             var request = new GetObjectRequest { BucketName = _bucketName, Key = claimCheck, };
@@ -245,6 +250,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             }
         }
 
+        /// <inheritdoc />
         public async Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken = default)
         {
             try
@@ -265,6 +271,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             return false;
         }
 
+        /// <inheritdoc />
         public async Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default)
         {
             var claim = $"{_luggagePrefix}/luggage_store/{Guid.NewGuid().ToString()}";
@@ -274,23 +281,54 @@ namespace Paramore.Brighter.Tranformers.AWS
             await transferUtility.UploadAsync(stream, _bucketName, claim, cancellationToken);
             return claim;
         }
+        /// <inheritdoc />
+        public void Delete(string claimCheck)
+        {
+            BrighterAsyncContext.Run(async () => await DeleteAsync(claimCheck));
+        }
+
+        /// <inheritdoc />
+        public Stream Retrieve(string claimCheck)
+        {
+            return BrighterAsyncContext.Run(async () => await RetrieveAsync(claimCheck));
+        }
+
+        /// <inheritdoc />
+        public bool HasClaim(string claimCheck)
+        {
+            return BrighterAsyncContext.Run(async () => await HasClaimAsync(claimCheck));
+        }
+
+        /// <inheritdoc />
+        public string Store(Stream stream)
+        {
+            return BrighterAsyncContext.Run(async () => await StoreAsync(stream));
+        }
 
         private void ReleaseUnmanagedResources()
         {
             // TODO release unmanaged resources here
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             ReleaseUnmanagedResources();
             GC.SuppressFinalize(this);
         }
 
-        private static async Task<bool> BucketExistsAsync(IHttpClientFactory httpClientFactory, string accountId, string bucketName, S3Region bucketRegion)
+        private static async Task<bool> BucketExistsAsync(IHttpClientFactory httpClientFactory, 
+            string accountId, 
+            string bucketName, 
+            S3Region bucketRegion,
+            string bucketAddressTemplate)
         {
             var httpClient = httpClientFactory.CreateClient();
-            httpClient.BaseAddress = new Uri($"https://{bucketName}.s3.{bucketRegion.Value}.amazonaws.com");
-            using var headRequest = new HttpRequestMessage(HttpMethod.Head, @"/");
+            httpClient.BaseAddress = new Uri(bucketAddressTemplate
+                .Replace("{BucketName}", bucketName)
+                .Replace("{BucketRegion}", bucketRegion.Value)
+            );
+            using var headRequest = new HttpRequestMessage(HttpMethod.Head, "/");
             headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
             using var response = await httpClient.SendAsync(headRequest);
             //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 

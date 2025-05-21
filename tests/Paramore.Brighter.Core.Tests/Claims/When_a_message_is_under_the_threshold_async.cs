@@ -9,16 +9,16 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class AsyncClaimCheckSmallPayloadTests
 {
-    private readonly ClaimCheckTransformerAsync _transformerAsync;
+    private readonly ClaimCheckTransformer _transformerAsync;
     private readonly Message _message;
-    private readonly InMemoryStorageProviderAsync _store;
     private readonly RoutingKey _topic = new("test_topic");
 
     public AsyncClaimCheckSmallPayloadTests()
     {
         //arrange
-        _store = new InMemoryStorageProviderAsync();
-        _transformerAsync = new ClaimCheckTransformerAsync(store: _store);
+        InMemoryStorageProvider store = new();
+        InMemoryStorageProviderAsync storeAsync = new();
+        _transformerAsync = new ClaimCheckTransformer(store, storeAsync);
 
         //set the threshold to 5K
         _transformerAsync.InitializeWrapFromAttributeParams(5);
@@ -36,7 +36,7 @@ public class AsyncClaimCheckSmallPayloadTests
         var luggageCheckedMessage = await _transformerAsync.WrapAsync(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //assert
-        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _);
+        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _);
 
         Assert.False(hasLuggage);
     }

@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Transforms.Attributes
     /// <summary>
     /// Compresses the payload of a message to reduce its size
     /// </summary>
-    public class Compress : WrapWithAttribute
+    public class CompressAttribute : WrapWithAttribute
     {
         private readonly CompressionMethod _compressionMethod;
         private readonly CompressionLevel _compressionLevel;
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <param name="compressionMethod">The compression method> One of <see cref="CompressionMethod"/>: GZip, Zlib, or Brotli. Defaults to Gzip </param>
         /// <param name="compressionLevel">The level of compression <see cref="CompressionLevel"/></param>
         /// <param name="thresholdInKb">How large the payload should be before we try to compress it.</param>
-        public Compress(
+        public CompressAttribute(
             int step, 
             CompressionMethod compressionMethod = CompressionMethod.GZip, 
             CompressionLevel compressionLevel = CompressionLevel.Optimal, 
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <returns>The type for the compression middleware</returns>
         public override Type GetHandlerType()
         {
-            return typeof(CompressPayloadTransformerAsync);
+            return typeof(CompressPayloadTransformer);
         }
     }
 }

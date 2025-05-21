@@ -25,37 +25,37 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Transforms.Transformers;
 
-namespace Paramore.Brighter.Transforms.Attributes
+namespace Paramore.Brighter.Transforms.Attributes;
+
+/// <summary>
+/// Configures large payloads that may not be possible on certain middleware platforms, or perform badly on others. A claim check allows us to
+/// offload the message body to distributed storage, from where it can be retrieved later.
+/// </summary>
+public class ClaimCheckAttribute : WrapWithAttribute
 {
+    private readonly int _thresholdInKb;
+
     /// <summary>
-    /// Configures middleware to retrieve a payload from a message store and writes it to the body of the message
+    /// Checks large payloads, 'luggage', into storage
     /// </summary>
-    public class RetrieveClaim : UnwrapWithAttribute
+    /// <param name="step">The order to run this in</param>
+    /// <param name="thresholdInKb">The size in Kb over which luggage should be checked, 0 for all. So 256 represents 256Kb</param>
+    public ClaimCheckAttribute(int step, int thresholdInKb = 0) : base(step)
     {
-        private readonly bool _retain;
+        _thresholdInKb = thresholdInKb;
+    }
 
-        /// <summary>
-        /// Retrieves 'luggage' matching a claim id from storage
-        /// </summary>
-        /// <param name="step">The order in which transformations are applied</param>
-        /// <param name="retain">Should we retain the 'luggage' in the store once deleted</param>
-        public RetrieveClaim(int step, bool retain = false) : base(step)
-        {
-            _retain = retain;
-        }
+    public override object[] InitializerParams()
+    {
+        return [_thresholdInKb];
+    }
 
-        public override object[] InitializerParams()
-        {
-            return [_retain];
-        }
-
-        /// <summary>
-        /// Gets the retrieve luggage transformer type
-        /// </summary>
-        /// <returns>The type of the Claims Check Transformer</returns>
-        public override Type GetHandlerType()
-        {
-            return typeof(ClaimCheckTransformerAsync);
-        }
+    /// <summary>
+    /// Get the Claims Check Transformer type 
+    /// </summary>
+    /// <returns>The type of the Claims Check Transformer</returns>
+    public override Type GetHandlerType()
+    {
+        return typeof(ClaimCheckTransformer);
     }
 }
