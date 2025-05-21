@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.MessagingGateway.Postgres;
+﻿using System;
+
+namespace Paramore.Brighter.MessagingGateway.Postgres;
 
 /// <summary>
 /// Represents the publication configuration specific to PostgreSQL within the Brighter framework.
@@ -28,4 +30,15 @@ public class PostgresPublication : Publication
     /// <see cref="PostgresMessagingGatewayConnection"/> will be used.
     /// </summary>
     public bool? BinaryMessagePayload { get; set; }
+}
+
+/// <summary>
+/// Represents the publication configuration specific to PostgreSQL within the Brighter framework.
+/// This class extends the base <see cref="Publication"/> class with PostgreSQL-specific settings
+/// for customizing how messages are published to a PostgreSQL message queue.
+/// </summary>
+public class PostgresPublication<T> : PostgresPublication 
+    where T : class, IRequest 
+{
+    public override Type? RequestType { get; set; } = typeof(T);
 }
