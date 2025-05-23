@@ -28,6 +28,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Transforms.Transformers;
 
@@ -89,7 +90,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
     /// <param name="message">The message to compress</param>
     /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>
     /// <param name="cancellationToken"></param>
-    /// <returns>A message with a compressed body</returns
+    /// <returns>A message with a compressed body</returns>
     public async Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
     {
         var bytes = message.Body.Bytes;
@@ -151,7 +152,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
 #endif
 
         string contentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
-        message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.UTF8);
+        message.Body = new MessageBody(output.ToArray(), contentType);
         message.Header.ContentType = contentType;
 
         return message;

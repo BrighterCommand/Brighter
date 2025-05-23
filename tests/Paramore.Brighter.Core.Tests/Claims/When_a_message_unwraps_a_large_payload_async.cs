@@ -12,14 +12,14 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class AsyncRetrieveClaimLargePayloadTests
 {
-    private readonly InMemoryStorageProviderAsync _store;
+    private readonly InMemoryStorageProvider _store;
     private readonly ClaimCheckTransformer _transformerAsync;
     private readonly string _contents;
 
     public AsyncRetrieveClaimLargePayloadTests()
     {
-        _store = new InMemoryStorageProviderAsync();
-        _transformerAsync = new ClaimCheckTransformer(new InMemoryStorageProvider(), _store);
+        _store = new InMemoryStorageProvider();
+        _transformerAsync = new ClaimCheckTransformer(_store, _store);
         //delete the luggage from the store after claiming it
         _transformerAsync.InitializeUnwrapFromAttributeParams(false);
         _contents = DataGenerator.CreateString(6000);

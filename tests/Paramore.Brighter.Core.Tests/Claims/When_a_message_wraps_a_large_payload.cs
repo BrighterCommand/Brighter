@@ -19,7 +19,7 @@ public class ClaimCheckLargePayloadTests
     {
         //arrange
         _store = new InMemoryStorageProvider();
-        _transformer = new ClaimCheckTransformer(_store, new InMemoryStorageProviderAsync());
+        _transformer = new ClaimCheckTransformer(_store, new InMemoryStorageProvider());
         _transformer.InitializeWrapFromAttributeParams(5);
 
         _body = DataGenerator.CreateString(6000);

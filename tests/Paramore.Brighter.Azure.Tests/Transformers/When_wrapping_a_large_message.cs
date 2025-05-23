@@ -38,7 +38,11 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
             _client = new BlobContainerClient(bucketUrl, new AzureCliCredential());
 
-            _luggageStore = new AzureBlobLuggageStore(bucketUrl, new AzureCliCredential());
+            _luggageStore = new AzureBlobLuggageStore(new AzureBlobLuggageOptions
+            {
+                    ContainerUri = bucketUrl,
+                    Credential = new AzureCliCredential()
+            });
 
             var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 

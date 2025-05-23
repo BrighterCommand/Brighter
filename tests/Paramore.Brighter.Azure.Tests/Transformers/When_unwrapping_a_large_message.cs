@@ -26,7 +26,11 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
 
         _client = new BlobContainerClient(_bucketUrl, new AzureCliCredential());
         _client.CreateIfNotExists();
-        _luggageStore = new AzureBlobLuggageStore(_bucketUrl, new AzureCliCredential());
+        _luggageStore = new AzureBlobLuggageStore(new AzureBlobLuggageOptions
+        {
+            ContainerUri = _bucketUrl,
+            Credential = new AzureCliCredential()
+        });
         
         TransformPipelineBuilder.ClearPipelineCache();
 

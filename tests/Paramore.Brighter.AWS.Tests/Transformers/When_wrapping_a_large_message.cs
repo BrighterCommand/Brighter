@@ -15,13 +15,13 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 {
     public class LargeMessagePayloadWrapTests : IDisposable
     {
-        private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
+        private string? _id;
+        private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
         private readonly TransformPipelineBuilderAsync _pipelineBuilder;
         private readonly MyLargeCommand _myCommand;
         private readonly S3LuggageStore _luggageStore;
         private readonly AmazonS3Client _client;
         private readonly string _bucketName;
-        private string _id;
         private readonly Publication _publication;
 
         public LargeMessagePayloadWrapTests()
@@ -38,34 +38,23 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             
             _myCommand = new MyLargeCommand(6000);
 
-           var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
-
+            var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
             _client = factory.CreateS3Client();
-            var stsClient = factory.CreateStsClient();
 
             var services = new ServiceCollection();
             services.AddHttpClient();
             var provider = services.BuildServiceProvider();
-            IHttpClientFactory httpClientFactory = provider.GetService<IHttpClientFactory>();
+            IHttpClientFactory httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
 
             _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
+
+            _luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
+            {
+                HttpClientFactory = httpClientFactory,
+                Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
+            });
             
-            _luggageStore = S3LuggageStore
-                .CreateAsync(
-                    client: _client,
-                    bucketName: _bucketName,
-                    storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                    httpClientFactory: httpClientFactory,
-                    stsClient: stsClient, 
-#pragma warning disable CS0618 // It is obsolete, but we want the string value here not the replacement one
-                    bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618
-                    tags: [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-                    acl: S3CannedACL.Private,
-                    abortFailedUploadsAfterDays: 1,
-                    deleteGoodUploadsAfterDays: 1)
-                .GetAwaiter()
-                .GetResult();
+            _luggageStore.EnsureStoreExists();
 
             var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
@@ -87,13 +76,17 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
             Assert.Equal($"Claim Check {_id}", message.Body.Value);
             
-            Assert.True((await _luggageStore.HasClaimAsync(_id)));
+            Assert.True(await _luggageStore.HasClaimAsync(_id));
         }
 
         public void Dispose()
         {
             //We have to empty objects from a bucket before deleting it
-            _luggageStore.DeleteAsync(_id).GetAwaiter().GetResult();
+            if (_id != null)
+            {
+                _luggageStore.DeleteAsync(_id).GetAwaiter().GetResult();
+            }
+            
             _client.DeleteBucketAsync(_bucketName).GetAwaiter().GetResult();
         }
     }

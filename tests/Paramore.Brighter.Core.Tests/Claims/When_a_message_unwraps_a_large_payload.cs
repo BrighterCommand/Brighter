@@ -16,7 +16,7 @@ public class RetrieveClaimLargePayloadTests
     public RetrieveClaimLargePayloadTests()
     {
         _store = new InMemoryStorageProvider();
-        _transformerAsync = new ClaimCheckTransformer(_store, new InMemoryStorageProviderAsync());
+        _transformerAsync = new ClaimCheckTransformer(_store, _store);
         //delete the luggage from the store after claiming it
         _transformerAsync.InitializeUnwrapFromAttributeParams(false);
         _contents = DataGenerator.CreateString(6000);

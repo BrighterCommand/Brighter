@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 public class AsyncLargeMessagePaylodUnwrapTests
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
-    private readonly InMemoryStorageProviderAsync _inMemoryStorageProviderAsync;
+    private readonly InMemoryStorageProvider _inMemoryStorageProviderAsync;
 
     public AsyncLargeMessagePaylodUnwrapTests()
     {
@@ -26,8 +26,8 @@ public class AsyncLargeMessagePaylodUnwrapTests
             );
         mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
 
-        _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
-        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(new InMemoryStorageProvider(), _inMemoryStorageProviderAsync));
+        _inMemoryStorageProviderAsync = new InMemoryStorageProvider();
+        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_inMemoryStorageProviderAsync, _inMemoryStorageProviderAsync));
 
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }

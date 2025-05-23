@@ -185,14 +185,13 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             startTime: now);
         
-        
         activity?.AddBaggage("correlationId", message.Header.CorrelationId);
         
         Activity.Current = activity;
 
         return activity;
     }
-
+    
     /// <summary>
     /// Create a span for a request in CommandProcessor
     /// </summary>
@@ -354,6 +353,40 @@ public class BrighterTracer : IAmABrighterTracer
         
          Activity.Current = activity;
 
+        return activity;
+    }
+
+    /// <inheritdoc />
+    public Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info)
+    {
+        var spanName = $"{info.Operation.ToSpanName()} {info.ProviderName} {info.BucketName}";
+
+        const ActivityKind kind = ActivityKind.Client;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection
+        {
+            [BrighterSemanticConventions.InstrumentationDomain] = BrighterSemanticConventions.ClaimCheckInstrumentationDomain,
+            [BrighterSemanticConventions.ClaimCheckOperation] = info.Operation.ToSpanName(),
+            [BrighterSemanticConventions.ClaimCheckProvider] = info.ProviderName,
+            [BrighterSemanticConventions.ClaimCheckBucketName] = info.BucketName,
+        };
+
+        if (info.Attributes != null)
+        {
+            foreach (var attribute in  info.Attributes)
+            {
+                tags.Add(attribute.Key, attribute.Value);
+            }
+        }
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            tags: tags,
+            startTime: now);
+
+        Activity.Current = activity;
         return activity;
     }
 

@@ -17,7 +17,7 @@ public class RetrieveClaimLeaveLuggage
     public RetrieveClaimLeaveLuggage()
     {
         _store = new InMemoryStorageProvider();
-        _transformer = new ClaimCheckTransformer(_store, new InMemoryStorageProviderAsync());
+        _transformer = new ClaimCheckTransformer(_store, _store);
         _transformer.InitializeUnwrapFromAttributeParams(true);
 
         _contents = DataGenerator.CreateString(6000);

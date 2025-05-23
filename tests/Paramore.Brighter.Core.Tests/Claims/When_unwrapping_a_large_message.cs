@@ -25,7 +25,7 @@ public class LargeMessagePaylodUnwrapTests
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
 
         _inMemoryStorageProvider = new InMemoryStorageProvider();
-        var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_inMemoryStorageProvider, new InMemoryStorageProviderAsync()));
+        var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_inMemoryStorageProvider, _inMemoryStorageProvider));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }

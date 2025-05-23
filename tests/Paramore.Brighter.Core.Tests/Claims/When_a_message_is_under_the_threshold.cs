@@ -16,8 +16,7 @@ public class ClaimCheckSmallPayloadTests
     {
         //arrange
         InMemoryStorageProvider store = new();
-        InMemoryStorageProviderAsync storeAsync = new();
-        _transformer = new ClaimCheckTransformer(store, storeAsync);
+        _transformer = new ClaimCheckTransformer(store, store);
 
         //set the threshold to 5K
         _transformer.InitializeWrapFromAttributeParams(5);

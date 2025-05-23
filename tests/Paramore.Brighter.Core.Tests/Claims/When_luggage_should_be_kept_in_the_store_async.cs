@@ -10,14 +10,14 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class AsyncRetrieveClaimLeaveLuggage
 {
-    private readonly InMemoryStorageProviderAsync _store;
+    private readonly InMemoryStorageProvider _store;
     private readonly ClaimCheckTransformer _transformerAsync;
     private readonly string _contents;
 
     public AsyncRetrieveClaimLeaveLuggage()
     {
-        _store = new InMemoryStorageProviderAsync();
-        _transformerAsync = new ClaimCheckTransformer(new InMemoryStorageProvider(), _store);
+        _store = new InMemoryStorageProvider();
+        _transformerAsync = new ClaimCheckTransformer(_store, _store);
         _transformerAsync.InitializeUnwrapFromAttributeParams(true);
 
         _contents = DataGenerator.CreateString(6000);

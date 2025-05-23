@@ -12,7 +12,7 @@ public class AsyncLargeMessagePayloadWrapTests
     private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
-    private InMemoryStorageProviderAsync _inMemoryStorageProviderAsync;
+    private readonly InMemoryStorageProvider _inMemoryStorageProviderAsync;
     private readonly Publication _publication;
 
     public AsyncLargeMessagePayloadWrapTests()
@@ -27,9 +27,9 @@ public class AsyncLargeMessagePayloadWrapTests
 
         _myCommand = new MyLargeCommand(6000);
 
-        _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
+        _inMemoryStorageProviderAsync = new InMemoryStorageProvider();
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(
-            _ => new ClaimCheckTransformer(new InMemoryStorageProvider(), _inMemoryStorageProviderAsync));
+            _ => new ClaimCheckTransformer(_inMemoryStorageProviderAsync, _inMemoryStorageProviderAsync));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand") };
 

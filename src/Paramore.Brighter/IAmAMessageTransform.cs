@@ -22,8 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading;
-using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {

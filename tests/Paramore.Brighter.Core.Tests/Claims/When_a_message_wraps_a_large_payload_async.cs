@@ -13,14 +13,14 @@ public class AsyncClaimCheckLargePayloadTests
     private readonly ClaimCheckTransformer _transformerAsync;
     private readonly Message _message;
     private readonly string _body;
-    private readonly InMemoryStorageProviderAsync _store;
+    private readonly InMemoryStorageProvider _store;
     private readonly RoutingKey _topic = new("test_topic");
 
     public AsyncClaimCheckLargePayloadTests()
     {
         //arrange
-        _store = new InMemoryStorageProviderAsync();
-        _transformerAsync = new ClaimCheckTransformer(new InMemoryStorageProvider(), _store);
+        _store = new InMemoryStorageProvider();
+        _transformerAsync = new ClaimCheckTransformer(_store, _store);
         _transformerAsync.InitializeWrapFromAttributeParams(5);
 
         _body = DataGenerator.CreateString(6000);

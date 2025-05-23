@@ -65,19 +65,6 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
         _storeAsync = storeAsync;
     }
 
-    /// <summary>
-    /// NOTE: Default constructor is not intended for usage, but is required for the service activator to not throw an exception
-    /// due to missing dependencies when auto-registration registers this transformer but you do not use the claim check
-    /// functionality
-    /// If you forget to register your storage provider, you will get a not implemented exception when you try to use the
-    /// claim check functionality
-    /// </summary>
-    public ClaimCheckTransformer()
-    {
-        _store = new NullLuggageStore();
-        _storeAsync = new NullLuggageStoreAsync();
-    }
-
     public void Dispose()
     {
     }
@@ -128,6 +115,8 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
             return message;
         }
 
+        await _storeAsync.EnsureStoreExistsAsync(cancellationToken);
+        
         var body = message.Body.Value;
         var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
@@ -162,6 +151,8 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
         {
             return message;
         }
+        
+        await _storeAsync.EnsureStoreExistsAsync(cancellationToken);
             
 #if NETSTANDARD
             var luggage = await new StreamReader(await _storeAsync.RetrieveAsync(id!, cancellationToken))
@@ -198,7 +189,7 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
         {
             return message;
         }
-
+        
         var body = message.Body.Value;
         var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
