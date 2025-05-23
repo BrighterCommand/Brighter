@@ -82,18 +82,16 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
             
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
             
-            var header = new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT)
-            {
-                TraceParent = externalActivity?.Id, TraceState = externalActivity?.TraceStateString
-            };
-            
-            externalActivity?.Stop();
-
             _message = new Message(
-                header, 
+                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT), 
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
             
+            var contextPropogator = new TextContextPropogator();
+            contextPropogator.PropogateContext(externalActivity?.Context, _message);
+            
+            externalActivity?.Stop();
+
             channel.Enqueue(_message);
             
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);

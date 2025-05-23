@@ -9,6 +9,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
 [Trait("Fragile", "CI")]
+[Collection("RMQ")]
 public class RmqMessageConsumerMultipleTopicTests : IDisposable
 {        
     private readonly IAmAMessageProducerSync _messageProducer;

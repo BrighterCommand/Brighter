@@ -34,7 +34,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
         MessageId = message.Id;
         MessageType = message.Header.MessageType.ToString();
         PartitionKey = message.Header.PartitionKey;
-        ReplyTo = message.Header.ReplyTo;
+        ReplyTo = message.Header.ReplyTo?.Value;
         Topic = message.Header.Topic;
         ExpireAfterSeconds = expireAfterSeconds;
     }
@@ -127,7 +127,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
             topic: new RoutingKey(Topic),
             messageType: messageType,
             timeStamp: TimeStamp,
-            correlationId: CorrelationId,
+            correlationId: CorrelationId is not null ? new Id(CorrelationId) : null,
             replyTo: ReplyTo == null ? RoutingKey.Empty : new RoutingKey(ReplyTo));
 
         if (!string.IsNullOrEmpty(PartitionKey))

@@ -61,9 +61,9 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
     /// <param name="messages">Messages to send</param>
     /// <param name="cancellationToken">The Cancellation Token</param>
     /// <returns>IDs of successfully archived messages</returns>
-    public async Task<string[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+    public async Task<Id[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
     {
-        var uploads = new Queue<Task<string>>();
+        var uploads = new Queue<Task<Id>>();
 
         foreach (var message in messages)
         {
@@ -77,7 +77,7 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
 
     }
 
-    private async Task<string?> UploadSafe(Message message, CancellationToken cancellationToken)
+    private async Task<Id?> UploadSafe(Message message, CancellationToken cancellationToken)
     {
         try
         {

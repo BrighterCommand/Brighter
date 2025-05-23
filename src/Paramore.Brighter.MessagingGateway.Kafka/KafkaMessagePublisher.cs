@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 deliveryResult.Status = PersistenceStatus.NotPersisted;
                 deliveryResult.Message = new Message<string, byte[]>();
                 deliveryResult.Message.Headers = [];
-                deliveryResult.Headers.Add(HeaderNames.MESSAGE_ID, message.Id.ToByteArray());
+                deliveryResult.Headers.Add(HeaderNames.MESSAGE_ID, message.Id.Value.ToByteArray());
                 deliveryReport(deliveryResult);
             }
 

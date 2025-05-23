@@ -30,16 +30,7 @@ namespace Paramore.Brighter;
 
 public class RoutingKeyConvertor : JsonConverter<RoutingKey>
 {
-    public override RoutingKey Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        switch (reader.TokenType)
-        {
-            case JsonTokenType.String:
-                return new RoutingKey(reader.GetString()!);
-            default:
-                throw new JsonException($"Unable to convert Json Type {reader.TokenType} to String, Supported Types are String, Number.");
-        }        
-    }
+    public override RoutingKey Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => new(reader.GetString()!);
 
     public override void Write(Utf8JsonWriter writer, RoutingKey? value, JsonSerializerOptions options)
     {

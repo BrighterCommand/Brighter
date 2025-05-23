@@ -52,6 +52,11 @@ namespace GreetingsSender
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+            if (commandProcessor == null)
+            {
+                Console.WriteLine("Command Processor not found");
+                return;
+            }
 
             bool run = true;
 
@@ -64,7 +69,7 @@ namespace GreetingsSender
                 commandProcessor.Post(new GreetingEvent("Paul"));
                 commandProcessor.Post(new GreetingAsyncEvent("Paul - Async"));
 
-                commandProcessor.ClearOutbox(new []{distroGreeting.Id});
+                commandProcessor.ClearOutbox([distroGreeting.Id.Value]);
                 
                 Console.WriteLine("Press q to Quit or any other key to continue");
 

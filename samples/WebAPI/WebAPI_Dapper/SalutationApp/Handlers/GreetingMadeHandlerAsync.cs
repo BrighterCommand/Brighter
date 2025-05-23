@@ -36,7 +36,7 @@ public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
     public override async Task<GreetingMade> HandleAsync(GreetingMade @event,
         CancellationToken cancellationToken = default)
     {
-        List<string> posts = new List<string>();
+        List<Id> posts = new List<Id>();
 
         DbTransaction tx = await _transactionConnectionProvider.GetTransactionAsync(cancellationToken);
         DbConnection conn = tx.Connection;

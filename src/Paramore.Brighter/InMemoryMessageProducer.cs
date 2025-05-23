@@ -39,7 +39,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
     /// <param name="timeProvider"></param>
-    public class InMemoryProducer(IAmABus bus, TimeProvider timeProvider)
+    public sealed class InMemoryMessageProducer(IAmABus bus, TimeProvider timeProvider)
         : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         private ITimer? _requeueTimer;
@@ -62,7 +62,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
-        public event Action<bool, string>? OnMessagePublished;
+        public event Action<bool, Id>? OnMessagePublished;
 
         /// <summary>
         /// Dispose of the producer
@@ -93,7 +93,6 @@ namespace Paramore.Brighter
         public Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
-
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
@@ -108,8 +107,10 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">A cancellation token to end the operation</param>
         /// <returns></returns>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<Id[]> SendAsync(
+            IEnumerable<Message> messages,
+            [EnumeratorCancellation] CancellationToken cancellationToken
+            )
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             var msgs = messages as Message[] ?? messages.ToArray();
@@ -173,20 +174,5 @@ namespace Paramore.Brighter
             
             return Task.CompletedTask;
         }
-
-
-        private void SendNoDelay(Message message)
-        {
-            try
-            {
-                Send(message);
-            }
-            finally
-            {
-                _requeueTimer?.Dispose();
-            }
-        }
-
- 
     }
 }

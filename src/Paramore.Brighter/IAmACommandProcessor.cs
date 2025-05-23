@@ -298,7 +298,7 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        string DepositPost<TRequest>(TRequest request, RequestContext? requestContext = null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
+        Id DepositPost<TRequest>(TRequest request, RequestContext? requestContext = null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
@@ -315,7 +315,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
-        string DepositPost<TRequest, TTransaction>(
+        Id DepositPost<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext? requestContext = null,
@@ -335,7 +335,7 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext requestContext, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
+        Id[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext? requestContext, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Adds a messages into the outbox, and returns the id of the saved message.
@@ -351,7 +351,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        string[] DepositPost<TRequest, TTransaction>(
+        Id[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext? requestContext = null,
@@ -372,7 +372,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        Task<string> DepositPostAsync<TRequest>(
+        Task<Id> DepositPostAsync<TRequest>(
             TRequest request,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
@@ -398,7 +398,7 @@ namespace Paramore.Brighter
         /// <typeparam name="T">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
-        Task<string> DepositPostAsync<T, TTransaction>(
+        Task<Id> DepositPostAsync<T, TTransaction>(
             T request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext? requestContext = null,
@@ -422,7 +422,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        Task<string[]> DepositPostAsync<TRequest>(
+        Task<Id[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
@@ -446,7 +446,7 @@ namespace Paramore.Brighter
         /// <typeparam name="T">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
-        Task<string[]> DepositPostAsync<T, TTransaction>(
+        Task<Id[]> DepositPostAsync<T, TTransaction>(
             IEnumerable<T> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext? requestContext = null,
@@ -462,7 +462,7 @@ namespace Paramore.Brighter
         /// <param name="ids">The ids to flush</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        void ClearOutbox(string[] ids, RequestContext? requestContext = null, Dictionary<string, object>? args = null);
+        void ClearOutbox(Id[] ids, RequestContext? requestContext = null, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"/> to the broker.
@@ -474,7 +474,7 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext"></param>
         /// <param name="cancellationToken"></param>
         Task ClearOutboxAsync(
-            IEnumerable<string> posts,
+            IEnumerable<Id> posts,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,

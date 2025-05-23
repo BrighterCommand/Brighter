@@ -36,13 +36,8 @@ namespace Paramore.Brighter
     /// </summary>
     public class NullOutboxArchiveProvider : IAmAnArchiveProvider
     {
-        private ILogger _logger;
-        
-        public NullOutboxArchiveProvider()
-        {
-            _logger = ApplicationLogging.CreateLogger<NullOutboxArchiveProvider>();
-        }
-        
+        private readonly ILogger _logger = ApplicationLogging.CreateLogger<NullOutboxArchiveProvider>();
+
         /// <summary>
         /// Send a Message to the archive provider
         /// </summary>
@@ -70,7 +65,7 @@ namespace Paramore.Brighter
         /// <param name="messages">Messages to send</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>IDs of successfully archived messages</returns>
-        public Task<string[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+        public Task<Id[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Messages with Ids {MessageIds} will not be stored",
                 string.Join(",", messages.Select(m => m.Id.ToString()).ToArray()));
