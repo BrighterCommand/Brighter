@@ -12,7 +12,7 @@ public class AsyncLargeMessagePayloadWrapTests
     private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
-    private InMemoryStorageProviderAsync _inMemoryStorageProviderAsync;
+    private readonly InMemoryStorageProvider _inMemoryStorageProviderAsync;
     private readonly Publication _publication;
 
     public AsyncLargeMessagePayloadWrapTests()
@@ -27,9 +27,9 @@ public class AsyncLargeMessagePayloadWrapTests
 
         _myCommand = new MyLargeCommand(6000);
 
-        _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
+        _inMemoryStorageProviderAsync = new InMemoryStorageProvider();
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(
-            _ => new ClaimCheckTransformerAsync(_inMemoryStorageProviderAsync));
+            _ => new ClaimCheckTransformer(_inMemoryStorageProviderAsync, _inMemoryStorageProviderAsync));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand") };
 
@@ -44,8 +44,9 @@ public class AsyncLargeMessagePayloadWrapTests
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
         //assert
-        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK));
-        var id = (string) message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
+        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
+        Assert.Equal(message.Header.DataRef, message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]);
+        var id = (string) message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equal($"Claim Check {id}", message.Body.Value);
         Assert.True(await _inMemoryStorageProviderAsync.HasClaimAsync(id));
     }

@@ -38,9 +38,13 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
             _client = new BlobContainerClient(bucketUrl, new AzureCliCredential());
 
-            _luggageStore = new AzureBlobLuggageStore(bucketUrl, new AzureCliCredential());
+            _luggageStore = new AzureBlobLuggageStore(new AzureBlobLuggageOptions
+            {
+                    ContainerUri = bucketUrl,
+                    Credential = new AzureCliCredential()
+            });
 
-            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
             _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
 
@@ -55,8 +59,11 @@ public class LargeMessagePayloadWrapTests : IDisposable
         var message = _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication).Result;
 
         //assert
-        Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK));
-        _id = (string)message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
+        Assert.That(message.Header.DataRef, Is.Not.Null);
+        Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
+        Assert.That(message.Header.DataRef, Is.EqualTo((string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]));
+        
+        _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equals($"Claim Check {_id}", message.Body.Value);
 
         Assert.That(await _luggageStore.HasClaimAsync(_id, CancellationToken.None));

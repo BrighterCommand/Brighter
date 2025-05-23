@@ -10,17 +10,17 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class AsyncClaimCheckLargePayloadTests
 {
-    private readonly ClaimCheckTransformerAsync _transformerAsync;
+    private readonly ClaimCheckTransformer _transformerAsync;
     private readonly Message _message;
     private readonly string _body;
-    private readonly InMemoryStorageProviderAsync _store;
+    private readonly InMemoryStorageProvider _store;
     private readonly RoutingKey _topic = new("test_topic");
 
     public AsyncClaimCheckLargePayloadTests()
     {
         //arrange
-        _store = new InMemoryStorageProviderAsync();
-        _transformerAsync = new ClaimCheckTransformerAsync(store: _store);
+        _store = new InMemoryStorageProvider();
+        _transformerAsync = new ClaimCheckTransformer(_store, _store);
         _transformerAsync.InitializeWrapFromAttributeParams(5);
 
         _body = DataGenerator.CreateString(6000);
@@ -36,11 +36,12 @@ public class AsyncClaimCheckLargePayloadTests
         var luggageCheckedMessage = await _transformerAsync.WrapAsync(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //assert
-        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object storedData);
+        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out var storedData);
 
         Assert.True(hasLuggage);
+        Assert.Equal(luggageCheckedMessage.Header.DataRef, storedData);
 
-        var claimCheck = (string)storedData;
+        var claimCheck = (string)storedData!;
 
         var luggage = await new StreamReader(await _store.RetrieveAsync(claimCheck)).ReadToEndAsync();
 

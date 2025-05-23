@@ -27,7 +27,11 @@ public class AzureBlobUploadTests : IDisposable
     {
         //arrange
         await _client.CreateIfNotExistsAsync();
-        var luggageStore = new AzureBlobLuggageStore(_bucketUrl, new AzureCliCredential());
+        var luggageStore = new AzureBlobLuggageStore(new AzureBlobLuggageOptions
+        {
+            ContainerUri = _bucketUrl,
+            Credential = new AzureCliCredential()
+        });
         
         //act
         //Upload the test stream to Azure
