@@ -38,7 +38,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
     public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private readonly DynamoDBContext _context;
-        private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
+        private readonly FromQueryConfig _fromQueryConfig;
+        private readonly SaveConfig _saveConfig;
         private readonly DynamoDbInboxConfiguration _configuration;
         private readonly InstrumentationOptions _instrumentationOptions;
 
@@ -54,16 +55,20 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         ///     Initialises a new instance of the <see cref="DynamoDbInbox"/> class.
         /// </summary>
         /// <param name="client">The Amazon Dynamo Db client to use</param>
-        public DynamoDbInbox(IAmazonDynamoDB client, DynamoDbInboxConfiguration configuration, 
+        /// <param name="configuration">The <see cref="DynamoDbInboxConfiguration"/></param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/></param>
+        public DynamoDbInbox(IAmazonDynamoDB client, 
+            DynamoDbInboxConfiguration configuration, 
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
-            _context = new DynamoDBContext(client);
+            _context = new  DynamoDBContextBuilder()
+                .WithDynamoDBClient(() => client)
+                .Build();
+            
             _configuration = configuration;
             _instrumentationOptions = instrumentationOptions;
-            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
-            {
-                OverrideTableName = configuration.TableName
-            };
+            _fromQueryConfig = new FromQueryConfig { OverrideTableName = configuration.TableName };
+            _saveConfig = new SaveConfig { OverrideTableName = configuration.TableName };
         }
 
         /// <summary>
@@ -144,7 +149,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             try
             {
                 await _context
-                .SaveAsync(new CommandItem<T>(command, contextKey), _dynamoOverwriteTableConfig, cancellationToken)
+                .SaveAsync(new CommandItem<T>(command, contextKey), _saveConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             }
             finally
@@ -241,7 +246,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         private async Task<IEnumerable<CommandItem<T>>> PageAllMessagesAsync<T>(QueryOperationConfig queryConfig) 
             where T: class, IRequest 
         {
-            var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig, _dynamoOverwriteTableConfig);
+            var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig, _fromQueryConfig);
             
             var messages = new List<CommandItem<T>>();
             do

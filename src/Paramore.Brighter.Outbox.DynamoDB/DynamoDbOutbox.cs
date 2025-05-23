@@ -45,8 +45,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
-        private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
-        private readonly Random _random = new Random();
+        private readonly LoadConfig _loadConfig;
+        private readonly SaveConfig _saveConfig;
+        private readonly FromQueryConfig _fromQueryConfig;
+        private readonly ToDocumentConfig _toDocumentConfig;
+        private readonly Random _random = new();
         private readonly TimeProvider _timeProvider;
 
         private readonly ConcurrentDictionary<string, OutstandingTopicQueryContext> _outstandingTopicQueryContexts;
@@ -67,26 +70,36 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// We inject this so that we can use the same tracer as the calling application
         /// You do not need to set this property as we will set it when setting up the External Service Bus
         /// </summary>
-        public IAmABrighterTracer Tracer { private get; set; } 
+        public IAmABrighterTracer Tracer { private get; set; }
 
         /// <summary>
         ///  Initialises a new instance of the <see cref="DynamoDbOutbox"/> class.
         /// </summary>
         /// <param name="client">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
+        /// <param name="timeProvider">The <see cref="TimeProvider"/>.</param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions "/></param>
         public DynamoDbOutbox(IAmazonDynamoDB client,
             DynamoDbConfiguration configuration,
             TimeProvider timeProvider,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _configuration = configuration;
-            _context = new DynamoDBContext(client);
+
+            _context = new DynamoDBContextBuilder()
+                .WithDynamoDBClient(() => client)
+                .Build();
+            
             _timeProvider = timeProvider;
-            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
+            _loadConfig = new LoadConfig
             {
                 OverrideTableName = _configuration.TableName,
                 ConsistentRead = true
             };
+            
+            _saveConfig = new SaveConfig { OverrideTableName = _configuration.TableName };
+            _toDocumentConfig = new ToDocumentConfig { OverrideTableName = _configuration.TableName };
+            _fromQueryConfig = new FromQueryConfig { OverrideTableName = _configuration.TableName };
 
             if (_configuration.NumberOfShards > 20)
             {
@@ -110,7 +123,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             _context = context;
             _configuration = configuration;
             _timeProvider = timeProvider;
-            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
+            _loadConfig = new LoadConfig { OverrideTableName = _configuration.TableName };
+            _saveConfig = new SaveConfig { OverrideTableName = _configuration.TableName };
+            _toDocumentConfig = new ToDocumentConfig { OverrideTableName = _configuration.TableName };
+            _fromQueryConfig = new FromQueryConfig { OverrideTableName = _configuration.TableName };
             
             if (_configuration.NumberOfShards > 20)
             {
@@ -390,7 +406,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             try
             {
-                var messageItem = await _context.LoadAsync<MessageItem>(messageId, _dynamoOverwriteTableConfig, cancellationToken)
+                var messageItem = await _context.LoadAsync<MessageItem>(messageId, _loadConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
                 return messageItem?.ConvertToMessage() ?? new Message();
             }
@@ -426,13 +442,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             try
             {
-                var message = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken)
+                var message = await _context.LoadAsync<MessageItem>(id, _loadConfig, cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
                 MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
 
                 await _context.SaveAsync(
                     message,
-                    _dynamoOverwriteTableConfig,
+                    _saveConfig,
                     cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             finally
@@ -569,7 +585,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             try
             {
-                await _context.DeleteAsync<MessageItem>(messageId, _dynamoOverwriteTableConfig, cancellationToken);
+                await _context.DeleteAsync<MessageItem>(messageId, _loadConfig, cancellationToken);
             }
             finally
             {
@@ -703,7 +719,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
         {
             var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
-            var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
+            var attributes = _context.ToDocument(messageToStore, _toDocumentConfig).ToAttributeMap();
             
             var transaction = dynamoDbUnitOfWork.GetTransaction();
             transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
@@ -853,7 +869,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                         ConsistentRead = false
                     };
 
-                    var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
+                    var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _fromQueryConfig);
                     results.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken));
 
                     paginationToken = asyncSearch.PaginationToken;
@@ -908,7 +924,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     PaginationToken = paginationToken
                 };
 
-                var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
+                var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _fromQueryConfig);
                 results.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken));
 
                 paginationToken = asyncSearch.PaginationToken;
@@ -922,7 +938,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             await _context.SaveAsync(
                     messageToStore,
-                    _dynamoOverwriteTableConfig,
+                    _saveConfig,
                     cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
