@@ -172,6 +172,7 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
             
         _store.Delete(id!);
         message.Header.DataRef = null;
+        message.Header.Bag.Remove(CLAIM_CHECK);
 
         return message;
     }
@@ -230,6 +231,7 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
             
         _store.Delete(id!);
         message.Header.DataRef = null;
+        message.Header.Bag.Remove(CLAIM_CHECK);
 
         return message;
     }
