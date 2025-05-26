@@ -23,7 +23,6 @@
 
   <ItemGroup>
     <Folder Include="NJsonConverters\" />
-    <Folder Include="NewDirectory1\" />
   </ItemGroup>
   
 </Project>
