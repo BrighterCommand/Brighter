@@ -36,6 +36,7 @@ using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AWSSQS.Extensions;
 using Paramore.Brighter.Tasks;

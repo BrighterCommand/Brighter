@@ -23,24 +23,31 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
-namespace Paramore.Brighter;
+namespace Paramore.Brighter.NJsonConverters;
 
-public class TraceStateConverter : JsonConverter<TraceState>
+public class NRoutingKeyConverter : JsonConverter<RoutingKey>
 {
-    public override TraceState Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)  => new(reader.GetString()!);
+    public override RoutingKey ReadJson(
+        JsonReader reader,
+        Type objectType,
+        RoutingKey? existingValue,
+        bool hasExistingValue,
+        JsonSerializer serializer)
+    {
+        return new RoutingKey(reader.Value as string ?? string.Empty);
+    }
 
-    public override void Write(Utf8JsonWriter writer, TraceState? value, JsonSerializerOptions options)
+    public override void WriteJson(JsonWriter writer, RoutingKey? value, JsonSerializer serializer)
     {
         if (value is null)
         {
-            writer.WriteNullValue();
+            writer.WriteNull();
         }
         else
         {
-            writer.WriteStringValue(value.Value);
+            writer.WriteValue(value.Value);
         }
     }
 }

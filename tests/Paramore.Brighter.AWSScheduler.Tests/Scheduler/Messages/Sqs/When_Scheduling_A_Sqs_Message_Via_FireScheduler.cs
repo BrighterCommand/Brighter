@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 

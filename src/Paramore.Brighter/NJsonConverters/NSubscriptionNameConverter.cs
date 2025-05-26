@@ -23,24 +23,31 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
-namespace Paramore.Brighter;
+namespace Paramore.Brighter.NJsonConverters;
 
-public class TraceParentConverter : JsonConverter<TraceParent>
+public class NSubscriptionNameConverter : JsonConverter<SubscriptionName>
 {
-    public override TraceParent Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => new TraceParent(reader.GetString()!);
+    public override SubscriptionName ReadJson(
+        JsonReader reader, 
+        Type objectType, 
+        SubscriptionName? existingValue, 
+        bool hasExistingValue, 
+        JsonSerializer serializer)
+    {
+        return new SubscriptionName((reader.Value as string)!);
+    }
 
-    public override void Write(Utf8JsonWriter writer, TraceParent? value, JsonSerializerOptions options)
+    public override void WriteJson(JsonWriter writer, SubscriptionName? value, JsonSerializer serializer)
     {
         if (value is null)
         {
-            writer.WriteNullValue();
+            writer.WriteNull();
         }
         else
         {
-            writer.WriteStringValue(value.Value);
+            writer.WriteValue(value.Value);
         }
     }
 }

@@ -29,6 +29,7 @@ using System.Text.Json;
 using Amazon;
 using Amazon.SQS;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;

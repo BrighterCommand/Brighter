@@ -28,6 +28,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {

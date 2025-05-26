@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 

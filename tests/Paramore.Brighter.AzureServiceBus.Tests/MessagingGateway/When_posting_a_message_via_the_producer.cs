@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 

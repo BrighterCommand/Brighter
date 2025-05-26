@@ -31,6 +31,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 

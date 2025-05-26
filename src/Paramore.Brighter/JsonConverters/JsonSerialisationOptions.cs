@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Serialization;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter.JsonConverters
 {
     /// <summary>
     /// Global Configuration for the Json Serializer
@@ -40,6 +40,7 @@ namespace Paramore.Brighter
             opts.Converters.Add(new PartitionKeyConverter());
             opts.Converters.Add(new TraceStateConverter());
             opts.Converters.Add(new TraceParentConverter());
+            opts.Converters.Add(new ContentTypeConverter());
 
             Options = opts;
         }

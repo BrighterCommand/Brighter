@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace Greetings.Ports.Mappers
 {

@@ -6,6 +6,7 @@ using System.Text.Json;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Xunit;
 

@@ -1,4 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Text.Json.Serialization;
+using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.NJsonConverters;
 
 namespace Paramore.Brighter.ServiceActivator.Control.Events;
 
@@ -7,6 +10,8 @@ public record NodeStatusEvent : IEvent
     /// <summary>
     /// The event Id
     /// </summary>
+    [JsonConverter(typeof(IdConverter))]
+    [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
     public Id Id { get; set; } = null!;
 
     /// <summary>

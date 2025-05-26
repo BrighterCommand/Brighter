@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.Json;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using MongoDB.Bson.Serialization.Attributes;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MongoDb;
 
 namespace Paramore.Brighter.Outbox.MongoDb;

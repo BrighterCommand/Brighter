@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {

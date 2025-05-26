@@ -30,6 +30,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
 using OpenTelemetry;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Observability;
 

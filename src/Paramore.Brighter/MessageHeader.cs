@@ -25,6 +25,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.NJsonConverters;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
@@ -114,6 +117,8 @@ namespace Paramore.Brighter
         /// though Cloud Events does not.
         /// Default value is "text/plain"
         /// </summary>
+        [JsonConverter(typeof(ContentTypeConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NContentTypeConverter))]
         public ContentType ContentType { get; set; } = ContentType.TextPlain;
 
         /// <summary>
@@ -121,6 +126,8 @@ namespace Paramore.Brighter
         /// allows the originator to match responses to requests
         /// </summary>
         /// <value>The correlation identifier.</value>
+        [JsonConverter(typeof(IdConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
         public Id CorrelationId { get; set; } = new("");
 
         /// <summary>
@@ -161,6 +168,8 @@ namespace Paramore.Brighter
         /// Consumers MAY assume that Events with identical source and id are duplicates.
         /// </summary>
         /// <value>The identifier.</value>
+        [JsonConverter(typeof(IdConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
         public Id MessageId { get; init; } = new("");
 
         /// <summary>
@@ -185,6 +194,8 @@ namespace Paramore.Brighter
         /// do not have to filter replies intended for other listeners.
         /// </summary>
         /// <value>The reply to.</value>
+        [JsonConverter(typeof(RoutingKeyConvertor))]
+        [Newtonsoft.Json.JsonConverter(typeof(RoutingKeyConvertor))]
         public RoutingKey? ReplyTo { get; set; }
         
         /// <summary>
@@ -221,6 +232,8 @@ namespace Paramore.Brighter
         /// used internally when we send the message to its destination
         /// </summary>
         /// <value>The topic.</value>
+        [JsonConverter(typeof(RoutingKeyConvertor))]
+        [Newtonsoft.Json.JsonConverter(typeof(RoutingKeyConvertor))]
         public RoutingKey Topic { get; init; } = RoutingKey.Empty;
 
         /// <summary>
@@ -241,6 +254,8 @@ namespace Paramore.Brighter
         ///     - trace-flags
         /// In .NET it is set from Activity.Current.Id
         /// </summary>
+        [JsonConverter(typeof(TraceParentConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(TraceParentConverter))]
         public TraceParent? TraceParent { get; set; }
 
         /// <summary>
@@ -252,6 +267,8 @@ namespace Paramore.Brighter
         /// in multiple distributed tracing graphs.
         /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
         /// </summary>
+        [JsonConverter(typeof(TraceStateConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(TraceStateConverter))]
         public TraceState? TraceState { get; set; }
 
         /// <summary>

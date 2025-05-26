@@ -20,5 +20,10 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="NJsonConverters\" />
+    <Folder Include="NewDirectory1\" />
+  </ItemGroup>
   
 </Project>

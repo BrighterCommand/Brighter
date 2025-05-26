@@ -3,6 +3,7 @@ using System.Text.Json;
 using Amazon;
 using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tasks;
 using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundException;

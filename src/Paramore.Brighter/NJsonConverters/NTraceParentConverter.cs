@@ -1,9 +1,9 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +12,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -23,24 +23,31 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
-namespace Paramore.Brighter;
+namespace Paramore.Brighter.NJsonConverters;
 
-public class SubscriptionNameConverter : JsonConverter<SubscriptionName>
+public class NTraceParentConverter : JsonConverter<TraceParent>
 {
-    public override SubscriptionName Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => new(reader.GetString()!);
+    public override TraceParent ReadJson(
+        JsonReader reader, 
+        Type objectType, 
+        TraceParent? existingValue, 
+        bool hasExistingValue, 
+        JsonSerializer serializer)
+    {
+        return new TraceParent((reader.Value as string)!);
+    }
 
-    public override void Write(Utf8JsonWriter writer, SubscriptionName? value, JsonSerializerOptions options)
+    public override void WriteJson(JsonWriter writer, TraceParent? value, JsonSerializer serializer)
     {
         if (value is null)
         {
-            writer.WriteNullValue();
+            writer.WriteNull();
         }
         else
         {
-            writer.WriteStringValue(value.Value.AsSpan());
+            writer.WriteValue(value.Value);
         }
     }
 }
