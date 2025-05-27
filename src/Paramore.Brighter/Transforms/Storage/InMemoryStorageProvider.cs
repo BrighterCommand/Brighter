@@ -24,7 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,7 +40,7 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
     private const string ClaimCheckProvider = "in-memory";
     private const string BucketName = "in-memory";
     
-    private readonly Dictionary<string, string> _contents = new();
+    private readonly ConcurrentDictionary<string, string> _contents = new();
 
     /// <inheritdoc cref="IAmAStorageProvider.Tracer"/>
     public IAmABrighterTracer? Tracer { get; set; }
@@ -57,7 +57,7 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
        var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Delete, ClaimCheckProvider, BucketName, claimCheck));
         try
         {
-            _contents.Remove(claimCheck);
+            _contents.TryRemove(claimCheck, out _);
             return Task.CompletedTask;
         }
         finally
@@ -117,7 +117,7 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
         {
             var reader = new StreamReader(stream);
             
-            _contents.Add(claimCheck,
+            _contents.TryAdd(claimCheck,
 #if NETSTANDARD
             await reader.ReadToEndAsync()
 #else
@@ -140,12 +140,12 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
     /// Used to clean up after luggage is retrieved
     /// </summary>
     /// <param name="claimCheck">The claim check for the luggage</param>
-    public  void Delete(string claimCheck)
+    public void Delete(string claimCheck)
     {
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Delete, ClaimCheckProvider, BucketName, claimCheck));
         try
         {
-            _contents.Remove(claimCheck);
+            _contents.TryRemove(claimCheck, out _);
         }
         finally
         {
@@ -210,7 +210,7 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
         try
         {
             var reader = new StreamReader(stream);
-            _contents.Add(claimCheck, reader.ReadToEnd());
+            _contents.TryAdd(claimCheck, reader.ReadToEnd());
             return claimCheck;
         }
         finally

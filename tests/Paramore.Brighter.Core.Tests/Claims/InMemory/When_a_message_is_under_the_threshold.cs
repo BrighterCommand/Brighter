@@ -4,7 +4,7 @@ using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.Claims;
+namespace Paramore.Brighter.Core.Tests.Claims.InMemory;
 
 public class ClaimCheckSmallPayloadTests
 {

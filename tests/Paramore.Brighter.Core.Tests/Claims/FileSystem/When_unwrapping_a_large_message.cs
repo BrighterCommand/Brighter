@@ -8,14 +8,15 @@ using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.Claims;
+namespace Paramore.Brighter.Core.Tests.Claims.FileSystem;
 
-public class AsyncLargeMessagePaylodUnwrapTests
+public class LargeMessagePaylodUnwrapTests : IDisposable
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
-    private readonly InMemoryStorageProvider _inMemoryStorageProviderAsync;
+    private readonly string _bucketName;
+    private readonly FileSystemStorageProvider _luggageStore;
 
-    public AsyncLargeMessagePaylodUnwrapTests()
+    public LargeMessagePaylodUnwrapTests()
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
@@ -23,11 +24,17 @@ public class AsyncLargeMessagePaylodUnwrapTests
         var mapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyLargeCommandMessageMapperAsync())
-            );
+        );
+
         mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
 
-        _inMemoryStorageProviderAsync = new InMemoryStorageProvider();
-        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_inMemoryStorageProviderAsync, _inMemoryStorageProviderAsync));
+        _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
+        _luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{_bucketName}"));
+            
+        _luggageStore.EnsureStoreExists();
+
+        var messageTransformerFactory =
+            new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
@@ -36,25 +43,32 @@ public class AsyncLargeMessagePaylodUnwrapTests
     public async Task When_unwrapping_a_large_message()
     {
         //arrange
+
         //store our luggage and get the claim check
         var contents = DataGenerator.CreateString(6000);
         var myCommand = new MyLargeCommand(1) { Value = contents };
-        var commandAsJson = JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
+        var commandAsJson =
+            JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
 
-        var stream = new MemoryStream();
-        var writer = new StreamWriter(stream);
-        await writer.WriteAsync(commandAsJson);
-        await writer.FlushAsync();
-        stream.Position = 0;
-        var id = await _inMemoryStorageProviderAsync.StoreAsync(stream);
+        var id = string.Empty;
+        using(var stream = new MemoryStream())
+        using(var writer = new StreamWriter(stream))
+        {
+            await writer.WriteAsync(commandAsJson);
+            await writer.FlushAsync();
+            stream.Position = 0;
+            id = await _luggageStore.StoreAsync(stream);
+        }
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
 
         //set the headers, so that we have a claim check listed
         var message = new Message(
-            new MessageHeader(myCommand.Id, new RoutingKey("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
-            new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
+            new MessageHeader(myCommand.Id, new RoutingKey("MyLargeCommand"), MessageType.MT_COMMAND,
+                timeStamp: DateTime.UtcNow),
+            new MessageBody(JsonSerializer.Serialize(myCommand,
+                new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
         message.Header.DataRef = id;
@@ -67,6 +81,12 @@ public class AsyncLargeMessagePaylodUnwrapTests
         //assert
         //contents should be from storage
         Assert.Equal(contents, transformedMessage.Value);
-        Assert.False(await _inMemoryStorageProviderAsync.HasClaimAsync(id));
+        Assert.False(await _luggageStore.HasClaimAsync(id));
+    }
+
+    public void Dispose()
+    {
+        //The bucket should be empty, allowing us to delete it
+        Directory.Delete($"./{_bucketName}", true);
     }
 }
