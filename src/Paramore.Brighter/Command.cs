@@ -41,7 +41,7 @@ public class Command : ICommand
     /// Gets or sets the identifier.
     /// </summary>
     /// <value>The identifier.</value>
-    [NJsonSchema.Annotations.NotNull]
+    [NotNull]
     [JsonConverter(typeof(IdConverter))]
     [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
     [Display(Name = "id", Description = "The unique identifier for the command")]

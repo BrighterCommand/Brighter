@@ -42,7 +42,7 @@ public class Event : IEvent
     /// Gets or sets the identifier.
     /// </summary>
     /// <value>The identifier.</value>
-    [NJsonSchema.Annotations.NotNull]
+    [NotNull]
     [JsonConverter(typeof(IdConverter))]
     [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
     [JsonSchema(JsonObjectType.String)]
