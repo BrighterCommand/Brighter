@@ -64,7 +64,7 @@ public class KafkaHeaderToBrighterTests
         Assert.Equal(message.Header.Topic, readMessage.Header.Topic);
         Assert.Equal(message.Header.Delayed, readMessage.Header.Delayed);
         Assert.Equal(message.Header.HandledCount, readMessage.Header.HandledCount);
-        Assert.Equal(message.Header.TimeStamp.DateTime, readMessage.Header.TimeStamp.DateTime, TimeSpan.FromSeconds(5));
+        Assert.Equal(message.Header.TimeStamp, readMessage.Header.TimeStamp, TimeSpan.FromSeconds(5));
 
         //NOTE: Because we can only coerce the byte[] to a string for a unknown bag key, coercing to a specific
         //type has to be done by the user of the bag.

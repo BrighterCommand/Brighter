@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json.Serialization;
+using NJsonSchema;
+using NJsonSchema.Annotations;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.NJsonConverters;
 
@@ -43,6 +45,7 @@ public class Event : IEvent
     [NJsonSchema.Annotations.NotNull]
     [JsonConverter(typeof(IdConverter))]
     [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+    [JsonSchema(JsonObjectType.String)]
     public Id Id { get; set; }
 
     /// <summary>

@@ -23,7 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using NJsonSchema;
+using NJsonSchema.Annotations;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.NJsonConverters;
 
@@ -41,6 +44,8 @@ public class Command : ICommand
     [NJsonSchema.Annotations.NotNull]
     [JsonConverter(typeof(IdConverter))]
     [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+    [Display(Name = "id", Description = "The unique identifier for the command")]
+    [JsonSchema(JsonObjectType.String)]
     public Id Id { get; set; }
         
     /// <summary>
