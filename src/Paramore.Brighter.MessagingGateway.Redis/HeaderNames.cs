@@ -67,5 +67,40 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// The timestamp of the message
         /// </summary>
         public const string TIMESTAMP = "TimeStamp";
+        
+        /// <summary>
+        /// The cloud event dataschema
+        /// </summary>
+        public const string CLOUD_EVENTS_DATA_SCHEMA = "cloudEvents:dataschema";
+
+        /// <summary>
+        /// The cloud event subject
+        /// </summary>
+        public const string CLOUD_EVENTS_SOURCE = "cloudEvents:source";
+        
+        /// <summary>
+        /// The cloud event subject
+        /// </summary>
+        public const string CLOUD_EVENTS_SUBJECT = "cloudEvents:subject";
+        
+        /// <summary>
+        /// The cloud event type
+        /// </summary>
+        public const string CLOUD_EVENTS_TYPE = "cloudEvents:type";
+        
+        /// <summary>
+        /// The cloud events traceparent, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_PARENT = "cloudEvents:traceparent";
+
+        /// <summary>
+        /// The cloud events tracestate, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_STATE = "cloudevents:tracestate";
+
+        /// <summary>
+        /// The W3C baggage
+        /// </summary>
+        public const string W3C_BAGGAGE = "baggage";
     }
 }

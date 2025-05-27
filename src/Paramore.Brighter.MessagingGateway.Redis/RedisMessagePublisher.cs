@@ -71,38 +71,46 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             var headers = new Dictionary<string, string>();
             
-            //Read Message Id
             WriteMessageId(messageHeader, headers);
-            //Read TimeStamp
             WriteTimeStamp(messageHeader, headers);
-            //Read Topic
             WriteTopic(messageHeader, headers);
-            //Read MessageType
             WriteMessageType(messageHeader, headers);
-           //Read HandledCount
             WriteHandledCount(messageHeader, headers);
-            //Read DelayedMilliseconds
             WriteDelayedMilliseconds(messageHeader, headers);
-            //Read MessageBag
             WriteMessageBag(messageHeader, headers);
-            //reply to
             WrtiteReplyTo(messageHeader, headers);
-            //content type
             WriteContentType(messageHeader, headers);
-            //correlation id
             WriteCorrelationId(messageHeader, headers);
+            WriteSource(messageHeader, headers);
+            WriteType(messageHeader, headers);
+            WriteDataSchema(messageHeader, headers);
+            WriteSubject(messageHeader, headers);
+            WriteTraceParent(messageHeader, headers);
+            WriteTraceState(messageHeader, headers);
+            WriteBaggage(messageHeader, headers);
 
             return JsonSerializer.Serialize(headers, JsonSerialisationOptions.Options);
+        }
+        
+        private void WriteBaggage(MessageHeader messageHeader, Dictionary<string, string> headers)
+        {
+                headers.Add(HeaderNames.W3C_BAGGAGE, messageHeader.Baggage.ToString());
         }
 
         private void WriteContentType(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.CONTENT_TYPE, messageHeader.ContentType ?? ContentType.TextPlain);
+            headers.Add(HeaderNames.CONTENT_TYPE, messageHeader.ContentType.Value ?? ContentType.TextPlain);
         }
 
         private void WriteCorrelationId(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.CORRELATION_ID, messageHeader.CorrelationId);
+            headers.Add(HeaderNames.CORRELATION_ID, messageHeader.CorrelationId.Value);
+        }
+        
+        private void WriteDataSchema(MessageHeader messageHeader, Dictionary<string, string> headers)
+        {
+            if (messageHeader.DataSchema != null)
+                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, messageHeader.DataSchema.ToString());
         }
 
         private void WriteDelayedMilliseconds(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -123,7 +131,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteMessageId(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.MESSAGE_ID, messageHeader.MessageId);
+            headers.Add(HeaderNames.MESSAGE_ID, messageHeader.MessageId.Value);
         }
         
         private void WriteMessageType(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -133,12 +141,40 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private void WrtiteReplyTo(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.REPLY_TO, messageHeader.ReplyTo ?? string.Empty);
+            headers.Add(HeaderNames.REPLY_TO, messageHeader.ReplyTo?.Value ?? string.Empty);
+        }
+        
+        private void WriteSource(MessageHeader messageHeader, Dictionary<string, string> headers)
+        {
+            headers.Add(HeaderNames.CLOUD_EVENTS_SOURCE, messageHeader.Source.ToString());
+        }
+        
+        private void WriteSubject(MessageHeader messageHeader, Dictionary<string, string> headers)
+        {
+            if (messageHeader.Subject != null)
+                headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, messageHeader.Subject);
         }
 
         private void WriteTopic(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
             headers.Add(HeaderNames.TOPIC, messageHeader.Topic);
+        }
+        
+        private void WriteTraceParent(MessageHeader messageHeader, Dictionary<string, string> headers)
+        {
+            if (messageHeader.TraceParent != null)
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, messageHeader.TraceParent.Value);
+        }
+        
+        private void WriteTraceState(MessageHeader messageHeader, Dictionary<string, string> headers)
+        {
+            if (messageHeader.TraceState != null)
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, messageHeader.TraceState.Value);
+        }
+        
+        private void WriteType(MessageHeader messageHeader, Dictionary<string, string> headers)
+        {
+            headers.Add(HeaderNames.CLOUD_EVENTS_TYPE, messageHeader.Type);
         }
 
         private void WriteTimeStamp(MessageHeader messageHeader, Dictionary<string, string> headers)

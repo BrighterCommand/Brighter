@@ -64,18 +64,8 @@ internal sealed partial class RmqMessagePublisher
         /// </exception>
         public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection) 
         {
-            if (channel is null)
-            {
-                throw new ArgumentNullException(nameof(channel));
-            }
-            if (connection is null)
-            {
-                throw new ArgumentNullException(nameof(connection));
-            }
-
-            _connection = connection;
-            
-            _channel = channel;
+            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            _channel = channel ?? throw new ArgumentNullException(nameof(channel));
        }
 
        /// <summary>
@@ -87,8 +77,7 @@ internal sealed partial class RmqMessagePublisher
         {
             if (_connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessagePublisher.PublishMessage: Connections Exchange is null");
-            
-            var messageId = message.Id;
+
             var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.DeliveryTag.ToString() : null;
 
             Dictionary<string, object> headers = AddCloudEventHeaders(message);
@@ -102,7 +91,7 @@ internal sealed partial class RmqMessagePublisher
                 message.Header.Topic,
                 false,
                 CreateBasicProperties(
-                    messageId, 
+                    message.Id, 
                     message.Header.TimeStamp, 
                     message.Body.ContentType, 
                     message.Header.ContentType ?? ContentType.TextPlain, 

@@ -22,6 +22,11 @@ namespace Paramore.Brighter
         public string Value { get; }
 
         /// <summary>
+        /// Represents an empty TraceParent instance. The value is an empty string.
+        /// </summary>
+        public static TraceParent Empty { get; } = new TraceParent(string.Empty);
+
+        /// <summary>
         /// Creates a new instance of the TraceParent class.
         /// </summary>
         /// <param name="value"></param>
@@ -78,6 +83,11 @@ namespace Paramore.Brighter
         /// This value is opaque and should only be modified by the OpenTelemetry implementation.
         /// </summary>
         public string Value { get; }
+
+        /// <summary>
+        /// Creates an empty TraceState instance. The value is an empty string.
+        /// </summary>
+        public static TraceState Empty { get; } = new TraceState(string.Empty);
 
         /// <summary>
         /// Creates a new instance of the TraceState class.
