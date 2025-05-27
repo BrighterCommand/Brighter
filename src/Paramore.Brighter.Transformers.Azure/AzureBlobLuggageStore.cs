@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Transformers.Azure;
 /// </remarks>
 public class AzureBlobLuggageStore : IAmAStorageProvider, IAmAStorageProviderAsync
 {
-    private const string ClaimCheckProvider = "azure-blob";
+    private const string ClaimCheckProvider = "azure_blob";
     private readonly Dictionary<string, string> _spanAttributes = new();
     private readonly BlobContainerClient _blobClient;
     private readonly AzureBlobLuggageOptions _options;

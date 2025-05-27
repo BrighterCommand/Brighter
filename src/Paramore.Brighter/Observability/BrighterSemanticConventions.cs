@@ -95,5 +95,7 @@ public static class BrighterSemanticConventions
     public const string ClaimCheckInstrumentationDomain  = "claim_check";
     public const string ClaimCheckOperation = "claim_check.operation";
     public const string ClaimCheckProvider = "claim_check.provider";
-    public const string ClaimCheckBucketName = "claim_check.bucket";
+    public const string ClaimCheckBucketName = "claim_check.bucket_name";
+    public const string ClaimCheckId = "claim_check.id";
+    public const string ClaimCheckContentLenght = "claim_check.content_lenght";
 }

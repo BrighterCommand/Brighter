@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Claims.FileSystem;
 
-public class S3LuggageUploadMissingParametersTests
+public class LuggageUploadMissingParametersTests
 {
     [Theory]
     [InlineData("")]

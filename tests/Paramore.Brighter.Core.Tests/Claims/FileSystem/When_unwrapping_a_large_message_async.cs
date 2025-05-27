@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text.Json;
-using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
@@ -10,23 +10,23 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Claims.FileSystem;
 
-public class LargeMessagePayloadUnwrapTests : IDisposable
+public class LargeMessagePayloadAsyncUnwrapTests : IDisposable
 {
-    private readonly TransformPipelineBuilder _pipelineBuilder;
+    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly string _bucketName;
     private readonly FileSystemStorageProvider _luggageStore;
 
-    public LargeMessagePayloadUnwrapTests()
+    public LargeMessagePayloadAsyncUnwrapTests()
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
-            null
+            null,
+            new SimpleMessageMapperFactoryAsync(_ => new MyLargeCommandMessageMapperAsync())
         );
 
-        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+        mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
 
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
         _luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{_bucketName}"));
@@ -34,13 +34,13 @@ public class LargeMessagePayloadUnwrapTests : IDisposable
         _luggageStore.EnsureStoreExists();
 
         var messageTransformerFactory =
-            new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
+            new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
 
     [Fact]
-    public void When_unwrapping_a_large_message()
+    public async Task When_unwrapping_a_large_message_async()
     {
         //arrange
 
@@ -52,13 +52,13 @@ public class LargeMessagePayloadUnwrapTests : IDisposable
 
         using var stream = new MemoryStream();
         using var writer = new StreamWriter(stream);
-        writer.Write(commandAsJson);
-        writer.Flush();
+        await writer.WriteAsync(commandAsJson);
+        await writer.FlushAsync();
         stream.Position = 0;
-        var id = _luggageStore.Store(stream);
-        
-        //pretend we ran through the claim check
-        myCommand.Value = $"Claim Check {id}";
+        string id = await _luggageStore.StoreAsync(stream);
+
+            //pretend we ran through the claim check
+            myCommand.Value = $"Claim Check {id}";
 
         //set the headers, so that we have a claim check listed
         var message = new Message(
@@ -73,12 +73,12 @@ public class LargeMessagePayloadUnwrapTests : IDisposable
 
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-        var transformedMessage = transformPipeline.Unwrap(message, new RequestContext());
+        var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
 
         //assert
         //contents should be from storage
         Assert.Equal(contents, transformedMessage.Value);
-        Assert.False(_luggageStore.HasClaim(id));
+        Assert.False(await _luggageStore.HasClaimAsync(id));
     }
 
     public void Dispose()

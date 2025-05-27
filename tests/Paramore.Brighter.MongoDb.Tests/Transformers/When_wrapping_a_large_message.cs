@@ -1,30 +1,28 @@
 ﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
-using Paramore.Brighter.Transforms.Storage;
+using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.MongoDb.Tests.TestDoubles;
+using Paramore.Brighter.Transformers.MongoGridFS;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.Claims.FileSystem;
+namespace Paramore.Brighter.MongoDb.Tests.Transformers;
 
+[Trait("Category", "MongoDb")]
 public class LargeMessagePayloadWrapTests : IDisposable
 {
     private string? _id;
     private WrapPipeline<MyLargeCommand>? _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
-    private readonly FileSystemStorageProvider _luggageStore;
-    private readonly string _bucketName;
+    private readonly MongoDbLuggageStore _luggageStore;
     private readonly Publication _publication;
 
-    public LargeMessagePayloadWrapTests()
+    public LargeMessagePayloadWrapTests ()
     {
         //arrange
         TransformPipelineBuilderAsync.ClearPipelineCache();
 
-        var mapperRegistry =
-            new MessageMapperRegistry(
+        var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
                 null
             );
@@ -33,8 +31,9 @@ public class LargeMessagePayloadWrapTests : IDisposable
             
         _myCommand = new MyLargeCommand(6000);
 
-        _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-        _luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{_bucketName}"));
+        string bucketName = $"brightertestbucket-{Guid.NewGuid()}";
+
+        _luggageStore = new MongoDbLuggageStore(new MongoDbLuggageStoreOptions(Configuration.ConnectionString, Configuration.DatabaseName, bucketName));
             
         _luggageStore.EnsureStoreExists();
 
@@ -68,7 +67,5 @@ public class LargeMessagePayloadWrapTests : IDisposable
         {
             _luggageStore.Delete(_id);
         }
-            
-        Directory.Delete($"./{_bucketName}");
     }
 }

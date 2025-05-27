@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Transforms.Storage;
 /// </remarks>
 public class FileSystemStorageProvider : IAmAStorageProvider, IAmAStorageProviderAsync
 {
-    private const string ClaimCheckProvider = "file-system";
+    private const string ClaimCheckProvider = "file_system";
 
     private readonly FileSystemOptions _options;
     private readonly Dictionary<string, string> _spanAttributes = new();
@@ -151,7 +151,7 @@ public class FileSystemStorageProvider : IAmAStorageProvider, IAmAStorageProvide
     {
         var claimCheck = Guid.NewGuid().ToString();
         
-        var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, _options.Path, claimCheck, _spanAttributes));
+        var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, _options.Path, claimCheck, _spanAttributes, stream.Length));
         try
         {
             
@@ -216,7 +216,7 @@ public class FileSystemStorageProvider : IAmAStorageProvider, IAmAStorageProvide
         {
             var memory = new MemoryStream();
             using var fs = File.OpenRead(Path.Combine(_options.Path, claimCheck));
-            fs.CopyToAsync(memory);
+            fs.CopyTo(memory);
             fs.Flush();
             memory.Position = 0;
             return memory;
@@ -245,7 +245,7 @@ public class FileSystemStorageProvider : IAmAStorageProvider, IAmAStorageProvide
     public string Store(Stream stream)
     {
         var claimCheck = Guid.NewGuid().ToString();
-        var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, _options.Path, claimCheck, _spanAttributes));
+        var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, _options.Path, claimCheck, _spanAttributes, stream.Length));
         try
         {
             using var fs = File.Create(Path.Combine(_options.Path, claimCheck));

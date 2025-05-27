@@ -9,17 +9,17 @@ namespace Paramore.Brighter.Azure.Tests.Transformers;
 
 [Category("Azure")]
 [Property("Fragile", "CI")]
-public class LargeMessagePayloadWrapTests : IDisposable
+public class LargeMessagePayloadAsyncWrapTests : IDisposable
 {
-    private WrapPipeline<MyLargeCommand>? _transformPipeline;
-    private readonly TransformPipelineBuilder _pipelineBuilder;
+    private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
+    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly Publication _publication;
     private readonly MyLargeCommand _myCommand;
     private readonly AzureBlobLuggageStore _luggageStore;
     private readonly BlobContainerClient _client;
     private string? _id;
 
-    public LargeMessagePayloadWrapTests()
+    public LargeMessagePayloadAsyncWrapTests()
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
@@ -43,18 +43,18 @@ public class LargeMessagePayloadWrapTests : IDisposable
             Credential = new AzureCliCredential()
         });
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
     
     [Test]
-    public void When_wrapping_a_large_message()
+    public async Task When_wrapping_a_large_message_async()
     {
-        _luggageStore.EnsureStoreExists();
+        await _luggageStore.EnsureStoreExistsAsync();
         
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
+        var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
         //assert
         Assert.That(message.Header.DataRef, Is.Not.Null);
@@ -64,7 +64,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equals($"Claim Check {_id}", message.Body.Value);
 
-        Assert.That(_luggageStore.HasClaim(_id));
+        Assert.That(await _luggageStore.HasClaimAsync(_id, CancellationToken.None));
     }
     
     public void Dispose()

@@ -370,7 +370,13 @@ public class BrighterTracer : IAmABrighterTracer
             [BrighterSemanticConventions.ClaimCheckOperation] = info.Operation.ToSpanName(),
             [BrighterSemanticConventions.ClaimCheckProvider] = info.ProviderName,
             [BrighterSemanticConventions.ClaimCheckBucketName] = info.BucketName,
+            [BrighterSemanticConventions.ClaimCheckId] = info.Id
         };
+
+        if (info.ContentLenght.HasValue)
+        {
+            tags[BrighterSemanticConventions.ClaimCheckContentLenght] = info.ContentLenght;
+        }
 
         if (info.Attributes != null)
         {

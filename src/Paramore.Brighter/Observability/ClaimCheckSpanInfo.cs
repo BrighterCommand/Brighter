@@ -6,6 +6,6 @@ public record ClaimCheckSpanInfo(
     ClaimCheckOperation Operation,
     string ProviderName, 
     string BucketName,
-    string ClaimCheckKey,
+    string Id,
     Dictionary<string, string>? Attributes = null,
     long? ContentLenght = null);

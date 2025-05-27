@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.IO;
+using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Transforms.Storage;

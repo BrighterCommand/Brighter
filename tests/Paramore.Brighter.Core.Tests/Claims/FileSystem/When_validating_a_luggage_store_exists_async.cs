@@ -9,17 +9,17 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Claims.FileSystem;
 
-public class LuggageStoreExistsTests 
+public class LuggageStoreExistsAsyncTests 
 {
     [Fact]
-    public void When_checking_store_that_exists()
+    public async Task When_checking_store_that_exists_async()
     {
         var pathName = $"brightertestbucket-{Guid.NewGuid()}";
         
         //arrange
         var luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{pathName}"));
         
-        luggageStore.EnsureStoreExists();
+        await luggageStore.EnsureStoreExistsAsync();
 
         //act
         luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{pathName}"));
@@ -31,20 +31,19 @@ public class LuggageStoreExistsTests
     }
     
     [Fact]
-    public void When_checking_store_that_does_not_exist_async()
+    public async Task When_checking_store_that_does_not_exist_async()
     {
         
         var pathName = $"brightertestbucket-{Guid.NewGuid()}";
         
         //act
-         var doesNotExist = Catch.Exception(() =>
+         var doesNotExist = await Catch.ExceptionAsync(async () =>
          {
              var luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{pathName}")
-             {
+             { 
                  Strategy = StorageStrategy.Validate
              });
-             
-             luggageStore.EnsureStoreExists();
+             await luggageStore.EnsureStoreExistsAsync();
          });
 
          Assert.NotNull(doesNotExist);

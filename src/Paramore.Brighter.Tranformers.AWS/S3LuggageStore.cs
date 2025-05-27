@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Tranformers.AWS;
 /// </remarks>
 public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAsync
 {
-    private const string ClaimCheckProvider = "aws-s3";
+    private const string ClaimCheckProvider = "aws_s3";
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<S3LuggageStore>();
     private readonly S3LuggageOptions _options;
     private readonly Dictionary<string, string> _spanAttributes = new();

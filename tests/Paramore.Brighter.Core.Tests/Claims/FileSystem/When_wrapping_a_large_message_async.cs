@@ -8,28 +8,27 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Claims.FileSystem;
 
-public class LargeMessagePayloadWrapTests : IDisposable
+public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
 {
     private string? _id;
-    private WrapPipeline<MyLargeCommand>? _transformPipeline;
-    private readonly TransformPipelineBuilder _pipelineBuilder;
+    private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
+    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
     private readonly FileSystemStorageProvider _luggageStore;
     private readonly string _bucketName;
     private readonly Publication _publication;
 
-    public LargeMessagePayloadWrapTests()
+    public LargeMessagePayloadAsyncWrapTests()
     {
         //arrange
         TransformPipelineBuilderAsync.ClearPipelineCache();
 
         var mapperRegistry =
-            new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
-                null
+            new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
+                _ => new MyLargeCommandMessageMapperAsync())
             );
            
-        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+        mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
             
         _myCommand = new MyLargeCommand(6000);
 
@@ -38,19 +37,19 @@ public class LargeMessagePayloadWrapTests : IDisposable
             
         _luggageStore.EnsureStoreExists();
 
-        var transformerFactoryAsync = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
+        var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactoryAsync);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync);
     }
 
     [Fact]
-    public void When_wrapping_a_large_message()
+    public async Task When_wrapping_a_large_message_async()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
+        var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
         //assert
         Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
@@ -58,15 +57,15 @@ public class LargeMessagePayloadWrapTests : IDisposable
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equal($"Claim Check {_id}", message.Body.Value);
             
-        Assert.True(_luggageStore.HasClaim(_id));
+        Assert.True(await _luggageStore.HasClaimAsync(_id));
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        //We have to empty objects from a bucket before deleting it
+       //We have to empty objects from a bucket before deleting it
         if (_id != null)
         {
-            _luggageStore.Delete(_id);
+            await _luggageStore.DeleteAsync(_id);
         }
             
         Directory.Delete($"./{_bucketName}");
