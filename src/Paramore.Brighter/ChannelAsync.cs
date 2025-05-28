@@ -153,10 +153,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cancellationToken">Cancel the rekect operation</param>
-        public virtual async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
-        {
-            await _messageConsumer.RejectAsync(message, cancellationToken);
-        }
+        public virtual async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
+            => await _messageConsumer.RejectAsync(message, cancellationToken);
 
         /// <summary>
         /// Requeues the specified message.
