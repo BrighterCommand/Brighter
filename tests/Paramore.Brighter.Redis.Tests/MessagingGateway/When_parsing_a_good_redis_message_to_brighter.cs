@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 public class RedisGoodMessageParsingTests
 {
     private const string GoodMessage =
-        "<HEADER\n{\"TimeStamp\":\"2018-02-07T09:38:36Z\",\"Id\":\"18669550-2069-48c5-923d-74a2e79c0748\",\"Topic\":\"test\",\"MessageType\":1,\"Bag\":\"{}\",\"HandledCount\":3,\"DelayedMilliseconds\":200,\"CorrelationId\":\"0AF88BBC-07FD-4FC3-9CA7-BF68415A2535\",\"ContentType\":\"text/plain\",\"ReplyTo\":\"reply.queue\",\"Source\":\"http://goparamore.io\",\"Type\":\"goparamore.io.Paramore.Brighter.Message\",\"DataSchema\":\"http://schema.example.com/test\",\"Subject\":\"test-subject\",\"PartitionKey\":\"partition1\",\"TraceParent\":\"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01\",\"TraceState\":\"congo=t61rcWkgMzE\",\"Baggage\":\"userId=alice\"}\nHEADER/>\n<BODY\nmore test content\nBODY/>";
+        "<HEADER\n{\"TimeStamp\":\"2018-02-07T09:38:36Z\",\"Id\":\"18669550-2069-48c5-923d-74a2e79c0748\",\"Topic\":\"test\",\"MessageType\":1,\"Bag\":\"{}\",\"HandledCount\":3,\"DelayedMilliseconds\":200,\"CorrelationId\":\"0AF88BBC-07FD-4FC3-9CA7-BF68415A2535\",\"ContentType\":\"text/plain\",\"ReplyTo\":\"reply.queue\",\"cloudEvents:source\":\"http://goparamore.io\",\"cloudEvents:type\":\"goparamore.io.Paramore.Brighter.Message\",\"cloudEvents:dataschema\":\"http://schema.example.com/test\",\"cloudEvents:subject\":\"test-subject\",\"PartitionKey\":\"partition1\",\"cloudEvents:traceparent\":\"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01\",\"cloudevents:tracestate\":\"congo=t61rcWkgMzE\",\"baggage\":\"userId=alice\"}\nHEADER/>\n<BODY\nmore test content\nBODY/>";
 
     [Fact]
     public void When_parsing_a_good_redis_message_to_brighter()
@@ -35,7 +35,6 @@ public class RedisGoodMessageParsingTests
         Assert.Equal("goparamore.io.Paramore.Brighter.Message", message.Header.Type);
         Assert.Equal(new Uri("http://schema.example.com/test"), message.Header.DataSchema);
         Assert.Equal("test-subject", message.Header.Subject);
-        Assert.Equal(new PartitionKey("partition1"), message.Header.PartitionKey);
         
         // Assert W3C Trace Context properties
         Assert.Equal(new TraceParent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"), message.Header.TraceParent);
