@@ -33,22 +33,44 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 CommandValue = "Do the things.",
                 CommandNumber = 26
             };
-
-            _correlationId = Guid.NewGuid().ToString();
+            
+            _channelName = "test-channel";
             _topicName = $"Consumer-Tests-{Guid.NewGuid()}";
             var routingKey = new RoutingKey(_topicName);
-
+            
             AzureServiceBusSubscription<ASBTestCommand> subscription = new(
                 subscriptionName: new SubscriptionName(_channelName),
                 channelName: new ChannelName(_channelName),
                 routingKey: routingKey
             );
 
+            _correlationId = Guid.NewGuid().ToString();
             _contentType = "application/json";
 
+            var testSource = new Uri("http://testing.brightercommand.com");
+            var testSchema = new Uri("http://schemas.brightercommand.com/test");
+            var testPartitionKey = new PartitionKey("test-partition");
+            var testReplyTo = new RoutingKey("reply-to-topic");
+
             _message = new Message(
-                new MessageHeader(command.Id, new RoutingKey(_topicName), MessageType.MT_COMMAND, correlationId:_correlationId,
-                    contentType: _contentType
+                new MessageHeader(
+                    messageId: command.Id,
+                    topic: routingKey,
+                    messageType: MessageType.MT_COMMAND,
+                    source: testSource,
+                    type: "goparamore.io.test.command",
+                    timeStamp: DateTimeOffset.UtcNow,
+                    correlationId: _correlationId,
+                    replyTo: testReplyTo,
+                    contentType: _contentType,
+                    partitionKey: testPartitionKey,
+                    dataSchema: testSchema,
+                    subject: "test-subject",
+                    handledCount: 0,
+                    delayed: TimeSpan.Zero,
+                    traceParent: null,
+                    traceState: null,
+                    baggage: null
                 ),
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
@@ -103,11 +125,18 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var deadLetter = await deadLetterReceiver.ReceiveMessageAsync();
 
+            // Assert all MessageHeader properties
             Assert.Equal(message.Id, deadLetter.MessageId);
             Assert.Equal(_correlationId, deadLetter.CorrelationId);
             Assert.Equal(_contentType, deadLetter.ContentType);
-            Assert.Equal(0, deadLetter.ApplicationProperties["HandledCount"]);
             Assert.Equal(message.Body.Value, deadLetter.Body.ToString());
+            Assert.Equal(_message.Header.Topic.ToString(), _topicName);
+            Assert.Equal(MessageType.MT_COMMAND, _message.Header.MessageType);
+            Assert.Equal(TimeSpan.Zero, _message.Header.Delayed);
+            Assert.Equal(string.Empty, _message.Header.ReplyTo.ToString());
+            Assert.Equal(MessageHeader.DefaultSource, _message.Header.Source.ToString());
+            Assert.Equal(MessageHeader.DefaultType, _message.Header.Type);
+            Assert.Equal(MessageHeader.DefaultSpecVersion, _message.Header.SpecVersion);
         }
 
         [Fact]
@@ -126,6 +155,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
+            // Assert all MessageHeader properties
             Assert.Equal(message.Id, requeuedMessage.Id);
             Assert.False(requeuedMessage.Redelivered);
             Assert.Equal(message.Id, requeuedMessage.Header.MessageId);
@@ -135,6 +165,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             Assert.Equal(1, requeuedMessage.Header.HandledCount);
             Assert.Equal(TimeSpan.Zero, requeuedMessage.Header.Delayed);
             Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
+            Assert.Equal(MessageType.MT_COMMAND, requeuedMessage.Header.MessageType);
+            Assert.Equal(string.Empty, requeuedMessage.Header.ReplyTo.ToString());
+            Assert.Equal(MessageHeader.DefaultSource, requeuedMessage.Header.Source.ToString());
+            Assert.Equal(MessageHeader.DefaultType, requeuedMessage.Header.Type);
+            Assert.Equal(MessageHeader.DefaultSpecVersion, requeuedMessage.Header.SpecVersion);
+            Assert.Equal(PartitionKey.Empty, requeuedMessage.Header.PartitionKey);
+            Assert.Null(requeuedMessage.Header.DataSchema);
+            Assert.Null(requeuedMessage.Header.Subject);
         }
 
         [Fact]
