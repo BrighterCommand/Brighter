@@ -71,32 +71,32 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// The cloud event dataschema
         /// </summary>
-        public const string CLOUD_EVENTS_DATA_SCHEMA = "cloudEvents:dataschema";
+        public const string CLOUD_EVENTS_DATA_SCHEMA = "dataschema";
 
         /// <summary>
         /// The cloud event subject
         /// </summary>
-        public const string CLOUD_EVENTS_SOURCE = "cloudEvents:source";
+        public const string CLOUD_EVENTS_SOURCE = "source";
         
         /// <summary>
         /// The cloud event subject
         /// </summary>
-        public const string CLOUD_EVENTS_SUBJECT = "cloudEvents:subject";
+        public const string CLOUD_EVENTS_SUBJECT = "subject";
         
         /// <summary>
         /// The cloud event type
         /// </summary>
-        public const string CLOUD_EVENTS_TYPE = "cloudEvents:type";
+        public const string CLOUD_EVENTS_TYPE = "type";
         
         /// <summary>
         /// The cloud events traceparent, follows the W3C standard
         /// </summary>
-        public const string CLOUD_EVENTS_TRACE_PARENT = "cloudEvents:traceparent";
+        public const string CLOUD_EVENTS_TRACE_PARENT = "traceparent";
 
         /// <summary>
         /// The cloud events tracestate, follows the W3C standard
         /// </summary>
-        public const string CLOUD_EVENTS_TRACE_STATE = "cloudevents:tracestate";
+        public const string CLOUD_EVENTS_TRACE_STATE = "tracestate";
 
         /// <summary>
         /// The W3C baggage

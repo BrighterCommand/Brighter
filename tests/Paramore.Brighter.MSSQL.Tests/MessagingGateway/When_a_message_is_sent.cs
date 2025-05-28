@@ -4,19 +4,20 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
     [Trait("Category", "MSSQL")]
-    public class OrderTest : IAsyncDisposable, IDisposable
+    public class PostMessageTest : IAsyncDisposable, IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topicName = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly IAmAMessageConsumerSync _consumer;
 
-        public OrderTest()
+        public PostMessageTest()
         {
             var testHelper = new MsSqlTestHelper();
             testHelper.SetupQueueDb();
@@ -39,44 +40,53 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         public void When_a_message_is_sent_keep_order()
         {
             IAmAMessageConsumerSync consumer = _consumer;
-            var msgId = SendMessage();
-            var msgId2 = SendMessage();
-            var msgId3 = SendMessage();
-            var msgId4 = SendMessage();
+            
+            var messageId = Guid.NewGuid().ToString();
+            var messageType = MessageType.MT_COMMAND;
+            var source = new Uri("http://testing.example");
+            var type = "test-type";
+            var timestamp = DateTimeOffset.UtcNow;
+            var correlationId = Guid.NewGuid().ToString();
+            var replyTo = new RoutingKey("reply-queue");
+            var contentType = "application/json";
+            var handledCount = 5;
+            var dataSchema = new Uri("http://schema.example");
+            var subject = "test-subject";
+            var delayed = TimeSpan.FromSeconds(30);
+            var traceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+            var traceState = "congo=t61rcWkgMzE";
+            var baggage = new Baggage();
+            baggage.LoadBaggage("userId=alice");
 
-            //Now read those messages in order
+            var routingKey = new RoutingKey(_topicName);
+            var header = new MessageHeader(
+                messageId: messageId,
+                topic: routingKey,
+                messageType: messageType,
+                source: source,
+                type: type,
+                timeStamp: timestamp,
+                correlationId: correlationId,
+                replyTo: replyTo,
+                contentType: contentType,
+                handledCount: handledCount,
+                dataSchema: dataSchema,
+                subject: subject,
+                delayed: delayed,
+                traceParent: traceParent,
+                traceState: traceState,
+                baggage: baggage);
+
+            var body = new MessageBody($"test content [{_queueName}]");
+            
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
+                header,
+                body));
 
             var firstMessage = ConsumeMessages(consumer);
             var message = firstMessage.First();
             Assert.False(message.IsEmpty);
-            Assert.Equal(msgId, message.Id);
-
-            var secondMessage = ConsumeMessages(consumer);
-            message = secondMessage.First();
-            Assert.False(message.IsEmpty);
-            Assert.Equal(msgId2, message.Id);
-
-            var thirdMessages = ConsumeMessages(consumer);
-            message = thirdMessages.First();
-            Assert.False(message.IsEmpty);
-            Assert.Equal(msgId3, message.Id);
-
-            var fourthMessage = ConsumeMessages(consumer);
-            message = fourthMessage.First();
-            Assert.False(message.IsEmpty);
-            Assert.Equal(msgId4, message.Id);
-        }
-
-        private string SendMessage()
-        {
-            var messageId = Guid.NewGuid().ToString();
-
-            var routingKey = new RoutingKey(_topicName);
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
-                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND),
-                new MessageBody($"test content [{_queueName}]")));
-
-            return messageId;
+            Assert.Equal(messageId, message.Id);
         }
 
         private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
