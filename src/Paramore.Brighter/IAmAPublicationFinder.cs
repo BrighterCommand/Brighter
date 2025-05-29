@@ -19,7 +19,8 @@ public interface IAmAPublicationFinder
     /// </summary>
     /// <typeparam name="TRequest">The type of the request (command or event).</typeparam>
     /// <param name="registry">The <see cref="IAmAProducerRegistry"/> containing registered producers and their publications.</param>
+    /// <param name="requestContext">The <see cref="RequestContext"/>.</param>
     /// <returns>The <see cref="Publication"/> configuration for the request type, or <c>null</c> if no matching publication is found.</returns>
-    Publication Find<TRequest>(IAmAProducerRegistry registry)
+    Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext requestContext)
         where TRequest : class, IRequest;
 }

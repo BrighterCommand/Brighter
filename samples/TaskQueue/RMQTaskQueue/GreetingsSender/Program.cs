@@ -101,7 +101,7 @@ namespace GreetingsSender
             [typeof(FarewellEvent)] = "farewell.event"
         };
 
-        public override Publication Find<TRequest>(IAmAProducerRegistry registry)
+        public override Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext context)
         {
             if (s_typeRouteMapper.TryGetValue(typeof(TRequest), out var topic))
             {
@@ -111,7 +111,7 @@ namespace GreetingsSender
                 return registry.LookupBy(topic).Publication;
             }
             
-            return base.Find<TRequest>(registry);
+            return base.Find<TRequest>(registry, context);
         }
     }
 }

@@ -39,8 +39,17 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
     private static readonly ConcurrentDictionary<Type, RoutingKey?> s_typeRoutingKeyCache = new();
     
     /// <inheritdoc cref="IAmAPublicationFinder"/>
-    public virtual Publication Find<TRequest>(IAmAProducerRegistry registry) where TRequest : class, IRequest
+    public virtual Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext context) where TRequest : class, IRequest
     {
+        if (context.Topic != null)
+        {
+            var producer = registry.Producers.FirstOrDefault(x => context.Topic == x.Publication.Topic!);
+            if (producer != null)
+            {
+                return producer.Publication;
+            }
+        }
+        
         var routingKey = s_typeRoutingKeyCache.GetOrAdd(typeof(TRequest), GetRoutingKey);
         if (routingKey != null)
         {

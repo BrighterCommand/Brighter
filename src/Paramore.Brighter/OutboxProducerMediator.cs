@@ -948,7 +948,7 @@ namespace Paramore.Brighter
         private Message MapMessage<TRequest>(TRequest request, RequestContext requestContext)
             where TRequest : class, IRequest
         {
-            var publication = _publicationFinder.Find<TRequest>(_producerRegistry);
+            var publication = _publicationFinder.Find<TRequest>(_producerRegistry, requestContext);
             if (publication == null)
                 throw new ConfigurationException(
                     $"No publication found for request {request.GetType().Name}");
@@ -975,7 +975,7 @@ namespace Paramore.Brighter
         )
             where TRequest : class, IRequest
         {
-            var publication = _publicationFinder.Find<TRequest>(_producerRegistry);
+            var publication = _publicationFinder.Find<TRequest>(_producerRegistry, requestContext);
             if (publication == null)
                 throw new ConfigurationException(
                     $"No publication found for request {request.GetType().Name}");
