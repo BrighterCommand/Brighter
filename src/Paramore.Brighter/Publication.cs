@@ -126,6 +126,15 @@ namespace Paramore.Brighter
         /// </para>
         /// </remarks> 
         public IDictionary<string, object>? CloudEventsAdditionalProperties { get; set; }
+        
+        /// <summary>
+        /// OPTIONAL
+        /// Gets or sets the reply to topic. Used when doing Request-Reply instead of Publish-Subscribe to identify
+        /// the queue that the sender is listening on. Usually a sender listens on a private queue, so that they
+        /// do not have to filter replies intended for other listeners.
+        /// </summary>
+        /// <value>The reply to.</value>
+        public string? ReplyTo { get; set; }
     }
 
     /// <summary>

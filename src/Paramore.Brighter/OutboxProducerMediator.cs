@@ -950,8 +950,9 @@ namespace Paramore.Brighter
         {
             var publication = _publicationFinder.Find<TRequest>(_producerRegistry, requestContext);
             if (publication == null)
-                throw new ConfigurationException(
-                    $"No publication found for request {request.GetType().Name}");
+            {
+                throw new ConfigurationException($"No publication found for request {request.GetType().Name}");
+            }
 
             Message message;
             if (_transformPipelineBuilder.HasPipeline<TRequest>())
@@ -977,8 +978,9 @@ namespace Paramore.Brighter
         {
             var publication = _publicationFinder.Find<TRequest>(_producerRegistry, requestContext);
             if (publication == null)
-                throw new ConfigurationException(
-                    $"No publication found for request {request.GetType().Name}");
+            {
+                throw new ConfigurationException($"No publication found for request {request.GetType().Name}");
+            }
 
             Message message;
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())

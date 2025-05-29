@@ -92,6 +92,12 @@ namespace Paramore.Brighter
                 message = transform.Wrap(message, publication);
                 BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false);
             });
+
+            if (!string.IsNullOrEmpty(publication.ReplyTo))
+            {
+                message.Header.ReplyTo = publication.ReplyTo;
+            } 
+            
             return message;
         }
     }
