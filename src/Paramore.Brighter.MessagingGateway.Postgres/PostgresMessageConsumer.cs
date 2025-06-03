@@ -59,11 +59,11 @@ public partial class PostgresMessageConsumer(
     }
 
     /// <inheritdoc />
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
         {
-            return;
+            return false;
         }
 
         try
@@ -73,6 +73,7 @@ public partial class PostgresMessageConsumer(
             await using var command = connection.CreateCommand();
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
+            return true;
         }
         catch (Exception exception)
         {
@@ -220,11 +221,11 @@ public partial class PostgresMessageConsumer(
     }
 
     /// <inheritdoc />
-    public void Reject(Message message)
+    public bool Reject(Message message)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
         {
-            return;
+            return false;
         }
 
         try
@@ -235,7 +236,8 @@ public partial class PostgresMessageConsumer(
             using var command = connection.CreateCommand();
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
-            command.ExecuteNonQuery();       
+            command.ExecuteNonQuery();
+            return true;
         }
         catch (Exception exception)
         {

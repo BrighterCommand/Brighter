@@ -41,7 +41,8 @@ namespace Paramore.Brighter
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        void Reject(Message message);
+        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        bool Reject(Message message);
 
         /// <summary>
         /// Purges the specified queue name.
@@ -62,7 +63,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delay">Time to delay delivery of the message, default to 0ms or no delay</param>
-        /// <returns>True if the message should be acked, false otherwise</returns>
+        /// <returns>True if the message has been acked, false otherwise</returns>
         bool Requeue(Message message, TimeSpan? delay = null);
     }
 }
