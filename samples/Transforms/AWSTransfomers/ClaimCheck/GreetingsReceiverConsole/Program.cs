@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
@@ -31,10 +32,12 @@ using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Tranformers.AWS;
+using Paramore.Brighter.Transforms.Storage;
 using Serilog;
 
 namespace GreetingsReceiverConsole
@@ -77,22 +80,17 @@ namespace GreetingsReceiverConsole
                             options.Subscriptions = subscriptions;
                             options.DefaultChannelFactory = new ChannelFactory(awsConnection);
                         })
+                        .UseExternalLuggageStore(provider => new S3LuggageStore(new S3LuggageOptions(
+                            new AWSS3Connection(credentials, RegionEndpoint.EUWest1),
+                            "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002")
+                        {
+                            HttpClientFactory = provider.GetService<IHttpClientFactory>(),
+                            Strategy = StorageStrategy.Validate
+                        }))
                         .AutoFromAssemblies();
                         
                         //We need this for the check as to whether an S3 bucket exists
                         services.AddHttpClient();
-                
-                        //Adds a luggage store based on an S3 bucket
-                        //Assume that the sender has already created, but validate it
-                        services.AddS3LuggageStore((options) =>
-                        {
-                            options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
-                            options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";
-#pragma warning disable CS0618 // Continue to use as it maps to a correct string identifier, which the replacement does not                    
-                            options.BucketRegion = S3Region.EUW1;
-#pragma warning restore CS0618 // Preserve obsolete warnings                    
-                             options.StoreCreation = S3LuggageStoreCreation.ValidateExists;
-                        });
                     }
 
                     services.AddHostedService<ServiceActivatorHostedService>();

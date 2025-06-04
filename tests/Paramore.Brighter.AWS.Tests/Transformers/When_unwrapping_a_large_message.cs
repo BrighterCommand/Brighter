@@ -37,37 +37,23 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
 
-            var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
-
-            _client = factory.CreateS3Client();
-            var stsClient = factory.CreateStsClient();
-
             var services = new ServiceCollection();
             services.AddHttpClient();
             var provider = services.BuildServiceProvider();
-            IHttpClientFactory httpClientFactory = provider.GetService<IHttpClientFactory>();
+            IHttpClientFactory httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
 
             _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
 
-            _luggageStore = S3LuggageStore
-                .CreateAsync(
-                    client: _client,
-                    bucketName: _bucketName,
-                    storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                    httpClientFactory: httpClientFactory,
-                    stsClient: stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-                    bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618
-                    tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
-                    acl: S3CannedACL.Private,
-                    abortFailedUploadsAfterDays: 1,
-                    deleteGoodUploadsAfterDays: 1)
-                .GetAwaiter()
-                .GetResult();
+            _luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
+            {
+                HttpClientFactory = httpClientFactory,
+                Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }]
+            });
+            
+            _luggageStore.EnsureStoreExists();
 
             var messageTransformerFactory =
-                new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+                new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
             _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
         }
@@ -102,7 +88,8 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                     new JsonSerializerOptions(JsonSerializerDefaults.General)))
             );
 
-            message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
+            message.Header.DataRef = id;
+            message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
 
             //act
             var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();

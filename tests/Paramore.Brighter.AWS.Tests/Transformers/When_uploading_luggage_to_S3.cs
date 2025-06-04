@@ -19,24 +19,17 @@ using Policy = Polly.Policy;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
-public class S3LuggageUploadTests : IDisposable
+public class S3LuggageUploadTests
 {
-    private readonly AmazonS3Client _client;
-    private readonly AmazonSecurityTokenServiceClient _stsClient;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName;
 
     public S3LuggageUploadTests()
     {
-        //arrange
-        var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
-        _client = factory.CreateS3Client();
-        _stsClient = factory.CreateStsClient(); 
-
         var services = new ServiceCollection();
         services.AddHttpClient();
         var provider = services.BuildServiceProvider();
-        _httpClientFactory = provider.GetService<IHttpClientFactory>();
+        _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
     
@@ -44,24 +37,18 @@ public class S3LuggageUploadTests : IDisposable
     public async Task When_uploading_luggage_to_S3()
     {
         //arrange
-        var luggageStore = await S3LuggageStore.CreateAsync(
-            client: _client,
-            bucketName: _bucketName,
-            storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-            httpClientFactory: _httpClientFactory,       
-            stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-            bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618
-            tags: new List<Tag> {new Tag{Key = "BrighterTests", Value = "S3LuggageUploadTests"}},
-            acl: S3CannedACL.Private,
-            policy: GetSimpleHandlerRetryPolicy(), 
-            abortFailedUploadsAfterDays: 1, 
-            deleteGoodUploadsAfterDays: 1);    
+        var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
+        {
+            HttpClientFactory = _httpClientFactory,
+            Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
+            RetryPolicy = GetSimpleHandlerRetryPolicy()
+        });
+        
+        await luggageStore.EnsureStoreExistsAsync();
         
         //act
         //Upload the test stream to S3
-        var testContent = "Well, always know that you shine Brighter";
+        const string testContent = "Well, always know that you shine Brighter";
         var stream = new MemoryStream();
         var streamWriter = new StreamWriter(stream);
         await streamWriter.WriteAsync(testContent);
@@ -105,10 +92,5 @@ public class S3LuggageUploadTests : IDisposable
             })
             .WaitAndRetryAsync(delay);
 
-    }
-
-    public void Dispose()
-    {
-        _client.DeleteBucketAsync(_bucketName).GetAwaiter().GetResult();
     }
 }

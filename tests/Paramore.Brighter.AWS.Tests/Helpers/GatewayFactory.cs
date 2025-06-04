@@ -3,6 +3,7 @@ using System.Configuration;
 using Amazon;
 using Amazon.Runtime;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.Tranformers.AWS;
 
 namespace Paramore.Brighter.AWS.Tests.Helpers;
 
@@ -36,5 +37,11 @@ public class GatewayFactory
                     cfg.ServiceURL = serviceURL;
                 }*/
             });
+    }
+
+    public static AWSS3Connection CreateS3Connection()
+    {
+        var (credentials, region) = CredentialsChain.GetAwsCredentials();
+        return new AWSS3Connection(credentials, region);
     }
 }
