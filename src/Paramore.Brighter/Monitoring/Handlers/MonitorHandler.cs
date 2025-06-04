@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using System.Transactions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 

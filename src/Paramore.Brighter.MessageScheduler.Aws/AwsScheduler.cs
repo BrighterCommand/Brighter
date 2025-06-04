@@ -3,6 +3,7 @@ using System.Text.Json;
 using Amazon;
 using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tasks;
 using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundException;
@@ -321,7 +322,7 @@ public class AwsScheduler(
 
     private static object ToPublishRequest(string topicArn, Message message)
     {
-        if (string.IsNullOrEmpty(message.Header.CorrelationId))
+        if (Id.IsNullOrEmpty(message.Header.CorrelationId))
         {
             message.Header.CorrelationId = Guid.NewGuid().ToString();
         }
@@ -338,18 +339,14 @@ public class AwsScheduler(
             [HeaderNames.Timestamp] = new
             {
                 StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
+            },
+            [HeaderNames.CorrelationId] = new
+            {
+                StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String"
             }
         };
 
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            messageAttributes[HeaderNames.CorrelationId] = new
-            {
-                StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String"
-            };
-        }
-
-        if (!string.IsNullOrEmpty(message.Header.ReplyTo))
+        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
         {
             messageAttributes.Add(HeaderNames.ReplyTo,
                 new { StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String" });
@@ -409,7 +406,7 @@ public class AwsScheduler(
             }
         };
 
-        if (!string.IsNullOrEmpty(message.Header.ReplyTo))
+        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
         {
             messageAttributes.Add(HeaderNames.ReplyTo,
                 new { StringValue = message.Header.ReplyTo, DataType = "String" });

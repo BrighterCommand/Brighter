@@ -33,7 +33,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <param name="args">Additional parameters required for search, if any</param>
     /// <param name="cancellationToken">The cancellation token</param>
     /// <returns>A list of messages</returns>
-    public async Task<IList<Message>> GetAsync(int pageSize = 100,
+    public async Task<IList<Message>> GetAsync(
+        int pageSize = 100,
         int pageNumber = 1,
         Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
@@ -83,7 +84,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <param name="cancellationToken">Cancellation Token.</param>
     /// <returns></returns>
     public async Task<IEnumerable<Message>> GetAsync(
-        IEnumerable<string> messageIds,
+        IEnumerable<Id> messageIds,
         RequestContext requestContext,
         int outBoxTimeout = -1,
         CancellationToken cancellationToken = default
@@ -104,7 +105,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds);
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(x => x.ToString()));
 
             var cursor = await Collection.FindAsync(filter,
                     cancellationToken: cancellationToken)
@@ -250,14 +251,15 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public async Task DeleteAsync(string[] messageIds,
+    public async Task DeleteAsync(
+        Id[] messageIds,
         RequestContext requestContext,
         Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.ids", string.Join(",", messageIds)}
+            {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(m => m.ToString()))}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -270,7 +272,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds);
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(x => x.ToString()));
             await Collection.DeleteManyAsync(filter, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
         finally
@@ -280,7 +282,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public async Task<IEnumerable<Message>> DispatchedMessagesAsync(TimeSpan dispatchedSince,
+    public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
+        TimeSpan dispatchedSince,
         RequestContext requestContext,
         int pageSize = 100,
         int pageNumber = 1, int outboxTimeout = -1, Dictionary<string, object>? args = null,
@@ -327,7 +330,10 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public async Task<Message> GetAsync(string messageId, RequestContext requestContext, int outBoxTimeout = -1,
+    public async Task<Message> GetAsync(
+        Id messageId, 
+        RequestContext requestContext, 
+        int outBoxTimeout = -1,
         Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
@@ -363,7 +369,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public async Task MarkDispatchedAsync(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
+    public async Task MarkDispatchedAsync(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var dbAttributes = new Dictionary<string, string>()
@@ -381,7 +387,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.Eq(x => x.MessageId, id);
+            var filter = Builders<OutboxMessage>.Filter.Eq(x => x.MessageId, id.Value);
 
             dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
@@ -397,7 +403,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public async Task MarkDispatchedAsync(IEnumerable<string> ids,
+    public async Task MarkDispatchedAsync(
+        IEnumerable<Id> ids,
         RequestContext requestContext,
         DateTimeOffset? dispatchedAt = null,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
@@ -416,7 +423,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             options: Configuration.InstrumentationOptions);
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, ids);
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, ids.Select(x => x.ToString()));
 
             dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
@@ -432,7 +439,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public async Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince,
+    public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+        TimeSpan dispatchedSince,
         RequestContext requestContext,
         int pageSize = 100,
         int pageNumber = 1, Dictionary<string, object>? args = null,
@@ -530,7 +538,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
     /// <returns></returns>
     public IEnumerable<Message> Get(
-        IEnumerable<string> messageIds,
+        IEnumerable<Id> messageIds,
         RequestContext? requestContext = null,
         int outBoxTimeout = -1
     )
@@ -550,7 +558,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds);
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(x => x.ToString()));
 
             var cursor = Collection.FindSync(filter);
 
@@ -673,11 +681,11 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
+    public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.ids", string.Join(",", messageIds)}
+            {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(m => m.ToString()))}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -689,7 +697,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             options: Configuration.InstrumentationOptions);
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds);
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(x => x.ToString()));
             Collection.DeleteMany(filter);
         }
         finally
@@ -699,7 +707,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public IEnumerable<Message> DispatchedMessages(TimeSpan dispatchedSince, RequestContext requestContext,
+    public IEnumerable<Message> DispatchedMessages(
+        TimeSpan dispatchedSince, 
+        RequestContext requestContext,
         int pageSize = 100,
         int pageNumber = 1, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
@@ -744,8 +754,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1,
-        Dictionary<string, object>? args = null)
+    public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
         var dbAttributes = new Dictionary<string, string>()
         {
@@ -773,8 +782,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
-        Dictionary<string, object>? args = null)
+    public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
     {
         var dbAttributes = new Dictionary<string, string>()
         {
@@ -790,7 +798,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.Eq(x => x.MessageId, id);
+            var filter = Builders<OutboxMessage>.Filter.Eq(x => x.MessageId, id.Value);
 
             dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update

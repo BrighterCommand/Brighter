@@ -31,7 +31,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 using RabbitMQ.Client.Events;
 
@@ -134,6 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     Channel.ConfirmSelect();
                     _confirmsSelected = true;
 
+                    BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message);
 
                     Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic, message.Persist, message.Id, message.Body.Value);

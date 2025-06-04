@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
@@ -60,7 +61,7 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
             .Handle<Exception>()
             .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-        var producer = new InMemoryProducer (_internalBus, _timeProvider) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
+        var producer = new InMemoryMessageProducer (_internalBus, _timeProvider) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
         var policyRegistry = new PolicyRegistry
         {
             { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }

@@ -1,4 +1,5 @@
-﻿using Paramore.Brighter.Scheduler.Events;
+﻿using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using Quartz;
 using JsonSerializer = System.Text.Json.JsonSerializer;

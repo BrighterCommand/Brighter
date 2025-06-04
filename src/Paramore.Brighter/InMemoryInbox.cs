@@ -28,6 +28,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter

@@ -5,6 +5,7 @@ using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.JsonConverters;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;

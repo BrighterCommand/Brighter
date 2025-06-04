@@ -28,6 +28,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 

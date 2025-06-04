@@ -49,12 +49,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.CompletedTask;
         }
 
-        public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
+        public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
             Messages = Messages.Where(m => !messageIds.Any(id => m.Message.Id == id)).ToList();
         }
 
-        public Task DeleteAsync(string[] messageIds, RequestContext requestContext, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        public Task DeleteAsync(Id[] messageIds, RequestContext requestContext, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             Delete(messageIds, requestContext, args);
             return Task.CompletedTask;
@@ -70,29 +70,29 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(DispatchedMessages(dispatchedSince, requestContext, pageSize, pageNumber, outboxTimeout, args));
         }
 
-        public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+        public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
         {
             return Messages.First(m => m.Message.Id == messageId).Message;
         }
 
-        public Task<Message> GetAsync(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        public Task<Message> GetAsync(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Get(messageId, requestContext, outBoxTimeout, args));
         }
 
-        public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
+        public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
         {
             var entry = Messages.First(m => m.Message.Id == id);
             entry.Dispatched = true;
         }
 
-        public Task MarkDispatchedAsync(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        public Task MarkDispatchedAsync(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             MarkDispatched(id, requestContext, dispatchedAt, args);
             return Task.CompletedTask;
         }
 
-        public Task MarkDispatchedAsync(IEnumerable<string> ids, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        public Task MarkDispatchedAsync(IEnumerable<Id> ids, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             foreach (var id in ids)
             {

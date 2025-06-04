@@ -4,6 +4,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
+[Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqBrokerNotPreCreatedTests : IDisposable
 {
     private Message _message;

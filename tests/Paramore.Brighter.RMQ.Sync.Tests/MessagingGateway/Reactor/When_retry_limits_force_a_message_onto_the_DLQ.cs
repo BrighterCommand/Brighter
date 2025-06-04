@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -11,8 +12,9 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
 [Trait("Fragile", "CI")]
+[Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RMQMessageConsumerRetryDLQTests : IDisposable
 {
     private readonly IAmAMessagePump _messagePump;

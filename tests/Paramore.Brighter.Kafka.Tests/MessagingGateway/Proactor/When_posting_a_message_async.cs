@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -82,7 +83,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
                 PartitionKey = _partitionKey,
                 ContentType = "application/json",
                 Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
-                ReplyTo = "com.brightercommand.replyto",
+                ReplyTo = new RoutingKey("com.brightercommand.replyto"),
                 CorrelationId = Guid.NewGuid().ToString(),
                 Delayed = TimeSpan.FromMilliseconds(10),
                 HandledCount = 2,

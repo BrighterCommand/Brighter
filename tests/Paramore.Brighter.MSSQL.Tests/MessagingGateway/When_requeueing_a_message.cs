@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;

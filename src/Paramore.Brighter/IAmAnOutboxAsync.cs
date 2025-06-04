@@ -90,7 +90,7 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         Task DeleteAsync(
-            string[] messageIds,
+            Id[] messageIds,
             RequestContext requestContext,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
@@ -127,7 +127,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
         Task<Message> GetAsync(
-            string messageId,
+            Id messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
@@ -143,7 +143,7 @@ namespace Paramore.Brighter
         /// <param name="args">A dictionary of provider specific arguments</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         Task MarkDispatchedAsync(
-            string id,
+            Id id,
             RequestContext requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,
@@ -158,7 +158,7 @@ namespace Paramore.Brighter
         /// <param name="args">A dictionary of provider specfic arguments</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         Task MarkDispatchedAsync(
-            IEnumerable<string> ids,
+            IEnumerable<Id> ids,
             RequestContext requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,

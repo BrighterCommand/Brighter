@@ -2,6 +2,7 @@ using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.MessageMappers;

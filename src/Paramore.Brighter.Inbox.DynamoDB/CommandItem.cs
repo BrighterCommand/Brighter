@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.Json;
 using Amazon.DynamoDBv2.DataModel;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Inbox.DynamoDB
 {

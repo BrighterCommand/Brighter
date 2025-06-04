@@ -28,6 +28,7 @@ using Xunit;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
 using System.Text.Json;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {

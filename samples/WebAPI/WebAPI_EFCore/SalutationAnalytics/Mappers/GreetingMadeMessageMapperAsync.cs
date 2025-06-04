@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
+using Paramore.Brighter.JsonConverters;
 using SalutationApp.Requests;
 
 namespace SalutationAnalytics.Mappers

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 

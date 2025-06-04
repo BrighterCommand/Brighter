@@ -31,6 +31,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;

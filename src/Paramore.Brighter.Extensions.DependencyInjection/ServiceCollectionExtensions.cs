@@ -32,6 +32,7 @@ using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
 

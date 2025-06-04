@@ -29,7 +29,7 @@ namespace Paramore.Brighter
         /// <param name="args"></param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        void ClearOutbox(string[] posts, RequestContext requestContext, Dictionary<string, object>? args = null);
+        void ClearOutbox(Id[] posts, RequestContext requestContext, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// This is the clear outbox for explicit clearing of messages.
@@ -42,7 +42,7 @@ namespace Paramore.Brighter
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
         Task ClearOutboxAsync(
-            IEnumerable<string> posts,
+            IEnumerable<Id> posts,
             RequestContext requestContext,
             bool continueOnCapturedContext = true,
             Dictionary<string, object>? args = null,

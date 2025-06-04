@@ -126,5 +126,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The cloud events for content-type
         /// </summary>
         public const string CLOUD_EVENTS_DATA_CONTENT_TYPE  = "content-type";
+        
+        /// <summary>
+        /// The cloud events traceparent, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_PARENT = "ce_traceparent";
+
+        /// <summary>
+        /// The cloud events tracestate, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_STATE = "ce_tracestate";
+
+        /// <summary>
+        /// The W3C baggage
+        /// </summary>
+        public const string W3C_BAGGAGE = "baggage";
     }
 }

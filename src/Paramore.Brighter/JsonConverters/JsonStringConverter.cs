@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter.JsonConverters
 {
     public class JsonStringConverter : JsonConverter<string>
     {

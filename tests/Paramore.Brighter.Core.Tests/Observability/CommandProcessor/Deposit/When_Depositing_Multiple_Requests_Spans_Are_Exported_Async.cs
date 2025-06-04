@@ -11,6 +11,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -63,7 +64,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             {
-                routingKey, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+                routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider())
                 {
                     Publication = { Topic = routingKey, RequestType = typeof(MyEvent)}
                 }

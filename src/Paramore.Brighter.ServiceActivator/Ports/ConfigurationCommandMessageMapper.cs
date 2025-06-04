@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Text.Json;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.ServiceActivator.Ports

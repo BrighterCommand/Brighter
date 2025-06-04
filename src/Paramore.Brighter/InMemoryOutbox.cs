@@ -239,7 +239,7 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The messages to delete</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>           
         /// <param name="args"></param>
-        public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
+        public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
             foreach (string messageId in messageIds)
             {
@@ -256,7 +256,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous operation</param>
         /// <returns></returns>
         public Task DeleteAsync(
-            string[] messageIds,
+            Id[] messageIds,
             RequestContext requestContext,
             Dictionary<string, object>? args,
             CancellationToken cancellationToken = default)
@@ -339,7 +339,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1,
+        public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
@@ -371,7 +371,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">A cancellation token for the async operation</param>
         /// <returns></returns>
         public Task<Message> GetAsync(
-            string messageId,
+            Id messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
@@ -402,7 +402,7 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">A cancellation token for the async operation</param>
         public Task MarkDispatchedAsync(
-            string id,
+            Id id,
             RequestContext requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,
@@ -428,7 +428,7 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">A cancellation token for the async operation</param>
         public Task MarkDispatchedAsync(
-            IEnumerable<string> ids,
+            IEnumerable<Id> ids,
             RequestContext requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,
@@ -453,7 +453,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="dispatchedAt">The time that the message was dispatched</param>
         /// <param name="args">Allows passing arbitrary arguments for searching for a message - not used</param>
-        public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
+        public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
@@ -545,7 +545,7 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
         
-        private void Delete(string messageId, RequestContext? requestContext = null)
+        private void Delete(Id messageId, RequestContext? requestContext = null)
         {
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.Delete, InMemoryAttributes.DbTable),

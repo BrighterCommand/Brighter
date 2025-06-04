@@ -6,6 +6,7 @@ using System.Text.Json;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Xunit;
 
@@ -64,7 +65,7 @@ public class BrighterSemanticConventionsMessageMapperTests
         Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperType && (string)t.Value == "sync"));
         Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value == true));
         Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value?.ToString() == "MyTopic".ToString()));
-        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id.Value));
         Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == paritionKey));
         Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBody && (string)t.Value == message.Body.Value));
         Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBodySize && (int)t.Value == message.Body.Value.Length));

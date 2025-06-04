@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
 using Polly.CircuitBreaker;

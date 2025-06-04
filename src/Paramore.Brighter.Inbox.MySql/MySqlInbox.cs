@@ -31,6 +31,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Observability;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Paramore.Brighter.JsonConverters;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation

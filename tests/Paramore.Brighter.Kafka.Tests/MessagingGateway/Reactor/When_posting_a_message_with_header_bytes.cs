@@ -38,7 +38,8 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
                 Name = "Kafka Producer Send Test", 
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
+            [
+                new KafkaPublication
             {
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
@@ -48,13 +49,14 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
                 MakeChannels = OnMissingChannel.Create
-            }}).Create(); 
+            }
+            ]).Create(); 
             
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
-                    BootStrapServers = new[] { "localhost:9092" }
+                    BootStrapServers = ["localhost:9092"]
                 })
             .Create(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName), 
@@ -111,6 +113,8 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
         
         //ensure that the messages are all sent
         ((KafkaMessageProducer) producer).Flush();
+        
+        await Task.Delay(500); //Let the message propagate in the broker
 
         var received = GetMessage();
 

@@ -35,6 +35,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using System.Text.Json;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {

@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 
 namespace Paramore.Brighter.Scheduler.Handlers;

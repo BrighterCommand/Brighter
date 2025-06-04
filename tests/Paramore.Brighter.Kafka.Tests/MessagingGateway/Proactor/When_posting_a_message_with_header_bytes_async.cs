@@ -94,7 +94,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
         var routingKey = new RoutingKey(_topic);
 
         var sent = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, contentType: ContentType.OctetStream)
             {
                 PartitionKey = _partitionKey
             },

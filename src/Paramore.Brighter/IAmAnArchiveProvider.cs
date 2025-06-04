@@ -52,6 +52,6 @@ namespace Paramore.Brighter
         /// <param name="messages">Messages to send</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>IDs of successfully archived messages</returns>
-        Task<string[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken);
+        Task<Id[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken);
     }
 }

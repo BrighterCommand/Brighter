@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace ParamoreBrighter.Quartz.Tests.TestDoubles;
 

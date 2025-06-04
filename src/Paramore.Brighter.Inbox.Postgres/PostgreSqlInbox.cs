@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Xunit;

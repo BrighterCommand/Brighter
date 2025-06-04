@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Hangfire;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 
 namespace Paramore.Brighter.MessageScheduler.Hangfire;

@@ -100,7 +100,7 @@ namespace GreetingsSender.Web.Controllers
             
             await _commandProcessor.DepositPostAsync(greetingAsync2);
 
-            var msgs = new List<string>();
+            var msgs = new List<Id>();
             // msgs.Add(greeting.Id);
             // msgs.Add(greetingAsync.Id);
             msgs.Add(greeting2.Id);

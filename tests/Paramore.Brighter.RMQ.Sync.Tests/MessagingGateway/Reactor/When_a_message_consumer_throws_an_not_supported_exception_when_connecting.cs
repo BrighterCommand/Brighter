@@ -30,6 +30,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqMessageConsumerChannelFailureTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _sender;
@@ -74,7 +75,6 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
         Assert.True(exceptionHappened);
     }
 
-    [Fact]
     public void Dispose()
     {
         _sender.Dispose();
