@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The type of the request that we expect to publish on this channel
         /// </summary>
-        public virtual Type? RequestType { get; set; }
+        public Type? RequestType { get; set; }
         
         /// <summary>
         /// REQUIRED
@@ -145,6 +145,12 @@ namespace Paramore.Brighter
     public class Publication<T> : Publication
         where T: class, IRequest
     {
-        public override Type? RequestType { get; set; } = typeof(T);
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Publication{T}"/> class. 
+        /// </summary>
+        public Publication()
+        {
+            RequestType = typeof(T);
+        }
     }
 }

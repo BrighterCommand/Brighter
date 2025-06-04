@@ -70,5 +70,11 @@ public class SqsPublication : Publication
 public class SqsPublication<T> : SqsPublication 
     where T: class, IRequest
 {
-    public override Type? RequestType { get; set; } = typeof(T);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqsPublication{T}"/> class.
+    /// </summary>
+    public SqsPublication()
+    {
+        RequestType = typeof(T);
+    }
 }

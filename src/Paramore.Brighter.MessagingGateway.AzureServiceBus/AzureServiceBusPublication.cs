@@ -39,8 +39,21 @@ public class AzureServiceBusPublication : Publication
     public bool UseServiceBusQueue = false;
 }
 
+/// <summary>
+/// Represents a publication for Azure Service Bus, associating a specific message type with the publication.
+/// </summary>
+/// <typeparam name="T">
+/// The type of the request (message) that this publication handles.
+/// This type must be a class and implement the <see cref="IRequest"/> interface.
+/// </typeparam>
 public class AzureServiceBusPublication<T> : AzureServiceBusPublication
     where T: class, IRequest
 {
-    public override Type? RequestType { get; set; } = typeof(T);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureServiceBusPublication{T}"/> class.
+    /// </summary>
+    public AzureServiceBusPublication()
+    {
+        RequestType = typeof(T);
+    }
 }

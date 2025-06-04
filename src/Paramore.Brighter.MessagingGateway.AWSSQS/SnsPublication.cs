@@ -92,6 +92,12 @@ public class SnsPublication : Publication
 public class SnsPublication<T> : SnsPublication 
     where T: class, IRequest
 {
-    public override Type? RequestType { get; set; } = typeof(T);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SnsPublication{T}"/> class.
+    /// </summary>
+    public SnsPublication()
+    {
+        RequestType = typeof(T);
+    }
 }
 

@@ -40,5 +40,11 @@ public class PostgresPublication : Publication
 public class PostgresPublication<T> : PostgresPublication 
     where T : class, IRequest 
 {
-    public override Type? RequestType { get; set; } = typeof(T);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PostgresPublication{T}"/> class.
+    /// </summary>
+    public PostgresPublication()
+    {
+        RequestType = typeof(T);
+    }
 }
