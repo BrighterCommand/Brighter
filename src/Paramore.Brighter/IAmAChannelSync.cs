@@ -55,7 +55,7 @@ namespace Paramore.Brighter
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        void Reject(Message message);
+        bool Reject(Message message);
 
         /// <summary>
         /// Requeues the specified message.
