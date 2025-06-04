@@ -47,7 +47,10 @@ namespace Paramore.Brighter
         {
             Bag = bag;
         }
-        
+
+        /// <inheritdoc />
+        public RoutingKey? Topic { get; set; }
+
         /// <summary>
         /// Gets the bag.
         /// </summary>

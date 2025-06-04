@@ -84,6 +84,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox,
             timeProvider:_timeProvider);
     }

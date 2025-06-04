@@ -64,8 +64,7 @@ var host = Host.CreateDefaultBuilder(args)
                 {
                     Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
                 },
-                new[]
-                {
+                [
                     new KafkaPublication
                     {
                         Topic = new RoutingKey("greeting.event"),
@@ -74,7 +73,7 @@ var host = Host.CreateDefaultBuilder(args)
                         MessageTimeoutMs = 1000,
                         MaxInFlightRequestsPerConnection = 1
                     }
-                })
+                ])
             .Create();
 
         services.AddBrighter(options =>
