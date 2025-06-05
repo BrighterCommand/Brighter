@@ -49,7 +49,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// </remarks>
     /// </summary>
     public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
-    { 
+    {
+        private readonly InstrumentationOptions _instrumentationOptions;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
         static readonly object s_lock = new();
@@ -81,10 +82,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
         /// </summary>
         /// <param name="connection">The subscription information needed to talk to RMQ</param>
-        ///     Make Channels = Create
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection)
+        /// <param name="instrumentationOptions"></param>
+        /// Make Channels = Create
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
             : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create })
-        { }
+        {
+            _instrumentationOptions = instrumentationOptions;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -136,7 +140,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     Channel.ConfirmSelect();
                     _confirmsSelected = true;
 
-                    BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message);
+                    BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
                     Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic, message.Persist, message.Id, message.Body.Value);

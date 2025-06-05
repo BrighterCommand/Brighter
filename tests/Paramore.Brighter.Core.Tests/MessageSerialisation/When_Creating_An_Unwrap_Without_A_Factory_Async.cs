@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -31,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null, InstrumentationOptions.All);
     }
     
     [Fact]

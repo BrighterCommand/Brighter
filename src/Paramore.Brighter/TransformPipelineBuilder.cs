@@ -31,6 +31,7 @@ using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -49,6 +50,7 @@ namespace Paramore.Brighter
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
 
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
+        private readonly InstrumentationOptions _instrumentationOptions;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
@@ -66,16 +68,19 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="mapperRegistry">The message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactory">The transform factory, can be null</param>
+        /// <param name="instrumentationOptions"></param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
         public TransformPipelineBuilder(
             IAmAMessageMapperRegistry mapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
             )
         {
             _mapperRegistry = mapperRegistry ??
                               throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
 
             _messageTransformerFactory = messageTransformerFactory;
+            _instrumentationOptions = instrumentationOptions;
         }
 
         /// <summary>
@@ -92,7 +97,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                var pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms);
+                var pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms, _instrumentationOptions);
 
                 Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -33,9 +34,10 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
     /// <param name="publications">The list of topics that we want to publish to</param>
-    public class InMemoryMessageProducerFactory(InternalBus bus, IEnumerable<Publication> publications)
+    public class InMemoryMessageProducerFactory(InternalBus bus, IEnumerable<Publication> publications, InstrumentationOptions instrumentationOptions)
         : IAmAMessageProducerFactory
     {
+
         /// <summary>
         /// Creates a dictionary of in-memory message producers.
         /// </summary>
@@ -48,7 +50,7 @@ namespace Paramore.Brighter
             {
                 if (publication.Topic is null)
                     throw new ArgumentException("A publication must have a Topic to be dispatched");
-                var producer = new InMemoryMessageProducer(bus, TimeProvider.System);
+                var producer = new InMemoryMessageProducer(bus, TimeProvider.System, instrumentationOptions);
                 producer.Publication = publication;
                 producers[publication.Topic] = producer;
             }

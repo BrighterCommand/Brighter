@@ -138,9 +138,9 @@ namespace Paramore.Brighter
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
 
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, instrumentationOptions);
             _transformPipelineBuilderAsync =
-                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, instrumentationOptions);
 
             //default to in-memory; expectation for an in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox(TimeProvider.System);

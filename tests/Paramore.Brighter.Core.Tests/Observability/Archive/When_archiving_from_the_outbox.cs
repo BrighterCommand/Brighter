@@ -24,14 +24,14 @@ public class ExternalServiceBusArchiveObservabilityTests
     private RoutingKey _routingKey = new("MyEvent");
     private readonly InMemoryOutbox _outbox;
     private readonly TracerProvider _traceProvider;
-    private readonly OutboxArchiver<Message,CommittableTransaction> _archiver;
     private const double TOLERANCE = 0.000000001;
+    private readonly BrighterTracer _tracer;
 
     public ExternalServiceBusArchiveObservabilityTests()
     {
         IAmABus internalBus = new InternalBus();
         _timeProvider = new FakeTimeProvider();
-        var tracer = new BrighterTracer(_timeProvider);
+        _tracer = new BrighterTracer(_timeProvider);
 
         var builder = Sdk.CreateTracerProviderBuilder();
 
@@ -51,7 +51,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             Type = nameof(MyEvent),
         };
 
-        var producer = new InMemoryMessageProducer(internalBus, _timeProvider)
+        var producer = new InMemoryMessageProducer(internalBus, _timeProvider, InstrumentationOptions.All)
         {
             Publication = _publication
         };
@@ -70,10 +70,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
-        var archiveProvider = new InMemoryArchiveProvider();
-
-        _archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: tracer);
+        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = _tracer };
 
         _bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
@@ -81,14 +78,17 @@ public class ExternalServiceBusArchiveObservabilityTests
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
-            tracer,
+            _tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
             _outbox,
             timeProvider:_timeProvider);
     }
 
-    [Fact]
-    public void When_archiving_from_the_outbox()
+    [Theory]
+    [InlineData(InstrumentationOptions.RequestInformation)]
+    [InlineData(InstrumentationOptions.None)]
+    [InlineData(InstrumentationOptions.All)]
+    public void When_archiving_from_the_outbox(InstrumentationOptions instrumentationOptions)
     {
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
         
@@ -109,7 +109,11 @@ public class ExternalServiceBusArchiveObservabilityTests
         
         //archive
         var dispatchedSince = TimeSpan.FromSeconds(100);
-        _archiver.Archive(dispatchedSince, context);
+        var archiveProvider = new InMemoryArchiveProvider();
+
+        var archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: _tracer,
+            instrumentationOptions: instrumentationOptions);
+        archiver.Archive(dispatchedSince, context);
         
         //should be no messages in the outbox
         Assert.Equal(0, _outbox.EntryCount);
@@ -141,7 +145,27 @@ public class ExternalServiceBusArchiveObservabilityTests
         Assert.Equal(createActivity.Id, deleteActivity?.ParentId);
 
         //check the tags for the create span
-        Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ArchiveAge && Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE);
+        if(instrumentationOptions == InstrumentationOptions.None)
+            Assert.Empty(createActivity.Tags);
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            Assert.Contains(createActivity.TagObjects,
+                t => t.Key == BrighterSemanticConventions.ArchiveAge &&
+                     Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE);
+            Assert.Contains(createActivity.TagObjects,
+                t => t.Key == BrighterSemanticConventions.Operation &&
+                     (string)t.Value == CommandProcessorSpanOperation.Archive.ToSpanName());
+            Assert.Contains(createActivity.TagObjects,
+                t => t.Key == BrighterSemanticConventions.MessagingOperationType &&
+                     (string)t.Value == CommandProcessorSpanOperation.Archive.ToSpanName());
+        }
+        else
+        {
+            Assert.DoesNotContain(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ArchiveAge);
+            Assert.DoesNotContain(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.Operation);
+            Assert.DoesNotContain(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingOperationName);
+        }
+
 
         //check the tags for the outstanding messages span
         Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.DispatchedMessages.ToSpanName()));

@@ -50,7 +50,7 @@ namespace Paramore.Brighter
     /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public abstract partial class RequestHandlerAsync<TRequest> : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
+    public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandlerAsync<TRequest>>();
 
@@ -119,7 +119,7 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:true, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:true, instrumentationOptions, isSink:_successor == null);
             }   
             
             if (_successor != null)
@@ -155,7 +155,7 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:true, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:true, instrumentationOptions, isSink:_successor == null);
             }   
             
             if (_successor != null)
