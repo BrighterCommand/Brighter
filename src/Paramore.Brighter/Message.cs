@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Mime;
 using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
@@ -128,7 +129,14 @@ namespace Paramore.Brighter
         {
             Body = body;
             Header = header;
-            Header.ContentType = string.IsNullOrEmpty(Header.ContentType) ? Body.ContentType: Header.ContentType;
+            var contentType = Header.ContentType;
+            if (contentType is null && Body.ContentType is not null)
+                // If the header does not have a content type, but the body does, then we set the header to the body content type
+                contentType = Body.ContentType;
+            else if (contentType is null)
+                //otherwise we just default to text/plain 
+                contentType = new ContentType(MediaTypeNames.Text.Plain);    
+            Header.ContentType = contentType;
         }
 
         /// <summary>
@@ -166,6 +174,19 @@ namespace Paramore.Brighter
                     message.Header.Baggage.LoadBaggage(value);
                     break;
             }
+        }
+        
+        /// <summary>
+        /// Creates a failure message, used to indicate that a message could not be successfully retrieved from a channel
+        /// </summary>
+        /// <param name="topic">The topic of the channel</param>
+        /// <param name="messageId">The id of he message, may be Id.Empty if not known</param>
+        /// <returns></returns>
+        public static Message FailureMessage(RoutingKey? topic, Id? messageId = null)
+        {
+            var header = MessageHeader.FailureMessageHeader(topic, messageId);
+            var message = new Message(header, new MessageBody(string.Empty));
+            return message;
         }
 
         /// <summary>

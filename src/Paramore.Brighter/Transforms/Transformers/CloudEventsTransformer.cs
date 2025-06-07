@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mime;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transforms.Transformers;
@@ -24,7 +25,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
     private Uri? _source;
     private string? _type;
     private string? _specVersion;
-    private string? _dataContentType;
+    private ContentType? _dataContentType;
     private Uri? _dataSchema;
     private string? _subject;
 
@@ -58,7 +59,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
 
         if (initializerList[3] is string dataContentType)
         {
-            _dataContentType = dataContentType;
+            _dataContentType = new ContentType(dataContentType);
         }
 
         if (initializerList[4] is string dataSchema)

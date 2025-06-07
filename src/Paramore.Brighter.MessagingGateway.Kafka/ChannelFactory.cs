@@ -50,7 +50,7 @@ public class ChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is not a KafkaSubscription.</exception>
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
-        KafkaSubscription rmqSubscription = subscription as KafkaSubscription;
+        KafkaSubscription? rmqSubscription = subscription as KafkaSubscription;
         if (rmqSubscription == null)
             throw new ConfigurationException("We expect a KafkaSubscription or KafkaSubscription<T> as a parameter");
 
@@ -69,7 +69,7 @@ public class ChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is not a KafkaSubscription.</exception>
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
     {
-        KafkaSubscription rmqSubscription = subscription as KafkaSubscription;
+        KafkaSubscription? rmqSubscription = subscription as KafkaSubscription;
         if (rmqSubscription == null)
             throw new ConfigurationException("We expect a KafkaSubscription or KafkaSubscription<T> as a parameter");
 
@@ -89,7 +89,7 @@ public class ChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is not a KafkaSubscription.</exception>
     public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
     {
-        KafkaSubscription rmqSubscription = subscription as KafkaSubscription;
+        KafkaSubscription? rmqSubscription = subscription as KafkaSubscription;
         if (rmqSubscription == null)
             throw new ConfigurationException("We expect a KafkaSubscription or KafkaSubscription<T> as a parameter");
 

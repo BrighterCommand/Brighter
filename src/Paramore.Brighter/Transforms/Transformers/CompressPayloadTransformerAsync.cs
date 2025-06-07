@@ -88,7 +88,8 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Compress the message given the supplied compression algorithm
         /// </summary>
         /// <param name="message">The message to compress</param>
-        /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>       
+        /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>
+        /// <param name="cancellationToken">Support for cancelling the operation</param>
         /// <returns>A message with a compressed body</returns>
         public async Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
         {
@@ -104,9 +105,10 @@ namespace Paramore.Brighter.Transforms.Transformers
             await input.CopyToAsync(compressionStream);
             compressionStream.Close();
 
-            message.Header.ContentType = mimeType;
-            message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, message.Body.ContentType);
-            message.Body = new MessageBody(output.ToArray(), mimeType, CharacterEncoding.Raw);
+            var contentType = new ContentType(mimeType);
+            message.Header.ContentType = contentType;
+            message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain);
+            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
 
             return message;
         }
@@ -115,6 +117,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Decompress a message given the supplied compression algorithm
         /// </summary>
         /// <param name="message">The message to decompress</param>
+        /// <param name="cancellationToken">Suppot for cancelling the operation</param>
         /// <returns>An uncompressed message</returns>
         public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
@@ -128,7 +131,9 @@ namespace Paramore.Brighter.Transforms.Transformers
             await deCompressionStream.CopyToAsync(output);
             deCompressionStream.Close();
 
-            string contentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
+            string originalContentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
+            var contentType = new ContentType(originalContentType);
+            contentType.CharSet = nameof(CharacterEncoding.UTF8);
             message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.UTF8);
             message.Header.ContentType = contentType;
 
@@ -182,14 +187,17 @@ namespace Paramore.Brighter.Transforms.Transformers
 
         private bool IsCompressed(Message message)
         {
+            if (message.Header.ContentType is null)
+                return false;
+            
             switch (_compressionMethod)
             {
                 case CompressionMethod.GZip:
-                    return message.Header.ContentType == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
+                    return message.Header.ContentType.ToString() == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
                 case CompressionMethod.Zlib:
-                    return  message.Header.ContentType == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
+                    return  message.Header.ContentType.ToString() == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
                 case CompressionMethod.Brotli:
-                    return message.Header.ContentType == "application/br";
+                    return message.Header.ContentType.ToString() == "application/br";
                 default:
                     return false;
                     

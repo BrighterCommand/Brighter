@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
@@ -26,7 +27,7 @@ public class RMQMessageConsumerRetryDLQTestsAsync : IDisposable
     public RMQMessageConsumerRetryDLQTestsAsync()
     {
         string correlationId = Guid.NewGuid().ToString();
-        string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = new ChannelName($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
         var routingKey = new RoutingKey($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
 

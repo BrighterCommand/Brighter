@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net.Mime;
+using System.Text.Json;
 using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
@@ -14,7 +15,7 @@ namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Requests.Sns;
 [Collection("Scheduler SNS")]
 public class SnsSchedulingRequestAsyncTest : IDisposable
 {
-    private const string ContentType = "text\\plain";
+    private readonly ContentType _contentType = new(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
     private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -49,7 +50,7 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
         // Enforce topic to be created
         _messageProducer.Send(new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
             new MessageBody("test content one")
         ));
         _consumer.Purge();

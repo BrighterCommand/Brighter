@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 
 namespace Paramore.Brighter
 {
@@ -43,7 +44,7 @@ namespace Paramore.Brighter
         /// though Cloud Events does not.
         /// Default value is text/plain
         /// </summary>
-        public string ContentType { get; set; } = "text/plain";
+        public ContentType ContentType { get; set; } = new(MediaTypeNames.Text.Plain);
         
         /// <summary>
         /// OPTIONAL

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text.Json.Serialization;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.NJsonConverters;
@@ -117,9 +118,7 @@ namespace Paramore.Brighter
         /// though Cloud Events does not.
         /// Default value is "text/plain"
         /// </summary>
-        [JsonConverter(typeof(ContentTypeConverter))]
-        [Newtonsoft.Json.JsonConverter(typeof(NContentTypeConverter))]
-        public ContentType ContentType { get; set; } = ContentType.TextPlain;
+        public ContentType? ContentType { get; set; }
 
         /// <summary>
         /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,
@@ -335,7 +334,7 @@ namespace Paramore.Brighter
             Delayed = delayed ?? TimeSpan.Zero;
             CorrelationId = correlationId ?? new Id(string.Empty);
             ReplyTo = replyTo ?? RoutingKey.Empty;
-            ContentType = contentType ?? ContentType.TextPlain;
+            ContentType = contentType ?? new ContentType(MediaTypeNames.Text.Plain);
             PartitionKey = partitionKey ?? PartitionKey.Empty;
             DataSchema = dataSchema;
             Subject = subject;
@@ -368,6 +367,21 @@ namespace Paramore.Brighter
             }
 
             return newHeader;
+        }
+        
+        /// <summary>
+        /// We return an MT_UNACCEPTABLE message because we cannot process. Really this should go on to an
+        /// Invalid Message Queue provided by the Control Bus
+        /// </summary>
+        /// <param name="topic"></param>
+        /// <param name="messageId"></param>
+        /// <returns></returns>
+        public static MessageHeader FailureMessageHeader(RoutingKey? topic, Id? messageId)
+        {
+            return new MessageHeader(
+                messageId ?? Id.Empty,
+                topic ?? RoutingKey.Empty,
+                MessageType.MT_UNACCEPTABLE);
         }
 
         /// <summary>

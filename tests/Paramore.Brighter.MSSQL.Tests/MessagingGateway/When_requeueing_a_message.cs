@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -19,9 +20,9 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         public MsSqlMessageConsumerRequeueTests()
         {
             var myCommand = new MyCommand { Value = "Test" };
-            string correlationId = Guid.NewGuid().ToString();
-            string replyTo = "http:\\queueUrl";
-            string contentType = "text\\plain";
+            var correlationId = Id.Random;
+            var replyTo = new RoutingKey("http:\\queueUrl");
+            var contentType = new ContentType(MediaTypeNames.Text.Plain);
             var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";
             _topic = new RoutingKey($"Consumer-Requeue-Tests-{Guid.NewGuid()}");
 

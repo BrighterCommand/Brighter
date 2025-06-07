@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
@@ -53,10 +54,11 @@ internal sealed partial class RmqMessageCreator
             messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
 
             if (false == (topic.Success && messageId.Success))
-                return FailureMessage(topic, messageId);
+                return Message.FailureMessage(topic.Result, messageId.Result);
 
             var messageHeader = CreateMessageHeader(fromQueue, headers, topic, messageId);
-            message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type ?? ContentType.TextPlain));
+
+            message = new Message(messageHeader, new MessageBody(fromQueue.Body, new ContentType(fromQueue.BasicProperties.Type)));
 
             ProcessHeaderBag(headers, message);
             SetMessageMetadata(fromQueue, message);
@@ -64,7 +66,7 @@ internal sealed partial class RmqMessageCreator
         catch (Exception e)
         {
             Log.FailedToCreateMessageFromAmqpMessage(s_logger, e);
-            message = FailureMessage(topic, messageId);
+            message = Message.FailureMessage(topic.Result, messageId.Result);
         }
 
         return message;
@@ -103,7 +105,7 @@ internal sealed partial class RmqMessageCreator
             timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
             correlationId: correlationId.Result,
             replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
-            contentType: fromQueue.BasicProperties.Type ?? ContentType.TextPlain,
+            contentType: new ContentType(fromQueue.BasicProperties.ContentType), 
             handledCount: handledCount.Result,
             dataSchema: dataSchema.Result,
             subject: subject.Result,
@@ -153,16 +155,6 @@ internal sealed partial class RmqMessageCreator
             Log.FailedToReadHeaderValueAsUtf8(s_logger, key, firstTwentyBytes, e);
             return new HeaderResult<string?>(null, false);
         }
-    }
-
-    private static Message FailureMessage(HeaderResult<RoutingKey?> topic, HeaderResult<Id?> messageId)
-    {
-        var header = new MessageHeader(
-            (messageId.Success ? messageId.Result : string.Empty)!,
-            (topic.Success ? topic.Result : RoutingKey.Empty)!,
-            MessageType.MT_UNACCEPTABLE);
-        var message = new Message(header, new MessageBody(string.Empty));
-        return message;
     }
 
     private static HeaderResult<Id?> ReadCorrelationId(IDictionary<string, object?> headers)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Net.Mime;
 using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -24,7 +25,7 @@ public class KafkaHeaderToBrighterTests
                 timeStamp: DateTimeOffset.UtcNow,
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("test"),
-                contentType: "application/octet",
+                contentType: new ContentType(MediaTypeNames.Application.Octet),
                 partitionKey: "mykey"
             ),
             new MessageBody("test content")

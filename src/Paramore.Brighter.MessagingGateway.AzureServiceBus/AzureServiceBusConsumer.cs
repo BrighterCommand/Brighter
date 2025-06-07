@@ -48,7 +48,8 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     private readonly int _batchSize;
     protected IServiceBusReceiverWrapper? ServiceBusReceiver;
     protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
-        
+    private readonly AzureServiceBusMesssageCreator _azureServiceBusMesssageCreator;
+
     /// <summary>
     /// Constructor for the Azure Service Bus Consumer
     /// </summary>
@@ -69,6 +70,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
         _messageProducer = messageProducer;
         AdministrationClientWrapper = administrationClientWrapper;
+        _azureServiceBusMesssageCreator = new AzureServiceBusMesssageCreator(subscription);
     }
         
     /// <summary>
@@ -218,7 +220,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
 
         foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
         {
-            Message message = MapToBrighterMessage(azureServiceBusMessage);
+            Message message = _azureServiceBusMesssageCreator.MapToBrighterMessage(azureServiceBusMessage);
             messagesToReturn.Add(message);
         }
 
@@ -306,89 +308,6 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     }
 
     protected abstract Task GetMessageReceiverProviderAsync();
-
-    private Message MapToBrighterMessage(IBrokeredMessageWrapper azureServiceBusMessage)
-    {
-        if (azureServiceBusMessage.MessageBodyValue is null)
-        {
-            Logger.LogWarning(
-                "Null message body received from topic {Topic} via subscription {ChannelName}",
-                Topic, SubscriptionName);
-        }
-
-        var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
-            
-        Logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}",
-            Topic, SubscriptionName, messageBody);
-            
-        MessageType messageType = GetMessageType(azureServiceBusMessage);
-        var replyAddress = GetReplyAddress(azureServiceBusMessage);
-        var handledCount = GetHandledCount(azureServiceBusMessage);
-            
-        // Azure is using the cloud event payload, so the user should read that info from the payload
-        // https://learn.microsoft.com/en-us/azure/event-grid/cloud-event-schema
-        // https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/servicebus/Azure.Messaging.ServiceBus/samples/Sample11_CloudEvents.md
-            
-        var headers = new MessageHeader(
-            messageId: azureServiceBusMessage.Id, 
-            topic: new RoutingKey(Topic), 
-            messageType: messageType, 
-            source: null,
-            type: "",
-            timeStamp: DateTime.UtcNow,
-            correlationId: azureServiceBusMessage.CorrelationId,
-            replyTo: new RoutingKey(replyAddress),
-            contentType: azureServiceBusMessage.ContentType,
-            handledCount:handledCount, 
-            dataSchema: null,
-            subject: null,
-            delayed: TimeSpan.Zero
-        );
-
-        headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
-            
-        foreach (var property in azureServiceBusMessage.ApplicationProperties)
-        {
-            headers.Bag.Add(property.Key, property.Value);
-        }
-            
-        var message = new Message(headers, new MessageBody(messageBody));
-        return message;
-    }
-
-    private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
-    {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey,
-                out object? property))
-            return MessageType.MT_EVENT;
-
-        return Enum.TryParse(property.ToString(), true, out MessageType messageType) ? messageType : MessageType.MT_EVENT;
-    }
-
-    private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
-    {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey,
-                out object? property))
-        {
-            return string.Empty;
-        }
-
-        var replyAddress = property.ToString();
-
-        return replyAddress ?? string.Empty;
-    }
-
-    private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
-    {
-        var count = 0;
-        if (azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
-                out object? property))
-        {
-            int.TryParse(property.ToString(), out count);
-        }
-
-        return count;
-    }
 
     protected abstract Task EnsureChannelAsync();
 

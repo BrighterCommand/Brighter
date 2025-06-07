@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO.Compression;
+using System.Net.Mime;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -17,10 +18,11 @@ public class SmallPayloadNotCompressedTests
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
 
         string body = "small message";
+        var contentType = new ContentType(MediaTypeNames.Application.Json);
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT,
-                timeStamp: DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON),
-            new MessageBody(body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8)
+            new MessageHeader(Id.Random, _topic, MessageType.MT_EVENT,
+                timeStamp: DateTime.UtcNow, contentType: contentType),
+            new MessageBody(body, contentType, CharacterEncoding.UTF8)
         );
     }
 
@@ -30,7 +32,7 @@ public class SmallPayloadNotCompressedTests
         var uncompressedMessage = _transformer.Wrap(_message, new Publication{Topic = _topic});
 
         //look for gzip in the bytes
-        Assert.Equal(MessageBody.APPLICATION_JSON, uncompressedMessage.Body.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), uncompressedMessage.Body.ContentType);
         Assert.Equal(_message.Body.Value, uncompressedMessage.Body.Value);
     }
 }

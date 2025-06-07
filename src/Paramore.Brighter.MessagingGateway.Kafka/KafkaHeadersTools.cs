@@ -30,7 +30,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     internal static class KafkaHeadersTools
     {
-        public static bool TryGetLastBytesIgnoreCase(this Headers headers, string key, out byte[] lastHeader)
+        public static bool TryGetLastBytesIgnoreCase(this Headers headers, string key, out byte[]? lastHeader)
         {
             var header = headers.FirstOrDefault(h => h.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
 

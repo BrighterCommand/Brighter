@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -31,24 +32,24 @@ public class AsyncUncompressLargePayloadTests
         await input.CopyToAsync(compressionStream);
         await compressionStream.FlushAsync();
 
-        var body = new MessageBody(output.ToArray(), mimeType);
+        var body = new MessageBody(output.ToArray(), new ContentType(mimeType));
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, 
-                timeStamp:DateTime.UtcNow, contentType: mimeType
+                timeStamp:DateTime.UtcNow, contentType: new ContentType(mimeType)
             ),
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
+        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
         //act
         var msg = await transformer.UnwrapAsync(message);
   
         //assert
         Assert.Equal(largeContent, msg.Body.Value);
-        Assert.Equal(MessageBody.APPLICATION_JSON, msg.Body.ContentType);
-        Assert.Equal(MessageBody.APPLICATION_JSON, msg.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
     }
     
     [Fact]
@@ -69,24 +70,24 @@ public class AsyncUncompressLargePayloadTests
         await input.CopyToAsync(compressionStream);
         await compressionStream.FlushAsync();
 
-        var body = new MessageBody(output.ToArray(), mimeType);
+        var body = new MessageBody(output.ToArray(), new ContentType(mimeType));
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, 
-                timeStamp: DateTime.UtcNow, contentType: mimeType
+                timeStamp: DateTime.UtcNow, contentType: new ContentType(mimeType)
             ),
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
+        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
          //act
         var msg = await transformer.UnwrapAsync(message);
         
         //assert
         Assert.Equal(largeContent, msg.Body.Value);
-        Assert.Equal(MessageBody.APPLICATION_JSON, msg.Body.ContentType);
-        Assert.Equal(MessageBody.APPLICATION_JSON, msg.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
     }
     
     [Fact]
@@ -107,23 +108,23 @@ public class AsyncUncompressLargePayloadTests
         await input.CopyToAsync(compressionStream);
         await compressionStream.FlushAsync();
 
-        var body = new MessageBody(output.ToArray(), mimeType);
+        var body = new MessageBody(output.ToArray(), new ContentType(mimeType));
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, 
-                timeStamp: DateTime.UtcNow, contentType: mimeType
+                timeStamp: DateTime.UtcNow, contentType: new ContentType(mimeType)
             ),
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
+        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
         //act
          var msg = await transformer.UnwrapAsync(message);
  
          //assert
          Assert.Equal(largeContent, msg.Body.Value);
-         Assert.Equal(MessageBody.APPLICATION_JSON, msg.Body.ContentType);
-         Assert.Equal(MessageBody.APPLICATION_JSON, msg.Header.ContentType);
+         Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
+         Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
     }
 }

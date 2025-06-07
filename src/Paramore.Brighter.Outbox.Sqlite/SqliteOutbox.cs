@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,9 +75,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction
+            Action? loggingAction
         )
         {
             var connection = GetOpenConnection(_connectionProvider, transactionProvider);
@@ -90,7 +91,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             catch (SqliteException sqlException)
             {
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
-                loggingAction.Invoke();
+                loggingAction?.Invoke();
             }
             finally
             {
@@ -99,9 +100,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction,
+            Action? loggingAction,
             CancellationToken cancellationToken)
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
@@ -120,7 +121,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             catch (SqliteException sqlException)
             {
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
-                loggingAction.Invoke();
+                loggingAction?.Invoke();
             }
             finally
             {
@@ -229,7 +230,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return parameters;
         }
 
-        protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
+        protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
         {
             return new SqliteParameter(parameterName, value ?? DBNull.Value);
         }
@@ -418,12 +419,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     timeStamp: timeStamp,
                     handledCount: 0,
                     delayed: TimeSpan.Zero,
-                    correlationId: correlationId,
-                    replyTo: new RoutingKey(replyTo),
+                    correlationId: correlationId is not null ? new Id(correlationId) : Id.Empty,
+                    replyTo: replyTo is not null ? new RoutingKey(replyTo) : RoutingKey.Empty,
                     contentType: contentType,
-                    partitionKey: partitionKey);
+                    partitionKey: partitionKey is not null ? new PartitionKey(partitionKey) : PartitionKey.Empty);
 
-                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+                Dictionary<string, object>? dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
                     foreach (var key in dictionaryBag.Keys)
@@ -434,8 +435,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), "application/octet-stream",
-                    CharacterEncoding.Raw)
+                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
                 : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
 
@@ -457,7 +457,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return buffer;
         }
 
-        private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        private static Dictionary<string, object>? GetContextBag(IDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
@@ -466,16 +466,16 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return dictionaryBag;
         }
 
-        private string GetContentType(IDataReader dr)
+        private ContentType? GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null;
 
             var contentType = dr.GetString(ordinal);
-            return contentType;
+            return new ContentType(contentType);
         }
 
-        private static string GetCorrelationId(IDataReader dr)
+        private static string? GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
@@ -494,7 +494,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
-        private static string GetPartitionKey(IDataReader dr)
+        private static string? GetPartitionKey(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
@@ -504,7 +504,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
 
-        private static string GetReplyTo(IDataReader dr)
+        private static string? GetReplyTo(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
             if (dr.IsDBNull(ordinal)) return null;

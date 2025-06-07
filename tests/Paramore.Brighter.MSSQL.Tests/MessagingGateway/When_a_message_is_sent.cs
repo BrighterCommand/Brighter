@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             var timestamp = DateTimeOffset.UtcNow;
             var correlationId = Guid.NewGuid().ToString();
             var replyTo = new RoutingKey("reply-queue");
-            var contentType = "application/json";
+            var contentType = new ContentType(MediaTypeNames.Text.Plain);
             var handledCount = 5;
             var dataSchema = new Uri("http://schema.example");
             var subject = "test-subject";

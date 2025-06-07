@@ -40,7 +40,6 @@ namespace Paramore.Brighter.JsonConverters
             opts.Converters.Add(new PartitionKeyConverter());
             opts.Converters.Add(new TraceStateConverter());
             opts.Converters.Add(new TraceParentConverter());
-            opts.Converters.Add(new ContentTypeConverter());
 
             Options = opts;
         }

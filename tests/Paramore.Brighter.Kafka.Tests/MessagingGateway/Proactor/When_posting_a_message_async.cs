@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
@@ -81,7 +82,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
             {
                 PartitionKey = _partitionKey,
-                ContentType = "application/json",
+                ContentType = new ContentType(MediaTypeNames.Application.Json),
                 Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
                 ReplyTo = new RoutingKey("com.brightercommand.replyto"),
                 CorrelationId = Guid.NewGuid().ToString(),

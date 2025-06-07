@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
@@ -27,7 +28,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
         var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

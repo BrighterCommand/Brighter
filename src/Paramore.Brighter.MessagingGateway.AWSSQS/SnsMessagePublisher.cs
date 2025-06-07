@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
@@ -88,13 +89,14 @@ public class SnsMessagePublisher
 
     private Dictionary<string, MessageAttributeValue> BuildMessageAttributes(Message message, string cloudEventHeadersJson)
     {
+        var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
         var messageAttributes = new Dictionary<string, MessageAttributeValue>
         {
             [HeaderNames.Id] = new (){ StringValue = message.Header.MessageId, DataType = "String" },
             [HeaderNames.CloudEventHeaders] = new() { StringValue = cloudEventHeadersJson, DataType = "String" },
             [HeaderNames.Topic] = new() { StringValue = _topicArn, DataType = "String" },
             [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
+            [HeaderNames.ContentType] = new() { StringValue = contentType.ToString(), DataType = "String" },
             [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRcf3339()), DataType = "String" },
         };
 
@@ -115,9 +117,10 @@ public class SnsMessagePublisher
 
     private static string CreateCloudEventHeadersJson(Message message)
     {
+        var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
         var cloudEventHeaders = new Dictionary<string, string>
         {
-            [HeaderNames.DataContentType] = message.Header.ContentType ?? ContentType.TextPlain,
+            [HeaderNames.DataContentType] = contentType.ToString(),
             [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
             [HeaderNames.Type] = message.Header.Type,

@@ -27,6 +27,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -110,8 +111,8 @@ internal sealed partial class RmqMessagePublisher
             CreateBasicProperties(
                 messageId,
                 message.Header.TimeStamp,
-                message.Body.ContentType,
-                message.Header.ContentType ?? ContentType.TextPlain,
+                message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain,
+                message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain,
                 message.Header.ReplyTo ?? string.Empty,
                 message.Persist,
                 headers),
@@ -149,8 +150,8 @@ internal sealed partial class RmqMessagePublisher
             CreateBasicProperties(
                 messageId,
                 message.Header.TimeStamp,
-                message.Body.ContentType,
-                message.Header.ContentType ?? ContentType.TextPlain,
+                message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain,
+                message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain,
                 message.Header.ReplyTo ?? string.Empty,
                 message.Persist,
                 headers),

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using Paramore.Brighter.Observability;
 using Xunit;
 
@@ -54,7 +55,7 @@ public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
             timeStamp: _timestamp,
             correlationId: new Id(_correlationId),
             replyTo: new RoutingKey(_replyTo),
-            contentType: ContentType.ApplicationJson,
+            contentType: new ContentType(MediaTypeNames.Application.Json),
             dataSchema: _dataSchema,
             subject: _subject,
             traceParent: _traceParent,
@@ -84,7 +85,7 @@ public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
         Assert.Equal(_timestamp, sentMessage.Header.TimeStamp, TimeSpan.FromSeconds(5));
         Assert.Equal(_correlationId, sentMessage.Header.CorrelationId);
         Assert.Equal(_replyTo, sentMessage.Header.ReplyTo);
-        Assert.Equal(ContentType.ApplicationJson, sentMessage.Header.ContentType);
+        Assert.Equal(MediaTypeNames.Application.Json, sentMessage.Header.ContentType!.ToString());
         Assert.Equal("custom-value", sentMessage.Header.Bag["custom-header"]);
         Assert.Equal(_source, sentMessage.Header.Source);
         Assert.Equal(_type, sentMessage.Header.Type);

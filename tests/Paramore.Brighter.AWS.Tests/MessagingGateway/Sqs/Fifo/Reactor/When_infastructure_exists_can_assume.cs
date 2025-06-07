@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
@@ -23,9 +24,9 @@ public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
     public AwsAssumeInfrastructureTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
-        var correlationId = Guid.NewGuid().ToString();
+       var replyTo = new RoutingKey("http:\\queueUrl");
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
+        var correlationId = Id.Random;
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(queueName);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
@@ -73,7 +74,7 @@ public class KafkaMessageProducerSendTests : IDisposable
         var correlationId = Guid.NewGuid().ToString();
         var messageId = Guid.NewGuid().ToString();
         var timestamp = DateTimeOffset.UtcNow;
-        const string contentType = "application/json";
+        var contentType = new ContentType(MediaTypeNames.Application.Json);
         const string replyTo = "reply-queue";
         const string type = "test-type";
         const string subject = "test-subject";

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net.Mime;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.Observability;
 using Xunit;
@@ -47,7 +48,7 @@ public class RmqMessageProducerSendMessageTests : IDisposable
         var timestamp = DateTimeOffset.UtcNow;
         var correlationId = Guid.NewGuid().ToString();
         var replyTo = new RoutingKey("reply-queue");
-        var contentType = "application/json";
+        var contentType = new ContentType(MediaTypeNames.Application.Json);
         var handledCount = 5;
         var dataSchema = new Uri("http://schema.example");
         var subject = "test-subject";

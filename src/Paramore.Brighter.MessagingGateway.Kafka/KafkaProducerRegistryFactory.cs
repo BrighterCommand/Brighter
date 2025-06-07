@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly IEnumerable<KafkaPublication> _publications;
-        private Action<ProducerConfig> _configHook;
+        private Action<ProducerConfig>? _configHook;
 
         /// <summary>
         /// This constructs a <see cref="KafkaProducerRegistryFactory"/> which can be used to create a <see cref="ProducerRegistry" /> of <see cref="KafkaMessageProducer" /> instances.
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// might drop the Confluent client, and this hook
         /// </summary>
         /// <param name="hook"></param>
-        public void SetConfigHook(Action<ProducerConfig> hook)
+        public void SetConfigHook(Action<ProducerConfig>? hook)
         {
             _configHook = hook;
         }

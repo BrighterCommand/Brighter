@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
@@ -94,7 +95,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
         var routingKey = new RoutingKey(_topic);
 
         var sent = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, contentType: ContentType.OctetStream)
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Application.Octet))
             {
                 PartitionKey = _partitionKey
             },

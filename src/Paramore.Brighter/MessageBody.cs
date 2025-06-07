@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -35,8 +36,6 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageBody : IEquatable<MessageBody>
     {
-        public const string APPLICATION_JSON = "application/json";
-
         /// <summary>
         /// The message body as a byte array.
         /// </summary>
@@ -46,8 +45,11 @@ namespace Paramore.Brighter
         /// The type of message encoded into Bytes.  A hint for deserialization that 
         /// will be sent with the byte[] to allow
         /// </summary>
-        public string ContentType { get; private set; }
+        public ContentType? ContentType { get; private set; }
 
+        /// <summary>
+        /// What is  the character encoding of the text in the message
+        /// </summary>
         public CharacterEncoding CharacterEncoding { get; private set; }
 
         /// <summary>
@@ -85,9 +87,15 @@ namespace Paramore.Brighter
         /// <param name="characterEncoding">The encoding of the content. Defaults to MessageEncoding.UTF8.
         /// If you pass us "application/octet" but the type is ascii or utf8, we will convert to base64 for you.
         /// </param>
-        public MessageBody(string? body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(string? body, ContentType? contentType = null, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
-            ContentType = contentType;
+#if NETSTANDARD2_0
+            ContentType = contentType ?? new ContentType("application/json");
+            ContentType.CharSet = nameof(characterEncoding);
+#else            
+            ContentType = contentType ?? new ContentType(MediaTypeNames.Application.Json);
+            ContentType.CharSet = nameof(characterEncoding);
+#endif
             CharacterEncoding = characterEncoding;
             
             if (characterEncoding == CharacterEncoding.Raw) throw new ArgumentOutOfRangeException("characterEncoding", "Raw encoding is not supported for string constructor");
@@ -114,14 +122,20 @@ namespace Paramore.Brighter
         /// <param name="contentType">The content type of message encoded in body</param>
         /// <param name="characterEncoding"></param>
         [JsonConstructor]
-        public MessageBody(byte[]? bytes, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(byte[]? bytes, ContentType? contentType = null,  CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
-            ContentType = contentType;
+#if NETSTANDARD2_0
+            ContentType = contentType ?? new ContentType("application/json");
+            ContentType.CharSet = nameof(characterEncoding);
+#else            
+            ContentType = contentType ?? new ContentType(MediaTypeNames.Application.Json);
+            ContentType.CharSet = nameof(characterEncoding);
+#endif
             CharacterEncoding = characterEncoding;
             
             if (bytes is null)
             {
-                Bytes = Array.Empty<byte>();
+                Bytes = [];
                 return;
             }
             
@@ -130,18 +144,22 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
-        /// TODO: We don't support the range of options on Span<T> on netstandard2.0 that let's us
-        /// flow through a ReadOnlyMemory<byte> for serialization so we allocate here as well as in
-        /// PullConsumer when we probably don't need this allocation.
-        /// We can fix in .NET 7.0 over the dead-end fork of netstandard2.1
+        /// TODO: We don't support the range of options on Span on netstandard2.0 that let's us  flow through a ReadOnlyMemory
+        /// for serialization so we allocate here as well as in PullConsumer when we probably don't need this allocation.
         /// </summary>
-        /// <param name="body"></param>
-        /// <param name="contentType"></param>
-        /// <param name="characterEncoding"></param>
-        public MessageBody(in ReadOnlyMemory<byte> body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        /// <param name="body">The body of the message in bytes</param>
+        /// <param name="contentType">The content type of the body</param>
+        /// <param name="characterEncoding">The encoding of any text in the body</param>
+        public MessageBody(in ReadOnlyMemory<byte> body, ContentType? contentType = null, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
+#if NETSTANDARD2_0
+            ContentType = contentType ?? new ContentType("application/json");
+            ContentType.CharSet = nameof(characterEncoding);
+#else            
+            ContentType = contentType ?? new ContentType(MediaTypeNames.Application.Json);
+            ContentType.CharSet = nameof(characterEncoding);
+#endif
             Bytes = body.ToArray();
-            ContentType = contentType;
             CharacterEncoding = characterEncoding;
         }
 
@@ -169,7 +187,7 @@ namespace Paramore.Brighter
         public bool Equals(MessageBody? other)
         {
             if (other is null) return false;
-            return Bytes.SequenceEqual(other.Bytes) && ContentType.Equals(other?.ContentType);
+            return !Bytes.SequenceEqual(other.Bytes) || ContentType is null || ContentType.Equals(other?.ContentType);
         }
 
         /// <summary>

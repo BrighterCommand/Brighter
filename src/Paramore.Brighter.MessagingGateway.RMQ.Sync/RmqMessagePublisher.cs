@@ -26,6 +26,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
@@ -86,6 +87,9 @@ internal sealed partial class RmqMessagePublisher
             
             AddDeliveryHeaders(delay, headers, deliveryTag);
 
+            var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+            var bodyContentType = message.Body.ContentType ?? contentType; 
+            
             _channel.BasicPublish(
                 _connection.Exchange.Name,
                 message.Header.Topic,
@@ -93,8 +97,8 @@ internal sealed partial class RmqMessagePublisher
                 CreateBasicProperties(
                     message.Id, 
                     message.Header.TimeStamp, 
-                    message.Body.ContentType, 
-                    message.Header.ContentType ?? ContentType.TextPlain, 
+                    bodyContentType.ToString(),
+                    contentType.ToString(), 
                     message.Header.ReplyTo ?? string.Empty,
                     message.Persist,
                     headers),
@@ -121,6 +125,9 @@ internal sealed partial class RmqMessagePublisher
             AddDeliveryHeaders(TimeSpan.Zero, headers, deliveryTag);
 
             AddOriginalMessageIdOnRepublish(message, headers);
+            
+            var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+            var bodyContentType = message.Body.ContentType ?? contentType;
 
             // To send it to the right queue use the default (empty) exchange
             _channel.BasicPublish(
@@ -130,8 +137,8 @@ internal sealed partial class RmqMessagePublisher
                 CreateBasicProperties(
                     messageId, 
                     message.Header.TimeStamp, 
-                    message.Body.ContentType, 
-                    message.Header.ContentType ?? ContentType.TextPlain, 
+                    bodyContentType.ToString(),
+                    contentType.ToString(), 
                     message.Header.ReplyTo ?? string.Empty,
                     message.Persist,
                     headers),

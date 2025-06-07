@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using Amazon.DynamoDBv2.DataModel;
@@ -124,7 +125,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var date = message.Header.TimeStamp == DateTimeOffset.MinValue ? DateTimeOffset.UtcNow : message.Header.TimeStamp;
 
             Body = message.Body.Bytes;
-            ContentType = message.Header.ContentType;
+            var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+            
+            ContentType = contentType.ToString();
             CorrelationId = message.Header.CorrelationId.ToString();
             CharacterEncoding = message.Body.CharacterEncoding.ToString();
             CreatedAt = date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
@@ -150,7 +153,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var messageId = MessageId;
             var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType!);
             var timestamp = new DateTime(CreatedTime ?? DateTime.UtcNow.Ticks, DateTimeKind.Utc);
-            var contentType = ContentType is  not null ? new ContentType(ContentType) : Paramore.Brighter.ContentType.TextPlain;
+            var contentType = ContentType is not null ? new ContentType(ContentType) : new ContentType(MediaTypeNames.Text.Plain);
             
             var header = new MessageHeader(
                 messageId: Id.Create(messageId),

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Mime;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
@@ -144,20 +145,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private MessageHeader ReadHeader(string? headersJson)
         {
             if (headersJson is null)
-            {
-                return FailureMessageHeader(
-                    new HeaderResult<RoutingKey>(RoutingKey.Empty, false), 
-                    new HeaderResult<string>(string.Empty, false)
-                );
-            }
+                return MessageHeader.FailureMessageHeader(RoutingKey.Empty, Id.Empty);
             
             var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);  
             
             if (headers is null)
-                return FailureMessageHeader(
-                    new HeaderResult<RoutingKey>(RoutingKey.Empty, false), 
-                    new HeaderResult<string>(string.Empty, false)
-                );
+                return MessageHeader.FailureMessageHeader(RoutingKey.Empty, Id.Empty);
             
             var messageId = ReadMessageId(headers);
             var timeStamp = ReadTimeStamp(headers);
@@ -178,54 +171,35 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var baggage = ReadBaggage(headers);
             
             if (!messageId.Success)
-            {
-                return FailureMessageHeader(topic, messageId);
-            }
-            else
-            {
-                var messageHeader = new MessageHeader(
-                    messageId: messageId.Result,
-                    topic: topic.Result,
-                    messageType: messageType.Result,
-                    source: source.Success ? source.Result : null,
-                    delayed: delayed.Success ? delayed.Result : TimeSpan.Zero,
-                    type: type.Success ? type.Result : null,
-                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                    correlationId: correlationId.Success ? correlationId.Result : Id.Empty,
-                    replyTo: replyTo.Success ? replyTo.Result : RoutingKey.Empty,
-                    contentType: contentType.Success ? contentType.Result : ContentType.TextPlain,
-                    handledCount: handledCount.Result,
-                    dataSchema: dataSchema.Success ? dataSchema.Result : null,
-                    subject: subject.Success ? subject.Result : string.Empty,
-                    traceParent: traceParent.Result,
-                    traceState: traceState.Result,
-                    baggage: baggage.Result);
+                return MessageHeader.FailureMessageHeader(topic.Result, messageId.Result);
 
-                if (!bag.Success) return messageHeader;
+            var messageHeader = new MessageHeader(
+                messageId: messageId.Result,
+                topic: topic.Result,
+                messageType: messageType.Result,
+                source: source.Success ? source.Result : null,
+                delayed: delayed.Success ? delayed.Result : TimeSpan.Zero,
+                type: type.Success ? type.Result : null,
+                timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                correlationId: correlationId.Success ? correlationId.Result : Id.Empty,
+                replyTo: replyTo.Success ? replyTo.Result : RoutingKey.Empty,
+                contentType: contentType.Success ? contentType.Result : new ContentType(MediaTypeNames.Text.Plain),
+                handledCount: handledCount.Result,
+                dataSchema: dataSchema.Success ? dataSchema.Result : null,
+                subject: subject.Success ? subject.Result : string.Empty,
+                traceParent: traceParent.Result,
+                traceState: traceState.Result,
+                baggage: baggage.Result);
 
-                var bagResult = bag.Result;
-                foreach (var key in bagResult.Keys)
-                    messageHeader.Bag.Add(key, bagResult[key]);
+            if (!bag.Success) return messageHeader;
 
-                return messageHeader;
-            }
+            var bagResult = bag.Result;
+            foreach (var key in bagResult.Keys)
+                messageHeader.Bag.Add(key, bagResult[key]);
+
+            return messageHeader;
         }
 
-       /// <summary>
-        /// We return an MT_UNACCEPTABLE message because we cannot process. Really this should go on to an
-        /// Invalid Message Queue provided by the Control Bus
-        /// </summary>
-        /// <param name="topic"></param>
-        /// <param name="messageId"></param>
-        /// <returns></returns>
-        private MessageHeader FailureMessageHeader(HeaderResult<RoutingKey> topic, HeaderResult<string> messageId)
-        {
-            return new MessageHeader(
-                messageId.Success ? messageId.Result : string.Empty,
-                topic.Success ? topic.Result : RoutingKey.Empty,
-                MessageType.MT_UNACCEPTABLE);
-        }
-       
        private HeaderResult<Baggage> ReadBaggage(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.W3C_BAGGAGE, out string? header))
@@ -237,13 +211,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<Baggage>(new Baggage(), false);
         }
         
-        private HeaderResult<string> ReadContentType(Dictionary<string, string> headers)
+        private HeaderResult<ContentType?> ReadContentType(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CONTENT_TYPE, out string? header))
             {
-                return new HeaderResult<string>(header, true);
+                var contentType = header is not null ? new ContentType(header) : new ContentType(MediaTypeNames.Text.Plain);
+                return new HeaderResult<ContentType?>(contentType, true);
             }
-            return new HeaderResult<string>(String.Empty, false);
+            return new HeaderResult<ContentType?>(null, false);
         }
 
         private HeaderResult<string> ReadCorrelationId(Dictionary<string, string> headers)

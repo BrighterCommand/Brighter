@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
@@ -18,7 +19,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly ASBTestCommand _command;
         private readonly string _correlationId;
-        private readonly string _contentType;
+        private readonly ContentType _contentType;
         private readonly string _topicName;
         private readonly string _queueName;
         private readonly IAdministrationClientWrapper _administrationClient;
@@ -56,7 +57,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 }
             );
 
-            _contentType = "application/json";
+            _contentType = new ContentType(MediaTypeNames.Application.Json);
 
             var clientProvider = ASBCreds.ASBClientProvider;
             _administrationClient = new AdministrationClientWrapper(clientProvider);
@@ -71,11 +72,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 clientProvider,
-                new AzureServiceBusPublication[]
-                    {
-                        new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) },
+                [
+                    new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) },
                         new AzureServiceBusPublication { Topic = new RoutingKey(_queueName), UseServiceBusQueue = true}
-                    }
+                ]
                 )
                 .Create();
         }

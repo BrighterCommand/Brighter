@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -404,7 +405,7 @@ namespace Paramore.Brighter.Outbox.MySql
                     delayed: TimeSpan.Zero,
                     correlationId: correlationId,
                     replyTo: new RoutingKey(replyTo),
-                    contentType: contentType,
+                    contentType: contentType is not null ? new ContentType(contentType) : new ContentType(MediaTypeNames.Text.Plain),
                     partitionKey: partitionKey);
 
                 Dictionary<string, object> dictionaryBag = GetContextBag(dr);
@@ -417,10 +418,18 @@ namespace Paramore.Brighter.Outbox.MySql
                 }
             }
 
+#if NETSTANDARD2_0 
+            
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream",
-                    CharacterEncoding.Raw)
-                : new MessageBody(GetBodyAsString(dr), "application/json", CharacterEncoding.UTF8);
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsString(dr), new ContentType("application/json"), CharacterEncoding.UTF8);
+        
+#else
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsString(dr), new ContentType(MediaTypeNames.Application.Json), CharacterEncoding.UTF8);
+            
+#endif                
 
             return new Message(header, body);
         }

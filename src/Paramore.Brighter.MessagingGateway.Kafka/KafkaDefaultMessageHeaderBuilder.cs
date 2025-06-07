@@ -62,8 +62,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
             
-            if (!ContentType.IsNullOrEmpty(message.Header.ContentType))
-                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
+            if (message.Header.ContentType is not null)
+                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType!.ToString().ToByteArray());
             
             if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.Value.ToByteArray());
@@ -92,22 +92,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private void AddCLoudEventsOptionalHeaders(Headers headers, Message message)
         {
             if (!string.IsNullOrEmpty(message.Header.Subject))
-                headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject.ToByteArray());
+                headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject!.ToByteArray());
             
             if (message.Header.DataSchema != null)
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString().ToByteArray());
             
             if (!TraceParent.IsNullOrEmpty(message.Header.TraceParent))
-                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent.Value.ToByteArray());
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent!.Value.ToByteArray());
             
             if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
-                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState.Value.ToByteArray());
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState!.Value.ToByteArray());
             
             if (message.Header.Baggage.Any())
                 headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString().ToByteArray());
                             
-            if (!string.IsNullOrEmpty(message.Header.ContentType))
-                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, message.Header.ContentType.Value.ToByteArray());
+            if (message.Header.ContentType is not null)
+                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, message.Header.ContentType.ToString().ToByteArray());
         }
 
         private void AddUserDefinedBagHeaders(Headers headers, Message message)
@@ -152,7 +152,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     headers.Add(key, byteArray);
                     break;
                 default:
-                    headers.Add(key, value.ToString().ToByteArray());
+                    headers.Add(key, value.ToString()!.ToByteArray());
                     break;
             }
         }

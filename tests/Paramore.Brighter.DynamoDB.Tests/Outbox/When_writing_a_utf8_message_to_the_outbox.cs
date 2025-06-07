@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Mime;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
@@ -64,7 +65,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyAddress"),
-                contentType: "text/plain");
+                contentType: new ContentType(MediaTypeNames.Text.Plain));
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -72,7 +73,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _messageEarliest = new Message(messageHeader,
-                new MessageBody(body, "application/json", CharacterEncoding.UTF8));
+                new MessageBody(body, new ContentType(MediaTypeNames.Application.Json), CharacterEncoding.UTF8));
             var fakeTimeProvider = new FakeTimeProvider();
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
                 new DynamoDbConfiguration(OutboxTableName),

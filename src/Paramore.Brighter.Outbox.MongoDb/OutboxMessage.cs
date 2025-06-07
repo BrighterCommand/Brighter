@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net.Mime;
+using System.Text.Json;
 using MongoDB.Bson.Serialization.Attributes;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MongoDb;
@@ -28,8 +29,11 @@ public class OutboxMessage : IMongoDbCollectionTTL
             ? DateTimeOffset.UtcNow
             : message.Header.TimeStamp;
         Body = message.Body.Bytes;
-        BodyContentType = message.Body.ContentType;
-        ContentType = message.Header.ContentType;
+        var bodyContentType = message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain;
+        var headerContentType = message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain;
+        
+        BodyContentType = bodyContentType;
+        ContentType = headerContentType;
         CorrelationId = message.Header.CorrelationId;
         HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         MessageId = message.Id;
@@ -79,7 +83,11 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// <summary>
     /// The message content type
     /// </summary>
-    public string BodyContentType { get; set; } = MessageBody.APPLICATION_JSON;
+# if NET472
+    public string BodyContentType { get; set; } = "appllcation/json";
+#else
+    public string BodyContentType { get; set; } = MediaTypeNames.Application.Json; 
+#endif    
 
     /// <summary>
     /// The message partition key
@@ -138,7 +146,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
 
         if (!string.IsNullOrEmpty(ContentType))
         {
-            header.ContentType = ContentType!;
+            header.ContentType = new ContentType(ContentType);
         }
 
         if (!string.IsNullOrEmpty(HeaderBag))
@@ -151,7 +159,9 @@ public class OutboxMessage : IMongoDbCollectionTTL
             }
         }
 
-        var body = new MessageBody(Body, BodyContentType, characterEncoding);
+        var bodyContentType = new ContentType(BodyContentType) { CharSet = nameof(characterEncoding) };
+
+        var body = new MessageBody(Body, bodyContentType, characterEncoding);
 
         return new Message(header, body);
     }

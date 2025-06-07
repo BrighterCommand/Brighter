@@ -27,8 +27,8 @@ public class RedisGoodMessageParsingTests
         Assert.Equal(3, message.Header.HandledCount);
         Assert.Equal(TimeSpan.FromMilliseconds(200), message.Header.Delayed);
         Assert.Equal("0AF88BBC-07FD-4FC3-9CA7-BF68415A2535", message.Header.CorrelationId);
-        Assert.Equal("text/plain", message.Header.ContentType);
-        Assert.Equal("reply.queue", message.Header.ReplyTo);
+        Assert.Equal("text/plain", message.Header.ContentType!.ToString());
+        Assert.Equal("reply.queue", message.Header.ReplyTo!.ToString());
 
         // Assert new Cloud Events properties
         Assert.Equal(new Uri("http://goparamore.io"), message.Header.Source);

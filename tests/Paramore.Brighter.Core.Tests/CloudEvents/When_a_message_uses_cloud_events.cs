@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mime;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
@@ -8,19 +9,19 @@ namespace Paramore.Brighter.Core.Tests.CloudEvents;
 public class CloudEventsTransformerTests 
 {
     private readonly CloudEventsTransformer _transformer;
-    private Uri _source;
-    private string _type;
-    private string _dataContentType;
-    private Uri _dataSchema;
-    private string _subject;
-    private Message _message;
+    private readonly Uri _source;
+    private readonly string _type;
+    private readonly ContentType _dataContentType;
+    private readonly Uri _dataSchema;
+    private readonly string _subject;
+    private readonly Message _message;
 
     public CloudEventsTransformerTests()
     {
         _transformer = new CloudEventsTransformer();
         _source = new Uri("http://goparamore.io/CloudEventsTransformerTests");
         _type = typeof(MyCommand).FullName;
-        _dataContentType = "application/json";
+        _dataContentType = new(MediaTypeNames.Application.Json);
         _dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerTests/schema");
         _subject = "CloudEventsTransformerTests";
         _message = new Message(
@@ -84,8 +85,8 @@ public class CloudEventsTransformerTests
         //These attributes override the publication values above
         const string source = "http://goparamore.io/OverrideSource";
         const string type = "goparamore.io/OverrideType";
-        const string dataContentType = "application/xml";
-        const string dataSchema = "http://goparamore.io/CloudEventsTransformerOverride/schema";
+        ContentType dataContentType = new ContentType(MediaTypeNames.Application.Xml);
+        Uri dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerOverride/schema");
         const string subject = "CloudEventsTransformerAlternative"; 
 
         //act
@@ -97,7 +98,7 @@ public class CloudEventsTransformerTests
         Assert.Equal(source, cloudEvents.Header.Source.ToString());
         Assert.Equal(type, cloudEvents.Header.Type);
         Assert.Equal(dataContentType, cloudEvents.Header.ContentType);
-        Assert.Equal(dataSchema, cloudEvents.Header.DataSchema.ToString());
+        Assert.Equal(dataSchema, cloudEvents.Header.DataSchema);
         Assert.Equal(subject, cloudEvents.Header.Subject);
 
     }
@@ -119,7 +120,7 @@ public class CloudEventsTransformerTests
         //assert
         Assert.Equal(new Uri("http://goparamore.io"), cloudEvents.Header.Source);
         Assert.Equal( "goparamore.io.Paramore.Brighter.Message", cloudEvents.Header.Type);
-        Assert.Equal("text/plain", cloudEvents.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Text.Plain), cloudEvents.Header.ContentType);
         Assert.Null(cloudEvents.Header.DataSchema);
         Assert.Null(cloudEvents.Header.Subject);
     }
