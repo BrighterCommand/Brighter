@@ -187,7 +187,9 @@ namespace Paramore.Brighter
         public bool Equals(MessageBody? other)
         {
             if (other is null) return false;
-            return !Bytes.SequenceEqual(other.Bytes) || ContentType is null || ContentType.Equals(other?.ContentType);
+            var bodyEqual = Bytes.SequenceEqual(other.Bytes);
+            var sameContentType = ContentType is null || ContentType.Equals(other?.ContentType); 
+            return bodyEqual && sameContentType ;
         }
 
         /// <summary>
