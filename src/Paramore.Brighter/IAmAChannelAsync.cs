@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cancellationToken">Cancels the reject</param>
-        Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken));
+        Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken));
         
         /// <summary>
         /// Requeues the specified message.

@@ -45,7 +45,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cancellationToken">Cancel the rejection</param>
-        Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken));
+        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Purges the specified queue name.
@@ -68,7 +69,7 @@ namespace Paramore.Brighter
         /// <param name="message"></param>
         /// <param name="delay">Time to delay delivery of the message, default to 0ms or no delay</param>
         /// <param name="cancellationToken">Cancel the requeue</param>
-        /// <returns>True if the message should be acked, false otherwise</returns>
+        /// <returns>True if the message has been acked, false otherwise</returns>
         Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken));
     }
 }

@@ -258,9 +258,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// This a 'do nothing operation' as we have already popped
         /// </summary>
         /// <param name="message">The message to reject</param>
-        public void Reject(Message message)
+        public bool Reject(Message message)
         {
             _inflight.Remove(message.Id);
+            return true;
         }
 
         /// <summary>
@@ -268,12 +269,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="message">The message to reject</param>
         /// <param name="cancellationToken">The cancellation token</param>
-        public async Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            Reject(message);
-            await Task.CompletedTask;
-        }
-
+        public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+            => Task.FromResult(Reject(message));
 
         /// <summary>
         /// Requeues the specified message.
