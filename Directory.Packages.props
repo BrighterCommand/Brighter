@@ -4,14 +4,14 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.407.23" />
-    <PackageVersion Include="AWSSDK.IdentityManagement" Version="3.7.406.11" />
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.400" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.417.6" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.111" />
-    <PackageVersion Include="AWSSDK.Scheduler" Version="3.7.400.162" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.162" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.162" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.407.23, 4)" />
+    <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.406.11, 4)" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400, 4)" />
+    <PackageVersion Include="AWSSDK.S3" Version="[3.7.417.6, 4)" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="[3.7.401.111, 4)" />
+    <PackageVersion Include="AWSSDK.Scheduler" Version="[3.7.400.162, 4)" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="[3.7.400.162, 4)" />
+    <PackageVersion Include="AWSSDK.SQS" Version="[3.7.400.162, 4)" />
     <PackageVersion Include="Azure.Identity" Version="1.14.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.19.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
