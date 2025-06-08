@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using RabbitMQ</Description>
@@ -11,7 +11,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="RabbitMQ.Client" VersionOverride="6.8.1" />
+    <PackageReference Include="RabbitMQ.Client" VersionOverride="7.1.2" />
   </ItemGroup>
 
 </Project>
