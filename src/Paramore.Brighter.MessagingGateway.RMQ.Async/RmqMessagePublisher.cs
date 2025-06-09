@@ -107,7 +107,7 @@ internal sealed partial class RmqMessagePublisher
             [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
             [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
             [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
-            [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRcf3339(),
+            [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRfc3339(),
 
             // Brighter custom headers
             [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
@@ -176,7 +176,7 @@ internal sealed partial class RmqMessagePublisher
             [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
             [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
             [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
-            [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRcf3339(),
+            [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRfc3339(),
 
             // Brighter custom headers
             [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),

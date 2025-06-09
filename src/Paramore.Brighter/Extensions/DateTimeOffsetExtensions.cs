@@ -13,6 +13,6 @@ public static class DateTimeOffsetExtensions
     /// </summary>
     /// <param name="datetime">The <see cref="DateTimeOffset"/> to be converted</param>
     /// <returns>A date time in <seealso href="https://datatracker.ietf.org/doc/html/rfc3339">RFC 3339</seealso> format.</returns>
-    public static string ToRcf3339(this DateTimeOffset datetime) 
+    public static string ToRfc3339(this DateTimeOffset datetime) 
         => datetime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ", DateTimeFormatInfo.InvariantInfo);
 }
