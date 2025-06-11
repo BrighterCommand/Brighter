@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 new Header(HeaderNames.CLOUD_EVENTS_SPEC_VERSION, message.Header.SpecVersion.ToByteArray()),
                 new Header(HeaderNames.CLOUD_EVENTS_TYPE, message.Header.Type.ToByteArray()),
                 new Header(HeaderNames.CLOUD_EVENTS_SOURCE, message.Header.Source.ToString().ToByteArray()),
-                new Header(HeaderNames.CLOUD_EVENTS_TIME, message.Header.TimeStamp.ToRcf3339().ToByteArray()),
+                new Header(HeaderNames.CLOUD_EVENTS_TIME, message.Header.TimeStamp.ToRfc3339().ToByteArray()),
                 
                 // Brighter custom headers
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),

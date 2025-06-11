@@ -147,10 +147,8 @@ namespace Paramore.Brighter
         ///  Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public virtual void Reject(Message message)
-        {
-            _messageConsumer.Reject(message);
-        }
+        public virtual bool Reject(Message message)
+            => _messageConsumer.Reject(message);
 
         /// <summary>
         /// Requeues the specified message.

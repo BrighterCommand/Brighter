@@ -480,9 +480,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// This is just a commit of the offset to move past the record without processing it
         /// </remarks>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        public bool Reject(Message message)
         {
             Acknowledge(message);
+            return true;
         }
 
         /// <summary>
@@ -494,10 +496,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </remarks>
         /// <param name="message">The message.</param>
         /// <param name="cancellationToken">Cancels the reject; not used as non-blocking</param>
-        public Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
             Reject(message);
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
 
         /// <summary>
@@ -508,7 +510,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>False as no requeue support on Kafka</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
-            return false;
+            return true;
         }
 
         /// <summary>
@@ -520,7 +522,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>False as no requeue support on Kafka</returns>
         public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.FromResult(false);
+            return Task.FromResult(true);
         }
         
         private void CheckHasPartitions()
