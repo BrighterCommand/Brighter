@@ -1,7 +1,7 @@
 ﻿#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2023 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,36 +23,27 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter.Extensions;
+
+public static class CharacterEncodingExtensions
 {
-    /// <summary>
-    /// How is the message body being encoded
-    /// </summary>
-    public enum CharacterEncoding
-    {
-        /// <summary>
-        /// Ascii text
-        /// </summary>
-        ASCII,
+    public static string? FromCharacterEncoding(this CharacterEncoding characterEncoding) =>
+        characterEncoding switch
+        {
+            CharacterEncoding.ASCII => "us-ascii",
+            CharacterEncoding.UTF8 => "utf-8",
+            CharacterEncoding.UTF16 => "utf-16",
+            CharacterEncoding.Base64 => "base64",
+            _ => null
+        };
 
-        /// <summary>
-        /// Bse64 or asciiArmor
-        /// </summary>
-        Base64,
-
-        /// <summary>
-        /// UTF-8 Text
-        /// </summary>
-        UTF8,
-
-       /// <summary>
-       /// UTF-16 Text
-       /// </summary>
-        UTF16,
-        
-        /// <summary>
-        /// Raw bytes, conversion to string may be lossy
-        /// </summary>
-        Raw,
-    }
+    public static CharacterEncoding ToCharacterEncoding(this string name) =>
+        name.ToLowerInvariant() switch
+        {
+            "us-ascii" => CharacterEncoding.ASCII,
+            "utf-8" => CharacterEncoding.UTF8,
+            "utf-16" => CharacterEncoding.UTF16,
+            "base64" => CharacterEncoding.Base64,
+            _ => CharacterEncoding.Raw
+        };
 }

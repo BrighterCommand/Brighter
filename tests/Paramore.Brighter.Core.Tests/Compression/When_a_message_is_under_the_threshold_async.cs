@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using System.Net.Mime;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -34,7 +35,7 @@ public class AsyncSmallPayloadNotCompressedTests
         var uncompressedMessage = await _transformer.WrapAsync(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //look for gzip in the bytes
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), uncompressedMessage.Body.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, uncompressedMessage.Body.ContentType);
         Assert.Equal(_message.Body.Value, uncompressedMessage.Body.Value);
     }
 }

@@ -334,7 +334,7 @@ namespace Paramore.Brighter
             Delayed = delayed ?? TimeSpan.Zero;
             CorrelationId = correlationId ?? new Id(string.Empty);
             ReplyTo = replyTo ?? RoutingKey.Empty;
-            ContentType = contentType ?? new ContentType(MediaTypeNames.Text.Plain);
+            ContentType = contentType; 
             PartitionKey = partitionKey ?? PartitionKey.Empty;
             DataSchema = dataSchema;
             Subject = subject;

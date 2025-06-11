@@ -105,9 +105,12 @@ namespace Paramore.Brighter.Transforms.Transformers
             await input.CopyToAsync(compressionStream);
             compressionStream.Close();
 
-            var contentType = new ContentType(mimeType);
-            message.Header.ContentType = contentType;
             message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain);
+            var contentType = new ContentType(mimeType);
+            var charset = message.Header.ContentType?.CharSet;
+            if (!string.IsNullOrEmpty(charset)) contentType.CharSet = charset;
+            message.Header.ContentType = contentType;
+            message.Body.ContentType = contentType;
             message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
 
             return message;
@@ -132,9 +135,8 @@ namespace Paramore.Brighter.Transforms.Transformers
             deCompressionStream.Close();
 
             string originalContentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
-            var contentType = new ContentType(originalContentType);
-            contentType.CharSet = nameof(CharacterEncoding.UTF8);
-            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.UTF8);
+            var contentType = new ContentType(originalContentType) ;
+            message.Body = new MessageBody(output.ToArray(), contentType);
             message.Header.ContentType = contentType;
 
             return message;

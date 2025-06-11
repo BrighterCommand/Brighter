@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net.Mime;
 using System.Text;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -45,8 +46,10 @@ public class UncompressLargePayloadTests
         
         //assert
         Assert.Equal(largeContent, msg.Body.Value);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
+            msg.Body.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+            msg.Header.ContentType);
     }
     
     [Fact]
@@ -83,8 +86,12 @@ public class UncompressLargePayloadTests
         
         //assert
         Assert.Equal(largeContent, msg.Body.Value);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
+        Assert.Equal(
+            new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+            msg.Body.ContentType);
+        Assert.Equal(
+            new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+            msg.Header.ContentType);
     }
     
     [Fact]
@@ -121,8 +128,12 @@ public class UncompressLargePayloadTests
 
          //assert
          Assert.Equal(largeContent, msg.Body.Value);
-         Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
-         Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
+         Assert.Equal(
+             new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
+             msg.Body.ContentType);
+         Assert.Equal(
+             new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+             msg.Header.ContentType);
 
     }
 }

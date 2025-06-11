@@ -5,6 +5,7 @@ using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -48,8 +49,9 @@ public class AsyncUncompressLargePayloadTests
   
         //assert
         Assert.Equal(largeContent, msg.Body.Value);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
+        var expected = new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
+        Assert.Equal(expected, msg.Body.ContentType);
+        Assert.Equal(expected, msg.Header.ContentType);
     }
     
     [Fact]
@@ -86,8 +88,9 @@ public class AsyncUncompressLargePayloadTests
         
         //assert
         Assert.Equal(largeContent, msg.Body.Value);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
+        var expected = new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
+        Assert.Equal(expected, msg.Body.ContentType);
+        Assert.Equal(expected, msg.Header.ContentType);
     }
     
     [Fact]
@@ -124,7 +127,8 @@ public class AsyncUncompressLargePayloadTests
  
          //assert
          Assert.Equal(largeContent, msg.Body.Value);
-         Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Body.ContentType);
-         Assert.Equal(new ContentType(MediaTypeNames.Application.Json), msg.Header.ContentType);
+         var expected = new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
+         Assert.Equal(expected, msg.Body.ContentType);
+         Assert.Equal(expected, msg.Header.ContentType);
     }
 }

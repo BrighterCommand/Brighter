@@ -27,6 +27,7 @@ using System.Linq;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json.Serialization;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
 {
@@ -45,7 +46,7 @@ namespace Paramore.Brighter
         /// The type of message encoded into Bytes.  A hint for deserialization that 
         /// will be sent with the byte[] to allow
         /// </summary>
-        public ContentType? ContentType { get; private set; }
+        public ContentType? ContentType { get; set; }
 
         /// <summary>
         /// What is  the character encoding of the text in the message
@@ -91,10 +92,10 @@ namespace Paramore.Brighter
         {
 #if NETSTANDARD2_0
             ContentType = contentType ?? new ContentType("application/json");
-            ContentType.CharSet = nameof(characterEncoding);
+            SetCharacterEncoding(ContentType, characterEncoding);
 #else            
             ContentType = contentType ?? new ContentType(MediaTypeNames.Application.Json);
-            ContentType.CharSet = nameof(characterEncoding);
+            SetCharacterEncoding(ContentType, characterEncoding);
 #endif
             CharacterEncoding = characterEncoding;
             
@@ -115,6 +116,8 @@ namespace Paramore.Brighter
             })!;
         }
 
+
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
         /// </summary>
@@ -126,10 +129,10 @@ namespace Paramore.Brighter
         {
 #if NETSTANDARD2_0
             ContentType = contentType ?? new ContentType("application/json");
-            ContentType.CharSet = nameof(characterEncoding);
+            SetCharacterEncoding(ContentType, characterEncoding);
 #else            
             ContentType = contentType ?? new ContentType(MediaTypeNames.Application.Json);
-            ContentType.CharSet = nameof(characterEncoding);
+            SetCharacterEncoding(ContentType, characterEncoding);
 #endif
             CharacterEncoding = characterEncoding;
             
@@ -154,10 +157,10 @@ namespace Paramore.Brighter
         {
 #if NETSTANDARD2_0
             ContentType = contentType ?? new ContentType("application/json");
-            ContentType.CharSet = nameof(characterEncoding);
+            SetCharacterEncoding(ContentType, characterEncoding);
 #else            
             ContentType = contentType ?? new ContentType(MediaTypeNames.Application.Json);
-            ContentType.CharSet = nameof(characterEncoding);
+            SetCharacterEncoding(ContentType, characterEncoding);
 #endif
             Bytes = body.ToArray();
             CharacterEncoding = characterEncoding;
@@ -165,7 +168,7 @@ namespace Paramore.Brighter
 
 
         /// <summary>
-        /// Converts the body to a character encoded string.
+        /// Converts the body to a character-encoded string.
         /// </summary>
         /// <returns></returns>
         public string ToCharacterEncodedString(CharacterEncoding characterEncoding)
@@ -188,7 +191,7 @@ namespace Paramore.Brighter
         {
             if (other is null) return false;
             var bodyEqual = Bytes.SequenceEqual(other.Bytes);
-            var sameContentType = ContentType is null || ContentType.Equals(other?.ContentType); 
+            var sameContentType = ContentType is null || ContentType.Equals(other.ContentType); 
             return bodyEqual && sameContentType ;
         }
 
@@ -211,7 +214,7 @@ namespace Paramore.Brighter
         /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
-            return (Bytes != null ? Bytes.GetHashCode() : 0);
+            return (Bytes is not null ? Bytes.GetHashCode() : 0);
         }
 
         /// <summary>
@@ -234,6 +237,13 @@ namespace Paramore.Brighter
         public static bool operator !=(MessageBody? left, MessageBody? right)
         {
             return !Equals(left, right);
+        }
+        
+        private void SetCharacterEncoding(ContentType? contentType, CharacterEncoding characterEncoding)
+        {
+            var characterEncodingString = characterEncoding.FromCharacterEncoding();
+            if (contentType is not null && characterEncodingString is not null)
+                contentType.CharSet = characterEncodingString;
         }
     }
 }
