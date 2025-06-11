@@ -68,4 +68,14 @@ public static class BrighterSpanExtensions
        MessagePumpSpanOperation.Begin => "begin",
        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
    };
+
+
+   public static string ToSpanName(this ClaimCheckOperation operation) => operation switch
+   {
+       ClaimCheckOperation.Delete => "delete.message",
+       ClaimCheckOperation.Store => "store.message",
+       ClaimCheckOperation.Retrieve => "retrieve.message",
+       ClaimCheckOperation.HasClaim => "has_claim.message",
+       _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
+   };
 }
