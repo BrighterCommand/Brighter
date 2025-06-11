@@ -86,7 +86,7 @@ public partial class SqsMessageSender
             [HeaderNames.Topic] = new() { StringValue = _queueUrl ,DataType = "String" },
             [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
             [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRcf3339()), DataType = "String" }
+            [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRfc3339()), DataType = "String" }
         };
         
         if (!string.IsNullOrEmpty(message.Header.ReplyTo))
@@ -125,7 +125,7 @@ public partial class SqsMessageSender
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
             [HeaderNames.Type] = message.Header.Type,
             [HeaderNames.Source] = message.Header.Source.ToString(),
-            [HeaderNames.Time] = message.Header.TimeStamp.ToRcf3339()
+            [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339()
         };
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
