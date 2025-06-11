@@ -144,9 +144,9 @@ public class OutboxMessage : IMongoDbCollectionTTL
         {
             var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(HeaderBag!,
                 JsonSerialisationOptions.Options)!;
-            foreach (var key in bag.Keys)
+            foreach (var keyValue in bag)
             {
-                header.Bag.Add(key, bag[key]);
+                header.Bag.Add(keyValue.Key, keyValue.Value);
             }
         }
 
