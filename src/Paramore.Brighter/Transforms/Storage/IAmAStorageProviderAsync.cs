@@ -22,10 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Transforms.Storage
 {
@@ -36,12 +36,25 @@ namespace Paramore.Brighter.Transforms.Storage
     public interface IAmAStorageProviderAsync
     {
         /// <summary>
+        /// The Tracer that we want to use to capture telemetry
+        /// We inject this so that we can use the same tracer as the calling application
+        /// You do not need to set this property as we will set it when setting up the Service Activator
+        /// </summary>
+        IAmABrighterTracer? Tracer { get; set; }
+        
+        /// <summary>
+        /// Ensure that the store provider exists.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token</param>
+        Task EnsureStoreExistsAsync(CancellationToken cancellationToken = default);
+        
+        /// <summary>
         /// Delete the luggage identified by the claim check
         /// Used to clean up after luggage is retrieved
         /// </summary>
         /// <param name="claimCheck">The claim check for the luggage</param>
         /// <param name="cancellationToken">The cancellation token</param>
-        Task DeleteAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken));
+        Task DeleteAsync(string claimCheck, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Downloads the luggage associated with the claim check
@@ -49,14 +62,14 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="claimCheck">The claim check for the luggage</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The luggage as a stream</returns>
-        Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken));
+        Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Do we have luggage for this claim check - in case of error or deletion
         /// </summary>
         /// <param name="claimCheck"></param>
         /// <param name="cancellationToken">The cancellation token</param>
-        Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken));
+        Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Puts luggage into the store and provides a claim check for that luggage
@@ -64,6 +77,6 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="stream">A stream representing the luggage to check</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>A claim check for the luggage stored</returns>
-        Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default(CancellationToken));
+        Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default);
     }
 }

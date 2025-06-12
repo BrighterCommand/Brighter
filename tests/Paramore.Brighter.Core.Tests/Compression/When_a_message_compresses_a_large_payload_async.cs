@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Core.Tests.Compression;
 
 public class AsyncCompressLargePayloadTests
 {
-    private readonly CompressPayloadTransformerAsync _transformer;
+    private readonly CompressPayloadTransformer _transformer;
     private readonly Message _message;
     private readonly RoutingKey _topic = new("test_topic");
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
@@ -17,7 +17,7 @@ public class AsyncCompressLargePayloadTests
 
     public AsyncCompressLargePayloadTests()
     {
-        _transformer = new CompressPayloadTransformerAsync();
+        _transformer = new CompressPayloadTransformer();
 
         string body = DataGenerator.CreateString(6000);
         _message = new Message(
@@ -37,9 +37,9 @@ public class AsyncCompressLargePayloadTests
         Assert.Equal(GZIP_LEAD_BYTES, BitConverter.ToUInt16(compressedMessage.Body.Bytes, 0));
 
         //mime types
-        Assert.Equal(CompressPayloadTransformerAsync.GZIP, compressedMessage.Header.ContentType);
-        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
-        Assert.Equal(CompressPayloadTransformerAsync.GZIP, compressedMessage.Body.ContentType);
+        Assert.Equal(CompressPayloadTransformer.GZIP, compressedMessage.Header.ContentType);
+        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
+        Assert.Equal(CompressPayloadTransformer.GZIP, compressedMessage.Body.ContentType);
     }
 
     [Fact]
@@ -55,9 +55,9 @@ public class AsyncCompressLargePayloadTests
         Assert.Equal(ZLIB_LEAD_BYTE, compressedMessage.Body.Bytes[0]);
 
         //mime types
-        Assert.Equal(CompressPayloadTransformerAsync.DEFLATE, compressedMessage.Header.ContentType);
-        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
-        Assert.Equal(CompressPayloadTransformerAsync.DEFLATE, compressedMessage.Body.ContentType);
+        Assert.Equal(CompressPayloadTransformer.DEFLATE, compressedMessage.Header.ContentType);
+        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
+        Assert.Equal(CompressPayloadTransformer.DEFLATE, compressedMessage.Body.ContentType);
     }
 
     [Fact]
@@ -72,8 +72,8 @@ public class AsyncCompressLargePayloadTests
         Assert.Equal("application/br", compressedMessage.Body.ContentType);
 
         //mime types
-        Assert.Equal(CompressPayloadTransformerAsync.BROTLI, compressedMessage.Header.ContentType);
-        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
-        Assert.Equal(CompressPayloadTransformerAsync.BROTLI, compressedMessage.Body.ContentType);
+        Assert.Equal(CompressPayloadTransformer.BROTLI, compressedMessage.Header.ContentType);
+        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
+        Assert.Equal(CompressPayloadTransformer.BROTLI, compressedMessage.Body.ContentType);
     }
 }
