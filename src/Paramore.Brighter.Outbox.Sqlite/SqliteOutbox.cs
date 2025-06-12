@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -445,7 +446,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private static byte[] GetBodyAsBytes(DbDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
-            var body = dr.GetStream(i);
+            using var body = dr.GetStream(i);
+            if (body is MemoryStream memoryStream) // the current implementation returns a MemoryStream
+                return memoryStream.ToArray(); // then we can just return its value
+
             var buffer = new byte[body.Length];
             
 #if NETSTANDARD

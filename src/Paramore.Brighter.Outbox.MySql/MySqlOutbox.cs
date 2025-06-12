@@ -426,17 +426,12 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private static byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
-            var i = dr.GetOrdinal("Body");
+            using var stream = dr.GetStream("Body");
+            if (stream is MemoryStream memoryStream) // the current implementation returns a MemoryStream
+                return memoryStream.ToArray(); // then we can just return its value
+
             using var ms = new MemoryStream();
-            var buffer = new byte[1024];
-            int offset = 0;
-            var bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-            while (bytesRead > 0)
-            {
-                ms.Write(buffer, offset, (int)bytesRead);
-                offset += (int)bytesRead;
-                bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-            }
+            stream.CopyTo(ms);
 
             ms.Flush();
             var body = ms.ToArray();

@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.IO;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
@@ -360,7 +361,10 @@ namespace Paramore.Brighter.Outbox.MsSql
             var ordinal = dr.GetOrdinal("Body");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var body = dr.GetStream(ordinal);
+            using var body = dr.GetStream(ordinal);
+            if (body is MemoryStream memoryStream) // the current implementation returns a MemoryStream
+                return memoryStream.ToArray(); // then we can just return its value
+
             long bodyLength = body.Length;
             var buffer = new byte[bodyLength];
             var bytesRemaining = bodyLength;
