@@ -20,6 +20,8 @@
         public const string OtelTraceState = "cloudevents:tracestate";
         public const string CloudEventsParitionKey = "cloudEvents:partitionkey";
         public const string Baggage = "cloudevents:baggage";
+        public const string TraceParent = "cloudevents:traceparent";
+        public const string TraceState = "cloudevents:tracestate";
 
         public static readonly string[] ReservedHeaders = [LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey, ReplyToHeaderBagKey, SessionIdKey
         ];

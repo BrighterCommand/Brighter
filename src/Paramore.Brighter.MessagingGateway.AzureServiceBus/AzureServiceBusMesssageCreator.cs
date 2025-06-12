@@ -28,6 +28,7 @@ using System.Net.Mime;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
@@ -72,6 +73,9 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         var time = GetCloudEventsTime(azureServiceBusMessage);
         var dataSchema = GetCloudEventsDataSchema(azureServiceBusMessage);
         var subject = GetCloudEventsSubject(azureServiceBusMessage);
+        var traceParent = GetTraceParent(azureServiceBusMessage);
+        var traceState = GetTraceState(azureServiceBusMessage);
+        var baggage = GetBaggage(azureServiceBusMessage);
             
         // TODO: We only support  a header based approach to Cloud Events at the moment, so we don't
         // have support here for Cloud Events JSON as the body. We should probably support that as well in the future.
@@ -91,9 +95,9 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             dataSchema: dataSchema,
             subject: subject,
             delayed: TimeSpan.Zero,
-            traceParent: null,
-            traceState: null,
-            baggage: null
+            traceParent: traceParent,
+            traceState: traceState,
+            baggage: baggage
         );
 
         headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
@@ -107,7 +111,22 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         return message;
     }
 
-   private Uri GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
+    private Baggage GetBaggage(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.Baggage, out object? property))
+        {
+            s_logger.LogWarning("No baggage found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return new Baggage();
+        }
+        
+        var baggageString = property.ToString() ?? string.Empty;
+
+        var baggage = new Baggage();
+        baggage.LoadBaggage(baggageString);
+        return baggage;
+    }
+
+    private Uri GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSchema, out object? property))
         {
@@ -169,6 +188,18 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         return new ContentType(azureServiceBusMessage.ContentType);
     }
+    
+    private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        var count = 0;
+        if (azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
+                out object? property))
+        {
+            int.TryParse(property.ToString(), out count);
+        }
+
+        return count;
+    }
 
     private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
     {
@@ -204,15 +235,30 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         return new Uri(source );
     }
     
-    private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
+   private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        var count = 0;
-        if (azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
-                out object? property))
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.TraceParent, out object?property))
         {
-            int.TryParse(property.ToString(), out count);
-        }
+            s_logger.LogWarning("No trace parent found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return new TraceParent(string.Empty);
+        } 
+        
+        var traceParentString = property.ToString() ?? string.Empty;
+        
+        return new TraceParent(traceParentString);
+    }
 
-        return count;
+    private TraceState GetTraceState(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.TraceState, out object? property))
+        {
+            s_logger.LogWarning("No trace state found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return new TraceState(string.Empty);
+        } 
+        
+        var traceStateString = property.ToString() ?? string.Empty;
+        
+        return new TraceState(traceStateString);
+        
     }
 }
