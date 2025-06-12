@@ -378,7 +378,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return sqlException.Number == MySqlDuplicateKeyError;
         }
 
-        private Message MapAMessage(IDataReader dr)
+        private Message MapAMessage(DbDataReader dr)
         {
             var id = GetMessageId(dr);
             var messageType = GetMessageType(dr);
@@ -430,7 +430,7 @@ namespace Paramore.Brighter.Outbox.MySql
             var stream = dr.GetStream("Body");
             if (stream is not MemoryStream memoryStream) // the current implementation returns a MemoryStream
                 // If the type of returned Stream is ever changed, please check if it requires disposal, also other places in the code base that uses GetStream
-                throw new NotImplementedException(nameof(DbDataReader.GetStream) + " no longer returns " + nameof(MemoryStream));
+                throw new NotImplementedException(nameof(MySqlDataReader.GetStream) + " no longer returns " + nameof(MemoryStream));
             
             return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
         }

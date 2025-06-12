@@ -356,18 +356,19 @@ namespace Paramore.Brighter.Outbox.MsSql
             return partitionKey;
         }
 
-        private static byte[] GetBodyAsBytes(DbDataReader dr)
+        private static byte[] GetBodyAsBytes(SqlDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Body");
             if (dr.IsDBNull(ordinal)) return null;
 
-            // No need to dispose a MemoryStream, I do not think they dare to ever change that
             var body = dr.GetStream(ordinal);
-            if (body is not MemoryStream memoryStream) // The current implementation returns a MemoryStream
-                // If the type of returned Stream is ever changed, please check if it requires disposal, also other places in the code base that uses GetStream
-                throw new NotImplementedException(nameof(DbDataReader.GetStream) + " no longer returns " + nameof(MemoryStream));
-            
-            return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
+            if (body is MemoryStream memoryStream) // No need to dispose a MemoryStream, I do not think they dare to ever change that
+                return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
+
+            MemoryStream ms = new();
+            body.CopyTo(ms);
+            body.Dispose();
+            return ms.ToArray();
         }
 
         private static string GetBodyAsText(DbDataReader dr)
