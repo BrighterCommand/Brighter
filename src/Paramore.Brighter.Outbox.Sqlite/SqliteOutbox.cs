@@ -446,18 +446,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private static byte[] GetBodyAsBytes(DbDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
-            using var body = dr.GetStream(i);
-            if (body is MemoryStream memoryStream) // the current implementation returns a MemoryStream
-                return memoryStream.ToArray(); // then we can just return its value
-
-            var buffer = new byte[body.Length];
+            // No need to dispose a MemoryStream, I do not think they dare to ever change that
+            var body = dr.GetStream(i);
             
-#if NETSTANDARD
-            body.Read(buffer, 0, (int)body.Length);
-#else
-            body.ReadExactly(buffer, 0, (int)body.Length);
-#endif 
-            return buffer;
+            if (body is not MemoryStream memoryStream) // The current implementation returns a MemoryStream
+                // If the type of returned Stream is ever changed, please check if it requires disposal, also other places in the code base that uses GetStream
+                throw new NotImplementedException(nameof(DbDataReader.GetStream) + " no longer returns " + nameof(MemoryStream));
+            
+            return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
         }
 
         private static Dictionary<string, object> GetContextBag(IDataReader dr)

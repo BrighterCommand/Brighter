@@ -375,7 +375,7 @@ public partial class PostgresMessageConsumer(
     {
         var id = reader.GetInt64(0);
 
-        using var content = reader.GetStream(3);
+        var content = reader.GetStream(3);
         var message = JsonSerializer.Deserialize<Message>(content, JsonSerialisationOptions.Options)!;
         
         message.Header.Bag["ReceiptHandle"] = id;
@@ -386,7 +386,7 @@ public partial class PostgresMessageConsumer(
     {
         var id = reader.GetInt64(0);
 
-        using var content = reader.GetStream(3);
+        var content = reader.GetStream(3);
         var message = await JsonSerializer.DeserializeAsync<Message>(content, JsonSerialisationOptions.Options, cancellationToken);
         
         message!.Header.Bag["ReceiptHandle"] = id;

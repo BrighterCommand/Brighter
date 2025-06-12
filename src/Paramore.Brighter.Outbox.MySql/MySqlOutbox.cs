@@ -426,16 +426,13 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private static byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
-            using var stream = dr.GetStream("Body");
-            if (stream is MemoryStream memoryStream) // the current implementation returns a MemoryStream
-                return memoryStream.ToArray(); // then we can just return its value
-
-            using var ms = new MemoryStream();
-            stream.CopyTo(ms);
-
-            ms.Flush();
-            var body = ms.ToArray();
-            return body;
+            // No need to dispose a MemoryStream, I do not think they dare to ever change that
+            var stream = dr.GetStream("Body");
+            if (stream is not MemoryStream memoryStream) // the current implementation returns a MemoryStream
+                // If the type of returned Stream is ever changed, please check if it requires disposal, also other places in the code base that uses GetStream
+                throw new NotImplementedException(nameof(DbDataReader.GetStream) + " no longer returns " + nameof(MemoryStream));
+            
+            return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
         }
 
         private static string GetBodyAsString(IDataReader dr)
