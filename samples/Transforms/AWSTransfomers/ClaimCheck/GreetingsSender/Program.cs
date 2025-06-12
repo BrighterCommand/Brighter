@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net.Http;
 using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
@@ -35,6 +36,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tranformers.AWS;
+using Paramore.Brighter.Transforms.Storage;
 using Serilog;
 using Serilog.Extensions.Logging;
 
@@ -78,23 +80,18 @@ namespace GreetingsSender
                     {
                         configure.ProducerRegistry = producerRegistry;
                     })
+                    .UseExternalLuggageStore(provider => new S3LuggageStore(new S3LuggageOptions(
+                        new AWSS3Connection(credentials, RegionEndpoint.EUWest1),
+                        "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002")
+                    {
+                        HttpClientFactory = provider.GetService<IHttpClientFactory>(),
+                        Strategy = StorageStrategy.Validate
+                    }))
                     .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
                 //We need this for the check as to whether an S3 bucket exists
                 serviceCollection.AddHttpClient();
                 
-                //Adds a luggage store based on an S3 bucket
-                serviceCollection.AddS3LuggageStore((options) =>
-                {
-                    options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
-                    options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";
-#pragma warning disable CS0618 // Continue to use as it maps to a correct string identifier, which the replacement does not                    
-                    options.BucketRegion = S3Region.EUW1;
-#pragma warning restore CS0618 // Preserve obsolete warnings                    
-                     options.StoreCreation = S3LuggageStoreCreation.CreateIfMissing;
-                });
-                
-
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
                 var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();

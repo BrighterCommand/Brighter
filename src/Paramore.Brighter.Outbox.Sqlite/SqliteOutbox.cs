@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -425,9 +426,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 Dictionary<string, object> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
-                    foreach (var key in dictionaryBag.Keys)
+                    foreach (var keyValue in dictionaryBag)
                     {
-                        header.Bag.Add(key, dictionaryBag[key]);
+                        header.Bag.Add(keyValue.Key, keyValue.Value);
                     }
                 }
             }
@@ -442,18 +443,18 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
 
-        private static byte[] GetBodyAsBytes(DbDataReader dr)
+        private static byte[] GetBodyAsBytes(SqliteDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
             var body = dr.GetStream(i);
-            var buffer = new byte[body.Length];
             
-#if NETSTANDARD
-            body.Read(buffer, 0, (int)body.Length);
-#else
-            body.ReadExactly(buffer, 0, (int)body.Length);
-#endif 
-            return buffer;
+            if (body is MemoryStream memoryStream) // No need to dispose a MemoryStream, I do not think they dare to ever change that
+                return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
+
+            MemoryStream ms = new();
+            body.CopyTo(ms);
+            body.Dispose();
+            return ms.ToArray();
         }
 
         private static Dictionary<string, object> GetContextBag(IDataReader dr)
@@ -465,7 +466,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return dictionaryBag;
         }
 
-        private string GetContentType(IDataReader dr)
+        private static string GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null;
