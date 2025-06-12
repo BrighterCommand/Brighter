@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using System.Net.Mime;
 using Azure.Messaging.ServiceBus;
+using Paramore.Brighter.Extensions;
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -43,9 +45,8 @@ public class AzureServiceBusMessagePublisher
         var azureServiceBusMessage = new ServiceBusMessage(message.Body.Value);
         
         AddBrighterHeaders(message, azureServiceBusMessage);
-
-        //Add Cloud Event properties if they exist
-        
+        AddCloudEventHeaders(message, azureServiceBusMessage);
+        AddOtelHeaders(message, azureServiceBusMessage);
 
         return azureServiceBusMessage;
     }
@@ -57,6 +58,8 @@ public class AzureServiceBusMessagePublisher
         azureServiceBusMessage.ContentType = message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain;
         if(!string.IsNullOrEmpty(message.Header.CorrelationId))
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
+        if (!string.IsNullOrEmpty(message.Header.ReplyTo!))
+            azureServiceBusMessage.ReplyTo = message.Header.ReplyTo!;
         if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
             azureServiceBusMessage.SessionId = value.ToString();
 
@@ -70,4 +73,45 @@ public class AzureServiceBusMessagePublisher
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
         
    }
+    
+    private static void AddCloudEventHeaders(Message message, ServiceBusMessage azureServiceBusMessage)
+    {
+        //required Cloud Event headers
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSource, message.Header.Source?.ToString() ?? string.Empty);
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsId, message.Id.ToString());
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSpecVersion, message.Header.SpecVersion.ToString());
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsType, message.Header.Type ?? string.Empty);
+
+        //optional Cloud Event headers
+        if (message.Header.ContentType is not null)
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsContentType, message.Header.ContentType.ToString());
+       
+        if(message.Header.DataSchema is not null)
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSchema, message.Header.DataSchema);
+        
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSubject, message.Header.Subject);
+       
+        if (message.Header.TimeStamp != default)
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsTime, message.Header.TimeStamp.ToRcf3339());
+        
+        //extension Cloud Event headers
+        if (message.Header.DataRef is not null)
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventDataRef, message.Header.DataRef);
+        
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsParitionKey, message.Header.PartitionKey.Value);
+    }
+    
+    private static void AddOtelHeaders(Message message, ServiceBusMessage azureServiceBusMessage)
+    {
+        if(message.Header.TraceParent is not null)
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.OtelTraceParent, message.Header.TraceParent);
+        
+        if(message.Header.TraceState is not null)
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.OtelTraceState, message.Header.TraceState);
+        
+        
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.Baggage, message.Header.Baggage.ToString());
+    }
+    
 }

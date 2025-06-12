@@ -62,29 +62,38 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
         s_logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}", _topic, subscription.Name, messageBody);
             
+        //TODO: Switch these to use the option type HeaderResult<T> for consistency with the rest of the codebase.
         MessageType messageType = GetMessageType(azureServiceBusMessage);
         var replyAddress = GetReplyAddress(azureServiceBusMessage);
         var handledCount = GetHandledCount(azureServiceBusMessage);
-        var contentType = new ContentType(azureServiceBusMessage.ContentType);
+        var contentType = GetContentType(azureServiceBusMessage);
+        var source = GetSource(azureServiceBusMessage);
+        var type = GetCloudEventsType(azureServiceBusMessage);
+        var time = GetCloudEventsTime(azureServiceBusMessage);
+        var dataSchema = GetCloudEventsDataSchema(azureServiceBusMessage);
+        var subject = GetCloudEventsSubject(azureServiceBusMessage);
             
-        // Azure is using the cloud event payload, so the user should read that info from the payload
-        // https://learn.microsoft.com/en-us/azure/event-grid/cloud-event-schema
+        // TODO: We only support  a header based approach to Cloud Events at the moment, so we don't
+        // have support here for Cloud Events JSON as the body. We should probably support that as well in the future.
         // https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/servicebus/Azure.Messaging.ServiceBus/samples/Sample11_CloudEvents.md
             
         var headers = new MessageHeader(
             messageId: azureServiceBusMessage.Id, 
             topic: new RoutingKey(_topic), 
             messageType: messageType, 
-            source: null,
-            type: "",
-            timeStamp: DateTime.UtcNow,
+            source: source,
+            type: type,
+            timeStamp: time,
             correlationId: azureServiceBusMessage.CorrelationId,
             replyTo: new RoutingKey(replyAddress),
             contentType: contentType,
             handledCount:handledCount, 
-            dataSchema: null,
-            subject: null,
-            delayed: TimeSpan.Zero
+            dataSchema: dataSchema,
+            subject: subject,
+            delayed: TimeSpan.Zero,
+            traceParent: null,
+            traceState: null,
+            baggage: null
         );
 
         headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
@@ -97,7 +106,70 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         var message = new Message(headers, new MessageBody(messageBody));
         return message;
     }
-    
+
+   private Uri GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSchema, out object? property))
+        {
+            s_logger.LogWarning("No Cloud Events data schema found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return new Uri(string.Empty);
+        }
+
+        var dataSchema = property.ToString() ?? string.Empty;
+
+        return new Uri(dataSchema);
+    }
+
+    private string GetCloudEventsSubject(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSubject, out object? property))
+        {
+            s_logger.LogWarning("No Cloud Events subject found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return string.Empty;
+        }
+
+        var subject = property.ToString() ?? string.Empty;
+
+        return subject;
+    }
+
+    private DateTimeOffset GetCloudEventsTime(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsTime, out object? property))
+        {
+            s_logger.LogWarning("No Cloud Events time found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return DateTimeOffset.UtcNow;
+        }
+        
+        var time = property.ToString() ?? string.Empty;
+
+        if (!string.IsNullOrEmpty(time) && DateTimeOffset.TryParse(time, out DateTimeOffset parsedTime))
+        {
+            return parsedTime;
+        }
+
+        s_logger.LogWarning("Invalid Cloud Events time format in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+        return DateTimeOffset.UtcNow;
+    }
+
+    private string GetCloudEventsType(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsType, out object? property))
+        {
+            s_logger.LogWarning("No Cloud Events type found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return string.Empty;
+        }
+
+        var type = property.ToString() ?? string.Empty;
+
+        return type;
+    }
+
+    private static ContentType GetContentType(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        return new ContentType(azureServiceBusMessage.ContentType);
+    }
+
     private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey, out object? property))
@@ -113,11 +185,25 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             return string.Empty;
         }
 
-        var replyAddress = property.ToString();
+        var replyAddress = property.ToString() ?? string.Empty;
 
-        return replyAddress ?? string.Empty;
+        return replyAddress ;
     }
 
+    private Uri GetSource(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSource, out object? property))
+        {
+            s_logger.LogWarning("No source found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return new Uri(string.Empty);
+        }
+
+        var source = property.ToString() ?? string.Empty;
+
+        return new Uri(source );
+    }
+    
     private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         var count = 0;
