@@ -22,13 +22,14 @@ public class CommandProcessorClearObservabilityTests
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
-    private readonly Brighter.CommandProcessor _commandProcessor;
     private readonly InMemoryProducer _producer;
     private readonly InternalBus _internalBus = new();
+    private readonly FakeTimeProvider _timeProvider;
+    private readonly RoutingKey _routingKey;
 
     public CommandProcessorClearObservabilityTests()
     {
-        var routingKey = new RoutingKey("MyEvent");
+        _routingKey = new RoutingKey("MyEvent");
         
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -37,84 +38,41 @@ public class CommandProcessorClearObservabilityTests
             .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
-            .Build();
+            .Build(); 
         
-        Brighter.CommandProcessor.ClearServiceBus();
-        
-        var registry = new SubscriberRegistry();
-
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .Retry();
-        
-        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
-
-        var timeProvider  = new FakeTimeProvider();
-        var tracer = new BrighterTracer(timeProvider);
-        InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
-        
-        var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-
-        _producer = new InMemoryProducer(_internalBus, timeProvider)
+        _timeProvider  = new FakeTimeProvider();
+        _producer = new InMemoryProducer(_internalBus, _timeProvider)
         {
             Publication =
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
-                Topic = routingKey,
+                Topic = _routingKey,
                 Type = nameof(MyEvent),
             }
         };
-
-        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-        {
-            {routingKey, _producer}
-        });
         
-        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            policyRegistry, 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            outbox,
-            maxOutStandingMessages: -1
-        );
-        
-        _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
-            new InMemoryRequestContextFactory(),
-            policyRegistry, 
-            bus,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
     }
     
-    [Fact]
-    public void When_Clearing_A_Message_A_Span_Is_Exported()
+    [Theory]
+    [InlineData(InstrumentationOptions.All)]
+    [InlineData(InstrumentationOptions.None)]
+    public void When_Clearing_A_Message_A_Span_Is_Exported(InstrumentationOptions options)
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
         
         var @event = new MyEvent();
         var context = new RequestContext { Span = parentActivity };
+        var commandProcessor = CreateCommandProcessor(options);
 
         //act
-        var messageId = _commandProcessor.DepositPost(@event, context);
+        var messageId = commandProcessor.DepositPost(@event, context);
         
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutbox([messageId], context);
+        commandProcessor.ClearOutbox([messageId], context);
         
         parentActivity?.Stop();
         
@@ -128,13 +86,22 @@ public class CommandProcessorClearObservabilityTests
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         Assert.NotNull(createActivity);
         Assert.Equal(parentActivity?.Id, createActivity.ParentId);
-        Assert.True(createActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" }));
         
         //there should be a clear span for each message id
         var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
         Assert.NotNull(clearActivity);
-        Assert.True(clearActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" }));
-        Assert.True(clearActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == messageId));
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            Assert.Contains(clearActivity.Tags, t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" });
+            Assert.Contains(clearActivity.Tags, t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "clear" });
+            Assert.Contains(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value == messageId);
+        }
+        else
+        {
+            Assert.DoesNotContain(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.Operation);
+            Assert.DoesNotContain(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessagingOperationType);
+            Assert.DoesNotContain(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId);
+        }
 
         var events = clearActivity.Events.ToList();
         
@@ -204,5 +171,56 @@ public class CommandProcessorClearObservabilityTests
         Assert.True(markAsDispatchedActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable));
         Assert.True(markAsDispatchedActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()));
         Assert.True(markAsDispatchedActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName));
+    }
+
+    private Brighter.CommandProcessor CreateCommandProcessor(InstrumentationOptions instrumentationOptions)
+    {
+        Brighter.CommandProcessor.ClearServiceBus();
+        
+        var registry = new SubscriberRegistry();
+
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
+        
+        var retryPolicy = Policy
+            .Handle<Exception>()
+            .Retry();
+        
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
+        
+        var tracer = new BrighterTracer(_timeProvider);
+        InMemoryOutbox outbox = new(_timeProvider);
+        
+        var messageMapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+            null);
+        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+        {
+            {_routingKey, _producer}
+        });
+        
+        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            producerRegistry, 
+            policyRegistry, 
+            messageMapperRegistry, 
+            new EmptyMessageTransformerFactory(), 
+            new EmptyMessageTransformerFactoryAsync(),
+            tracer,
+            outbox,
+            maxOutStandingMessages: -1,
+            instrumentationOptions: instrumentationOptions
+        );
+        
+        return new Brighter.CommandProcessor(
+            registry, 
+            handlerFactory, 
+            new InMemoryRequestContextFactory(),
+            policyRegistry, 
+            bus,
+            new InMemorySchedulerFactory(),
+            tracer: tracer, 
+            instrumentationOptions: instrumentationOptions
+        ); 
     }
 }

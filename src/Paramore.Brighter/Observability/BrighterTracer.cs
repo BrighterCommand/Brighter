@@ -115,12 +115,17 @@ public class BrighterTracer : IAmABrighterTracer
         var tags = new ActivityTagsCollection
         {
             { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.RequestId, request.Id },
-            { BrighterSemanticConventions.RequestType, request.GetType().Name },
-            { BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request, JsonSerialisationOptions.Options) }
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() }
         };
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.RequestId, request.Id);
+            tags.Add(BrighterSemanticConventions.RequestType, request.GetType().Name);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+        }
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
 
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -338,11 +343,15 @@ public class BrighterTracer : IAmABrighterTracer
         var tags = new ActivityTagsCollection()
         
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds }
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain }
         };
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName()); 
+            tags.Add(BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds);
+        }
         
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -417,12 +426,15 @@ public class BrighterTracer : IAmABrighterTracer
         
         var tags = new ActivityTagsCollection
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName() }
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain }
         };
-        
-        if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() );
+            tags.Add(BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName());
+            if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
+        }
         
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -453,26 +465,30 @@ public class BrighterTracer : IAmABrighterTracer
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection
+        var tags = new ActivityTagsCollection();
+        if (options.HasFlag(InstrumentationOptions.DatabaseInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.DbInstrumentationDomain },
-            { BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName() },
-            { BrighterSemanticConventions.DbName, info.dbName },
-            { BrighterSemanticConventions.DbTable, info.dbTable },
-            { BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName() }
-        };
+            tags = new ActivityTagsCollection
+            {
+                { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.DbInstrumentationDomain },
+                { BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName() },
+                { BrighterSemanticConventions.DbName, info.dbName },
+                { BrighterSemanticConventions.DbTable, info.dbTable },
+                { BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName() }
+            };
 
-        if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
-        if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
-        if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
-        if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
-        if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
-        if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
-        if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
+            if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
+            if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
+            if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
+            if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
+            if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
+            if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
+            if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
         
-        if (info.dbAttributes != null)
-           foreach (var pair in info.dbAttributes)
-               tags.Add(pair.Key, pair.Value);
+            if (info.dbAttributes != null)
+                foreach (var pair in info.dbAttributes)
+                    tags.Add(pair.Key, pair.Value);
+        }
 
         var activity = ActivitySource.StartActivity(
             name: spanName,
