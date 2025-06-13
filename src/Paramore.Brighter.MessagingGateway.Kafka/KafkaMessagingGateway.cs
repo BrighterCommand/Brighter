@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 if (!exists && MakeChannels == OnMissingChannel.Validate)
                 {
-                    var topic = Topic is not null ? Topic.Value : RoutingKey.Empty;
+                    var topic = Topic is not null ? new RoutingKey(Topic.Value) : RoutingKey.Empty;
                     throw new ChannelFailureException($"Topic: {topic} does not exist");
                 }
 

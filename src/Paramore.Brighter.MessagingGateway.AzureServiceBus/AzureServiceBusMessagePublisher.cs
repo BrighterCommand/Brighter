@@ -93,7 +93,7 @@ public class AzureServiceBusMessagePublisher
             azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSubject, message.Header.Subject);
        
         if (message.Header.TimeStamp != default)
-            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsTime, message.Header.TimeStamp.ToRcf3339());
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsTime, message.Header.TimeStamp.ToRfc3339());
         
         //extension Cloud Event headers
         if (message.Header.DataRef is not null)

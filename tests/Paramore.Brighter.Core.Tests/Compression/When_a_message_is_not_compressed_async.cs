@@ -12,7 +12,7 @@ public class AsyncUncompressedPayloadTests
     public async Task When_a_message_is_not_gzip_compressed()
     {
         //arrange
-        var transformer = new CompressPayloadTransformerAsync();
+        var transformer = new CompressPayloadTransformer();
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.GZip);
 
         var smallContent = "small message";
@@ -38,7 +38,7 @@ public class AsyncUncompressedPayloadTests
     public async Task When_a_message_is_not_zlib_compressed()
     {
         //arrange
-        var transformer = new CompressPayloadTransformerAsync();
+        var transformer = new CompressPayloadTransformer();
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Zlib);
 
         var smallContent = "small message";
@@ -64,7 +64,7 @@ public class AsyncUncompressedPayloadTests
     public async Task When_a_message_is_not_brotli_compressed()
     {
         //arrange
-        var transformer = new CompressPayloadTransformerAsync();
+        var transformer = new CompressPayloadTransformer();
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Brotli);
 
         var smallContent = "small message";

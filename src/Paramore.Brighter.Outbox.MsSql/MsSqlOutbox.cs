@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.IO;
 using System.Net.Mime;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
@@ -357,22 +358,19 @@ namespace Paramore.Brighter.Outbox.MsSql
             return partitionKey;
         }
 
-        private static byte[]? GetBodyAsBytes(DbDataReader dr)
+        private static byte[]? GetBodyAsBytes(SqlDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Body");
             if (dr.IsDBNull(ordinal)) return null;
 
             var body = dr.GetStream(ordinal);
-            long bodyLength = body.Length;
-            var buffer = new byte[bodyLength];
-            var bytesRemaining = bodyLength;
-            while (bytesRemaining > 0)
-            {
-                var bytesRead = body.Read(buffer, 0, (int)bodyLength);
-                bytesRemaining -= bytesRead;
-            }
+            if (body is MemoryStream memoryStream) // No need to dispose a MemoryStream, I do not think they dare to ever change that
+                return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
 
-            return buffer;
+            MemoryStream ms = new();
+            body.CopyTo(ms);
+            body.Dispose();
+            return ms.ToArray();
         }
 
         private static string? GetBodyAsText(DbDataReader dr)
@@ -503,9 +501,9 @@ namespace Paramore.Brighter.Outbox.MsSql
             Dictionary<string, object>? dictionaryBag = GetContextBag(dr);
             if (dictionaryBag != null)
             {
-                foreach (var key in dictionaryBag.Keys)
+                foreach (var keyValue in dictionaryBag)
                 {
-                    header.Bag.Add(key, dictionaryBag[key]);
+                    header.Bag.Add(keyValue.Key, keyValue.Value);
                 }
             }
 

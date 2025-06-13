@@ -380,7 +380,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return sqlException.Number == MySqlDuplicateKeyError;
         }
 
-        private Message MapAMessage(IDataReader dr)
+        private Message MapAMessage(DbDataReader dr)
         {
             var id = GetMessageId(dr);
             var messageType = GetMessageType(dr);
@@ -411,9 +411,9 @@ namespace Paramore.Brighter.Outbox.MySql
                 Dictionary<string, object> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
-                    foreach (var key in dictionaryBag.Keys)
+                    foreach (var keyValue in dictionaryBag)
                     {
-                        header.Bag.Add(key, dictionaryBag[key]);
+                        header.Bag.Add(keyValue.Key, keyValue.Value);
                     }
                 }
             }
@@ -436,21 +436,13 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private static byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
-            var i = dr.GetOrdinal("Body");
-            using var ms = new MemoryStream();
-            var buffer = new byte[1024];
-            int offset = 0;
-            var bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-            while (bytesRead > 0)
-            {
-                ms.Write(buffer, offset, (int)bytesRead);
-                offset += (int)bytesRead;
-                bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-            }
-
-            ms.Flush();
-            var body = ms.ToArray();
-            return body;
+            // No need to dispose a MemoryStream, I do not think they dare to ever change that
+            var stream = dr.GetStream("Body");
+            if (stream is not MemoryStream memoryStream) // the current implementation returns a MemoryStream
+                // If the type of returned Stream is ever changed, please check if it requires disposal, also other places in the code base that uses GetStream
+                throw new NotImplementedException(nameof(MySqlDataReader.GetStream) + " no longer returns " + nameof(MemoryStream));
+            
+            return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
         }
 
         private static string GetBodyAsString(IDataReader dr)
@@ -534,4 +526,3 @@ namespace Paramore.Brighter.Outbox.MySql
         }
     }
 }
-

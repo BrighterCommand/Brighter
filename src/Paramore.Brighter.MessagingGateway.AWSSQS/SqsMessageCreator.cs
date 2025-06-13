@@ -31,6 +31,7 @@ using Amazon;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Transforms.Transformers;
@@ -119,9 +120,9 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static void PopulateBag(Dictionary<string, object> bag, Message message, HeaderResult<string> deduplicationId, HeaderResult<string> receiptHandle)
     {
-        foreach (var key in bag.Keys)
+        foreach (var keyValue in bag)
         {
-            message.Header.Bag.Add(key, bag[key]);
+            message.Header.Bag.Add(keyValue.Key, keyValue.Value);
         }
 
         if (deduplicationId.Success)
@@ -135,7 +136,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         }
     }
 
-    private HeaderResult<Uri?> ReadCloudEventsDataSchema(Dictionary<string, string> cloudEventHeaders)
+    private static HeaderResult<Uri?> ReadCloudEventsDataSchema(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.DataSchema, out var value))
         {
@@ -154,7 +155,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         {
             try
             {
-                var cloudEventHeaders = JsonSerializer.Deserialize<Dictionary<string, string>>(value.StringValue,
+                var cloudEventHeaders = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(value.StringValue,
                     JsonSerialisationOptions.Options);
                 if (cloudEventHeaders != null)
                     return cloudEventHeaders;
@@ -167,7 +168,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new Dictionary<string, string>();
     }
     
-    private HeaderResult<Uri?> ReadCloudEventSource(Dictionary<string, string> cloudEventHeaders)
+    private static HeaderResult<Uri?> ReadCloudEventSource(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.Source, out var value))
         {
@@ -180,7 +181,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<Uri?>(null, false);
     }
     
-    private HeaderResult<string> ReadCloudEventsSpecVersion(Dictionary<string,string> cloudEventHeaders)
+    private static HeaderResult<string> ReadCloudEventsSpecVersion(Dictionary<string,string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.SpecVersion, out var value))
         {
@@ -189,7 +190,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
     }
     
-    private HeaderResult<DateTimeOffset?> ReadCloudEventsTimeStamp(Dictionary<string, string> cloudEventHeaders)
+    private static HeaderResult<DateTimeOffset?> ReadCloudEventsTimeStamp(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.Timestamp, out var value))
         {
@@ -202,7 +203,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<DateTimeOffset?>(null, false);
     }
     
-    private HeaderResult<string?> ReadCloudEventType(Dictionary<string, string> cloudEventHeaders)
+    private static HeaderResult<string?> ReadCloudEventType(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.Type, out var value))
         {
@@ -215,9 +216,9 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static MessageBody ReadMessageBody(Amazon.SQS.Model.Message sqsMessage, ContentType contentType)
     {
-        if (contentType.ToString() == CompressPayloadTransformerAsync.GZIP
-            || contentType.ToString() == CompressPayloadTransformerAsync.DEFLATE
-            || contentType.ToString() == CompressPayloadTransformerAsync.BROTLI)
+        if (contentType.ToString() == CompressPayloadTransformer.GZIP
+            || contentType.ToString() == CompressPayloadTransformer.DEFLATE
+            || contentType.ToString() == CompressPayloadTransformer.BROTLI)
             return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
 
         return new MessageBody(sqsMessage.Body, contentType);
@@ -229,7 +230,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         {
             try
             {
-                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(value.StringValue,
+                var bag = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(value.StringValue,
                     JsonSerialisationOptions.Options);
                 if (bag != null)
                     return bag;

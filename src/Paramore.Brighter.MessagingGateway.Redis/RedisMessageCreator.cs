@@ -130,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return message;
         }
 
-        private MessageBody ReadBody(StringReader reader)
+        private static MessageBody ReadBody(StringReader reader)
         {
             return new MessageBody(reader.ReadLine());
         }
@@ -194,13 +194,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (!bag.Success) return messageHeader;
 
             var bagResult = bag.Result;
-            foreach (var key in bagResult.Keys)
-                messageHeader.Bag.Add(key, bagResult[key]);
+            foreach (var keyValue in bagResult)
+                messageHeader.Bag.Add(keyValue.Key, keyValue.Value);
 
             return messageHeader;
         }
 
-       private HeaderResult<Baggage> ReadBaggage(Dictionary<string, string> headers)
+        private static HeaderResult<Baggage> ReadBaggage(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.W3C_BAGGAGE, out string? header))
             {
@@ -211,7 +211,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<Baggage>(new Baggage(), false);
         }
         
-        private HeaderResult<ContentType?> ReadContentType(Dictionary<string, string> headers)
+        private static HeaderResult<ContentType?> ReadContentType(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CONTENT_TYPE, out string? header))
             {
@@ -221,7 +221,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<ContentType?>(null, false);
         }
 
-        private HeaderResult<string> ReadCorrelationId(Dictionary<string, string> headers)
+        private static HeaderResult<string> ReadCorrelationId(Dictionary<string, string> headers)
         {
             var newCorrelationId = string.Empty;
             
@@ -245,7 +245,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<Uri?>(null, false);
         }
 
-        private HeaderResult<TimeSpan> ReadDelay(Dictionary<string, string> headers)
+        private static HeaderResult<TimeSpan> ReadDelay(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out string? header))
             {
@@ -257,7 +257,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
          }
         
-        private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
+        private static HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out string? header))
             {
@@ -278,7 +278,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="headers">The raw json</param>
         /// <returns>A dictionary, either empty if key missing or matching contents if present (could be mepty)</returns>
-        private HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, string> headers)
+        private static HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, string> headers)
         {
 
             if (headers.TryGetValue(HeaderNames.BAG, out string? header))
@@ -293,7 +293,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         }
 
-         private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
+         private static HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.MESSAGE_TYPE, out string? header))
             {
@@ -306,7 +306,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
-        private HeaderResult<string> ReadMessageId(IDictionary<string, string> headers)
+        private static HeaderResult<string> ReadMessageId(IDictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string? header))
             {
@@ -316,7 +316,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<string>(string.Empty, false);
         }
         
-        private HeaderResult<RoutingKey> ReadReplyTo(Dictionary<string, string> headers)
+        private static HeaderResult<RoutingKey> ReadReplyTo(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.REPLY_TO, out string? header))
             {
@@ -348,7 +348,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="headers">The collection of headers</param>
         /// <returns>The result, always a success because we don't break for missing timestamp, just use now</returns>
-        private HeaderResult<DateTime> ReadTimeStamp(Dictionary<string, string> headers)
+        private static HeaderResult<DateTime> ReadTimeStamp(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.TIMESTAMP, out string? header))
             {
@@ -360,7 +360,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
         }
        
-       private HeaderResult<TraceParent> ReadTraceParent(Dictionary<string, string> headers)
+       private static HeaderResult<TraceParent> ReadTraceParent(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, out string? header))
             {
@@ -369,7 +369,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<TraceParent>(TraceParent.Empty, false);
         }
 
-        private HeaderResult<TraceState> ReadTraceState(Dictionary<string, string> headers)
+        private static HeaderResult<TraceState> ReadTraceState(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out string? header))
             {
@@ -378,7 +378,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<TraceState>(TraceState.Empty, false);
         }
        
-       private HeaderResult<string> ReadType(Dictionary<string, string> headers)
+       private static HeaderResult<string> ReadType(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out string? header))
             {
@@ -387,7 +387,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<string>(string.Empty, false);
         }
 
-        private HeaderResult<RoutingKey> ReadTopic(Dictionary<string, string> headers)
+        private static HeaderResult<RoutingKey> ReadTopic(Dictionary<string, string> headers)
         {
             var topic = string.Empty;
             if (headers.TryGetValue(HeaderNames.TOPIC, out string? header))

@@ -22,45 +22,54 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
-namespace Paramore.Brighter.Transforms.Storage
+namespace Paramore.Brighter.Transforms.Storage;
+
+/// <summary>
+/// Provides storage for a message body that is too large to transmit over message-oriented middleware
+/// The stored value is the 'luggage' and the id of the item is the 'claim check'
+/// </summary>
+public interface IAmAStorageProvider
 {
     /// <summary>
-    /// Provides storage for a message body that is too large to transmit over message-oriented middleware
-    /// The stored value is the 'luggage' and the id of the item is the 'claim check'
+    /// The Tracer that we want to use to capture telemetry
+    /// We inject this so that we can use the same tracer as the calling application
+    /// You do not need to set this property as we will set it when setting up the Service Activator
     /// </summary>
-    public interface IAmAStorageProvider
-    {
-        /// <summary>
-        /// Delete the luggage identified by the claim check
-        /// Used to clean up after luggage is retrieved
-        /// </summary>
-        /// <param name="claimCheck">The claim check for the luggage</param>
-        void Delete(string claimCheck);
+    IAmABrighterTracer? Tracer { get; set; }
 
+    /// <summary>
+    /// Ensure that the store provider exists.
+    /// </summary>
+    void EnsureStoreExists();
 
-        /// <summary>
-        /// Downloads the luggage associated with the claim check
-        /// </summary>
-        /// <param name="claimCheck">The claim check for the luggage</param>
-        /// <returns>The luggage as a stream</returns>
-        Stream Retrieve(string claimCheck);
+    /// <summary>
+    /// Delete the luggage identified by the claim check
+    /// Used to clean up after luggage is retrieved
+    /// </summary>
+    /// <param name="claimCheck">The claim check for the luggage</param>
+    void Delete(string claimCheck);
 
-        /// <summary>
-        /// Do we have luggage for this claim check - in case of error or deletion
-        /// </summary>
-        /// <param name="claimCheck"></param>
-        bool HasClaim(string claimCheck);
+    /// <summary>
+    /// Downloads the luggage associated with the claim check
+    /// </summary>
+    /// <param name="claimCheck">The claim check for the luggage</param>
+    /// <returns>The luggage as a stream</returns>
+    Stream Retrieve(string claimCheck);
 
-        /// <summary>
-        /// Puts luggage into the store and provides a claim check for that luggage
-        /// </summary>
-        /// <param name="stream">A stream representing the luggage to check</param>
-        /// <returns>A claim check for the luggage stored</returns>
-        string Store(Stream stream);
-    }
+    /// <summary>
+    /// Do we have luggage for this claim check - in case of error or deletion
+    /// </summary>
+    /// <param name="claimCheck">The claim check for the luggage</param>
+    bool HasClaim(string claimCheck);
+
+    /// <summary>
+    /// Puts luggage into the store and provides a claim check for that luggage
+    /// </summary>
+    /// <param name="stream">A stream representing the luggage to check</param>
+    /// <returns>A claim check for the luggage stored</returns>
+    string Store(Stream stream);
 }

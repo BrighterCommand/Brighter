@@ -24,12 +24,9 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Core.Tests.CloudEvents.TestDoubles
-{
-    public class MyCommand : Command
-    {
-        public MyCommand() :base(Guid.NewGuid()) {}
+namespace Paramore.Brighter.Core.Tests.CloudEvents.TestDoubles;
 
-        public string Value { get; set; }
-    }
+public class MyCommand() : Command(Guid.NewGuid())
+{
+    public string Value { get; set; }
 }

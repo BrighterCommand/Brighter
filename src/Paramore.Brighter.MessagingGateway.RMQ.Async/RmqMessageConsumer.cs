@@ -331,9 +331,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -344,6 +344,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag);
             //if we have a DLQ, this will force over to the DLQ
             await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
+            return true;
         }
         catch (Exception exception)
         {

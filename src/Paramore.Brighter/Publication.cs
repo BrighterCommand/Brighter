@@ -105,5 +105,27 @@ namespace Paramore.Brighter
         /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
         /// </summary>
         public string Type { get; set; } = "goparamore.io.Paramore.Brighter.Message";
+        
+        /// <summary>
+        /// Gets or sets a dictionary of additional properties related to CloudEvents.
+        /// This property enables the inclusion of custom or vendor-specific metadata beyond the standard CloudEvents attributes.
+        /// These properties are serialized alongside the core CloudEvents attributes when mapping to a CloudEvent message.
+        /// </summary>
+        /// <value>
+        /// A dictionary where keys represent the names of the additional CloudEvents attributes and values are their corresponding data.
+        /// This can be <c>null</c> if no additional properties are provided.
+        /// </value>
+        /// <remarks>
+        /// Use this dictionary to attach any non-standard CloudEvents attributes pertinent to your specific application or integration requirements.
+        /// During serialization to a CloudEvent JSON structure, the key-value pairs within this dictionary are added as top-level properties in the resulting JSON.
+        /// This mechanism facilitates forward compatibility and allows for seamless extensibility in accordance with the CloudEvents specification and its extensions.
+        /// <para>
+        /// This property is utilized by the <see cref="Paramore.Brighter.MessageMappers.CloudEventJsonMessageMapper{T}"/> for mapping and by the <see cref="Paramore.Brighter.Transforms.Transformers.CloudEventsTransformer"/> for transforming messages into CloudEvents.
+        /// </para>
+        /// <para>
+        /// **Important:** If any key in this dictionary conflicts with the name of a standard CloudEvents JSON property (e.g., "id", "source", "type"), the serializer (<c>System.Text.Json</c>) will prioritize the value present in this <c>CloudEventsAdditionalProperties</c> dictionary, effectively overriding the standard property's value during serialization. Exercise caution to avoid unintended overwrites of core CloudEvents attributes.
+        /// </para>
+        /// </remarks> 
+        public IDictionary<string, object>? CloudEventsAdditionalProperties { get; set; }
     }
 }

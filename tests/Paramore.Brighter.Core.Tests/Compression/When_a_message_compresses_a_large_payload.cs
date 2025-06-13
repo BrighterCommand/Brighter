@@ -43,7 +43,7 @@ public class CompressLargePayloadTests
             compressedMessage.Header.ContentType);
         Assert.Equal(
             new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
-            compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
+            compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
         Assert.Equal(
             new ContentType(MediaTypeNames.Application.GZip), 
             compressedMessage.Body.ContentType);
@@ -65,14 +65,14 @@ public class CompressLargePayloadTests
 
         //mime types
         Assert.Equal(
-            new ContentType(CompressPayloadTransformerAsync.DEFLATE), 
+            new ContentType(CompressPayloadTransformer.DEFLATE), 
             compressedMessage.Header.ContentType
             );
         Assert.Equal(
             new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
-            compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
+            compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
         Assert.Equal(
-            new ContentType(CompressPayloadTransformerAsync.DEFLATE), 
+            new ContentType(CompressPayloadTransformer.DEFLATE), 
             compressedMessage.Body.ContentType);
     }
 
@@ -91,13 +91,13 @@ public class CompressLargePayloadTests
 
         //mime types
         Assert.Equal(
-            new ContentType(CompressPayloadTransformerAsync.BROTLI), 
+            new ContentType(CompressPayloadTransformer.BROTLI), 
             compressedMessage.Header.ContentType);
         Assert.Equal(
             new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}.ToString(), 
-            compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
+            compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
         Assert.Equal(
-            new ContentType(CompressPayloadTransformerAsync.BROTLI), 
+            new ContentType(CompressPayloadTransformer.BROTLI), 
             compressedMessage.Body.ContentType);
     }
 }

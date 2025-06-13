@@ -26,7 +26,7 @@ public class UncompressLargePayloadTests
 
         Stream compressionStream = new GZipStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformerAsync.GZIP;
+        string mimeType = CompressPayloadTransformer.GZIP;
         input.CopyToAsync(compressionStream);
         compressionStream.FlushAsync();
 
@@ -66,7 +66,7 @@ public class UncompressLargePayloadTests
 
         Stream compressionStream = new ZLibStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformerAsync.DEFLATE;
+        string mimeType = CompressPayloadTransformer.DEFLATE;
         input.CopyToAsync(compressionStream);
         compressionStream.FlushAsync();
 
@@ -121,7 +121,7 @@ public class UncompressLargePayloadTests
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
+        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
         //act
          var msg = transformer.Unwrap(message);

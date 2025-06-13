@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
@@ -113,7 +114,7 @@ public partial class SqsMessageSender
             [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
             [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
             [HeaderNames.ContentType] = new() { StringValue = contentType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRcf3339()), DataType = "String" }
+            [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRfc3339()), DataType = "String" }
         };
 
         if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
@@ -127,7 +128,7 @@ public partial class SqsMessageSender
 
         message.Header.Bag[HeaderNames.HandledCount] = message.Header.HandledCount.ToString(CultureInfo.InvariantCulture);
 
-        var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
+        var bagJson = System.Text.Json.JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };
         request.MessageAttributes = messageAttributes;
     }
@@ -143,7 +144,7 @@ public partial class SqsMessageSender
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
             [HeaderNames.Type] = message.Header.Type,
             [HeaderNames.Source] = message.Header.Source.ToString(),
-            [HeaderNames.Time] = message.Header.TimeStamp.ToRcf3339()
+            [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339()
         };
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
@@ -155,7 +156,7 @@ public partial class SqsMessageSender
         if (message.Header.DataRef != null)
             cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
 
-        var cloudEventHeadersJson = JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
+        var cloudEventHeadersJson = System.Text.Json.JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
         return cloudEventHeadersJson;
     }
 

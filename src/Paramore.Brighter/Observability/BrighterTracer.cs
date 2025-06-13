@@ -291,6 +291,46 @@ public class BrighterTracer : IAmABrighterTracer
         return activity;
     }
 
+    /// <inheritdoc />
+    public Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info)
+    {
+        var spanName = $"{info.Operation.ToSpanName()} {info.ProviderName} {info.BucketName}";
+
+        const ActivityKind kind = ActivityKind.Client;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection
+        {
+            [BrighterSemanticConventions.InstrumentationDomain] = BrighterSemanticConventions.ClaimCheckInstrumentationDomain,
+            [BrighterSemanticConventions.ClaimCheckOperation] = info.Operation.ToSpanName(),
+            [BrighterSemanticConventions.ClaimCheckProvider] = info.ProviderName,
+            [BrighterSemanticConventions.ClaimCheckBucketName] = info.BucketName,
+            [BrighterSemanticConventions.ClaimCheckId] = info.Id
+        };
+
+        if (info.ContentLenght.HasValue)
+        {
+            tags[BrighterSemanticConventions.ClaimCheckContentLenght] = info.ContentLenght;
+        }
+
+        if (info.Attributes != null)
+        {
+            foreach (var attribute in  info.Attributes)
+            {
+                tags.Add(attribute.Key, attribute.Value);
+            }
+        }
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            tags: tags,
+            startTime: now);
+
+        Activity.Current = activity;
+        return activity;
+    }
+
     /// <summary>
     /// Create a span for a batch of messages to be cleared  
     /// </summary>

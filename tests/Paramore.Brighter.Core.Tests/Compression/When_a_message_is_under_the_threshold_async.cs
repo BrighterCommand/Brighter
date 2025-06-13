@@ -10,14 +10,14 @@ namespace Paramore.Brighter.Core.Tests.Compression;
 
 public class AsyncSmallPayloadNotCompressedTests
 {
-    private readonly CompressPayloadTransformerAsync _transformer;
+    private readonly CompressPayloadTransformer _transformer;
     private readonly Message _message;
     private readonly RoutingKey _topic = new("test_topic");
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
 
     public AsyncSmallPayloadNotCompressedTests()
     {
-        _transformer = new CompressPayloadTransformerAsync();
+        _transformer = new CompressPayloadTransformer();
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
 
         string body = "small message";

@@ -26,182 +26,265 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
+using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 using System.Net.Mime;
 
-namespace Paramore.Brighter.Transforms.Transformers
+namespace Paramore.Brighter.Transforms.Transformers;
+
+public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTransformAsync
 {
-    public class CompressPayloadTransformer : IAmAMessageTransform
+    private CompressionMethod _compressionMethod = CompressionMethod.GZip;
+    private CompressionLevel _compressionLevel = CompressionLevel.Optimal;
+    private int _thresholdInBytes;
+    private const ushort GZIP_LEAD_BYTES = 0x8b1f;
+    private const byte ZLIB_LEAD_BYTE = 0x78;
+        
+    /// <summary>Compression method GZip</summary>
+    public const string GZIP = "application/gzip";
+    /// <summary> Compression method Deflate</summary>
+    public const string DEFLATE = "application/deflate";
+    /// <summary> Compression method Brotli</summary>
+    public const string BROTLI = "application/br";
+        
+    /// <summary> Original content type header name</summary>
+    public const string ORIGINAL_CONTENTTYPE_HEADER = "originalContentType";
+        
+    /// <summary>
+    /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+    /// </summary>
+    /// <value>The context.</value>
+    public IRequestContext? Context { get; set; }
+
+    /// <summary>
+    /// Dispose of this transform; a no-op
+    /// </summary>
+    public void Dispose() { }
+
+    /// <summary>
+    /// Initializes from the <see cref="TransformAttribute"/> wrap attribute parameters.
+    /// Used to pass the compression algorithm to the transformer and the size over which to compress
+    /// </summary>
+    /// <param name="initializerList"></param>
+    public void InitializeWrapFromAttributeParams(params object?[] initializerList)
     {
-        private CompressionMethod _compressionMethod = CompressionMethod.GZip;
-        private CompressionLevel _compressionLevel = CompressionLevel.Optimal;
-        private int _thresholdInBytes;
-        private const ushort GZIP_LEAD_BYTES = 0x8b1f;
-        private const byte ZLIB_LEAD_BYTE = 0x78;
-        
-        /// <summary>Compression method GZip</summary>
-        public const string GZIP = "application/gzip";
-        /// <summary> Compression method Deflate</summary>
-        public const string DEFLATE = "application/deflate";
-        /// <summary> Compression method Brotli</summary>
-        public const string BROTLI = "application/br";
-        
-        /// <summary> Original content type header name</summary>
-        public const string ORIGINAL_CONTENTTYPE_HEADER = "originalContentType";
-        
-        /// <summary>
-        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
-        /// </summary>
-        /// <value>The context.</value>
-        public IRequestContext? Context { get; set; }
+        _compressionMethod = (CompressionMethod)initializerList[0]!;
+        _compressionLevel = (CompressionLevel)initializerList[1]!;
+        _thresholdInBytes = (int)initializerList[2]! * 1024;
 
-        /// <summary>
-        /// Dispose of this transform; a no-op
-        /// </summary>
-        public void Dispose() { }
+    }
 
-        /// <summary>
-        /// Initializes from the <see cref="TransformAttribute"/> wrap attribute parameters.
-        /// Used to pass the compression algorithm to the transformer and the size over which to compress
-        /// </summary>
-        /// <param name="initializerList"></param>
-        public void InitializeWrapFromAttributeParams(params object?[] initializerList)
+    /// <summary>
+    /// Initializes from the <see cref="TransformAttribute"/> unwrap attribute parameters.
+    /// Used to pass the decompression algorithm to the transformer 
+    /// </summary>
+    /// <param name="initializerList"></param>
+    public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
+    {
+        _compressionMethod = (CompressionMethod)initializerList[0]!;
+    }
+
+    /// <summary>
+    /// Compress the message given the supplied compression algorithm
+    /// </summary>
+    /// <param name="message">The message to compress</param>
+    /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>A message with a compressed body</returns>
+    public async Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
+    {
+        var bytes = message.Body.Bytes;
+
+        if (bytes is null)
         {
-            _compressionMethod = (CompressionMethod)initializerList[0]!;
-            _compressionLevel = (CompressionLevel)initializerList[1]!;
-            _thresholdInBytes = (int)initializerList[2]! * 1024;
-
+            throw new ArgumentException("Cannot transform and empty body");
         }
-
-        /// <summary>
-        /// Initializes from the <see cref="TransformAttribute"/> unwrap attribute parameters.
-        /// Used to pass the decompression algorithm to the transformer 
-        /// </summary>
-        /// <param name="initializerList"></param>
-        public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
+            
+        //don't transform it too small
+        if (bytes.Length < _thresholdInBytes)
         {
-            _compressionMethod = (CompressionMethod)initializerList[0]!;
+            return message;
         }
-
-        /// <summary>
-        /// Compress the message given the supplied compression algorithm
-        /// </summary>
-        /// <param name="message">The message to compress</param>
-        /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>       
-        /// <returns>A message with a compressed body</returns>
-        public Message Wrap(Message message, Publication publication)
-        {
-            var bytes = message.Body.Bytes;
-
-            if (bytes is null) throw new ArgumentException("Cannot transform and empty body");
             
-            //don't transform it too small
-            if (bytes.Length < _thresholdInBytes) return message;
+        using var input = new MemoryStream(bytes);
+        using var output = new MemoryStream();
             
-            using var input = new MemoryStream(bytes);
-            using var output = new MemoryStream();
-            
-            (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
-            input.CopyTo(compressionStream);
+        (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
+#if NETSTANDARD
+            await input.CopyToAsync(compressionStream);
             compressionStream.Close();
+#else
+        await input.CopyToAsync(compressionStream, cancellationToken);
+        compressionStream.Close();
+#endif
 
-            var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
-            var contentType = new ContentType(mimeType);
-            message.Header.ContentType = contentType;
-            message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
-            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+        var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var contentType = new ContentType(mimeType);
+        message.Header.ContentType = contentType;
+        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
+        message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
 
+        return message;
+    }
+
+    /// <summary>
+    /// Decompress a message given the supplied compression algorithm
+    /// </summary>
+    /// <param name="message">The message to decompress</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>An uncompressed message</returns>
+    public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        if (!IsCompressed(message))
+        {
             return message;
         }
-
-        
-        /// <summary>
-        /// Decompress a message given the supplied compression algorithm
-        /// </summary>
-        /// <param name="message">The message to decompress</param>
-        /// <returns>An uncompressed message</returns>
-        public Message Unwrap(Message message)
-        {
-            if (!IsCompressed(message)) return message;
             
-            var bytes = message.Body.Bytes;
-            using var input = new MemoryStream(bytes);
-            using var output = new MemoryStream();
+        var bytes = message.Body.Bytes;
+        using var input = new MemoryStream(bytes);
+        using var output = new MemoryStream();
             
-            Stream deCompressionStream = CreateDecompressionStream(input);
-            deCompressionStream.CopyTo(output);
+        Stream deCompressionStream = CreateDecompressionStream(input);
+#if NETSTANDARD
+            await deCompressionStream.CopyToAsync(output);
             deCompressionStream.Close();
+#else
+            await deCompressionStream.CopyToAsync(output, cancellationToken);
+            deCompressionStream.Close();
+#endif
 
-            var originalContentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
-            var contentType = new ContentType(originalContentType);
-            message.Body = new MessageBody(output.ToArray(), contentType);
-            message.Header.ContentType = contentType;
+        var contentType = new ContentType((string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER]);
+        message.Body = new MessageBody(output.ToArray(), contentType);
+        message.Header.ContentType = contentType;
 
+        return message;
+    }
+
+    /// <summary>
+    /// Compress the message given the supplied compression algorithm
+    /// </summary>
+    /// <param name="message">The message to compress</param>
+    /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>       
+    /// <returns>A message with a compressed body</returns>
+    public Message Wrap(Message message, Publication publication)
+    {
+        var bytes = message.Body.Bytes;
+
+        if (bytes is null)
+        {
+            throw new ArgumentException("Cannot transform and empty body");
+        }
+            
+        //don't transform it too small
+        if (bytes.Length < _thresholdInBytes) return message;
+            
+        using var input = new MemoryStream(bytes);
+        using var output = new MemoryStream();
+            
+        (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
+        input.CopyTo(compressionStream);
+        compressionStream.Close();
+
+        var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var contentType = new ContentType(mimeType);
+        message.Header.ContentType = contentType;
+        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
+        message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+
+        return message;
+    }
+
+        
+    /// <summary>
+    /// Decompress a message given the supplied compression algorithm
+    /// </summary>
+    /// <param name="message">The message to decompress</param>
+    /// <returns>An uncompressed message</returns>
+    public Message Unwrap(Message message)
+    {
+        if (!IsCompressed(message))
+        {
             return message;
         }
+            
+        var bytes = message.Body.Bytes;
+        using var input = new MemoryStream(bytes);
+        using var output = new MemoryStream();
+            
+        Stream deCompressionStream = CreateDecompressionStream(input);
+        deCompressionStream.CopyTo(output);
+        deCompressionStream.Close();
+
+        var originalContentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
+        var contentType = new ContentType(originalContentType);
+        message.Body = new MessageBody(output.ToArray(), contentType);
+        message.Header.ContentType = contentType;
+
+        return message;
+    }
        
-        private (Stream , string) CreateCompressionStream(MemoryStream uncompressed)
+    private (Stream , string) CreateCompressionStream(MemoryStream uncompressed)
+    {
+        switch (_compressionMethod)
         {
-            switch (_compressionMethod)
-            {
-                case CompressionMethod.GZip:
-                    return (new GZipStream(uncompressed, _compressionLevel), GZIP);
+            case CompressionMethod.GZip:
+                return (new GZipStream(uncompressed, _compressionLevel), GZIP);
 #if NETSTANDARD2_0
                 case CompressionMethod.Zlib:
                     throw new ArgumentException("Zlib is not supported in nestandard20");
                 case CompressionMethod.Brotli:
                     throw new ArgumentException("Brotli is not supported in nestandard20");
 #else
-                case CompressionMethod.Zlib:
-                    return (new ZLibStream(uncompressed, _compressionLevel), DEFLATE);  
-                case CompressionMethod.Brotli:
-                    return (new BrotliStream(uncompressed, _compressionLevel), BROTLI);              
+            case CompressionMethod.Zlib:
+                return (new ZLibStream(uncompressed, _compressionLevel), DEFLATE);  
+            case CompressionMethod.Brotli:
+                return (new BrotliStream(uncompressed, _compressionLevel), BROTLI);              
 #endif
-                default:
-                    return (uncompressed, "application/json");
-            }
+            default:
+                return (uncompressed, "application/json");
+        }
+    }
+        
+    private Stream CreateDecompressionStream(MemoryStream compressed)
+    {
+        switch (_compressionMethod)
+        {
+            case CompressionMethod.GZip:
+                return new GZipStream(compressed, CompressionMode.Decompress);
+
+#if NETSTANDARD2_0
+                case CompressionMethod.Zlib:
+                    throw new ArgumentException("Zlib is not supported in nestandard20");
+                case CompressionMethod.Brotli:
+                    throw new ArgumentException("Brotli is not supported in nestandard20");
+#else
+            case CompressionMethod.Zlib:
+                return new ZLibStream(compressed, CompressionMode.Decompress); 
+            case CompressionMethod.Brotli:
+                return new BrotliStream(compressed, CompressionMode.Decompress);              
+#endif
+            default:
+                return compressed;
+        }
+    }
+
+    private bool IsCompressed(Message message)
+    {
+        if (message.Header.ContentType is null)
+        {
+            return false;
         }
         
-        private Stream CreateDecompressionStream(MemoryStream compressed)
+        return _compressionMethod switch
         {
-            switch (_compressionMethod)
-            {
-                case CompressionMethod.GZip:
-                    return new GZipStream(compressed, CompressionMode.Decompress);
-
-#if NETSTANDARD2_0
-                case CompressionMethod.Zlib:
-                    throw new ArgumentException("Zlib is not supported in nestandard20");
-                case CompressionMethod.Brotli:
-                    throw new ArgumentException("Brotli is not supported in nestandard20");
-#else
-                case CompressionMethod.Zlib:
-                    return new ZLibStream(compressed, CompressionMode.Decompress); 
-                case CompressionMethod.Brotli:
-                    return new BrotliStream(compressed, CompressionMode.Decompress);              
-#endif
-                default:
-                    return compressed;
-            }
-        }
-
-        private bool IsCompressed(Message message)
-        {
-            if (message.Header.ContentType is null)
-                return false;
-            
-            switch (_compressionMethod)
-            {
-                case CompressionMethod.GZip:
-                    return message.Header.ContentType.ToString() == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
-                case CompressionMethod.Zlib:
-                    return  message.Header.ContentType.ToString() == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
-                case CompressionMethod.Brotli:
-                    return message.Header.ContentType.ToString() == "application/br";
-                default:
-                    return false;
-                    
-            }
-        }
-
+            CompressionMethod.GZip => message.Header.ContentType.ToString() == "application/gzip" &&
+                                      message.Body.Bytes.Length >= 2 &&
+                                      BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES,
+            CompressionMethod.Zlib => message.Header.ContentType.ToString() == "application/deflate" &&
+                                      message.Body.Bytes[0] == ZLIB_LEAD_BYTE,
+            CompressionMethod.Brotli => message.Header.ContentType.ToString() == "application/br",
+            _ => false
+        };
     }
 }

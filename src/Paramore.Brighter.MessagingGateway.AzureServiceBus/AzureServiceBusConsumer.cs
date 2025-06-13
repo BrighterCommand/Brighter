@@ -232,14 +232,16 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
     /// <summary>
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="cancellationToken">Cancel the rejection</param>
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
     {
         try
         {
@@ -262,6 +264,8 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
             Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
             throw;
         }
+
+        return true;
     }
 
     /// <summary>

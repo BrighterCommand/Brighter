@@ -339,12 +339,12 @@ namespace Paramore.Brighter.ServiceActivator
             return context;
         }
 
-        private async Task RejectMessage(Message message)
+        private async Task<bool> RejectMessage(Message message)
         {
             Log.RejectingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
             IncrementUnacceptableMessageLimit();
 
-            await Channel.RejectAsync(message);
+            return await Channel.RejectAsync(message);
         }
 
         private async Task<bool> RequeueMessage(Message message)
@@ -361,8 +361,7 @@ namespace Paramore.Brighter.ServiceActivator
                             ? string.Empty
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
-                    await RejectMessage(message);
-                    return false;
+                    return await RejectMessage(message);
                 }
             }
 

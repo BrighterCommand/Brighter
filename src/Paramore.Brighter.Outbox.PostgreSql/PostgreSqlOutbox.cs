@@ -406,9 +406,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             Dictionary<string, object> dictionaryBag = GetContextBag(dr);
             if (dictionaryBag != null)
             {
-                foreach (var key in dictionaryBag.Keys)
+                foreach (var keyValue in dictionaryBag)
                 {
-                    header.Bag.Add(key, dictionaryBag[key]);
+                    header.Bag.Add(keyValue.Key, keyValue.Value);
                 }
             }
 
@@ -498,4 +498,3 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
     }
 }
-

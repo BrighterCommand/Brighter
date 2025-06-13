@@ -93,9 +93,9 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
             //deserialize the bag 
             var bag = ReadMessageBag();
-            foreach (var key in bag.Keys)
+            foreach (var keyValue in bag)
             {
-                message.Header.Bag.Add(key, bag[key]);
+                message.Header.Bag.Add(keyValue.Key, keyValue.Value);
             }
 
             if (deduplicationId.Success)
@@ -403,4 +403,3 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
     }
 }
-

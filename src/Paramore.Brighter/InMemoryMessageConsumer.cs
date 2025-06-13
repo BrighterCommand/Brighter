@@ -98,10 +98,8 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message)
-    {
-        _lockedMessages.TryRemove(message.Id, out _);
-    }
+    public bool Reject(Message message)
+        => _lockedMessages.TryRemove(message.Id, out _);
 
     /// <summary>
     /// Rejects the specified message.
@@ -109,9 +107,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="cancellationToken">Cancel the rejection</param>
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
-        await Task.Run(() => Reject(message), cancellationToken);
+        return await Task.Run(() => Reject(message), cancellationToken);
     }
 
     /// <summary>

@@ -19,7 +19,7 @@ public class AsyncUncompressLargePayloadTests
     public async Task When_decompressing_a_large_gzip_payload_in_a_message()
     {
         //arrange
-        var transformer = new CompressPayloadTransformerAsync();
+        var transformer = new CompressPayloadTransformer();
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.GZip);
         
         var largeContent = DataGenerator.CreateString(6000);
@@ -29,7 +29,7 @@ public class AsyncUncompressLargePayloadTests
 
         Stream compressionStream = new GZipStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformerAsync.GZIP;
+        string mimeType = CompressPayloadTransformer.GZIP;
         await input.CopyToAsync(compressionStream);
         await compressionStream.FlushAsync();
 
@@ -42,7 +42,7 @@ public class AsyncUncompressLargePayloadTests
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
+        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
         //act
         var msg = await transformer.UnwrapAsync(message);
@@ -58,7 +58,7 @@ public class AsyncUncompressLargePayloadTests
     public async Task When_decompressing_a_large_zlib_payload_in_a_message()
     {
         //arrange
-        var transformer = new CompressPayloadTransformerAsync();
+        var transformer = new CompressPayloadTransformer();
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Zlib);
         
         var largeContent = DataGenerator.CreateString(6000);
@@ -68,7 +68,7 @@ public class AsyncUncompressLargePayloadTests
 
         Stream compressionStream = new ZLibStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformerAsync.DEFLATE;
+        string mimeType = CompressPayloadTransformer.DEFLATE;
         await input.CopyToAsync(compressionStream);
         await compressionStream.FlushAsync();
 
@@ -81,7 +81,7 @@ public class AsyncUncompressLargePayloadTests
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
+        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
          //act
         var msg = await transformer.UnwrapAsync(message);
@@ -97,7 +97,7 @@ public class AsyncUncompressLargePayloadTests
     public async Task When_decompressing_a_large_brotli_payload_in_a_message()
     {
         //arrange
-        var transformer = new CompressPayloadTransformerAsync();
+        var transformer = new CompressPayloadTransformer();
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Brotli);
         
         var largeContent = DataGenerator.CreateString(6000);
@@ -107,7 +107,7 @@ public class AsyncUncompressLargePayloadTests
 
         Stream compressionStream = new BrotliStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformerAsync.BROTLI;
+        string mimeType = CompressPayloadTransformer.BROTLI;
         await input.CopyToAsync(compressionStream);
         await compressionStream.FlushAsync();
 
@@ -120,7 +120,7 @@ public class AsyncUncompressLargePayloadTests
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
+        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
         //act
          var msg = await transformer.UnwrapAsync(message);

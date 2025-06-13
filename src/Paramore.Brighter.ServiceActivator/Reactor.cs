@@ -308,12 +308,12 @@ namespace Paramore.Brighter.ServiceActivator
             return context;
         }
 
-        private void RejectMessage(Message message)
+        private bool RejectMessage(Message message)
         {
             Log.RejectingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
             IncrementUnacceptableMessageLimit();
 
-            Channel.Reject(message);
+            return Channel.Reject(message);
         }
 
         private bool RequeueMessage(Message message)
@@ -330,8 +330,7 @@ namespace Paramore.Brighter.ServiceActivator
                             ? string.Empty
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
-                    RejectMessage(message);
-                    return false;
+                    return RejectMessage(message);
                 }
             }
 
