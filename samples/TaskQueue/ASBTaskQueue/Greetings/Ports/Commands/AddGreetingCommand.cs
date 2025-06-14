@@ -3,6 +3,8 @@ using Paramore.Brighter;
 
 namespace Greetings.Ports.Commands
 {
+    // This attribute is not required, it's just a demonstration
+    [PublicationTopic("greeting.addGreetingCommand")]
     public class AddGreetingCommand : Command
     {
         public AddGreetingCommand() : base(Guid.NewGuid()) { }

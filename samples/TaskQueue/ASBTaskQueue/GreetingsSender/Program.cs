@@ -22,24 +22,20 @@ namespace GreetingsSender
 
             var producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 asbClientProvider,
-                new AzureServiceBusPublication[] 
-                {
+                [
                     new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.event"),
-                        RequestType = typeof(GreetingEvent)
                     },
                     new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.addGreetingCommand"),
-                        RequestType = typeof(AddGreetingCommand)
                     },
                     new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.Asyncevent"),
-                        RequestType = typeof(GreetingAsyncEvent)
                     }
-                }
+                ]
             ).Create();
             
             serviceCollection.AddBrighter()

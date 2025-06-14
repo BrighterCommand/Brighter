@@ -96,23 +96,14 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
         /// <exception cref="ConfigurationException">Thrown if we have too many publications or none at all</exception>
-        public Publication LookupPublication<TRequest>() where TRequest : class, IRequest
+        public Publication? LookupPublication<TRequest>() where TRequest : class, IRequest
         {
-            var publications = from producer in messageProducers
-            where producer.Value.Publication.RequestType == typeof(TRequest)
-                select producer.Value.Publication;
+            var publications = messageProducers?.Values
+                .Where(producer => producer.Publication.RequestType == typeof(TRequest))
+                .Select(producer => producer.Publication)
+                .ToArray() ?? [];
 
-            var publicationsArray = publications as Publication[] ?? publications.ToArray();
-            
-            if (publicationsArray.Count() > 1)
-                throw new ConfigurationException("Only one producer per request type is supported. Have you added the request type to multiple Publications?");
-            
-            var publication = publicationsArray.FirstOrDefault();
-            
-            if (publication is null)
-                throw new ConfigurationException("No producer found for request type. Have you set the request type on the Publication?");
-
-            return publication;
+            return publications.Length == 1 ? publications[0] : null;
         }
     }
 }

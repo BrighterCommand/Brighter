@@ -80,6 +80,7 @@ public class AsyncCommandProcessorDepositObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox,
             maxOutStandingMessages: -1
         );
