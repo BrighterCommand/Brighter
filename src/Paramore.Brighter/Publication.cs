@@ -36,17 +36,6 @@ namespace Paramore.Brighter
     public class Publication
     {
         /// <summary>
-        /// OPTIONAL [Cloud Events] REQUIRED [Brighter]
-        /// Content type of data value. This attribute enables data to carry any type of content, whereby format and
-        /// encoding might differ from that of the chosen event format.
-        /// MUST adhere to the format specified in <see href="https://datatracker.ietf.org/doc/html/rfc2046">RFC 2046</see>
-        /// Because of the complexity of serializing if you do not know the type, we regard this as required even
-        /// though Cloud Events does not.
-        /// Default value is text/plain
-        /// </summary>
-        public ContentType ContentType { get; set; } = new(MediaTypeNames.Text.Plain);
-        
-        /// <summary>
         /// OPTIONAL
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
         /// Identifies the schema that data adheres to. Incompatible changes to the schema SHOULD be reflected by a different URI. 

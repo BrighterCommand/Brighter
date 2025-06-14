@@ -47,24 +47,20 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
             throw new ArgumentException($"No Topic Defined for {publication}");
         }
 
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType("application/cloudevents+json"));
-        var contentType = publication.ContentType;
-        var contentTypeString = contentType?.ToString() ?? string.Empty;
-        if (!contentTypeString.StartsWith("application") || !contentTypeString.Contains("json"))
-        {
+        var headerContentType = new ContentType("application/cloudevents+json");
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: headerContentType);
 #if NETSTANDARD2_0
-        contentType = new ContentType("application/json");   
+        var bodyContentType = new ContentType("application/json");   
  #else           
-        contentType = new ContentType(MediaTypeNames.Application.Json);
+        var bodyContentType = new ContentType(MediaTypeNames.Application.Json);
 #endif            
-        }
         
         var body = new MessageBody(JsonSerializer.Serialize(new CloudEventMessage
         {
             Id = request.Id,
             Source = publication.Source,
             Type = publication.Type,
-            DataContentType = contentType!.ToString(),
+            DataContentType = bodyContentType!.ToString(),
             Subject = publication.Subject,
             DataSchema = publication.DataSchema,
             AdditionalProperties = publication.CloudEventsAdditionalProperties,

@@ -21,8 +21,9 @@ public class CloudEventsTransformerTests
     public CloudEventsTransformerTests()
     {
         _message = new(
-            new MessageHeader(Id.Random, new RoutingKey("Test Topic"), MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Text.Plain) ),
-            new MessageBody("test content"));
+            new MessageHeader(Id.Random, new RoutingKey("Test Topic"), MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Text.Plain), 
+                source: _source, subject: _subject, type: _type, dataSchema: _dataSchema), new MessageBody("test content")
+            );
     }
 
     [Fact]
@@ -30,13 +31,19 @@ public class CloudEventsTransformerTests
     {
         //act
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
-        var cloudEvents = _transformer.Wrap(_message, new Publication());
+        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
+        var cloudEvents = _transformer.Wrap(_message, new Publication
+        {
+            DataSchema = _dataSchema,
+            Source = _source,
+            Type = _type,
+            Subject = _subject
+        });
         
         //assert
         Assert.Equal(_source, cloudEvents.Header.Source);
         Assert.Equal(_type, cloudEvents.Header.Type);
-        Assert.Equal(_dataContentType, cloudEvents.Header.ContentType!);
+        Assert.Equal(_message.Header.ContentType, cloudEvents.Header.ContentType!);
         Assert.Equal(_dataSchema, cloudEvents.Header.DataSchema);
         Assert.Equal(_subject, cloudEvents.Header.Subject);
         Assert.Equal(body.Bytes, cloudEvents.Body.Bytes);
@@ -47,8 +54,14 @@ public class CloudEventsTransformerTests
     {
         //act
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
-        var cloudEvents = _transformer.Wrap(_message, new Publication());
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        var cloudEvents = _transformer.Wrap(_message, new Publication
+        {
+            DataSchema = _dataSchema,
+            Source = _source,
+            Type = _type,
+            Subject = _subject
+        });
         
         //assert
         Assert.Equal(_source, cloudEvents.Header.Source);
@@ -58,14 +71,14 @@ public class CloudEventsTransformerTests
         Assert.Equal(_subject, cloudEvents.Header.Subject);
         Assert.NotEqual(body.Bytes, cloudEvents.Body.Bytes);
 
-        var json = JsonSerializer.Deserialize<CloudEventsTransformer.CloudEventMessage>(cloudEvents.Body.Bytes);
+        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes);
         Assert.NotNull(json);
         Assert.Equal(_source, json.Source);
         Assert.Equal(_type, json.Type);
-        Assert.Equal(_dataContentType.ToString(), json.DataContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Text.Plain).MediaType, json.DataContentType);
         Assert.Equal(_dataSchema, json.DataSchema);
         Assert.Equal(_subject, json.Subject);
-        Assert.True(JsonElement.DeepEquals(json.Data.GetValueOrDefault(), JsonSerializer.Deserialize<JsonElement>(body.Bytes)));
+        Assert.Equal(body.Value, json.Data?.GetString());
     }
     
     [Fact]
@@ -77,8 +90,14 @@ public class CloudEventsTransformerTests
             new MessageBody([]) );
         
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
-        var cloudEvents = _transformer.Wrap(_message, new Publication());
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null,  _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        var cloudEvents = _transformer.Wrap(_message, new Publication
+        {
+            DataSchema = _dataSchema,
+            Source = _source,
+            Type = _type,
+            Subject = _subject
+        });
         
         //assert
         Assert.Equal(_source, cloudEvents.Header.Source);
@@ -88,11 +107,11 @@ public class CloudEventsTransformerTests
         Assert.Equal(_subject, cloudEvents.Header.Subject);
         Assert.NotEqual(body.Bytes, cloudEvents.Body.Bytes);
 
-        var json = JsonSerializer.Deserialize<CloudEventsTransformer.CloudEventMessage>(cloudEvents.Body.Bytes);
+        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes);
         Assert.NotNull(json);
         Assert.Equal(_source, json.Source);
         Assert.Equal(_type, json.Type);
-        Assert.Equal(_dataContentType.ToString(), json.DataContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json).MediaType, json.DataContentType);
         Assert.Equal(_dataSchema, json.DataSchema);
         Assert.Equal(_subject, json.Subject);
         Assert.Null(json.Data);
@@ -107,13 +126,19 @@ public class CloudEventsTransformerTests
             new MessageBody("teste"));
         
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
-        var cloudEvents = _transformer.Wrap(_message, new Publication());
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        var cloudEvents = _transformer.Wrap(_message, new Publication
+        {
+            DataSchema = _dataSchema,
+            Source = _source,
+            Type = _type,
+            Subject = _subject
+        });
         
         //assert
         Assert.Equal(_source, cloudEvents.Header.Source);
         Assert.Equal(_type, cloudEvents.Header.Type);
-        Assert.Equal(new ContentType("application/json"), cloudEvents.Header.ContentType);
+        Assert.Equal(_message.Header.ContentType, cloudEvents.Header.ContentType);
         Assert.Equal(_dataSchema, cloudEvents.Header.DataSchema);
         Assert.Equal(_subject, cloudEvents.Header.Subject);
         Assert.Equal(body.Bytes, cloudEvents.Body.Bytes);
@@ -127,7 +152,6 @@ public class CloudEventsTransformerTests
         {
             Source = _source,
             Type = _type,
-            ContentType = _dataContentType,
             DataSchema = _dataSchema,
             Subject = _subject
         });
@@ -135,7 +159,6 @@ public class CloudEventsTransformerTests
         //assert
         Assert.Equal(_source, cloudEvents.Header.Source);
         Assert.Equal(_type, cloudEvents.Header.Type);
-        Assert.Equal(_dataContentType, cloudEvents.Header.ContentType!);
         Assert.Equal(_dataSchema.AbsoluteUri, cloudEvents.Header.DataSchema!.AbsoluteUri);
         Assert.Equal(_subject, cloudEvents.Header.Subject);
 
@@ -145,12 +168,10 @@ public class CloudEventsTransformerTests
     public void When_a_message_uses_cloud_events_and_a_publication_and_format_as_binary()
     {
         //arrange
-        
         var publication = new Publication
         {
             Source = _source,
             Type = _type,
-            ContentType = _dataContentType,
             DataSchema = _dataSchema,
             Subject = _subject
         };
@@ -159,19 +180,18 @@ public class CloudEventsTransformerTests
         const string source = "http://goparamore.io/OverrideSource";
         const string type = "goparamore.io/OverrideType";
         //Should use a string, as we want to pass these as constants in the attribute
-        string dataContentType = MediaTypeNames.Application.Xml;
         string dataSchema = "http://goparamore.io/CloudEventsTransformerOverride/schema";
         const string subject = "CloudEventsTransformerAlternative"; 
 
         //act
-        _transformer.InitializeWrapFromAttributeParams(source, type, null, dataContentType, dataSchema, subject, CloudEventFormat.Binary);
+        _transformer.InitializeWrapFromAttributeParams(source, type, null,  dataSchema, subject, CloudEventFormat.Binary);
 
         var cloudEvents = _transformer.Wrap(_message, publication);
         
         //assert
         Assert.Equal(source, cloudEvents.Header.Source.ToString());
         Assert.Equal(type, cloudEvents.Header.Type);
-        Assert.Equal(dataContentType, cloudEvents.Header.ContentType!.ToString());
+        Assert.Equal(_message.Header.ContentType, cloudEvents.Header.ContentType);
         Assert.Equal(dataSchema, cloudEvents.Header.DataSchema!.AbsoluteUri);
         Assert.Equal(subject, cloudEvents.Header.Subject);
 
@@ -187,7 +207,6 @@ public class CloudEventsTransformerTests
         {
             Source = _source,
             Type = _type,
-            ContentType = _dataContentType,
             DataSchema = _dataSchema,
             Subject = _subject
         };
@@ -195,14 +214,14 @@ public class CloudEventsTransformerTests
         //These attributes override the publication values above
         const string source = "http://goparamore.io/OverrideSource";
         const string type = "goparamore.io/OverrideType";
-        const string dataContentType = "application/json";
+        const string dataContentType = MediaTypeNames.Text.Plain;
         var cloudEventDataContentType = new ContentType("application/cloudevents+json");
         const string dataSchema = "http://goparamore.io/CloudEventsTransformerOverride/schema";
         const string subject = "CloudEventsTransformerAlternative"; 
         var body = _message.Body;
 
         //act
-        _transformer.InitializeWrapFromAttributeParams(source, type, null, dataContentType, dataSchema, subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(source, type, null,  dataSchema, subject, CloudEventFormat.Json);
 
         var cloudEvents = _transformer.Wrap(_message, publication);
         
@@ -214,14 +233,14 @@ public class CloudEventsTransformerTests
         Assert.Equal(subject, cloudEvents.Header.Subject);
         Assert.NotEqual(body.Bytes, cloudEvents.Body.Bytes);
         
-        var json = JsonSerializer.Deserialize<CloudEventsTransformer.CloudEventMessage>(cloudEvents.Body.Bytes);
+        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes);
         Assert.NotNull(json);
         Assert.Equal(source, json.Source.ToString());
         Assert.Equal(type, json.Type);
         Assert.Equal(dataContentType, json.DataContentType);
         Assert.Equal(dataSchema, json.DataSchema!.ToString());
         Assert.Equal(subject, json.Subject);
-        Assert.True(JsonElement.DeepEquals(json.Data.GetValueOrDefault(), JsonSerializer.Deserialize<JsonElement>(body.Bytes)));
+        Assert.Equal(body.Value, json.Data?.GetString());
     }
     
     [Fact]
@@ -250,7 +269,7 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_binary_format()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null,  _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
        
         // act
         var message = _transformer.Unwrap(_message);
@@ -272,7 +291,7 @@ public class CloudEventsTransformerTests
             //no cloud events properties set
         };
         
-       _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
+       _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
        var cloudEvents = _transformer.Wrap(_message, publication);
        
        // act
@@ -280,7 +299,6 @@ public class CloudEventsTransformerTests
        
        Assert.Equal(_source, message.Header.Source);
        Assert.Equal(_type, message.Header.Type);
-       Assert.Equal(_dataContentType, message.Header.ContentType);
        Assert.Equal(_dataSchema, message.Header.DataSchema);
        Assert.Equal(_subject, message.Header.Subject);
        Assert.Equal(_message.Body.Bytes, message.Body.Bytes);
@@ -290,7 +308,7 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_json_format_and_provided_message_is_not_json()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null,  _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND), 
             new MessageBody("teste"));
@@ -310,7 +328,7 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_json_format_and_provided_message_is_not_cloud_event_json()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
        
         // act
         var message = _transformer.Unwrap(_message);
@@ -327,12 +345,18 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_json_format_and_provided_message_has_no_body()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null,  _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND), 
             new MessageBody([]) );
         
-        var cloudEventsMessage = _transformer.Wrap(_message, new Publication());
+        var cloudEventsMessage = _transformer.Wrap(_message, new Publication
+        {
+            DataSchema = _dataSchema,
+            Source = _source,
+            Type = _type,
+            Subject = _subject
+        });
        
         // act
         var unwrap = _transformer.Unwrap(cloudEventsMessage);
@@ -349,7 +373,7 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_json_format()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataContentType, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         var body = _message.Body;
         var cloudEventsMessage = _transformer.Wrap(_message, new Publication
         {
@@ -364,10 +388,10 @@ public class CloudEventsTransformerTests
        
         Assert.Equal(_message.Header.Source, unwrap.Header.Source);
         Assert.Equal(_message.Header.Type, unwrap.Header.Type);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), unwrap.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Text.Plain), unwrap.Header.ContentType);
         Assert.Equal(_message.Header.DataSchema, unwrap.Header.DataSchema);
         Assert.Equal(_message.Header.Subject, unwrap.Header.Subject);
-        Assert.True(JsonElement.DeepEquals(JsonSerializer.Deserialize<JsonElement>(unwrap.Body.Bytes), JsonSerializer.Deserialize<JsonElement>(body.Bytes)));
+        Assert.Equal(body.Bytes, unwrap.Body.Bytes);
         Assert.Single(unwrap.Header.Bag);
         Assert.Equal("test-header", unwrap.Header.Bag["test"]);
     }
