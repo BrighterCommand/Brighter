@@ -219,7 +219,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         {
             JsonElement? data = null;
             string? dataBase64 = null;
-            var contentType = message.Header.ContentType?.MediaType?.ToLowerInvariant() ?? string.Empty;
+            var contentType = message.Header.ContentType?.ToString()?? string.Empty;
             if (message.Body.Value.Length > 0)
             {
                 if (contentType.Contains("application/json") || contentType.Contains("text/json"))

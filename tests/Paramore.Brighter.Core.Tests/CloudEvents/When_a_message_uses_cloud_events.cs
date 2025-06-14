@@ -3,6 +3,7 @@ using System.Net.Mime;
 using System.Collections.Generic;
 using System.Text.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -111,7 +112,7 @@ public class CloudEventsTransformerTests
         Assert.NotNull(json);
         Assert.Equal(_source, json.Source);
         Assert.Equal(_type, json.Type);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json).MediaType, json.DataContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}.ToString(), json.DataContentType);
         Assert.Equal(_dataSchema, json.DataSchema);
         Assert.Equal(_subject, json.Subject);
         Assert.Null(json.Data);
@@ -363,7 +364,7 @@ public class CloudEventsTransformerTests
        
         Assert.Equal(_message.Header.Source, unwrap.Header.Source);
         Assert.Equal(_message.Header.Type, unwrap.Header.Type);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), unwrap.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, unwrap.Header.ContentType);
         Assert.Equal(_message.Header.DataSchema, unwrap.Header.DataSchema);
         Assert.Equal(_message.Header.Subject, unwrap.Header.Subject);
         Assert.Equal([], unwrap.Body.Bytes);

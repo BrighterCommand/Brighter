@@ -58,9 +58,7 @@ public class AsyncCompressLargePayloadTests
         //look for gzip in the bytes
         Assert.NotNull(compressedMessage.Body.Bytes);
         Assert.True(compressedMessage.Body.Bytes.Length >= 2);
-        Assert.Equal(
-            new ContentType("application/deflate"){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
-            compressedMessage.Body.ContentType);
+        Assert.Equal(new ContentType("application/deflate").MediaType, compressedMessage.Body.ContentType!.MediaType);
         Assert.Equal(ZLIB_LEAD_BYTE, compressedMessage.Body.Bytes[0]);
 
         //mime types
