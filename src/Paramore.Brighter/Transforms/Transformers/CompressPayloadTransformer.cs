@@ -29,6 +29,8 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
+using System.Net.Mime;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Transforms.Transformers;
 
@@ -118,9 +120,12 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         compressionStream.Close();
 #endif
 
-        message.Header.ContentType = mimeType;
-        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, message.Body.ContentType);
-        message.Body = new MessageBody(output.ToArray(), mimeType, CharacterEncoding.Raw);
+        var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
+        var contentType = new ContentType(mimeType);
+        contentType.CharSet = message.Header.ContentType?.CharSet ?? CharacterEncoding.UTF8.FromCharacterEncoding();
+        message.Header.ContentType = contentType;
+        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
+        message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
 
         return message;
     }
@@ -151,7 +156,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
             deCompressionStream.Close();
 #endif
 
-        string contentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
+        var contentType = new ContentType((string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER]);
         message.Body = new MessageBody(output.ToArray(), contentType);
         message.Header.ContentType = contentType;
 
@@ -183,9 +188,11 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         input.CopyTo(compressionStream);
         compressionStream.Close();
 
-        message.Header.ContentType = mimeType;
-        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, message.Body.ContentType);
-        message.Body = new MessageBody(output.ToArray(), mimeType, CharacterEncoding.Raw);
+        var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var contentType = new ContentType(mimeType);
+        message.Header.ContentType = contentType;
+        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
+        message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
 
         return message;
     }
@@ -211,7 +218,8 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         deCompressionStream.CopyTo(output);
         deCompressionStream.Close();
 
-        string contentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
+        var originalContentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
+        var contentType = new ContentType(originalContentType);
         message.Body = new MessageBody(output.ToArray(), contentType);
         message.Header.ContentType = contentType;
 
@@ -265,14 +273,19 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
 
     private bool IsCompressed(Message message)
     {
+        if (message.Header.ContentType is null)
+        {
+            return false;
+        }
+        
         return _compressionMethod switch
         {
-            CompressionMethod.GZip => message.Header.ContentType == "application/gzip" &&
+            CompressionMethod.GZip => message.Header.ContentType.ToString() == "application/gzip" &&
                                       message.Body.Bytes.Length >= 2 &&
                                       BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES,
-            CompressionMethod.Zlib => message.Header.ContentType == "application/deflate" &&
+            CompressionMethod.Zlib => message.Header.ContentType.ToString() == "application/deflate" &&
                                       message.Body.Bytes[0] == ZLIB_LEAD_BYTE,
-            CompressionMethod.Brotli => message.Header.ContentType == "application/br",
+            CompressionMethod.Brotli => message.Header.ContentType.ToString() == "application/br",
             _ => false
         };
     }

@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             // Should serialize the connection name to the message body
             Assert.Contains("\"subscriptionName\":\"getallthethings\"", _message.Body.Value);
             // Should serialize the message id to the message body
-            Assert.Contains($"\"id\":\"{_command.Id}\"", _message.Body.Value);
+            Assert.Contains($"\"id\":\"{_command.Id.Value}\"", _message.Body.Value);
 
         }
     }

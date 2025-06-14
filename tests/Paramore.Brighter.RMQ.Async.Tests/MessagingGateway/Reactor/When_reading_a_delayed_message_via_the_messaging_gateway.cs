@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net.Mime;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -43,7 +44,7 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
             
         var header = new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND);
         header.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
-        _message = new Message(header, new MessageBody("test3 content", "plain/text"));
+        _message = new Message(header, new MessageBody("test3 content", new ContentType(MediaTypeNames.Text.Plain)));
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -29,9 +31,9 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
     public SnsReDrivePolicySDlqTests()
     {
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var correlationId = Guid.NewGuid().ToString();
+        var correlationId = Id.Random;
         var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";

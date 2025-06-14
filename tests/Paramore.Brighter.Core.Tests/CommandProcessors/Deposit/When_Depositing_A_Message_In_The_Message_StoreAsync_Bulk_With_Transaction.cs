@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -32,15 +33,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer commandProducer = new(_bus, timeProvider);
-            commandProducer.Publication = new Publication 
+            InMemoryMessageProducer commandMessageProducer = new(_bus, timeProvider);
+            commandMessageProducer.Publication = new Publication 
             { 
                 Topic = new RoutingKey(_commandTopic), 
                 RequestType = typeof(MyCommand) 
             };
 
-            InMemoryProducer eventProducer = new(_bus, timeProvider);
-            eventProducer.Publication = new Publication 
+            InMemoryMessageProducer eventMessageProducer = new(_bus, timeProvider);
+            eventMessageProducer.Publication = new Publication 
             { 
                 Topic = new RoutingKey(_eventTopic), 
                 RequestType = typeof(MyEvent) 
@@ -82,8 +83,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { _commandTopic, commandProducer },
-                { _eventTopic, eventProducer}
+                { _commandTopic, commandMessageProducer },
+                { _eventTopic, eventMessageProducer}
             });
 
             var policyRegistry = new PolicyRegistry

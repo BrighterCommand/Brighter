@@ -26,8 +26,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
@@ -96,7 +98,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteContentType(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.CONTENT_TYPE, messageHeader.ContentType ?? "text/plain");
+            var contentType = messageHeader.ContentType is not null ? messageHeader.ContentType.ToString() : MediaTypeNames.Text.Plain;
+            headers.Add(HeaderNames.CONTENT_TYPE, contentType);
         }
 
         private void WriteCorrelationId(MessageHeader messageHeader, Dictionary<string, string> headers)

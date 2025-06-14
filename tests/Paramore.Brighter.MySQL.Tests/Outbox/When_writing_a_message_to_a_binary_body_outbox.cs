@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mime;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -35,7 +36,7 @@ namespace Paramore.Brighter.MySQL.Tests
                 delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyTo"),
-                contentType: "application/octet-stream",
+                contentType: new ContentType(MediaTypeNames.Application.Octet),
                 partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.MySQL.Tests
 
             _messageEarliest = new Message(
                 messageHeader, 
-                new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, "application/octet-stream", CharacterEncoding.Raw )
+                new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw )
                 );
             _mySqlOutbox.Add(_messageEarliest, new RequestContext());
         }

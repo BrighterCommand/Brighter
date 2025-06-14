@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mime;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
                 delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyAddress"),
-                contentType: "application/octet-stream",
+                contentType: new ContentType(MediaTypeNames.Application.Octet), 
                 partitionKey: "123456789");
             _messageHeader.Bag.Add(_key1, _value1);
             _messageHeader.Bag.Add(_key2, _value2);
@@ -51,7 +52,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         public void When_Writing_A_Message_To_The_MSSQL_Outbox()
         {
             _message = new Message(_messageHeader,
-                new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, "application/octet-stream", CharacterEncoding.Raw));
+                new MessageBody([1, 2, 3, 4, 5], new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw));
             _sqlOutbox.Add(_message, new RequestContext());
 
             AssertMessage();
@@ -60,7 +61,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public void When_Writing_A_Message_With_a_Null_To_The_MSSQL_Outbox()
         {
-            _message = new Message(_messageHeader, new MessageBody((byte[])null));
+            _message = new Message(_messageHeader, new MessageBody((byte[])null!, new ContentType(MediaTypeNames.Application.Octet)));
             _sqlOutbox.Add(_message, new RequestContext());
 
             AssertMessage();

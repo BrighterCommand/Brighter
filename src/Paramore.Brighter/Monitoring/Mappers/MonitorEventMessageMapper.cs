@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Monitoring.Events;
 
 namespace Paramore.Brighter.Monitoring.Mappers

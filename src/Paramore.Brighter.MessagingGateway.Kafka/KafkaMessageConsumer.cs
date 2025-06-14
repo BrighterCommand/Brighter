@@ -91,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
             RoutingKey routingKey,
-            string groupId,
+            string? groupId,
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
             TimeSpan? sessionTimeout = null,
             TimeSpan? maxPollInterval = null,
@@ -123,7 +123,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             Topic = routingKey;
 
-            _clientConfig = new ClientConfig
+            ClientConfig = new ClientConfig
             {
                 BootstrapServers = string.Join(",", configuration.BootStrapServers), 
                 ClientId = configuration.Name,
@@ -360,7 +360,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 try
                 {
                     Purge();
-                    tcs.SetResult(null);
+                    tcs.SetResult(new object());
                 }
                 catch (Exception e)
                 {
@@ -418,13 +418,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (ConsumeException consumeException)
             {
-                Log.ErrorListeningToTopic(s_logger, consumeException, Topic, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
+                Log.ErrorListeningToTopic(s_logger, consumeException, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", consumeException);
 
             }
             catch (KafkaException kafkaException)
             {
-                Log.ErrorListeningToTopic(s_logger, kafkaException, Topic, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
+                Log.ErrorListeningToTopic(s_logger, kafkaException, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new consumer
                     throw;
                 
@@ -432,7 +432,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (Exception exception)
             {
-                Log.ErrorListeningToTopic(s_logger, exception, Topic, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
+                Log.ErrorListeningToTopic(s_logger, exception, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 throw;
             }
         }
@@ -586,7 +586,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     bool hasOffsets = _offsetStorage.TryTake(out var offset);
                     if (hasOffsets)
-                        listOffsets.Add(offset);
+                        listOffsets.Add(offset!);
                     else
                         break;
 
@@ -666,7 +666,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     bool hasOffsets = _offsetStorage.TryTake(out var offset);
                     if (hasOffsets)
-                        listOffsets.Add(offset);
+                        listOffsets.Add(offset!);
                     else
                         break;
 
@@ -729,7 +729,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 
                 //This is expensive, so use a background thread
                 Task.Factory.StartNew(
-                    action: state => CommitAllOffsets((DateTime)state),
+                    action: state => CommitAllOffsets(state is not null ? (DateTime) state : DateTime.UtcNow),
                     state: now,
                     cancellationToken: CancellationToken.None,
                     creationOptions: TaskCreationOptions.DenyChildAttach,

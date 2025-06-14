@@ -225,17 +225,17 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                //discard message 
             }
             
-            public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
+            public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
             {
                 //ignore
             }
 
-            public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+            public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
             {
                  return new Message(){Header = new MessageHeader("",new RoutingKey(""), MessageType.MT_NONE)};
             }
 
-            public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
+            public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
             {
                 //ignore
             }
@@ -249,7 +249,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 Dictionary<string, object>? args = null
             )
             {
-                return Array.Empty<Message>();
+                return [];
             }
 
             public IEnumerable<Message> OutstandingMessages(
@@ -259,13 +259,13 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 int pageNumber = 1,
                 Dictionary<string, object>? args = null)
             {
-                return Array.Empty<Message>(); 
+                return []; 
             }
 
 
             public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince)
             {
-               return Array.Empty<Message>(); 
+               return []; 
             }
         }
     }
