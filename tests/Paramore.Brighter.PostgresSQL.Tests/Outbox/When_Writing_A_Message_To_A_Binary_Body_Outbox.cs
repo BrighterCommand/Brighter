@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mime;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -30,15 +31,15 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
             var messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid().ToString(),
+                messageId: Id.Random, 
                 topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayed: TimeSpan.FromMilliseconds(5),
-                correlationId: Guid.NewGuid().ToString(),
+                correlationId: Id.Random,
                 replyTo: new RoutingKey("ReplyTo"),
-                contentType: "text/plain",
+                contentType: new ContentType(MediaTypeNames.Text.Plain),
                 partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);

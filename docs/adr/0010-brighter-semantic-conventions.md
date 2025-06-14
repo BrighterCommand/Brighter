@@ -227,6 +227,14 @@ We should record exceptions as events on the span. See the [OTel documentation o
 
 Standards may exist for the attributes used by events, and we should follow those. *For example we should instrument our Feature Flag handler in compliance with the [OTel documentation on feature flags](https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-spans/)*
 
+### Message Context
+
+Because we may be participating in a distributed trace, we will need to work with `traceparent` and `tracecontext` headers when initializing the span. To do this, we need to use the OpenTelemetry Propogators API to extract and inject across process boundaries, see the [OTel documentation](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry.Api/README.md). 
+
+There is an example of this for DotNet and RabbtitMQ in the [DotNet OpenTelemetry Repo](https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/MicroserviceExample/Utils/Messaging).
+
+There is an example of this for DotNet and Kafka in the [LightStep Repo](https://github.com/lightstep/kafka-otel-dotnet-example). 
+
 ### Performer Spans
 
 The Performer (message pump) acts as a Consumer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
@@ -250,11 +258,7 @@ We will have to ask the transport for the operation the span is performing:
 
 This is because this will vary by the capabilities of the transport.As this information is static, we can enhance the channel with this information.
   
-#### Retrieving Message Context
-
-Because we may be participating in a distributed trace, we will need to work with `traceparent` and `tracecontext` headers when initializing the span. There is an example of how ASP.NET does this [here](https://github.com/dotnet/aspnetcore/blob/main/src/Hosting/Hosting/src/Internal/HostingApplicationDiagnostics.cs#L248) or .NET [here](https://github.com/dotnet/runtime/blob/4f9ae42d861fcb4be2fcd5d3d55d5f227d30e723/src/libraries/System.Net.Http/src/System/Net/Http/DiagnosticsHandler.cs?ref=jimmybogard.com#L254). See also this article on [distributed tracing](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/).
-
-#### Performer Attributes
+### Message Attributes
 
 The Semantic Conventions for Messaging Systems provides a common set of attributes for messaging systems. There are both Required and Recommended attributes. We should always set the Required attributes and offer the Recommended attributes. We should make it possible to control the amount of attributes we set by only setting the Recommended attributes if the user has requested them.
 
@@ -272,12 +276,6 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 * `MessageBody` => (`message.body`)what is the message body?
 * `MessageHeaders` => (`message.headers`) what is the metadata of the message?
 * `ServerInformation` => (`server.*`) what is the server information?
-
-### Propagating Context from a Producer
-
-Because we may be participating in a distributed trace, we will need to set the `traceparent` and `tracecontext` headers on the outgoing message. Because we might be an intermediary we need to preserve any remote context by setting the `traceparent` to the originator of the flow, not reset it to ourselves. 
-
-We will use `traceparent` and `tracestate` as message headers as defined in the [Cloud Events Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md) to allow context propagation.
 
 ## Consequences
 

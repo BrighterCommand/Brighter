@@ -23,36 +23,46 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using NJsonSchema;
+using NJsonSchema.Annotations;
+using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.NJsonConverters;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter;
+
+/// <summary>
+/// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
+/// </summary>
+public class Command : ICommand
 {
     /// <summary>
-    /// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
+    /// Gets or sets the identifier.
     /// </summary>
-    public class Command : ICommand
+    /// <value>The identifier.</value>
+    [NotNull]
+    [JsonConverter(typeof(IdConverter))]
+    [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+    [Display(Name = "id", Description = "The unique identifier for the command")]
+    [JsonSchema(JsonObjectType.String)]
+    public Id Id { get; set; }
+        
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Command"/> class.
+    /// </summary>
+    /// <param name="id">The identifier.</param>
+    public Command(Id id)
     {
-        /// Gets or sets the identifier.
-        /// </summary>
-        /// <value>The identifier.</value>
-        [NJsonSchema.Annotations.NotNull]
-        public string Id { get; set; }
+        Id = id;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        public Command(string id)
-        {
-            Id = id;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class. 
-        /// </summary>
-        /// <param name="id">The identifier</param>
-        public Command(Guid id)
-        {
-           Id = id.ToString(); 
-        }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Command"/> class. 
+    /// </summary>
+    /// <param name="id">The identifier</param>
+    public Command(Guid id)
+    {
+        Id = new Id(id.ToString()); 
     }
 }

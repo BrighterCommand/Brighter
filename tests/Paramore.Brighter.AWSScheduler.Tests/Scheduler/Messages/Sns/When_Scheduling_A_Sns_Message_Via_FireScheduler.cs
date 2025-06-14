@@ -1,5 +1,7 @@
-﻿using System.Text.Json;
+﻿using System.Net.Mime;
+using System.Text.Json;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Scheduler.Events;
@@ -10,7 +12,7 @@ namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Messages.Sns;
 [Collection("Scheduler SNS")]
 public class SnsSchedulingMessageViaFireSchedulerTest : IDisposable
 {
-    private const string ContentType = "text\\plain";
+    private readonly ContentType _contentType = new(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
     private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -45,7 +47,7 @@ public class SnsSchedulingMessageViaFireSchedulerTest : IDisposable
         // Enforce topic to be created
         _messageProducer.Send(new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
             new MessageBody("test content one")
         ));
         _consumer.Purge();
@@ -62,7 +64,7 @@ public class SnsSchedulingMessageViaFireSchedulerTest : IDisposable
         var routingKey = new RoutingKey(_topicName);
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
             new MessageBody("test content one")
         );
 

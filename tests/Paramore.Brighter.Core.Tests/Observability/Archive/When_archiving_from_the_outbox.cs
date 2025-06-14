@@ -51,7 +51,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             Type = nameof(MyEvent),
         };
 
-        var producer = new InMemoryProducer(internalBus, _timeProvider)
+        var producer = new InMemoryMessageProducer(internalBus, _timeProvider)
         {
             Publication = _publication
         };

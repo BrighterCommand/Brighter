@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.JsonMapper.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessageMappers;
 using Xunit;
 
@@ -18,7 +20,7 @@ public class JsonMessageMapperTests
         var message = mapper.MapToMessage(command, publication);
 
         Assert.NotNull(message);
-        Assert.Equal("application/json", message.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), message.Header.ContentType);
         Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
         Assert.Equal(publication.Topic, message.Header.Topic);
         Assert.Equal(message.Id, command.Id);
@@ -38,7 +40,7 @@ public class JsonMessageMapperTests
         var message = await mapper.MapToMessageAsync(command, publication);
 
         Assert.NotNull(message);
-        Assert.Equal("application/json", message.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), message.Header.ContentType);
         Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
         Assert.Equal(publication.Topic, message.Header.Topic);
         Assert.Equal(message.Id, command.Id);
@@ -58,7 +60,7 @@ public class JsonMessageMapperTests
         var message = mapper.MapToMessage(@event, publication);
 
         Assert.NotNull(message);
-        Assert.Equal("application/json", message.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), message.Header.ContentType);
         Assert.Equal(MessageType.MT_EVENT, message.Header.MessageType);
         Assert.Equal(publication.Topic, message.Header.Topic);
         Assert.Equal(message.Id, @event.Id);
@@ -78,7 +80,7 @@ public class JsonMessageMapperTests
         var message = await mapper.MapToMessageAsync(@event, publication);
 
         Assert.NotNull(message);
-        Assert.Equal("application/json", message.Header.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), message.Header.ContentType);
         Assert.Equal(MessageType.MT_EVENT, message.Header.MessageType);
         Assert.Equal(publication.Topic, message.Header.Topic);
         Assert.Equal(message.Id, @event.Id);

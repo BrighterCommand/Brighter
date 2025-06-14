@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <summary>
         /// Message Body.
         /// </summary>
-        byte[] MessageBodyValue { get; }
+        byte[]? MessageBodyValue { get; }
 
         /// <summary>
         /// Application Properties

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.PostgreSql;
 using JsonSerializer = System.Text.Json.JsonSerializer;

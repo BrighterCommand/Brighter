@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.MessageMappers;
@@ -45,19 +47,20 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
             throw new ArgumentException($"No Topic Defined for {publication}");
         }
 
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: "application/cloudevents+json");
-        var contentType = publication.ContentType;
-        if (!contentType.StartsWith("application") || !contentType.Contains("json"))
-        {
-            contentType = "application/json";
-        }
+        var headerContentType = new ContentType("application/cloudevents+json");
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: headerContentType);
+#if NETSTANDARD2_0
+        var bodyContentType = new ContentType("application/json");   
+ #else           
+        var bodyContentType = new ContentType(MediaTypeNames.Application.Json);
+#endif            
         
         var body = new MessageBody(JsonSerializer.Serialize(new CloudEventMessage
         {
             Id = request.Id,
             Source = publication.Source,
             Type = publication.Type,
-            DataContentType = contentType,
+            DataContentType = bodyContentType!.ToString(),
             Subject = publication.Subject,
             DataSchema = publication.DataSchema,
             AdditionalProperties = publication.CloudEventsAdditionalProperties,

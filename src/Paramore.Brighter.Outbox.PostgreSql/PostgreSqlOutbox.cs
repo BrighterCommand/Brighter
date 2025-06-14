@@ -27,12 +27,14 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
@@ -398,7 +400,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 delayed: TimeSpan.Zero,
                 correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo),
-                contentType: contentType,
+                contentType: contentType is not null ? new ContentType(contentType) : new ContentType(MediaTypeNames.Text.Plain),
                 partitionKey: partitionKey);
 
             Dictionary<string, object> dictionaryBag = GetContextBag(dr);

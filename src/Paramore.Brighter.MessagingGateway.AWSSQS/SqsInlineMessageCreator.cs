@@ -25,10 +25,12 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text.Json;
 using Amazon;
 using Amazon.SQS;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -42,7 +44,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
     {
         var topic = HeaderResult<RoutingKey>.Empty();
-        var messageId = HeaderResult<string?>.Empty();
+        var messageId = HeaderResult<Id?>.Empty();
 
         Message message;
         try
@@ -68,7 +70,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             var specVersion = ReadSpecVersion();
 
             var messageHeader = new MessageHeader(
-                messageId: messageId.Result ?? string.Empty,
+                messageId: messageId.Result ?? Id.Empty,
                 topic: topic.Result ?? RoutingKey.Empty,
                 messageType: messageType.Result,
                 source: source.Result,
@@ -76,7 +78,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
                 timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                 correlationId: correlationId.Success ? correlationId.Result : string.Empty,
                 replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
-                contentType: contentType.Result ?? "plain/text",
+                contentType: contentType.Result ?? new ContentType(MediaTypeNames.Text.Plain),
                 handledCount: handledCount.Result,
                 dataSchema: dataSchema.Result,
                 subject: subject.Result,
@@ -109,7 +111,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         catch (Exception e)
         {
             Log.FailedToCreateMessageFromAwsSqsMessage(s_logger, e);
-            message = FailureMessage(topic, messageId);
+            message = Message.FailureMessage(topic.Result, messageId.Result);
         }
 
         return message;
@@ -136,19 +138,21 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return messageAttributes ?? new Dictionary<string, JsonElement>();
     }
 
-    private HeaderResult<string?> ReadContentType()
+    private HeaderResult<ContentType?> ReadContentType()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.DataContentType, out var contentType))
         {
-            return new HeaderResult<string?>(contentType.GetValueInString(), true);
+            var result = contentType.GetValueInString();
+            return new HeaderResult<ContentType?>(result is not null ? new ContentType(result) : new ContentType(MediaTypeNames.Text.Plain), true);
         }
         
         if (_messageAttributes.TryGetValue(HeaderNames.ContentType, out contentType))
         {
-            return new HeaderResult<string?>(contentType.GetValueInString(), true);
+            var result = contentType.GetValueInString() ?? MediaTypeNames.Text.Plain;
+            return new HeaderResult<ContentType?>(new ContentType(result), true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<ContentType?>(null, true);
     }
 
     private Dictionary<string, object> ReadMessageBag()
@@ -177,14 +181,15 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new Dictionary<string, object>();
     }
 
-    private HeaderResult<string?> ReadReplyTo()
+    private HeaderResult<RoutingKey?> ReadReplyTo()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.ReplyTo, out var replyTo))
         {
-            return new HeaderResult<string?>(replyTo.GetValueInString(), true);
+            var result = replyTo.GetValueInString();
+            return new HeaderResult<RoutingKey?>(result is not null ? new RoutingKey(result) : RoutingKey.Empty, true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<RoutingKey?>(RoutingKey.Empty, true);
     }
 
     private HeaderResult<string?> ReadSpecVersion()
@@ -279,24 +284,26 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new HeaderResult<int>(0, true);
     }
 
-    private HeaderResult<string?> ReadCorrelationId()
+    private HeaderResult<Id?> ReadCorrelationId()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.CorrelationId, out var correlationId))
         {
-            return new HeaderResult<string?>(correlationId.GetValueInString(), true);
+            var result = correlationId.GetValueInString();
+            return new HeaderResult<Id?>(result is not null ? new Id(result) : Id.Empty, true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<Id?>(Id.Empty, true);
     }
 
-    private HeaderResult<string?> ReadMessageId()
+    private HeaderResult<Id?> ReadMessageId()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.Id, out var messageId))
         {
-            return new HeaderResult<string?>(messageId.GetValueInString(), true);
+            var value = messageId.GetValueInString();
+            return new HeaderResult<Id?>(value is not null ? new Id(value) : Id.Empty, true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<Id?>(Id.Empty, true);
     }
 
     private HeaderResult<RoutingKey> ReadTopic()
@@ -361,15 +368,15 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new MessageBody(string.Empty);
     }
 
-    private static HeaderResult<string> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<PartitionKey> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
     {
         if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
         {
             //we have an arn, and we want the topic
-            return new HeaderResult<string>(value, true);
+            return new HeaderResult<PartitionKey>(value, true);
         }
 
-        return new HeaderResult<string>(string.Empty, false);
+        return new HeaderResult<PartitionKey>(string.Empty, false);
     }
 
     private static HeaderResult<string> ReadDeduplicationId(Amazon.SQS.Model.Message sqsMessage)

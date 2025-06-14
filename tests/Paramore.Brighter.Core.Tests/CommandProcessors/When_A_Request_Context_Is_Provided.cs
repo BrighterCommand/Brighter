@@ -163,7 +163,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -216,7 +216,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -268,7 +268,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -324,7 +324,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },

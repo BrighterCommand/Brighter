@@ -27,10 +27,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(_bus, timeProvider);
+            InMemoryMessageProducer messageProducer = new(_bus, timeProvider);
             _routingKey = new RoutingKey("MyRequest");
             
-            producer.Publication = new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)};
+            messageProducer.Publication = new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)};
             
             _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { _routingKey, producer },
+                    { _routingKey, messageProducer },
                 });
 
             var tracer = new BrighterTracer();

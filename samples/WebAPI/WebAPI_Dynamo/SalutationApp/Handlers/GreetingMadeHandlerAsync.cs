@@ -38,7 +38,7 @@ namespace SalutationApp.Handlers
         public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
         {
 
-            var posts = new List<string>();
+            var posts = new List<Id>();
             var context = new DynamoDBContext(_transactionProvider1.DynamoDb);
             var tx = await _transactionProvider1.GetTransactionAsync(cancellationToken);
 

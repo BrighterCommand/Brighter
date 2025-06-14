@@ -1,7 +1,9 @@
-﻿using System.Text.Json;
+﻿using System.Net.Mime;
+using System.Text.Json;
 using Amazon.Scheduler;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -11,7 +13,7 @@ namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Requests.Sqs;
 [Collection("Scheduler SQS")]
 public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
 {
-    private const string ContentType = "text\\plain";
+    private readonly ContentType _contentType = new(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
     private readonly SqsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -66,7 +68,7 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
         var routingKey = new RoutingKey(_queueName);
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
             new MessageBody("test content one")
         );
 

@@ -48,7 +48,7 @@ namespace Paramore.Brighter
             {
                 if (publication.Topic is null)
                     throw new ArgumentException("A publication must have a Topic to be dispatched");
-                var producer = new InMemoryProducer(bus, TimeProvider.System);
+                var producer = new InMemoryMessageProducer(bus, TimeProvider.System);
                 producer.Publication = publication;
                 producers[publication.Topic] = producer;
             }

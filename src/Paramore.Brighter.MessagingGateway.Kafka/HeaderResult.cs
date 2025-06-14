@@ -51,11 +51,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <typeparam name="TNew">The type of the t new.</typeparam>
         /// <param name="map">The map.</param>
         /// <returns>HeaderResult&lt;TNew&gt;.</returns>
-        public HeaderResult<TNew> Map<TNew>(Func<TResult, HeaderResult<TNew>> map)
+        public HeaderResult<TNew?> Map<TNew>(Func<TResult, HeaderResult<TNew?>> map)
         {
-            if (Success)
-                return map(Result);
-            return HeaderResult<TNew>.Empty();
+            return Success ? map(Result) : HeaderResult<TNew>.Empty();
         }
 
         /// <summary>
@@ -74,19 +72,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Empties this instance.
         /// </summary>
         /// <returns>HeaderResult&lt;TResult&gt;.</returns>
-        public static HeaderResult<TResult> Empty()
+        public static HeaderResult<TResult?> Empty()
         {
             if (typeof(TResult) == typeof(string))
             {
-                return new HeaderResult<TResult>((TResult)(object)string.Empty, false);
+                return new HeaderResult<TResult?>((TResult)(object)string.Empty, false);
             }
 
             if (typeof(TResult) == typeof(RoutingKey))
             {
-                return new HeaderResult<TResult>((TResult)(object)RoutingKey.Empty, false);
+                return new HeaderResult<TResult?>((TResult)(object)RoutingKey.Empty, false);
             }
 
-            return new HeaderResult<TResult>(default(TResult), false);
+            return new HeaderResult<TResult?>(default(TResult), false);
         }
     }
 }

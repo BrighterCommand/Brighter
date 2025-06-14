@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
@@ -61,7 +62,7 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
             MessageType.MT_COMMAND,
             correlationId: Guid.NewGuid().ToString(),
             replyTo: RoutingKey.Empty,
-            contentType: "text\\plain",
+            contentType: new ContentType(MediaTypeNames.Text.Plain),
             partitionKey: messageGroupId) { Bag = { [HeaderNames.DeduplicationId] = deduplicationId } };
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");

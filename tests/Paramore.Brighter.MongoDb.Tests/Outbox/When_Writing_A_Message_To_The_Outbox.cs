@@ -61,7 +61,7 @@ public class MongoDbOutboxWritingMessageTests : IDisposable
             delayed: TimeSpan.FromMilliseconds(5),
             correlationId: Guid.NewGuid().ToString(),
             replyTo: new RoutingKey("ReplyTo"),
-            contentType: "text/plain",
+            contentType: new ContentType(MediaTypeNames.Text.Plain),
             partitionKey: Guid.NewGuid().ToString());
         messageHeader.Bag.Add(Key1, Value1);
         messageHeader.Bag.Add(Key2, Value2);

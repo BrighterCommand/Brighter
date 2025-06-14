@@ -138,7 +138,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The unique identifier for this producer, used with transactions
         /// </summary>
         /// <returns></returns>
-        public string TransactionalId { get; set; }
+        public string? TransactionalId { get; set; }
 
         /// <summary>
         /// The Kafka message header builder that builds the message header before sending to Kafka topic.
