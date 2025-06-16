@@ -82,6 +82,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox,
             timeProvider:_timeProvider);
     }

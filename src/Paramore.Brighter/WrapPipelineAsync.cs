@@ -27,7 +27,9 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
@@ -38,8 +40,10 @@ namespace Paramore.Brighter
     /// Takes a request and maps it to a message
     /// Runs transforms on that message
     /// </summary>
-    public class WrapPipelineAsync<TRequest> : TransformPipelineAsync<TRequest> where TRequest: class, IRequest
+    public partial class WrapPipelineAsync<TRequest> : TransformPipelineAsync<TRequest> where TRequest: class, IRequest
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<WrapPipelineAsync<TRequest>>();
+        
         /// <summary>
         /// Constructs an instance of a wrap pipeline
         /// </summary>
@@ -88,6 +92,12 @@ namespace Paramore.Brighter
             
             MessageMapper.Context = requestContext; 
             var message = await MessageMapper.MapToMessageAsync(request, publication, cancellationToken); 
+            
+            if (message.Header.Topic != publication.Topic)
+            {
+                Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic);
+            }
+            
             BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, true, true);
             
             await Transforms.EachAsync(async transform =>
@@ -96,7 +106,19 @@ namespace Paramore.Brighter
                 message = await transform.WrapAsync(message, publication, cancellationToken);
                 BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, true);
             }); 
+            
+            if (!string.IsNullOrEmpty(publication.ReplyTo))
+            {
+                message.Header.ReplyTo = publication.ReplyTo!;
+            } 
+            
             return message;
+        }
+        
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Topic mismatch detected: The found topic ({FindPublicationTopic}) differs from the message topic ({MessageTopic}). This discrepancy could lead to invalid data in the pipeline")]
+            public static partial void DifferentPublicationAndMessageTopic(ILogger logger, string findPublicationTopic, string messageTopic);
         }
     }
 }

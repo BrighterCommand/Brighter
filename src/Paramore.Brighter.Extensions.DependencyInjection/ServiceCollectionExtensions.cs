@@ -158,6 +158,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
             }
             
+            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
@@ -244,6 +245,34 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                ServiceLifetime.Singleton));
 
             return brighterBuilder;
+        }
+
+        /// <summary>
+        /// Set a default <see cref="IAmAPublicationFinder"/>
+        /// </summary>
+        /// <param name="builder"></param>
+        /// <param name="lifetime"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static IBrighterBuilder UsePublicationFinder<T>(this IBrighterBuilder builder, ServiceLifetime lifetime = ServiceLifetime.Transient)
+            where T : class, IAmAPublicationFinder
+        {
+            builder.Services.Add(new ServiceDescriptor(typeof(IAmAPublicationFinder), typeof(T), lifetime));
+            return builder;
+        }
+        
+        /// <summary>
+        /// Set a default <see cref="IAmAPublicationFinder"/>
+        /// </summary>
+        /// <param name="builder"></param>
+        /// <param name="instance"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static IBrighterBuilder UsePublicationFinder<T>(this IBrighterBuilder builder, T instance)
+            where T : class, IAmAPublicationFinder
+        {
+            builder.Services.AddSingleton<IAmAPublicationFinder>(instance);
+            return builder;
         }
         
          /// <summary>
@@ -456,6 +485,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),
                 Tracer(serviceProvider),
+                PublicationFinder(serviceProvider),
                 outbox,
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
@@ -568,6 +598,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IAmARequestContextFactory RequestContextFactory(IServiceProvider provider)
         {
             return provider.GetService<IAmARequestContextFactory>();
+        }
+
+        public static IAmAPublicationFinder PublicationFinder(IServiceProvider provider)
+        {
+            return provider.GetRequiredService<IAmAPublicationFinder>();
         }
         
         private static IAmABrighterTracer Tracer(IServiceProvider serviceProvider)
