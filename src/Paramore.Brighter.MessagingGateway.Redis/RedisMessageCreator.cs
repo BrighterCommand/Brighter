@@ -215,7 +215,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             if (headers.TryGetValue(HeaderNames.CONTENT_TYPE, out string? header))
             {
-                var contentType = header is not null ? new ContentType(header) : new ContentType(MediaTypeNames.Text.Plain);
+                var contentType = !string.IsNullOrEmpty(header) ? new ContentType(header) : new ContentType(MediaTypeNames.Text.Plain);
                 return new HeaderResult<ContentType?>(contentType, true);
             }
             return new HeaderResult<ContentType?>(null, false);

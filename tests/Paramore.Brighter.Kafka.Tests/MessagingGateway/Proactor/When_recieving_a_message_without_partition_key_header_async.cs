@@ -101,7 +101,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         var receivedMessage = await GetMessageAsync();
 
         //Where we lack a partition key header, assume non-Brighter header and set to message key
-        Assert.Equal(command.Id, receivedMessage.Header.PartitionKey);
+        Assert.Equal(kafkaMessage.Key, receivedMessage.Header.PartitionKey);
         Assert.Equal(value, receivedMessage.Body.Bytes);
     }
 

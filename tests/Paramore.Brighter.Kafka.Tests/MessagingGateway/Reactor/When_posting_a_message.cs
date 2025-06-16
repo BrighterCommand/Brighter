@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -74,7 +75,7 @@ public class KafkaMessageProducerSendTests : IDisposable
         var correlationId = Guid.NewGuid().ToString();
         var messageId = Guid.NewGuid().ToString();
         var timestamp = DateTimeOffset.UtcNow;
-        var contentType = new ContentType(MediaTypeNames.Application.Json);
+        var contentType = new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         const string replyTo = "reply-queue";
         const string type = "test-type";
         const string subject = "test-subject";
