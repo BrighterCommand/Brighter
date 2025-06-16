@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Maximum number of messages batched in one MessageSet. 
         /// </summary>
-        public int BatchNumberMessages { get; set; } = 10;
+        public int BatchNumberMessages { get; set; } = 10000;
 
         /// <summary>
         /// Messages are produced once only
@@ -104,7 +104,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Maximum number of messages allowed on the producer queue.
         /// </summary>
-        public int QueueBufferingMaxMessages { get; set; } = 10;
+        public int QueueBufferingMaxMessages { get; set; } = 100000;
 
         /// <summary>
         /// Maximum total message size sum allowed on the producer queue.
@@ -136,7 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The unique identifier for this producer, used with transactions
         /// </summary>
         /// <returns></returns>
-        public string TransactionalId { get; set; }
+        public string? TransactionalId { get; set; }
 
         /// <summary>
         /// The Kafka message header builder that builds the message header before sending to Kafka topic.

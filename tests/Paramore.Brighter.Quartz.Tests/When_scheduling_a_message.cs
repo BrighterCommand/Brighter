@@ -46,7 +46,7 @@ public class QuartzSchedulerMessageTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryProducer(_internalBus, _timeProvider)
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, _timeProvider)
             {
                 Publication = { Topic = _routingKey, RequestType = typeof(MyEvent) }
             }

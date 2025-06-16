@@ -29,5 +29,5 @@ namespace Paramore.Brighter.Core.Tests.JsonMapper.TestDoubles;
 public class MyRequest : IRequest
 {
     public string Value { get; set; }
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public Id Id { get; set; } = Guid.NewGuid().ToString();
 }

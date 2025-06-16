@@ -32,7 +32,9 @@ using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Transforms.Storage;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -114,7 +116,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 policyRegistry
             );
 
-            return builder.UseScheduler(new InMemorySchedulerFactory());
+            return builder
+                .UseScheduler(new InMemorySchedulerFactory())
+                .UseExternalLuggageStore<NullLuggageStore>();
         }
 
         /// <summary>
@@ -593,6 +597,86 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static ServiceProviderTransformerFactoryAsync TransformFactoryAsync(IServiceProvider provider)
         {
             return new ServiceProviderTransformerFactoryAsync(provider);
+        }
+        
+        /// <summary>
+        /// Adds a singleton instance of an external luggage (claim check) store provider to the Brighter framework.
+        /// This method is used when you have a pre-initialized instance of your storage provider.
+        /// The store provider must implement both <see cref="IAmAStorageProvider"/> for synchronous operations
+        /// and <see cref="IAmAStorageProviderAsync"/> for asynchronous operations.
+        /// </summary>
+        /// <typeparam name="TStoreProvider">The concrete type of the storage provider.
+        /// Must implement <see cref="IAmAStorageProvider"/> and <see cref="IAmAStorageProviderAsync"/>.</typeparam>
+        /// <param name="builder">The <see cref="IBrighterBuilder"/> instance to which the storage provider will be added.</param>
+        /// <returns>The <see cref="IBrighterBuilder"/> instance for chaining.</returns>
+        public static IBrighterBuilder UseExternalLuggageStore<TStoreProvider>(this IBrighterBuilder builder)
+            where TStoreProvider : class, IAmAStorageProvider, IAmAStorageProviderAsync
+        {
+            builder.Services.AddSingleton<TStoreProvider>()
+                .RegisterLuggageStore<TStoreProvider>();
+
+            return builder;
+        }
+        
+        /// <summary>
+        /// Adds a singleton instance of an external luggage (claim check) store provider to the Brighter framework.
+        /// This method is used when you have a pre-initialized instance of your storage provider.
+        /// The store provider must implement both <see cref="IAmAStorageProvider"/> for synchronous operations
+        /// and <see cref="IAmAStorageProviderAsync"/> for asynchronous operations.
+        /// </summary>
+        /// <typeparam name="TStoreProvider">The concrete type of the storage provider.
+        /// Must implement <see cref="IAmAStorageProvider"/> and <see cref="IAmAStorageProviderAsync"/>.</typeparam>
+        /// <param name="builder">The <see cref="IBrighterBuilder"/> instance to which the storage provider will be added.</param>
+        /// <param name="storeProvider">The pre-initialized instance of the storage provider.</param>
+        /// <returns>The <see cref="IBrighterBuilder"/> instance for chaining.</returns>
+        public static IBrighterBuilder UseExternalLuggageStore<TStoreProvider>(this IBrighterBuilder builder, TStoreProvider storeProvider)
+            where TStoreProvider : class, IAmAStorageProvider, IAmAStorageProviderAsync
+        {
+            builder.Services.AddSingleton(storeProvider)
+                 .RegisterLuggageStore<TStoreProvider>();
+
+            return builder;
+        }
+        
+        /// <summary>
+        /// Adds a singleton instance of a luggage (claim check) store provider to the Brighter framework,
+        /// resolved via a factory function. This method is used when the storage provider
+        /// needs to be instantiated by the service provider (e.g., to inject its own dependencies).
+        /// The store provider must implement both <see cref="IAmAStorageProvider"/> for synchronous operations
+        /// and <see cref="IAmAStorageProviderAsync"/> for asynchronous operations.
+        /// </summary>
+        /// <typeparam name="TStoreProvider">The concrete type of the storage provider.
+        /// Must implement <see cref="IAmAStorageProvider"/> and <see cref="IAmAStorageProviderAsync"/>.</typeparam>
+        /// <param name="builder">The <see cref="IBrighterBuilder"/> instance to which the storage provider will be added.</param>
+        /// <param name="storeProvider">A factory function that takes an <see cref="IServiceProvider"/> and returns an instance of the storage provider.</param>
+        /// <returns>The <see cref="IBrighterBuilder"/> instance for chaining.</returns>
+        public static IBrighterBuilder UseExternalLuggageStore<TStoreProvider>(this IBrighterBuilder builder, Func<IServiceProvider, TStoreProvider> storeProvider)
+            where TStoreProvider : class, IAmAStorageProvider, IAmAStorageProviderAsync
+        {
+            builder.Services.AddSingleton(storeProvider)
+                .RegisterLuggageStore<TStoreProvider>();
+            
+            return builder;
+        }
+
+        private static void RegisterLuggageStore<TStoreProvider>(this IServiceCollection services)
+            where TStoreProvider : class, IAmAStorageProvider, IAmAStorageProviderAsync
+        {
+            services
+                .AddSingleton(provider =>
+                {
+                    IAmAStorageProvider store = provider.GetRequiredService<TStoreProvider>();
+                    store.Tracer = provider.GetRequiredService<IAmABrighterTracer>();
+                    store.EnsureStoreExists();
+                    return store;
+                })
+                .AddSingleton(provider =>
+                {
+                    IAmAStorageProviderAsync store = provider.GetRequiredService<TStoreProvider>();
+                    store.Tracer = provider.GetRequiredService<IAmABrighterTracer>();
+                    store.EnsureStoreExistsAsync().GetAwaiter().GetResult();
+                    return store;
+                });
         }
     }
 }

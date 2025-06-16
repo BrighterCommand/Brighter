@@ -23,13 +23,14 @@ THE SOFTWARE. */
 
 #endregion
 
-using OpenTelemetry.Trace;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
+using OpenTelemetry;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Observability;
 
@@ -117,7 +118,7 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
             { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.RequestId, request.Id },
+            { BrighterSemanticConventions.RequestId, request.Id.Value },
             { BrighterSemanticConventions.RequestType, request.GetType().Name },
             { BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request, JsonSerialisationOptions.Options) }
         };
@@ -130,10 +131,14 @@ public class BrighterTracer : IAmABrighterTracer
             links: links,
             startTime: now);
         
+        Propogate(parentActivity, activity);
+
         Activity.Current = activity;
 
         return activity;
     }
+
+ 
 
     /// <summary>
     /// Create a span when we consume a message from a queue or stream
@@ -152,7 +157,9 @@ public class BrighterTracer : IAmABrighterTracer
     {
         var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
-        var parentId = message.Header.TraceParent;
+        var parentId = message.Header.TraceParent?.Value;
+        var baggage = message.Header.Baggage.ToString();
+        var traceState = message.Header.TraceState?.Value;
         var now = _timeProvider.GetUtcNow();
 
         var tags = new ActivityTagsCollection()
@@ -160,22 +167,70 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
             { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
+            { BrighterSemanticConventions.MessageId, message.Id.Value },
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
             { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
+            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value },
             { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.CeMessageId, message.Id },
+            { BrighterSemanticConventions.CeMessageId, message.Id.Value },
             { BrighterSemanticConventions.CeSource, message.Header.Source },
             { BrighterSemanticConventions.CeVersion, "1.0"},
             { BrighterSemanticConventions.CeSubject, message.Header.Subject },
             { BrighterSemanticConventions.CeType, message.Header.Type},
-            { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo },
+            { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value },
             { BrighterSemanticConventions.HandledCount, message.Header.HandledCount }
             
+        };
+        
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId ,
+            tags: tags,
+            startTime: now);
+
+        if (activity == null)
+            return Activity.Current;
+        
+        activity.TraceStateString = traceState;
+        
+        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+            message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
+        OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
+    
+    /// <summary>
+    /// Creates a span for an archive operation. Because a sweeper may not create an external bus, but just use the archiver directly, we
+    /// check for this existing and then recreate directly in the archive provider if it does not exist
+    /// </summary>
+    /// <param name="parentActivity">A parent activity that called this one</param>
+    /// <param name="dispatchedSince">The minimum age of a row to be archived</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns></returns>
+    public Activity? CreateArchiveSpan(
+        Activity? parentActivity,
+        TimeSpan dispatchedSince,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var operation = CommandProcessorSpanOperation.Archive;
+        var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {operation.ToSpanName()}";
+        var kind = ActivityKind.Producer;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();  
+        var tags = new ActivityTagsCollection()
+        
+        {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
+            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
+            { BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds }
         };
         
         var activity = ActivitySource.StartActivity(
@@ -185,8 +240,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             startTime: now);
         
-        
-        activity?.AddBaggage("correlationId", message.Header.CorrelationId);
+        Propogate(parentActivity, activity);
         
         Activity.Current = activity;
 
@@ -230,11 +284,147 @@ public class BrighterTracer : IAmABrighterTracer
             links: links,
             startTime: now);
         
+        Propogate(parentActivity, activity);
+        
         Activity.Current = activity;
 
         return activity;
     }
 
+    /// <inheritdoc />
+    public Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info)
+    {
+        var spanName = $"{info.Operation.ToSpanName()} {info.ProviderName} {info.BucketName}";
+
+        const ActivityKind kind = ActivityKind.Client;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection
+        {
+            [BrighterSemanticConventions.InstrumentationDomain] = BrighterSemanticConventions.ClaimCheckInstrumentationDomain,
+            [BrighterSemanticConventions.ClaimCheckOperation] = info.Operation.ToSpanName(),
+            [BrighterSemanticConventions.ClaimCheckProvider] = info.ProviderName,
+            [BrighterSemanticConventions.ClaimCheckBucketName] = info.BucketName,
+            [BrighterSemanticConventions.ClaimCheckId] = info.Id
+        };
+
+        if (info.ContentLenght.HasValue)
+        {
+            tags[BrighterSemanticConventions.ClaimCheckContentLenght] = info.ContentLenght;
+        }
+
+        if (info.Attributes != null)
+        {
+            foreach (var attribute in  info.Attributes)
+            {
+                tags.Add(attribute.Key, attribute.Value);
+            }
+        }
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            tags: tags,
+            startTime: now);
+
+        Activity.Current = activity;
+        return activity;
+    }
+
+    /// <summary>
+    /// Create a span for a batch of messages to be cleared  
+    /// </summary>
+    /// <param name="operation">The <see cref="CommandProcessorSpanOperation"/> being performed as part of the Clear Span</param>
+    /// <param name="parentActivity">What is the parent <see cref="Activity"/></param>
+    /// <param name="messageId">What is the identifier of the message we are trying to clear</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how verbose do we want to be?</param>
+    /// <returns></returns>
+    public Activity? CreateClearSpan(
+        CommandProcessorSpanOperation operation,
+        Activity? parentActivity,
+        string? messageId = null,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var spanName = $"{BrighterSemanticConventions.ClearMessages} {operation.ToSpanName()}";
+        var kind = ActivityKind.Producer;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow(); 
+        
+        var tags = new ActivityTagsCollection
+        {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
+            { BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName() }
+        };
+        
+        if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
+        
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+        
+        Propogate(parentActivity, activity);
+        
+        Activity.Current = activity;
+
+        return activity;
+        
+    }
+
+    /// <summary>
+    /// Create a span for an inbox or outbox operation
+    /// </summary>
+    /// <param name="info">An <see cref="BoxSpanInfo"/> with the attributes of the db operation</param>
+    /// <param name="parentActivity">The parent <see cref="Activity"/>, if any, that we should assign to this span</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> that explain how deep should the instrumentation go?</param>
+    /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
+    public Activity? CreateDbSpan(BoxSpanInfo info, Activity? parentActivity, InstrumentationOptions options)
+    {
+        var spanName = !string.IsNullOrEmpty(info.dbTable) 
+            ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
+        
+        var kind = ActivityKind.Client;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection
+        {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.DbInstrumentationDomain },
+            { BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName() },
+            { BrighterSemanticConventions.DbName, info.dbName },
+            { BrighterSemanticConventions.DbTable, info.dbTable },
+            { BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName() }
+        };
+
+        if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
+        if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
+        if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
+        if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
+        if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
+        if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
+        if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
+        
+        if (info.dbAttributes != null)
+           foreach (var pair in info.dbAttributes)
+               tags.Add(pair.Key, pair.Value);
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+        
+        Propogate(parentActivity, activity);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
+    
     /// <summary>
     /// The parent span for the message pump. This is the entry point for the message pump
     /// </summary>
@@ -319,135 +509,6 @@ public class BrighterTracer : IAmABrighterTracer
     }
 
     /// <summary>
-    /// Creates a span for an archive operation. Because a sweeper may not create an external bus, but just use the archiver directly, we
-    /// check for this existing and then recreate directly in the archive provider if it does not exist
-    /// </summary>
-    /// <param name="parentActivity">A parent activity that called this one</param>
-    /// <param name="dispatchedSince">The minimum age of a row to be archived</param>
-    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    /// <returns></returns>
-    public Activity? CreateArchiveSpan(
-        Activity? parentActivity,
-        TimeSpan dispatchedSince,
-        InstrumentationOptions options = InstrumentationOptions.All)
-    {
-        var operation = CommandProcessorSpanOperation.Archive;
-        var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {operation.ToSpanName()}";
-        var kind = ActivityKind.Producer;
-        var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow();  
-        var tags = new ActivityTagsCollection()
-        
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds }
-        };
-        
-        var activity = ActivitySource.StartActivity(
-            name: spanName,
-            kind: kind,
-            parentId: parentId,
-            tags: tags,
-            startTime: now);
-        
-         Activity.Current = activity;
-
-        return activity;
-    }
-
-    /// <summary>
-    /// Create a span for a batch of messages to be cleared  
-    /// </summary>
-    /// <param name="operation">The <see cref="CommandProcessorSpanOperation"/> being performed as part of the Clear Span</param>
-    /// <param name="parentActivity">What is the parent <see cref="Activity"/></param>
-    /// <param name="messageId">What is the identifier of the message we are trying to clear</param>
-    /// <param name="options">The <see cref="InstrumentationOptions"/> for how verbose do we want to be?</param>
-    /// <returns></returns>
-    public Activity? CreateClearSpan(
-        CommandProcessorSpanOperation operation,
-        Activity? parentActivity,
-        string? messageId = null,
-        InstrumentationOptions options = InstrumentationOptions.All)
-    {
-        var spanName = $"{BrighterSemanticConventions.ClearMessages} {operation.ToSpanName()}";
-        var kind = ActivityKind.Producer;
-        var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow(); 
-        
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName() }
-        };
-        
-        if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
-        
-        var activity = ActivitySource.StartActivity(
-            name: spanName,
-            kind: kind,
-            parentId: parentId,
-            tags: tags,
-            startTime: now);
-        
-        Activity.Current = activity;
-
-        return activity;
-        
-    } 
-
-    /// <summary>
-    /// Create a span for an inbox or outbox operation
-    /// </summary>
-    /// <param name="info">An <see cref="BoxSpanInfo"/> with the attributes of the db operation</param>
-    /// <param name="parentActivity">The parent <see cref="Activity"/>, if any, that we should assign to this span</param>
-    /// <param name="options">The <see cref="InstrumentationOptions"/> that explain how deep should the instrumentation go?</param>
-    /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
-    public Activity? CreateDbSpan(BoxSpanInfo info, Activity? parentActivity, InstrumentationOptions options)
-    {
-        var spanName = !string.IsNullOrEmpty(info.dbTable) 
-            ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
-        
-        var kind = ActivityKind.Client;
-        var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow();
-
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.DbInstrumentationDomain },
-            { BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName() },
-            { BrighterSemanticConventions.DbName, info.dbName },
-            { BrighterSemanticConventions.DbTable, info.dbTable },
-            { BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName() }
-        };
-
-        if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
-        if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
-        if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
-        if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
-        if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
-        if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
-        if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
-        
-        if (info.dbAttributes != null)
-           foreach (var pair in info.dbAttributes)
-               tags.Add(pair.Key, pair.Value);
-
-        var activity = ActivitySource.StartActivity(
-            name: spanName,
-            kind: kind,
-            parentId: parentId,
-            tags: tags,
-            startTime: now);
-        
-        Activity.Current = activity;
-
-        return activity;
-    }
-
-    /// <summary>
     /// Create a span that represents Brighter producing a message to a channel
     /// </summary>
     /// <param name="publication">The <see cref="Publication"/> which represents where we are sending the message</param>
@@ -485,17 +546,17 @@ public class BrighterTracer : IAmABrighterTracer
         if (message is not null)
         {
             //OTel specification attributes
-            tags.Add(BrighterSemanticConventions.MessageId, message.Id);
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
-            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
             tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
             tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options ));
-            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId); 
+            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value); 
             
             //cloud events attributes
-            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id);
+            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
         }
 
         var activity = ActivitySource.StartActivity(
@@ -505,9 +566,59 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             startTime: now);
         
+        Propogate(parentActivity, activity);
+        
         Activity.Current = activity;
 
         return activity; 
+    }
+
+    /// <summary>
+    /// Ends a span by correctly setting its status and then disposing of it
+    /// </summary>
+    /// <param name="span">The span to end</param>
+    public void EndSpan(Activity? span)
+    {
+        if (span?.Status == ActivityStatusCode.Unset)
+            span.SetStatus(ActivityStatusCode.Ok);
+        span?.Dispose();
+    }
+
+    /// <summary>
+    /// Ends a collection of named spans
+    /// </summary>
+    /// <param name="handlerSpans"></param>
+    public void EndSpans(ConcurrentDictionary<string, Activity> handlerSpans)
+    {
+        if (!handlerSpans.Any()) return;
+            
+        foreach (var handlerSpan in handlerSpans)
+        {
+            EndSpan(handlerSpan.Value);
+        }
+    }
+
+    /// <summary>
+    /// Links together a collection of spans
+    /// Mainly used with a batch to link siblings to each other
+    /// </summary>
+    /// <param name="handlerSpans"></param>
+    public void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans)
+    {
+        if (!handlerSpans.Any()) return;
+          
+        var handlerNames = handlerSpans.Keys.ToList();
+        foreach (var handlerName in handlerNames)
+        {
+            //var handlerSpan = handlerSpans[handlerName];
+            foreach (var hs in handlerSpans)
+            {
+                if (hs.Key != handlerName)
+                {
+                    hs.Value.AddLink(new ActivityLink(hs.Value.Context));
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -560,9 +671,9 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MapperName, mapperName },
             { BrighterSemanticConventions.MapperType, isAsync ? "async" : "sync" },
             { BrighterSemanticConventions.IsSink, isSink },
-            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessageId, message.Id.Value },
             { BrighterSemanticConventions.MessagingDestination, publication.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
             { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) }
@@ -599,19 +710,19 @@ public class BrighterTracer : IAmABrighterTracer
         {
             { BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction },
             { BrighterSemanticConventions.OutboxType, outBoxType },
-            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessageId, message.Id.Value },
             { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
             { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
         };
 
         span.AddEvent(new ActivityEvent(operation.ToSpanName(), DateTimeOffset.UtcNow, tags));
  
     }
-    
+
     /// <summary>
     /// Create an event representing the external service bus calling the outbox
     /// This is generic and not specific details from a particular outbox and is thus mostly message properties
@@ -654,15 +765,15 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
             { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
             { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
+            { BrighterSemanticConventions.MessageId, message.Id.Value },
             { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
+            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value },
             
-            { BrighterSemanticConventions.CeMessageId, message.Id },
+            { BrighterSemanticConventions.CeMessageId, message.Id.Value },
             { BrighterSemanticConventions.CeSource, message.Header.Source },
             { BrighterSemanticConventions.CeVersion, "1.0"},
             { BrighterSemanticConventions.CeSubject, message.Header.Subject },
@@ -670,56 +781,34 @@ public class BrighterTracer : IAmABrighterTracer
         };
 
         span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}", DateTimeOffset.UtcNow, tags));
-    }
- 
-    /// <summary>
-    /// Ends a span by correctly setting its status and then disposing of it
-    /// </summary>
-    /// <param name="span">The span to end</param>
-    public void EndSpan(Activity? span)
-    {
-        if (span?.Status == ActivityStatusCode.Unset)
-            span.SetStatus(ActivityStatusCode.Ok);
-        span?.Dispose();
+
+        new TextContextPropogator().PropogateContext(span?.Context, message);
     }
 
-    /// <summary>
-    /// Ends a collection of named spans
-    /// </summary>
-    /// <param name="handlerSpans"></param>
-    public void EndSpans(ConcurrentDictionary<string, Activity> handlerSpans)
+    private static void Propogate(Activity? parentActivity, Activity? activity)
     {
-        if (!handlerSpans.Any()) return;
-            
-        foreach (var handlerSpan in handlerSpans)
+        PropogateTraceString(parentActivity, activity);
+        PropogateBaggage(parentActivity, activity);
+    }
+    
+    private static void PropogateTraceString(Activity? parentActivity, Activity? activity)
+    {
+        if (activity == null)
+            return ;
+
+        if (parentActivity != null && !string.IsNullOrEmpty(parentActivity.TraceStateString))
+            activity.TraceStateString = parentActivity.TraceStateString;
+    }
+
+    private static void PropogateBaggage(Activity? parentActivity, Activity? activity)
+    {
+        if (activity == null)
+            return;
+
+        if (parentActivity != null && parentActivity.Baggage.Any())
         {
-            EndSpan(handlerSpan.Value);
+            foreach (var baggageItem in parentActivity!.Baggage)
+                activity.SetBaggage(baggageItem.Key, baggageItem.Value);
         }
     }
-
-    /// <summary>
-    /// Links together a collection of spans
-    /// Mainly used with a batch to link siblings to each other
-    /// </summary>
-    /// <param name="handlerSpans"></param>
-    public void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans)
-    {
-        if (!handlerSpans.Any()) return;
-          
-        var handlerNames = handlerSpans.Keys.ToList();
-        foreach (var handlerName in handlerNames)
-        {
-            //var handlerSpan = handlerSpans[handlerName];
-            foreach (var hs in handlerSpans)
-            {
-                if (hs.Key != handlerName)
-                {
-                    //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released  
-                    //handlerspan.AddLink(new ActivityLink(handlerspan.Value.Context));
-                }
-            }
-        }
-    }
-
-
 }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -21,8 +23,8 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 
     public AwsValidateInfrastructureByUrlTests ()
     {
-        const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var replyTo = new RoutingKey("http:\\queueUrl");
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
 
         _myCommand = new MyCommand { Value = "Test" };
         var correlationId = Guid.NewGuid().ToString();

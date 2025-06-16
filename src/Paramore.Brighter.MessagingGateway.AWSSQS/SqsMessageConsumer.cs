@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
@@ -120,17 +121,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cancellationToken">Cancel the reject operation</param>
-        public async Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
-                return;
+                return false;
 
             var receiptHandle = value.ToString();
 
@@ -157,6 +160,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
                 throw;
             }
+
+            return true;
         }
 
         /// <summary>

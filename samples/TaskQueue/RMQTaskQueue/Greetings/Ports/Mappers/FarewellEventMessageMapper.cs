@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Net.Mime;
 using Greetings.Ports.Commands;
 using MessagePack;
 using Paramore.Brighter;
@@ -35,14 +36,14 @@ namespace Greetings.Ports.Mappers
 
         public Message MapToMessage(FarewellEvent request, Publication publication)
         {
-
+            var contentType = new ContentType("application/vnd.msgpack");
             var header = new MessageHeader(
                 messageId: request.Id,
                 topic: publication.Topic,
                 messageType: request.RequestToMessageType(),
-                contentType: "application/vnd.msgpack");
+                contentType: contentType);
 
-            var body = new MessageBody(MessagePackSerializer.Serialize(request), "MessagePack");
+            var body = new MessageBody(MessagePackSerializer.Serialize(request), contentType);
             var message = new Message(header, body);
             return message;
         }

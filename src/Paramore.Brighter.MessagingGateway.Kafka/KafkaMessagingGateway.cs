@@ -42,9 +42,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public partial class KafkaMessagingGateway
     {
         protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageProducer>();
-        protected ClientConfig _clientConfig;
+        protected ClientConfig? ClientConfig;
         protected OnMissingChannel MakeChannels;
-        protected RoutingKey Topic;
+        protected RoutingKey? Topic;
         protected int NumPartitions;
         protected short ReplicationFactor;
         protected TimeSpan TopicFindTimeout;
@@ -64,7 +64,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var exists = FindTopic();
 
                 if (!exists && MakeChannels == OnMissingChannel.Validate)
-                    throw new ChannelFailureException($"Topic: {Topic.Value} does not exist");
+                {
+                    var topic = Topic is not null ? new RoutingKey(Topic.Value) : RoutingKey.Empty;
+                    throw new ChannelFailureException($"Topic: {topic} does not exist");
+                }
 
                 if (!exists && MakeChannels == OnMissingChannel.Create)
                     BrighterAsyncContext.Run(async () => await MakeTopic());
@@ -73,12 +76,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private async Task MakeTopic()
         {
-            using var adminClient = new AdminClientBuilder(_clientConfig).Build();
+            if (RoutingKey.IsNullOrEmpty(Topic)) throw new InvalidOperationException("Topic cannot be null");
+            
+            using var adminClient = new AdminClientBuilder(ClientConfig).Build();
             try
             {
                 await adminClient.CreateTopicsAsync(new List<TopicSpecification>
                 {
-                    new TopicSpecification
+                    new()
                     {
                         Name = Topic.Value,
                         NumPartitions = NumPartitions,
@@ -100,7 +105,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private bool FindTopic()
         {
-            using var adminClient = new AdminClientBuilder(_clientConfig).Build();
+            if (RoutingKey.IsNullOrEmpty(Topic)) throw new InvalidOperationException("Topic cannot be null");
+            
+            using var adminClient = new AdminClientBuilder(ClientConfig).Build();
             try
             {
                 bool found = false;
@@ -131,7 +138,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             //if topic is in error
                             if (inError)
                             {
-                                error += $" topic is in error => {matchingTopic.Error.Reason};";
+                                error += $" topic is in error => {matchingTopic.Error!.Reason};";
                             }
 
                             if (!matchingPartitions)

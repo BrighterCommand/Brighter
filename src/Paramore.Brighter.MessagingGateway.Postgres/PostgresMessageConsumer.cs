@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.PostgreSql;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -59,11 +60,11 @@ public partial class PostgresMessageConsumer(
     }
 
     /// <inheritdoc />
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
         {
-            return;
+            return false;
         }
 
         try
@@ -73,6 +74,7 @@ public partial class PostgresMessageConsumer(
             await using var command = connection.CreateCommand();
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
+            return true;
         }
         catch (Exception exception)
         {
@@ -220,11 +222,11 @@ public partial class PostgresMessageConsumer(
     }
 
     /// <inheritdoc />
-    public void Reject(Message message)
+    public bool Reject(Message message)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
         {
-            return;
+            return false;
         }
 
         try
@@ -235,7 +237,8 @@ public partial class PostgresMessageConsumer(
             using var command = connection.CreateCommand();
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
-            command.ExecuteNonQuery();       
+            command.ExecuteNonQuery();
+            return true;
         }
         catch (Exception exception)
         {
@@ -373,7 +376,7 @@ public partial class PostgresMessageConsumer(
     {
         var id = reader.GetInt64(0);
 
-        var content = reader.GetStream(3);
+        using var content = reader.GetStream(3);
         var message = JsonSerializer.Deserialize<Message>(content, JsonSerialisationOptions.Options)!;
         
         message.Header.Bag["ReceiptHandle"] = id;
@@ -384,7 +387,7 @@ public partial class PostgresMessageConsumer(
     {
         var id = reader.GetInt64(0);
 
-        var content = reader.GetStream(3);
+        using var content = reader.GetStream(3);
         var message = await JsonSerializer.DeserializeAsync<Message>(content, JsonSerialisationOptions.Options, cancellationToken);
         
         message!.Header.Bag["ReceiptHandle"] = id;

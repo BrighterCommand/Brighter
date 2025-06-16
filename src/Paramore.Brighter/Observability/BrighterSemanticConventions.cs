@@ -92,4 +92,10 @@ public static class BrighterSemanticConventions
     public const string SourceName = "Paramore.Brighter";
     public const string CeSubject = "cloudevents.event_subject";
     public const string CeType = "cloudevents.event_type";
+    public const string ClaimCheckInstrumentationDomain  = "claim_check";
+    public const string ClaimCheckOperation = "claim_check.operation";
+    public const string ClaimCheckProvider = "claim_check.provider";
+    public const string ClaimCheckBucketName = "claim_check.bucket_name";
+    public const string ClaimCheckId = "claim_check.id";
+    public const string ClaimCheckContentLenght = "claim_check.content_lenght";
 }

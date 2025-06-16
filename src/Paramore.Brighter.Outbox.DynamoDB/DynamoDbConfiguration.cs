@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="tableName">The name of the outbox table</param>
         /// <param name="timeout">The timeout when talking to DynamoDb</param>
         /// <param name="numberOfShards">The number of shards; use more than one shard for active topics to avoid hotspots</param>
-        public DynamoDbConfiguration(string tableName = null, int timeout = 500, int numberOfShards = 3)
+        public DynamoDbConfiguration(string? tableName = null, int timeout = 500, int numberOfShards = 3)
         {
             TableName = tableName ?? "brighter_outbox";
             OutstandingIndexName = "Outstanding";

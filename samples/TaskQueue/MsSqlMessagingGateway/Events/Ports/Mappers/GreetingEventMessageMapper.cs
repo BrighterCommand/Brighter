@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System.Text.Json;
 using Events.Ports.Commands;
 using Paramore.Brighter;
+using Paramore.Brighter.JsonConverters;
 
 namespace Events.Ports.Mappers
 {

@@ -1,7 +1,9 @@
 using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.MessageMappers;
@@ -41,7 +43,11 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
         if(publication.Topic is null)
             throw new ArgumentException($"No Topic Defined for {publication}");
 
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: MessageBody.APPLICATION_JSON);
+ #if NETSTANDARD2_0
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType("application/json"));
+ #else       
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType(MediaTypeNames.Application.Json));
+#endif
 
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);

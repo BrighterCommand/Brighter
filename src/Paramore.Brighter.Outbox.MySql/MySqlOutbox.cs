@@ -28,11 +28,13 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Observability;
@@ -378,7 +380,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return sqlException.Number == MySqlDuplicateKeyError;
         }
 
-        private Message MapAMessage(IDataReader dr)
+        private Message MapAMessage(DbDataReader dr)
         {
             var id = GetMessageId(dr);
             var messageType = GetMessageType(dr);
@@ -403,44 +405,44 @@ namespace Paramore.Brighter.Outbox.MySql
                     delayed: TimeSpan.Zero,
                     correlationId: correlationId,
                     replyTo: new RoutingKey(replyTo),
-                    contentType: contentType,
+                    contentType: contentType is not null ? new ContentType(contentType) : new ContentType(MediaTypeNames.Text.Plain),
                     partitionKey: partitionKey);
 
                 Dictionary<string, object> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
-                    foreach (var key in dictionaryBag.Keys)
+                    foreach (var keyValue in dictionaryBag)
                     {
-                        header.Bag.Add(key, dictionaryBag[key]);
+                        header.Bag.Add(keyValue.Key, keyValue.Value);
                     }
                 }
             }
 
+#if NETSTANDARD2_0 
+            
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream",
-                    CharacterEncoding.Raw)
-                : new MessageBody(GetBodyAsString(dr), "application/json", CharacterEncoding.UTF8);
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsString(dr), new ContentType("application/json"), CharacterEncoding.UTF8);
+        
+#else
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsString(dr), new ContentType(MediaTypeNames.Application.Json), CharacterEncoding.UTF8);
+            
+#endif                
 
             return new Message(header, body);
         }
 
         private static byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
-            var i = dr.GetOrdinal("Body");
-            using var ms = new MemoryStream();
-            var buffer = new byte[1024];
-            int offset = 0;
-            var bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-            while (bytesRead > 0)
-            {
-                ms.Write(buffer, offset, (int)bytesRead);
-                offset += (int)bytesRead;
-                bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-            }
-
-            ms.Flush();
-            var body = ms.ToArray();
-            return body;
+            // No need to dispose a MemoryStream, I do not think they dare to ever change that
+            var stream = dr.GetStream("Body");
+            if (stream is not MemoryStream memoryStream) // the current implementation returns a MemoryStream
+                // If the type of returned Stream is ever changed, please check if it requires disposal, also other places in the code base that uses GetStream
+                throw new NotImplementedException(nameof(MySqlDataReader.GetStream) + " no longer returns " + nameof(MemoryStream));
+            
+            return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
         }
 
         private static string GetBodyAsString(IDataReader dr)
@@ -524,4 +526,3 @@ namespace Paramore.Brighter.Outbox.MySql
         }
     }
 }
-

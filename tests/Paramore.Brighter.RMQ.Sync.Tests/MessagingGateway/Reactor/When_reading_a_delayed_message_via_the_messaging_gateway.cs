@@ -24,14 +24,16 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net.Mime;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Tests.MessagingGateway;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
 [Trait("Fragile", "CI")]
+[Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqMessageProducerDelayedMessageTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -44,7 +46,7 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
             
         var header = new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND);
         header.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
-        _message = new Message(header, new MessageBody("test3 content", "plain/text"));
+        _message = new Message(header, new MessageBody("test3 content", new ContentType(MediaTypeNames.Text.Plain)));
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -89,6 +91,8 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
     [Fact]
     public void When_requeing_a_failed_message_with_delay()
     {
+        //NOTE: This test will fail if RMQ is not configured to support delay
+        
         //send & receive a message
         _messageProducer.Send(_message);
         var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
@@ -101,13 +105,13 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
         //now requeue with a delay
         _message.Header.UpdateHandledCount();
         _messageConsumer.Requeue(_message, TimeSpan.FromMilliseconds(1000));
-
+        
         //receive and assert
-        var message2 = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
-        Assert.Equal(MessageType.MT_COMMAND, message2.Header.MessageType);
-        Assert.Equal(1, message2.Header.HandledCount);
+        var secondMessage = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
+        Assert.Equal(MessageType.MT_COMMAND, secondMessage.Header.MessageType);
+        Assert.Equal(1, secondMessage.Header.HandledCount);
 
-        _messageConsumer.Acknowledge(message2);
+        _messageConsumer.Acknowledge(secondMessage);
     }
 
     public void Dispose()

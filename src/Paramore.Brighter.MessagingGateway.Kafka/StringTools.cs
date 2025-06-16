@@ -10,8 +10,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return Encoding.ASCII.GetBytes(str);
         }
 
-        public static string FromByteArray(this byte[] bytes)
+        public static string FromByteArray(this byte[]? bytes)
         {
+            if (bytes is null) return string.Empty;
             return Encoding.ASCII.GetString(bytes);
         }
     }

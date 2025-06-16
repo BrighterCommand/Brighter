@@ -1,5 +1,7 @@
-﻿using System.Text.Json;
+﻿using System.Net.Mime;
+using System.Text.Json;
 using MongoDB.Bson.Serialization.Attributes;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MongoDb;
 
 namespace Paramore.Brighter.Outbox.MongoDb;
@@ -27,14 +29,17 @@ public class OutboxMessage : IMongoDbCollectionTTL
             ? DateTimeOffset.UtcNow
             : message.Header.TimeStamp;
         Body = message.Body.Bytes;
-        BodyContentType = message.Body.ContentType;
-        ContentType = message.Header.ContentType;
+        var bodyContentType = message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain;
+        var headerContentType = message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain;
+        
+        BodyContentType = bodyContentType;
+        ContentType = headerContentType;
         CorrelationId = message.Header.CorrelationId;
         HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         MessageId = message.Id;
         MessageType = message.Header.MessageType.ToString();
         PartitionKey = message.Header.PartitionKey;
-        ReplyTo = message.Header.ReplyTo;
+        ReplyTo = message.Header.ReplyTo?.Value;
         Topic = message.Header.Topic;
         ExpireAfterSeconds = expireAfterSeconds;
     }
@@ -78,7 +83,11 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// <summary>
     /// The message content type
     /// </summary>
-    public string BodyContentType { get; set; } = MessageBody.APPLICATION_JSON;
+# if NET472
+    public string BodyContentType { get; set; } = "appllcation/json";
+#else
+    public string BodyContentType { get; set; } = MediaTypeNames.Application.Json; 
+#endif    
 
     /// <summary>
     /// The message partition key
@@ -127,7 +136,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
             topic: new RoutingKey(Topic),
             messageType: messageType,
             timeStamp: TimeStamp,
-            correlationId: CorrelationId,
+            correlationId: CorrelationId is not null ? new Id(CorrelationId) : null,
             replyTo: ReplyTo == null ? RoutingKey.Empty : new RoutingKey(ReplyTo));
 
         if (!string.IsNullOrEmpty(PartitionKey))
@@ -137,20 +146,22 @@ public class OutboxMessage : IMongoDbCollectionTTL
 
         if (!string.IsNullOrEmpty(ContentType))
         {
-            header.ContentType = ContentType!;
+            header.ContentType = new ContentType(ContentType);
         }
 
         if (!string.IsNullOrEmpty(HeaderBag))
         {
             var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(HeaderBag!,
                 JsonSerialisationOptions.Options)!;
-            foreach (var key in bag.Keys)
+            foreach (var keyValue in bag)
             {
-                header.Bag.Add(key, bag[key]);
+                header.Bag.Add(keyValue.Key, keyValue.Value);
             }
         }
 
-        var body = new MessageBody(Body, BodyContentType, characterEncoding);
+        var bodyContentType = new ContentType(BodyContentType) { CharSet = nameof(characterEncoding) };
+
+        var body = new MessageBody(Body, bodyContentType, characterEncoding);
 
         return new Message(header, body);
     }

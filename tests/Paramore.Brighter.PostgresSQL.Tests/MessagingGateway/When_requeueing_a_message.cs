@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
 using Xunit;
@@ -21,7 +23,7 @@ public class PostgreSqlMessageConsumerRequeueTests
         var myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";
         _topic = new RoutingKey($"Consumer-Requeue-Tests-{Guid.NewGuid()}");
 

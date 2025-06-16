@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>A consumer that can be used to read from the stream</returns>
         public IAmAMessageConsumerSync Create(Subscription subscription)
         {
-            KafkaSubscription kafkaSubscription = subscription as KafkaSubscription;  
+            KafkaSubscription? kafkaSubscription = subscription as KafkaSubscription;  
             if (kafkaSubscription == null)
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
             

@@ -27,10 +27,13 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.IO;
+using System.Net.Mime;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;
@@ -71,9 +74,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction)
+            Action? loggingAction)
         {
             var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
@@ -87,7 +90,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             {
                 if (sqlException.Number != MsSqlDuplicateKeyError_UniqueIndexViolation &&
                     sqlException.Number != MsSqlDuplicateKeyError_UniqueConstraintViolation) throw;
-                loggingAction.Invoke();
+                loggingAction?.Invoke();
             }
             finally
             {
@@ -96,9 +99,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction,
+            Action? loggingAction,
             CancellationToken cancellationToken)
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
@@ -114,7 +117,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
                     sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    loggingAction.Invoke();
+                    loggingAction?.Invoke();
                     return;
                 }
 
@@ -214,7 +217,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         #region Parameter Helpers
 
-        protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
+        protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
         {
             return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
         }
@@ -223,71 +226,71 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-            return new[]
-            {
+            return
+            [
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}MessageId",
                     DbType = DbType.String,
-                    Value = (object)message.Id ?? DBNull.Value
+                    Value = message.Id
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}MessageType",
                     DbType = DbType.String,
-                    Value = (object)message.Header.MessageType.ToString() ?? DBNull.Value
+                    Value = message.Header.MessageType.ToString()
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}Topic",
                     DbType = DbType.String,
-                    Value = (object)message.Header.Topic.Value ?? DBNull.Value
+                    Value = message.Header.Topic.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}Timestamp",
                     DbType = DbType.DateTimeOffset,
-                    Value = (object)message.Header.TimeStamp.ToUniversalTime() ?? DBNull.Value
+                    Value = message.Header.TimeStamp.ToUniversalTime()
                 }, //always store in UTC, as this is how we query messages
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}CorrelationId",
                     DbType = DbType.String,
-                    Value = (object)message.Header.CorrelationId ?? DBNull.Value
+                    Value = message.Header.CorrelationId
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}ReplyTo",
                     DbType = DbType.String,
-                    Value = (object)message.Header.ReplyTo ?? DBNull.Value
+                    Value = message.Header.ReplyTo is not null ? message.Header.ReplyTo.Value : DBNull.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}ContentType",
                     DbType = DbType.String,
-                    Value = (object)message.Header.ContentType ?? DBNull.Value
+                    Value = message.Header.ContentType is not null ? message.Header.ContentType.ToString() : DBNull.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}PartitionKey",
                     DbType = DbType.String,
-                    Value = (object)message.Header.PartitionKey ?? DBNull.Value
+                    Value = message.Header.PartitionKey
                 },
-                new SqlParameter { ParameterName = $"{prefix}HeaderBag", Value = (object)bagJson ?? DBNull.Value },
+                new SqlParameter { ParameterName = $"{prefix}HeaderBag", Value = bagJson },
                 _configuration.BinaryMessagePayload
                     ? new SqlParameter
                     {
                         ParameterName = $"{prefix}Body",
                         DbType = DbType.Binary,
-                        Value = (object)message.Body?.Bytes ?? DBNull.Value
+                        Value = message.Body.Bytes
                     }
                     : new SqlParameter
                     {
                         ParameterName = $"{prefix}Body",
                         DbType = DbType.String,
-                        Value = (object)message.Body?.Value ?? DBNull.Value
+                        Value = message.Body.Value
                     }
-            };
+            ];
         }
 
         #endregion
@@ -301,7 +304,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         private static string GetMessageId(DbDataReader dr) => dr.GetString(dr.GetOrdinal("MessageId"));
 
-        private static string GetContentType(DbDataReader dr)
+        private static string? GetContentType(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null;
@@ -310,7 +313,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return contentType;
         }
 
-        private static string GetReplyTo(DbDataReader dr)
+        private static string? GetReplyTo(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
             if (dr.IsDBNull(ordinal)) return null;
@@ -319,7 +322,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return replyTo;
         }
 
-        private static Dictionary<string, object> GetContextBag(DbDataReader dr)
+        private static Dictionary<string, object>? GetContextBag(DbDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
@@ -328,7 +331,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return dictionaryBag;
         }
 
-        private static string GetCorrelationId(DbDataReader dr)
+        private static string? GetCorrelationId(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
@@ -346,7 +349,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return timeStamp;
         }
 
-        private static string GetPartitionKey(DbDataReader dr)
+        private static string? GetPartitionKey(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
@@ -355,25 +358,22 @@ namespace Paramore.Brighter.Outbox.MsSql
             return partitionKey;
         }
 
-        private static byte[] GetBodyAsBytes(DbDataReader dr)
+        private static byte[]? GetBodyAsBytes(SqlDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Body");
             if (dr.IsDBNull(ordinal)) return null;
 
             var body = dr.GetStream(ordinal);
-            long bodyLength = body.Length;
-            var buffer = new byte[bodyLength];
-            var bytesRemaining = bodyLength;
-            while (bytesRemaining > 0)
-            {
-                var bytesRead = body.Read(buffer, 0, (int)bodyLength);
-                bytesRemaining -= bytesRead;
-            }
+            if (body is MemoryStream memoryStream) // No need to dispose a MemoryStream, I do not think they dare to ever change that
+                return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
 
-            return buffer;
+            MemoryStream ms = new();
+            body.CopyTo(ms);
+            body.Dispose();
+            return ms.ToArray();
         }
 
-        private static string GetBodyAsText(DbDataReader dr)
+        private static string? GetBodyAsText(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Body");
             return dr.IsDBNull(ordinal) ? null : dr.GetString(ordinal);
@@ -385,7 +385,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         protected override Message MapFunction(DbDataReader dr)
         {
-            Message message = null;
+            Message? message = null;
             if (dr.Read())
             {
                 message = MapAMessage(dr);
@@ -397,7 +397,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         protected override async Task<Message> MapFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
         {
-            Message message = null;
+            Message? message = null;
             if (await dr.ReadAsync(cancellationToken))
             {
                 message = MapAMessage(dr);
@@ -480,40 +480,42 @@ namespace Paramore.Brighter.Outbox.MsSql
             var messageType = GetMessageType(dr);
             var topic = GetTopic(dr);
 
-            var header = new MessageHeader(id, topic, messageType);
-
             DateTimeOffset timeStamp = GetTimeStamp(dr);
             var correlationId = GetCorrelationId(dr);
             var replyTo = GetReplyTo(dr);
             var contentType = GetContentType(dr);
             var partitionKey = GetPartitionKey(dr);
 
-            header = new MessageHeader(
-                messageId: id,
+            var header = new MessageHeader(
+                messageId: new Id(id),
                 topic: topic,
                 messageType: messageType,
                 timeStamp: timeStamp,
                 handledCount: 0,
                 delayed: TimeSpan.Zero,
-                correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo),
-                contentType: contentType,
-                partitionKey: partitionKey);
+                correlationId: correlationId is not null ? new Id(correlationId) : Id.Empty,
+                replyTo: replyTo is not null ? new RoutingKey(replyTo) : RoutingKey.Empty,
+                contentType: contentType is not null ? new ContentType(contentType) : new ContentType(MediaTypeNames.Text.Plain),
+                partitionKey: partitionKey is not null ? new PartitionKey(partitionKey) : PartitionKey.Empty);
 
-            Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+            Dictionary<string, object>? dictionaryBag = GetContextBag(dr);
             if (dictionaryBag != null)
             {
-                foreach (var key in dictionaryBag.Keys)
+                foreach (var keyValue in dictionaryBag)
                 {
-                    header.Bag.Add(key, dictionaryBag[key]);
+                    header.Bag.Add(keyValue.Key, keyValue.Value);
                 }
             }
 
-            var bodyOrdinal = dr.GetOrdinal("Body");
-            string messageBody = string.Empty;
+#if NET462 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
-                : new MessageBody(GetBodyAsText(dr), "application/json", CharacterEncoding.UTF8);
+                ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsText(dr), new ContentType("applicaton/json"), CharacterEncoding.UTF8);
+#else
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsText(dr), new ContentType(MediaTypeNames.Application.Json), CharacterEncoding.UTF8);
+#endif
             return new Message(header, body);
         }
     }

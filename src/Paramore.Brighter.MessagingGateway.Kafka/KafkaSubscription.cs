@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Only one consumer in a group can read from a partition at any one time; this preserves ordering
         /// We do not default this value, and expect you to set it
         /// </summary>
-        public string GroupId { get; set; }
+        public string? GroupId { get; set; }
 
         /// <summary>
         /// Default to read only committed messages, change if you want to read uncommited messages. May cause duplicates.
@@ -134,10 +134,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         public KafkaSubscription (
             Type dataType, 
-            SubscriptionName subscriptionName = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null,
-            string groupId = null,
+            SubscriptionName? subscriptionName = null, 
+            ChannelName? channelName = null, 
+            RoutingKey? routingKey = null,
+            string? groupId = null,
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -153,7 +153,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             MessagePumpType messagePumpType = MessagePumpType.Unknown, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
@@ -208,10 +208,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         public KafkaSubscription(
-            SubscriptionName subscriptionName = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null, 
-            string groupId = null,
+            SubscriptionName? subscriptionName = null, 
+            ChannelName? channelName = null, 
+            RoutingKey? routingKey = null, 
+            string? groupId = null,
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -227,7 +227,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             MessagePumpType messagePumpType = MessagePumpType.Reactor, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,

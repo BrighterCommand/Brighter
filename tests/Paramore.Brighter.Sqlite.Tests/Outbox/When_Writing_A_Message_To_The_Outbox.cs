@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
@@ -62,7 +63,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
                 delayed:TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyTo"),
-                contentType: "text/plain",
+                contentType: new ContentType(MediaTypeNames.Text.Plain),
                 partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);

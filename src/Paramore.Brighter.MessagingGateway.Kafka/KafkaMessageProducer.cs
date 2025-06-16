@@ -27,7 +27,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Action taken when a message is published, following receipt of a confirmation from the broker
         /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
         /// </summary>
-        public event Action<bool, string> OnMessagePublished;
+        public event Action<bool, string>? OnMessagePublished;
       
         /// <summary>
         /// The publication configuration for this producer
@@ -47,30 +46,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         /// <inheritdoc />
-        public IAmAMessageScheduler Scheduler { get; set; }
+        public IAmAMessageScheduler? Scheduler { get; set; }
 
-        private IProducer<string, byte[]> _producer;
+        private IProducer<string, byte[]>? _producer;
         private readonly IKafkaMessageHeaderBuilder _headerBuilder;
         private readonly ProducerConfig _producerConfig;
-        private KafkaMessagePublisher _publisher;
+        private KafkaMessagePublisher? _publisher;
         private bool _hasFatalProducerError;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
             KafkaPublication publication)
         {
-            if (publication == null)
+            if (publication is null)
                 throw new ArgumentNullException(nameof(publication));
             
-            if (string.IsNullOrEmpty(publication.Topic))
+            if (string.IsNullOrEmpty(publication.Topic!))
                 throw new ConfigurationException("Topic is required for a publication");
 
             Publication = publication;
 
-            _clientConfig = new ClientConfig
+            ClientConfig = new ClientConfig
             {
                 Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
                 BootstrapServers = string.Join(",", configuration.BootStrapServers),
@@ -83,7 +82,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int)configuration.SecurityProtocol.Value) : null,
                 SslCaLocation = configuration.SslCaLocation,
                 SslKeyLocation = configuration.SslKeystoreLocation,
-
             };
 
             //We repeat properties because copying them from them to the producer config updates in client config in place
@@ -230,15 +228,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 return;
             }
             
-            if (message == null)
-            {
+            if (message is null)
                 throw new ArgumentNullException(nameof(message));
-            }
+
+            if (_publisher is null)
+                throw new InvalidOperationException("The publisher cannot be null");
 
             if (_hasFatalProducerError)
-            {
-                throw new ChannelFailureException($"Producer is in unrecoverable state");
-            }
+                throw new ChannelFailureException("Producer is in unrecoverable state");
             
             try
             {
@@ -266,7 +263,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (KafkaException kafkaException)
             {
-                Log.KafkaExceptionError(s_logger, kafkaException, Topic);
+                Log.KafkaExceptionError(s_logger, kafkaException, Topic ?? RoutingKey.Empty);
                             
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
@@ -294,15 +291,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 return;
              }
                         
-             if (message == null)
-             {
+             if (message is null)
                  throw new ArgumentNullException(nameof(message));
-             }
 
+             if (_publisher is null)
+                 throw new InvalidOperationException("The publisher cannot be null");
+             
              if (_hasFatalProducerError)
-             {
                  throw new ChannelFailureException("Producer is in unrecoverable state");
-             }
               
              try
              {
@@ -343,7 +339,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (status == PersistenceStatus.Persisted)
             {
-                if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
+                if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[]? messageIdBytes))
                 {
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val))

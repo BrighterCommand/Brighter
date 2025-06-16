@@ -202,7 +202,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         
         private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies, Assembly assembly)
         {
-            assemblies = assemblies.Concat(new[] { assembly });
+            assemblies = assemblies.Concat([assembly]);
             var subscribers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface

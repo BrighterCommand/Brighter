@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
@@ -17,7 +18,7 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
     private readonly SqsMessageConsumer _consumer;
     private readonly string _queueName;
     private readonly ChannelFactory _channelFactory;
-    private const string ContentType = "text\\plain";
+    private readonly ContentType _contentType = new(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
@@ -69,13 +70,13 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
         var messageGroupIdOne = $"MessageGroup{Guid.NewGuid():N}";
         var messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType, partitionKey: messageGroupIdOne),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: messageGroupIdOne),
             new MessageBody("test content one")
         );
 
         var messageTwo = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType, partitionKey: messageGroupIdOne),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: messageGroupIdOne),
             new MessageBody("test content two")
         );
 
@@ -85,7 +86,7 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 
         var messageThree = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType, partitionKey: messageGroupIdTwo)
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: messageGroupIdTwo)
             {
                 Bag = { [HeaderNames.DeduplicationId] = deduplicationId }
             },
@@ -94,7 +95,7 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 
         var messageFour = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType, partitionKey: messageGroupIdTwo)
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: messageGroupIdTwo)
             {
                 Bag = { [HeaderNames.DeduplicationId] = deduplicationId }
             },
@@ -103,7 +104,7 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 
         var messageFive = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: ContentType, partitionKey: messageGroupIdTwo),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: messageGroupIdTwo),
             new MessageBody("test content four")
         );
 
