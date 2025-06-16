@@ -34,6 +34,51 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// WHat is in the message body?
         /// </summary>
         public const string CONTENT_TYPE = "ContentType";
+        
+        /// <summary>
+        /// The cloud event dataschema
+        /// </summary>
+        public const string CLOUD_EVENTS_DATA_SCHEMA = "cloudevents:dataschema";
+
+        /// <summary>
+        /// The cloud event subject
+        /// </summary>
+        public const string CLOUD_EVENTS_SOURCE = "cloudevents:source";
+        
+        /// <summary>
+        /// The cloud event subject
+        /// </summary>
+        public const string CLOUD_EVENTS_SUBJECT = "cloudevents:subject";
+        
+        /// <summary>
+        /// The cloud event type
+        /// </summary>
+        public const string CLOUD_EVENTS_TYPE = "cloudevents:type";
+        
+        /// <summary>
+        /// The cloud events traceparent, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_PARENT = "cloudevents:traceparent";
+
+        /// <summary>
+        /// The cloud events tracestate, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_STATE = "cloudevents:tracestate";
+        
+        /// <summary>
+        /// The correlation id
+        /// </summary>
+        public const string CORRELATION_ID = "CorrelationId";
+        
+        /// <summary>
+        /// The milliseconds to delay the message by (requires plugin rabbitmq_delayed_message_exchange)
+        /// </summary>
+        public const string DELAYED_MILLISECONDS = "DelayedMilliseconds";
+        
+        /// <summary>
+        /// The handled count
+        /// </summary>
+        public const string HANDLED_COUNT = "HandledCount";
 
         /// <summary>
         /// The message type
@@ -43,64 +88,26 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// The message identifier
         /// </summary>
         public const string MESSAGE_ID = "Id";
-        /// <summary>
-        /// The correlation id
-        /// </summary>
-        public const string CORRELATION_ID = "CorrelationId";
-        /// <summary>
-        /// The topic
-        /// </summary>
-        public const string TOPIC = "Topic";
-        /// <summary>
-        /// The handled count
-        /// </summary>
-        public const string HANDLED_COUNT = "HandledCount";
-        /// <summary>
-        /// The milliseconds to delay the message by (requires plugin rabbitmq_delayed_message_exchange)
-        /// </summary>
-        public const string DELAYED_MILLISECONDS = "DelayedMilliseconds";
+        
         /// <summary>
         /// RPC, who should we reply to 
         /// </summary>
         public const string REPLY_TO = "ReplyTo";
+        
         /// <summary>
         /// The timestamp of the message
         /// </summary>
         public const string TIMESTAMP = "TimeStamp";
         
         /// <summary>
-        /// The cloud event dataschema
+        /// The topic
         /// </summary>
-        public const string CLOUD_EVENTS_DATA_SCHEMA = "dataschema";
-
-        /// <summary>
-        /// The cloud event subject
-        /// </summary>
-        public const string CLOUD_EVENTS_SOURCE = "source";
-        
-        /// <summary>
-        /// The cloud event subject
-        /// </summary>
-        public const string CLOUD_EVENTS_SUBJECT = "subject";
-        
-        /// <summary>
-        /// The cloud event type
-        /// </summary>
-        public const string CLOUD_EVENTS_TYPE = "type";
-        
-        /// <summary>
-        /// The cloud events traceparent, follows the W3C standard
-        /// </summary>
-        public const string CLOUD_EVENTS_TRACE_PARENT = "traceparent";
-
-        /// <summary>
-        /// The cloud events tracestate, follows the W3C standard
-        /// </summary>
-        public const string CLOUD_EVENTS_TRACE_STATE = "tracestate";
+        public const string TOPIC = "Topic";
 
         /// <summary>
         /// The W3C baggage
         /// </summary>
-        public const string W3C_BAGGAGE = "baggage";
+        public const string W3C_BAGGAGE = "cloudevents:baggage";
+
     }
 }
