@@ -101,7 +101,7 @@ namespace Paramore.Brighter
 
             if (!string.IsNullOrEmpty(publication.ReplyTo))
             {
-                message.Header.ReplyTo = publication.ReplyTo;
+                message.Header.ReplyTo = publication.ReplyTo!;
             } 
             
             return message;
