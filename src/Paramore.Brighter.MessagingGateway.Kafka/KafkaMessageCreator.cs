@@ -324,6 +324,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private static HeaderResult<PartitionKey?> ReadPartitionKey(Message<string, byte[]> message)
         {
+
             var pKey = ReadHeader(message.Headers, HeaderNames.PARTITIONKEY)
                 .Map(s =>
                 {
