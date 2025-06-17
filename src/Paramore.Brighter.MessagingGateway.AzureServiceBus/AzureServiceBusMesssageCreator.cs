@@ -233,16 +233,22 @@ public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscrip
 
     private Uri GetSource(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        
+        var defaultSourceUri = new Uri("http://goparamore.io"); // Default source URI
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSource, out object? property))
         {
             s_logger.LogWarning("No source found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
-            return new Uri(string.Empty);
+            return defaultSourceUri;
         }
 
-        var source = property.ToString() ?? string.Empty;
+        if (property is not string sourceString || string.IsNullOrEmpty(sourceString))
+        {
+            s_logger.LogWarning("Empty or invalid source in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return defaultSourceUri;
+        }
+        
+        var source = property.ToString();
 
-        return new Uri(source );
+        return new Uri(source!);
     }
     
    private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)
