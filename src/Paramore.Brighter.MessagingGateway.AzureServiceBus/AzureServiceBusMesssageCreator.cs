@@ -186,7 +186,10 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private static ContentType GetContentType(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        return new ContentType(azureServiceBusMessage.ContentType);
+        if (!string.IsNullOrEmpty(azureServiceBusMessage.ContentType))
+            return new ContentType(azureServiceBusMessage.ContentType);
+
+        return new ContentType(MediaTypeNames.Text.Plain);
     }
     
     private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
