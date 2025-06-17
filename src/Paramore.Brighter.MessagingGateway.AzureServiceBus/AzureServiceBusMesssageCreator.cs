@@ -128,13 +128,20 @@ public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscrip
 
     private Uri GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
     {
+        var defaultSchemaUri = new Uri("http://goparamore.io"); // Default schema URI
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSchema, out object? property))
         {
             s_logger.LogWarning("No Cloud Events data schema found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
-            return new Uri(string.Empty);
+            return defaultSchemaUri;
         }
 
-        var dataSchema = property.ToString() ?? string.Empty;
+        var dataSchema = property.ToString() ;
+        
+        if (string.IsNullOrEmpty(dataSchema))
+        {
+            s_logger.LogWarning("Empty Cloud Events data schema in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return defaultSchemaUri;
+        }
 
         return new Uri(dataSchema);
     }
@@ -226,16 +233,22 @@ public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscrip
 
     private Uri GetSource(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        
+        var defaultSourceUri = new Uri("http://goparamore.io"); // Default source URI
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSource, out object? property))
         {
             s_logger.LogWarning("No source found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
-            return new Uri(string.Empty);
+            return defaultSourceUri;
         }
 
-        var source = property.ToString() ?? string.Empty;
+        if (property is not string sourceString || string.IsNullOrEmpty(sourceString))
+        {
+            s_logger.LogWarning("Empty or invalid source in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return defaultSourceUri;
+        }
+        
+        var source = property.ToString();
 
-        return new Uri(source );
+        return new Uri(source!);
     }
     
    private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)
