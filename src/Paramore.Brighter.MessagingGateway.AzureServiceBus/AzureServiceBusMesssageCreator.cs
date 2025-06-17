@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// Creates a Brighter <see cref="Message"/> from an Azure Service Bus message.
 /// </summary>
 /// <param name="subscription">Subscription information, used to help populate the message</param>
-public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscription)
+public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscription)
 {
     private readonly RoutingKey _topic = subscription.RoutingKey;
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMesssageCreator>();
