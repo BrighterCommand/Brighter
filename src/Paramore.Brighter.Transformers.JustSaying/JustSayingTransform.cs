@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Transformers.JustSaying;
 /// During the <see cref="Wrap"/> operation, if the message body is a valid JSON,
 /// this transform injects the configured properties directly into the JSON payload.
 /// If no specific values are provided via the attribute, it can attempt to retrieve
-/// them from the Brighter <see cref="IRequestContext.Bag"/> if <see cref="JustSayingAttribute.FromContextRequest"/> is enabled.
+/// them from the Brighter <see cref="IRequestContext.Bag"/>.
 /// </para>
 /// <para>
 /// The <see cref="Unwrap"/> operation is intentionally a no-op as JustSaying's
@@ -30,7 +30,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     private string? _raisingComponent;
     private string? _version;
     private string? _tenant;
-    private string? _type;
+    private string? _subject;
 
     /// <inheritdoc cref="IAmAMessageTransform.Context"/>
     public IRequestContext? Context { get; set; }
@@ -55,7 +55,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
 
         if (initializerList[2] is string subject)
         {
-            _type = subject;
+            _subject = subject;
         }
 
         if (initializerList[3] is string tenant)
@@ -84,7 +84,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     /// <inheritdoc />
     public Message Wrap(Message message, Publication publication)
     {
-        message.Header.Bag["Subject"] = GetType(message, publication);
+        message.Header.Subject = GetSubject(message, publication);
 
         var tenant = GetTenant();
         var raisingComponent = GetRaisingComponent(message, publication);
@@ -96,7 +96,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
             return message;
         }
 
-        var id = node[nameof(IJustSayingRequest.Id)];
+        var id = node[nameof(IJustSayingRequest.Id)] ?? node[nameof(IJustSayingRequest.Id).ToLower()];
         if (id == null 
             || id.GetValueKind() != JsonValueKind.String 
             || !Guid.TryParse(id.GetValue<string>(), out _))
@@ -125,23 +125,32 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     {
     }
 
-    private string GetType(Message message, Publication publication)
+    private string GetSubject(Message message, Publication publication)
     {
-        if (!string.IsNullOrEmpty(_type))
+        if (!string.IsNullOrEmpty(_subject))
         {
-            return _type;
+            return _subject;
         }
 
-        if (string.IsNullOrEmpty(publication.Type) 
-            && (string.IsNullOrEmpty(message.Header.Type) || message.Header.Type == MessageHeader.DefaultType))
+        if (!string.IsNullOrEmpty(message.Header.Subject))
         {
-            return publication.Type;
+            return message.Header.Subject;
         }
 
-        return message.Header.Type;
+        if (!string.IsNullOrEmpty(publication.Subject))
+        {
+            return publication.Subject;
+        }
+
+        if (publication.RequestType != null)
+        {
+            return publication.RequestType.Name;
+        }
+
+        throw new InvalidOperationException("No Subject was define via Attribute/Message/SnsPublication");
     }
 
-    private string GetTenant()
+    private string? GetTenant()
     {
         if (!string.IsNullOrEmpty(_tenant))
         {
@@ -155,7 +164,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
             return tenant;
         }
 
-        return "all";
+        return null;
     }
 
     private string GetRaisingComponent(Message message, Publication publication)

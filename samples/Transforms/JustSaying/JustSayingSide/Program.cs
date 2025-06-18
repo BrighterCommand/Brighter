@@ -20,8 +20,8 @@ var host = new HostBuilder()
                     .Client(client => client.WithServiceUrl("http://localhost:4566")
                         .WithBasicCredentials("test", "test"))
                     .Messaging(messaging => messaging.WithRegion(RegionEndpoint.USEast1))
-                    .Publications(pub => pub.WithTopic<Greeting>())
-                    .Subscriptions(sub => sub.ForTopic<Greeting>());
+                    .Publications(pub => pub.WithTopic<Greeting>(topic => topic.WithTag("Source", "Brighter")))
+                    .Subscriptions(sub => sub.ForTopic<Greeting>(topic => topic.WithQueueName("justsaying-greeting")));
             });
     })
     .Build();

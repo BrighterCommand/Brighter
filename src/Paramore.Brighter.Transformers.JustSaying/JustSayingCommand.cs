@@ -27,7 +27,7 @@ public class JustSayingCommand : Command, IJustSayingRequest
     public string? SourceIp { get; set; }
     
     /// <inheritdoc />
-    public string Tenant { get; set; } = string.Empty;
+    public string? Tenant { get; set; }
     
     /// <inheritdoc />
     public string? Conversation { get; set; }

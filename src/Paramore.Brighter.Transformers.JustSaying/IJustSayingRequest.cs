@@ -1,5 +1,10 @@
 namespace Paramore.Brighter.Transformers.JustSaying;
 
+/// <summary>
+/// The <c>IJustSayingRequest</c> interface extends the <c>IRequest</c> interface,
+/// providing a standardized contract for messages exchanged within the JustSaying messaging framework.
+/// It defines common properties that are useful for tracing, auditing, and routing messages.
+/// </summary>
 public interface IJustSayingRequest : IRequest
 {
     /// <summary>
@@ -20,15 +25,12 @@ public interface IJustSayingRequest : IRequest
     /// <summary>
     /// The source IP
     /// </summary>
-    /// <remarks>
-    /// It's used by Just Saying
-    /// </remarks>
     string? SourceIp { get; set; }
 
     /// <summary>
     /// The message tenant.
     /// </summary>
-    string Tenant { get; set; }
+    string? Tenant { get; set; }
 
     /// <summary>
     /// The conversation id.

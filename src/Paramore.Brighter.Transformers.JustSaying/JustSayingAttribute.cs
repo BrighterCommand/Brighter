@@ -1,7 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Paramore.Brighter.Transformers.JustSaying;
-
+﻿namespace Paramore.Brighter.Transformers.JustSaying;
 
 /// <summary>
 /// An attribute that makes a Brighter message compatible with JustSaying by

@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Amazon;
-using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,7 +31,8 @@ var host = new HostBuilder()
                 configure.Subscriptions = [
                     new SqsSubscription<Greeting>(
                         channelName: new ChannelName("brighter-queue"),
-                        routingKey: new RoutingKey(nameof(Greeting).ToLower()))
+                        routingKey: new RoutingKey(nameof(Greeting).ToLower()),
+                        messagePumpType: MessagePumpType.Reactor)
                 ];
 
                 configure.DefaultChannelFactory = new ChannelFactory(connection);
@@ -49,6 +49,7 @@ var host = new HostBuilder()
                         ])
                     .Create();
             })
+            .TransformsFromAssemblies(typeof(JustSayingAttribute).Assembly)
             .AutoFromAssemblies();
     })
     .Build();
@@ -82,10 +83,21 @@ public class Greeting() : Command(Guid.NewGuid())
     public string Name { get; set; } = string.Empty;
 }
 
-public class GreetingMapper : IAmAMessageMapper<Greeting>
+public class GreetingMapper : IAmAMessageMapper<Greeting>, IAmAMessageMapperAsync<Greeting>
 {
     public IRequestContext? Context { get; set; }
-   
+    
+    [JustSaying(0, RaisingComponent = "brighter-sample", Tenant = "uk", Type = nameof(Greeting))]
+    public Task<Message> MapToMessageAsync(Greeting request, Publication publication, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(MapToMessage(request, publication));
+    }
+
+    public Task<Greeting> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(MapToRequest(message));
+    }
+
     [JustSaying(0, RaisingComponent = "brighter-sample", Tenant = "uk", Type = nameof(Greeting))]
     public Message MapToMessage(Greeting request, Publication publication)
     {

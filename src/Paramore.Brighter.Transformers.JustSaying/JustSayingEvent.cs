@@ -27,7 +27,7 @@ public class JustSayingEvent : Event, IJustSayingRequest
     public string? SourceIp { get; set; }
     
     /// <inheritdoc />
-    public string Tenant { get; set; } = "all";
+    public string? Tenant { get; set; }
     
     /// <inheritdoc />
     public string? Conversation { get; set; }

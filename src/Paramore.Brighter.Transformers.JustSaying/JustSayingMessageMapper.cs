@@ -55,17 +55,12 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
             
             return new Message(
                 new MessageHeader(
+                    correlationId: correlationId,
                     messageId: request.Id,
-                    topic: publication.Topic!,
                     messageType: messageType,
-                    correlationId: correlationId)
-                {
-                    TimeStamp = justSaying.TimeStamp,
-                    Bag =
-                    {
-                        ["Subject"] = GetSubject()
-                    }
-                },
+                    subject: GetSubject(),
+                    timeStamp: justSaying.TimeStamp,
+                    topic: publication.Topic!),
                 new MessageBody(JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options)));
         }
 
@@ -79,14 +74,12 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
 
         return new Message(
             new MessageHeader(
-                messageId: request.Id,
-                topic: publication.Topic!,
-                messageType: messageType,
-                correlationId: correlationId)
-            {
-                TimeStamp = timestamp,
-                Bag = { ["Subject"] = GetSubject() }
-            },
+                 correlationId: correlationId,
+                 messageId: request.Id,
+                 messageType: messageType,
+                 subject: GetSubject(),
+                 timeStamp: timestamp,
+                 topic: publication.Topic!) ,
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(doc, JsonSerialisationOptions.Options)));
     }
 
@@ -102,7 +95,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
         return Guid.NewGuid().ToString();
     }
     
-    private string GetTenant()
+    private string? GetTenant()
     {
         if (Context != null 
             && Context.Bag.TryGetValue(RequestContextAttributesName.Tenant, out var data) 
@@ -111,7 +104,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
             return tenant;
         }
         
-        return "all";
+        return null;
     }
 
     private string GetSubject()
