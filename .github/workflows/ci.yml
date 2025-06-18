@@ -396,6 +396,32 @@ jobs:
         run: dotnet restore
       - name: DynamoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
+  localstack-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: build
+    env:
+      LOCALSTACK_SERVICE_URL: http://localhost.localstack.cloud:4566
+    
+    services: 
+      localstack: 
+        image: localstack/localstack    
+        ports:
+          - 4566:4566
+        env: 
+          SERVICES: s3,sqs,sns,sts,dynamodb,iam,scheduler
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: AWS Tests
+        run: dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
 
   aws-ci:
     runs-on: ubuntu-latest

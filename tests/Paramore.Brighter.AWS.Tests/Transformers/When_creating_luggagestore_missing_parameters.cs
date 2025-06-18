@@ -12,12 +12,13 @@ public class S3LuggageUploadMissingParametersTests
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName;
-
+    
     public S3LuggageUploadMissingParametersTests()
     {
         var services = new ServiceCollection();
         services.AddHttpClient();
         var provider = services.BuildServiceProvider();
+        
         _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
@@ -76,7 +77,8 @@ public class S3LuggageUploadMissingParametersTests
         {
             var store = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
             {
-                HttpClientFactory = _httpClientFactory
+                HttpClientFactory = _httpClientFactory,
+                BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple() 
             });
             await store.EnsureStoreExistsAsync();
         });

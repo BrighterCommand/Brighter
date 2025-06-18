@@ -40,6 +40,8 @@ namespace Paramore.Brighter.Tranformers.AWS;
 /// </summary>
 public class S3LuggageOptions : StorageOptions
 {
+    public const string DefaultBucketAddressTemplate = "https://{BucketName}.s3.{BucketRegion}.amazonaws.com";
+    
     private static readonly Regex s_validBucketNameRx = new("(?!(^xn--|.+-s3alias$))^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$", RegexOptions.Compiled);
     
     public S3LuggageOptions(AWSS3Connection connection, string bucketName)
@@ -57,6 +59,7 @@ public class S3LuggageOptions : StorageOptions
 
         var stsConfig = new AmazonSecurityTokenServiceConfig { RegionEndpoint = connection.Region };
         connection.ClientConfig?.Invoke(stsConfig);
+        
         StsClient = new AmazonSecurityTokenServiceClient(connection.Credentials, stsConfig);
         BucketRegion = new S3Region(connection.Region.SystemName);
     }
@@ -136,7 +139,7 @@ public class S3LuggageOptions : StorageOptions
     /// If you are using an S3 compatible storage provided,
     /// please update this endpoint if you want to Brighter to create your bucket
     /// </remarks>
-    public string BucketAddressTemplate { get; set; } = "https://{BucketName}.s3.{BucketRegion}.amazonaws.com";
+    public string BucketAddressTemplate { get; set; } = DefaultBucketAddressTemplate;
     
     public AsyncRetryPolicy? RetryPolicy { get; set; }
 }
