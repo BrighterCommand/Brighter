@@ -62,10 +62,6 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
         {
             _tenant = tenant;
         }
-
-        if (initializerList[4] is bool fromContextRequest)
-        {
-        }
     }
 
     /// <inheritdoc cref="IAmAMessageTransform.InitializeUnwrapFromAttributeParams"/>
@@ -88,11 +84,11 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     /// <inheritdoc />
     public Message Wrap(Message message, Publication publication)
     {
-        message.Header.Bag["Subject"] = Get(_type, nameof(JustSayingAttribute.Type)) ?? publication.Type;
+        message.Header.Bag["Subject"] = GetType(message, publication);
 
-        var tenant = Get(_tenant, nameof(JustSayingAttribute.Tenant)) ?? "all";
-        var raisingComponent= Get(_raisingComponent, nameof(JustSayingAttribute.RaisingComponent)) ?? publication.Source.ToString();
-        var version = Get(_version, nameof(JustSayingAttribute.Version)) ?? "1.0";
+        var tenant = GetTenant();
+        var raisingComponent = GetRaisingComponent(message, publication);
+        var version = GetVersion();
         
         var node = JsonNode.Parse(message.Body.Bytes);
         if (node == null)
@@ -112,7 +108,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
         node[nameof(IJustSayingRequest.Version)] = version;
         node[nameof(IJustSayingRequest.TimeStamp)] = message.Header.TimeStamp;
         node[nameof(IJustSayingRequest.RaisingComponent)] = raisingComponent;
-        node[nameof(IJustSayingRequest.Conversation)] = message.Header.CorrelationId;
+        node[nameof(IJustSayingRequest.Conversation)] = message.Header.CorrelationId.Value;
 
         message.Body = new MessageBody(node.ToJsonString());
         return message;
@@ -127,6 +123,78 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     /// <inheritdoc />
     public void Dispose()
     {
+    }
+
+    private string GetType(Message message, Publication publication)
+    {
+        if (!string.IsNullOrEmpty(_type))
+        {
+            return _type;
+        }
+
+        if (string.IsNullOrEmpty(publication.Type) 
+            && (string.IsNullOrEmpty(message.Header.Type) || message.Header.Type == MessageHeader.DefaultType))
+        {
+            return publication.Type;
+        }
+
+        return message.Header.Type;
+    }
+
+    private string GetTenant()
+    {
+        if (!string.IsNullOrEmpty(_tenant))
+        {
+            return _tenant;
+        }
+
+        if (Context != null 
+            && Context.Bag.TryGetValue(RequestContextAttributesName.Tenant, out var obj) 
+            && obj is string tenant && !string.IsNullOrEmpty(tenant))
+        {
+            return tenant;
+        }
+
+        return "all";
+    }
+
+    private string GetRaisingComponent(Message message, Publication publication)
+    {
+        if (!string.IsNullOrEmpty(_raisingComponent))
+        {
+            return _raisingComponent;
+        }
+
+        if (Context != null
+            && Context.Bag.TryGetValue(RequestContextAttributesName.RasingComponent, out var obj)
+            && obj is string component && !string.IsNullOrEmpty(component))
+        {
+            return component;
+        }
+
+        if (message.Header.Source.ToString() != MessageHeader.DefaultSource)
+        {
+            return message.Header.Source.ToString();
+        }
+
+        return publication.Source.ToString();
+    }
+    
+    private string GetVersion()
+    {
+        if (!string.IsNullOrEmpty(_version))
+        {
+            return _version;
+        }
+
+        if (Context != null
+            && Context.Bag.TryGetValue(RequestContextAttributesName.Version, out var obj)
+            && obj is string version && !string.IsNullOrEmpty(version))
+        {
+            return version;
+        }
+
+        return "1.0.0";
     }
 
     private string? Get(string? attributeValue, string propertyName)

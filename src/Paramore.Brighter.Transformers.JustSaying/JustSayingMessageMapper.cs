@@ -1,6 +1,5 @@
-using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
 
@@ -20,6 +19,13 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
         
         var correlationId = GetCorrelationId();
         var tenant = GetTenant();
+        var version = GetVersion();
+        var messageType = request switch
+        {
+            Command _ => MessageType.MT_COMMAND,
+            Event _ => MessageType.MT_EVENT,
+            _ => MessageType.MT_DOCUMENT
+        };
         
         if (request is IJustSayingRequest justSaying)
         {
@@ -41,16 +47,24 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
             {
                 justSaying.TimeStamp = DateTimeOffset.UtcNow;
             }
+
+            if (string.IsNullOrEmpty(justSaying.Version))
+            {
+                justSaying.Version = version;
+            }
             
             return new Message(
                 new MessageHeader(
                     messageId: request.Id,
                     topic: publication.Topic!,
-                    messageType: MessageType.MT_EVENT,
+                    messageType: messageType,
                     correlationId: correlationId)
                 {
                     TimeStamp = justSaying.TimeStamp,
-                    Bag = { ["Subject"] = typeof(TMessage).Name }
+                    Bag =
+                    {
+                        ["Subject"] = GetSubject()
+                    }
                 },
                 new MessageBody(JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options)));
         }
@@ -60,24 +74,27 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
         var doc = JsonSerializer.SerializeToNode(request)!;
         doc[nameof(IJustSayingRequest.TimeStamp)] = timestamp;
         doc[nameof(IJustSayingRequest.Tenant)] = tenant;
+        doc[nameof(IJustSayingRequest.Version)] = version;
         doc[nameof(IJustSayingRequest.Conversation)] = correlationId;
 
         return new Message(
             new MessageHeader(
                 messageId: request.Id,
                 topic: publication.Topic!,
-                messageType: MessageType.MT_EVENT,
+                messageType: messageType,
                 correlationId: correlationId)
             {
                 TimeStamp = timestamp,
-                Bag = { ["Subject"] = typeof(TMessage).Name }
+                Bag = { ["Subject"] = GetSubject() }
             },
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(doc, JsonSerialisationOptions.Options)));
     }
 
     private string GetCorrelationId()
     {
-        if (Context != null && Context.Bag.TryGetValue(nameof(MessageHeader.CorrelationId), out var data) && data is string correlationId)
+        if (Context != null 
+            && Context.Bag.TryGetValue(nameof(MessageHeader.CorrelationId), out var data) 
+            && data is string correlationId)
         {
             return correlationId;
         }
@@ -87,7 +104,9 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
     
     private string GetTenant()
     {
-        if (Context != null && Context.Bag.TryGetValue(nameof(IJustSayingRequest.Tenant), out var data) && data is string tenant)
+        if (Context != null 
+            && Context.Bag.TryGetValue(RequestContextAttributesName.Tenant, out var data) 
+            && data is string tenant)
         {
             return tenant;
         }
@@ -95,34 +114,33 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>
         return "all";
     }
 
+    private string GetSubject()
+    {
+        if (Context != null 
+            && Context.Bag.TryGetValue("Subject", out var data) 
+            && data is string subject)
+        {
+            return subject;
+        }
+
+        return typeof(TMessage).Name;
+    }
+    
+    private string GetVersion()
+    {
+        if (Context != null 
+            && Context.Bag.TryGetValue(RequestContextAttributesName.Version, out var data) 
+            && data is string version)
+        {
+            return version;
+        }
+        
+        return "1.0.0";
+    }
+
     /// <inheritdoc />
     public TMessage MapToRequest(Message message)
     {
         return JsonSerializer.Deserialize<TMessage>(message.Body.Bytes, JsonSerialisationOptions.Options)!;
-    }
-
-
-    public class JustSayingMessaging
-    {
-        [JsonPropertyName("TimeStamp")]
-        public DateTime TimeStamp { get; set; }
-
-        [JsonPropertyName("RaisingComponent")]
-        public string? RaisingComponent { get; set; }
-
-        [JsonPropertyName("Version")]
-        public string? Version { get; set; }
-
-        [JsonPropertyName("SourceIp")]
-        public string? SourceIp { get; set; }
-
-        [JsonPropertyName("Tenant")]
-        public string Tenant { get; set; } = "all";
-
-        [JsonPropertyName("Conversation")]
-        public string? Conversation { get; set; }
-        
-        [JsonExtensionData]
-        public Dictionary<string, JsonElement?>? Data { get; set; }
     }
 }
