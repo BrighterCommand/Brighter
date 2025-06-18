@@ -64,7 +64,7 @@ public class S3LuggageOptions : StorageOptions
     /// <summary>
     /// How should we control access to the bucket used by the Luggage Store 
     /// </summary>
-    public S3CannedACL ACLs { get; set; } = S3CannedACL.Private;
+    public S3CannedACL? ACLs { get; set; }
 
     private string _bucketName = string.Empty;
 

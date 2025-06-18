@@ -44,7 +44,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             var services = new ServiceCollection();
             services.AddHttpClient();
             var provider = services.BuildServiceProvider();
-            IHttpClientFactory httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
+            var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
 
             _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
 
