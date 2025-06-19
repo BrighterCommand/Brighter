@@ -76,11 +76,11 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         [Fact]
         public void When_saving_a_message_item()
         {
-            Assert.Equal(_header.MessageId.Value, _messageItem.MessageId.ToString());
+            Assert.Equal(_header.MessageId.Value, _messageItem.MessageId);
             Assert.Equal(_header.Topic.ToString(), _messageItem.Topic);
             Assert.Equal(_header.MessageType.ToString(), _messageItem.MessageType);
-            Assert.Equal(_header.HandledCount, _messageItem.HandledCount);
-            Assert.Equal((int)_header.Delayed.TotalMilliseconds, _messageItem.DelayedMilliseconds);
+            Assert.Equal(0, _messageItem.HandledCount); //set to zero from outbox
+            Assert.Equal(0, _messageItem.DelayedMilliseconds); //set to zero from outbox
             Assert.Equal(_header.CorrelationId.Value, _messageItem.CorrelationId);
             Assert.Equal(_header.ReplyTo?.ToString(), _messageItem.ReplyTo);
             Assert.Equal(_header.ContentType?.MediaType, _messageItem.ContentType);
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             Assert.Equal(_header.TraceParent?.Value, _messageItem.TraceParent);
             Assert.Equal(_header.TraceState?.Value, _messageItem.TraceState);
             Assert.Equal(_header.Baggage.ToString(),  _messageItem.Baggage);
-            Assert.Equal(_header.TimeStamp.Ticks, _messageItem.TimeStamp.Ticks);
+            Assert.Equal(_header.TimeStamp.Ticks, _messageItem.CreatedTime);
         }
 
         [Fact]
@@ -106,8 +106,8 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             Assert.Equal(_message.Header.MessageId, result.Header.MessageId);
             Assert.Equal(_message.Header.Topic, result.Header.Topic);
             Assert.Equal(_message.Header.MessageType, result.Header.MessageType);
-            Assert.Equal(_message.Header.HandledCount, result.Header.HandledCount);
-            Assert.Equal(_message.Header.Delayed.TotalMilliseconds, result.Header.Delayed.TotalMilliseconds);
+            Assert.Equal(0, result.Header.HandledCount); //zero handled count when read from outbox
+            Assert.Equal(TimeSpan.Zero, result.Header.Delayed); //zero delayed when read from outbox
             Assert.Equal(_message.Header.CorrelationId, result.Header.CorrelationId);
             Assert.Equal(_message.Header.ReplyTo, result.Header.ReplyTo);
             Assert.Equal(_message.Header.ContentType?.MediaType, result.Header.ContentType?.MediaType);

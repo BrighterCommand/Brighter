@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Baggage = Paramore.Brighter.Observability.Baggage;
 
@@ -135,9 +136,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         public string? Subject { get; set; }
         
-        // The date and time that the message was published to the outbox
-        public DateTimeOffset TimeStamp { get; set; }
-
         /// <summary>
         /// The Topic the message was published to
         /// </summary>
@@ -197,8 +195,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Topic = message.Header.Topic;
             TopicShard = $"{Topic}_{shard}";
             ExpiresAt = expiresAt;
-            HandledCount = message.Header.HandledCount;
-            DelayedMilliseconds = (int)message.Header.Delayed.TotalMilliseconds;
+            HandledCount = 0; //An outbox message is always created with a HandledCount of 0
+            DelayedMilliseconds = 0; //An outbox message is always created with a DelayedMilliseconds of 0
             Type = message.Header.Type;
             SpecVersion = message.Header.SpecVersion;
             Subject = message.Header.Subject;
@@ -208,7 +206,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             TraceParent = message.Header.TraceParent?.Value;
             TraceState = message.Header.TraceState?.Value;
             Baggage =message.Header.Baggage.ToString();
-            TimeStamp = message.Header.TimeStamp;
         }
 
         public Message ConvertToMessage()
@@ -232,8 +229,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 replyTo: ReplyTo is not null ? new RoutingKey(ReplyTo) : RoutingKey.Empty,
                 contentType: contentType, 
                 partitionKey: PartitionKey is not null ? new PartitionKey(PartitionKey) : Paramore.Brighter.PartitionKey.Empty,
-                handledCount: HandledCount,
-                delayed: TimeSpan.FromMilliseconds(DelayedMilliseconds),
+                handledCount: 0,    //we set to zero in the outbox
+                delayed: TimeSpan.Zero,
                 type:Type,
                 subject: Subject,
                 source: !string.IsNullOrEmpty(Source) ? new Uri(Source) : new Uri("https://paramore.io"),
