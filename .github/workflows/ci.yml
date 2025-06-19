@@ -23,6 +23,10 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   # Don't show a logo on first run of CLI
   DOTNET_NOLOGO: true
+  # Enable color on terminal
+  DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: 1
+  FORCE_COLOR: 3
+  TERM: xterm
   # GitHub Packages Feed settings
   GITHUB_FEED: https://nuget.pkg.github.com/
   GITHUB_USER: iancooper
@@ -414,18 +418,29 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to fetch the Git tags
+          filter: tree:0
+          show-progress: false
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            Linux-nuget-
       - name: AWS Tests
         run: dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
 
   aws-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    if: ${{ github.event.repository.fork == false || github.event_name == 'pull_request' }} 
     needs: [build]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -455,6 +470,7 @@ jobs:
   aws-scheduler-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    if: ${{ github.event.repository.fork == false || github.event_name == 'pull_request' }} 
     needs: [build]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
