@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.Transformers.JustSaying;
+﻿using System;
+
+namespace Paramore.Brighter.Transformers.JustSaying;
 
 /// <summary>
 /// An attribute that makes a Brighter message compatible with JustSaying by
@@ -20,7 +22,7 @@
 /// are sourced during the transformation.
 /// </para>
 /// </remarks>
-[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)] 
+[AttributeUsage(AttributeTargets.Method, Inherited = false)] 
 public class JustSayingAttribute : WrapWithAttribute
 {
     /// <summary>
@@ -56,11 +58,17 @@ public class JustSayingAttribute : WrapWithAttribute
     /// used to derive routing keys or topic names.
     /// </summary>
     public string? Type { get; set; }
+    
+    /// <summary>
+    /// Get or sets the case-sensitive during deserialization the payload to fulfil
+    /// the missing JustSaying message property
+    /// </summary>
+    public bool PropertyCaseSensitive { get; set; }
 
     /// <inheritdoc />
     public override object?[] InitializerParams()
     {
-        return [RaisingComponent, Version, Type, Tenant];
+        return [RaisingComponent, Version, Type, Tenant, PropertyCaseSensitive];
     }
 
     /// <inheritdoc />

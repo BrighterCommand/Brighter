@@ -1,28 +1,33 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Net.Mime;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
+using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
 
 /// <summary>
-/// Implements a Brighter message transform that makes messages compatible with JustSaying's
-/// message envelope format. This transform enriches or extracts specific metadata fields
-/// (like RaisingComponent, Version, Tenant, and Subject) that JustSaying expects in its messages.
+/// A message transform that adds JustSaying-compatible metadata to Brighter messages for interoperability.
 /// </summary>
 /// <remarks>
-/// This transformer is typically used in conjunction with the <see cref="JustSayingAttribute"/>
-/// to automatically apply the necessary metadata during message publication (Wrap) or
-/// consumption (Unwrap). It populates a JSON message body with these fields, allowing
-/// JustSaying to correctly route, version, and filter messages.
 /// <para>
-/// During the <see cref="Wrap"/> operation, if the message body is a valid JSON,
-/// this transform injects the configured properties directly into the JSON payload.
-/// If no specific values are provided via the attribute, it can attempt to retrieve
-/// them from the Brighter <see cref="IRequestContext.Bag"/>.
+/// This transform enables compatibility between Brighter and JustSaying by enriching message headers and bodies 
+/// with JustSaying-specific properties (e.g., timestamp, version, tenant) during message publication. 
+/// It works with any message type through JSON node manipulation, allowing interoperability without requiring 
+/// messages to implement <see cref="IJustSayingRequest"/> or inherit from <see cref="JustSayingCommand"/>.
 /// </para>
 /// <para>
-/// The <see cref="Unwrap"/> operation is intentionally a no-op as JustSaying's
-/// deserialization often handles the entire message structure, and Brighter's
-/// core deserialization handles the body.
+/// <strong>Performance Note:</strong> For optimal performance, prefer using <see cref="JustSayingMessageMapper{TMessage}"/> 
+/// with messages that implement <see cref="IJustSayingRequest"/> or inherit from <see cref="JustSayingCommand"/> or /<see cref="JustSayingEvent"/>. 
+/// This transform uses dynamic JSON manipulation, which has higher overhead compared to the strongly-typed mapping in <see cref="JustSayingMessageMapper{TMessage}"/>.
+/// </para>
+/// <para>
+/// Configuration:
+/// - Apply this transform via the <see cref="IAmAMessageMapper{TMessage}"/> attribute on <see cref="IAmAMessageMapper{TMessage}.MapToRequest"/> 
+/// - Parameters like <c>raisingComponent</c>, <c>version</c>, and <c>tenant</c> can be set through attribute constructor arguments
+/// - Automatically populates missing metadata from message context or defaults
 /// </para>
 /// </remarks>
 public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsync
@@ -31,6 +36,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     private string? _version;
     private string? _tenant;
     private string? _subject;
+    private bool _caseSensitive;
 
     /// <inheritdoc cref="IAmAMessageTransform.Context"/>
     public IRequestContext? Context { get; set; }
@@ -38,11 +44,6 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     /// <inheritdoc cref="IAmAMessageTransform.InitializeWrapFromAttributeParams"/>
     public void InitializeWrapFromAttributeParams(params object?[] initializerList)
     {
-        if (initializerList.Length != 4)
-        {
-            return;
-        }
-
         if (initializerList[0] is string raisingComponent)
         {
             _raisingComponent = raisingComponent;
@@ -61,6 +62,11 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
         if (initializerList[3] is string tenant)
         {
             _tenant = tenant;
+        }
+
+        if (initializerList[4] is bool caseSensitive)
+        {
+            _caseSensitive = caseSensitive;
         }
     }
 
@@ -84,34 +90,34 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     /// <inheritdoc />
     public Message Wrap(Message message, Publication publication)
     {
-        message.Header.Subject = GetSubject(message, publication);
-
-        var tenant = GetTenant();
-        var raisingComponent = GetRaisingComponent(message, publication);
-        var version = GetVersion();
+        try
+        {
+            var node = JsonNode.Parse(message.Body.Bytes, 
+                new JsonNodeOptions { PropertyNameCaseInsensitive = !_caseSensitive }, 
+                new JsonDocumentOptions { MaxDepth = 0 });
         
-        var node = JsonNode.Parse(message.Body.Bytes);
-        if (node == null)
+            if (node == null)
+            {
+                return message;
+            }
+
+            SetId(node, message);
+            SetTimeStamp(node, message);
+            SetConversation(node, message);
+            SetRaisingComponent(node, message, publication);
+            SetTenant(node);
+            SetVersion(node);
+        
+            message.Header.ContentType = new ContentType("application/json");
+            message.Header.Subject = GetSubject(message, publication);
+
+            message.Body = new MessageBody(node.ToJsonString(JsonSerialisationOptions.Options));
+            return message;
+        }
+        catch (JsonException)
         {
             return message;
         }
-
-        var id = node[nameof(IJustSayingRequest.Id)] ?? node[nameof(IJustSayingRequest.Id).ToLower()];
-        if (id == null 
-            || id.GetValueKind() != JsonValueKind.String 
-            || !Guid.TryParse(id.GetValue<string>(), out _))
-        {
-            node[nameof(IJustSayingRequest.Id)] = Guid.NewGuid().ToString();
-        } 
-        
-        node[nameof(IJustSayingRequest.Tenant)] = tenant;
-        node[nameof(IJustSayingRequest.Version)] = version;
-        node[nameof(IJustSayingRequest.TimeStamp)] = message.Header.TimeStamp;
-        node[nameof(IJustSayingRequest.RaisingComponent)] = raisingComponent;
-        node[nameof(IJustSayingRequest.Conversation)] = message.Header.CorrelationId.Value;
-
-        message.Body = new MessageBody(node.ToJsonString());
-        return message;
     }
 
     /// <inheritdoc />
@@ -129,19 +135,26 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     {
         if (!string.IsNullOrEmpty(_subject))
         {
-            return _subject;
+            return _subject!;
         }
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
         {
-            return message.Header.Subject;
+            return message.Header.Subject!;
+        }
+
+        if (Context != null
+            && Context.Bag.TryGetValue(JustSayingAttributesName.Subject, out var obj)
+            && obj is string subject && !string.IsNullOrEmpty(subject))
+        {
+            return subject;
         }
 
         if (!string.IsNullOrEmpty(publication.Subject))
         {
-            return publication.Subject;
+            return publication.Subject!;
         }
-
+        
         if (publication.RequestType != null)
         {
             return publication.RequestType.Name;
@@ -150,74 +163,153 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
         throw new InvalidOperationException("No Subject was define via Attribute/Message/SnsPublication");
     }
 
-    private string? GetTenant()
+    private static void SetId(JsonNode node, Message message)
     {
-        if (!string.IsNullOrEmpty(_tenant))
+        var jsonNode = node[nameof(IJustSayingRequest.Id)];
+        if (jsonNode != null
+            && jsonNode.GetValueKind() == JsonValueKind.String
+            && Guid.TryParse(jsonNode.GetValue<string>(), out _))
         {
-            return _tenant;
+            return;
         }
 
-        if (Context != null 
-            && Context.Bag.TryGetValue(RequestContextAttributesName.Tenant, out var obj) 
-            && obj is string tenant && !string.IsNullOrEmpty(tenant))
+        var id = message.Id;
+        if (Id.IsNullOrEmpty(id) || !Guid.TryParse(id, out _))
         {
-            return tenant;
+            id = Id.Random;
         }
-
-        return null;
-    }
-
-    private string GetRaisingComponent(Message message, Publication publication)
-    {
-        if (!string.IsNullOrEmpty(_raisingComponent))
-        {
-            return _raisingComponent;
-        }
-
-        if (Context != null
-            && Context.Bag.TryGetValue(RequestContextAttributesName.RasingComponent, out var obj)
-            && obj is string component && !string.IsNullOrEmpty(component))
-        {
-            return component;
-        }
-
-        if (message.Header.Source.ToString() != MessageHeader.DefaultSource)
-        {
-            return message.Header.Source.ToString();
-        }
-
-        return publication.Source.ToString();
+        
+        node[nameof(IJustSayingRequest.Id)] = id.Value;
     }
     
-    private string GetVersion()
+    private static void SetTimeStamp(JsonNode node, Message message)
     {
-        if (!string.IsNullOrEmpty(_version))
+        var jsonNode = node[nameof(IJustSayingRequest.TimeStamp)];
+        if (jsonNode != null
+            && jsonNode.GetValueKind() == JsonValueKind.String
+            && DateTimeOffset.TryParse(jsonNode.GetValue<string>(), out _))
         {
-            return _version;
+            return;
         }
 
-        if (Context != null
-            && Context.Bag.TryGetValue(RequestContextAttributesName.Version, out var obj)
-            && obj is string version && !string.IsNullOrEmpty(version))
+        var timestamp = message.Header.TimeStamp;
+        if (timestamp == DateTimeOffset.MinValue)
         {
-            return version;
+            timestamp = DateTimeOffset.UtcNow;
+        }
+        
+        node[nameof(IJustSayingRequest.TimeStamp)] = timestamp;
+    }
+    
+    private static void SetConversation(JsonNode node, Message message)
+    {
+        var jsonNode = node[nameof(IJustSayingRequest.Conversation)];
+        if (jsonNode != null
+            && jsonNode.GetValueKind() == JsonValueKind.String
+            && DateTimeOffset.TryParse(jsonNode.GetValue<string>(), out _))
+        {
+            return;
         }
 
-        return "1.0.0";
+        var correlationId = message.Header.CorrelationId;
+        if (Id.IsNullOrEmpty(correlationId))
+        {
+            correlationId = Id.Random;
+        }
+        
+        node[nameof(IJustSayingRequest.Conversation)] = correlationId.Value;
+    }
+    
+
+    private void SetTenant(JsonNode node)
+    {
+        var jsonNode = node[nameof(IJustSayingRequest.Tenant)];
+        if (jsonNode != null && jsonNode.GetValueKind() == JsonValueKind.String)
+        {
+            return;
+        }
+
+        node[nameof(IJustSayingRequest.Tenant)] =  GetTenant();
+        return;
+            
+        string? GetTenant()
+        {
+            if (!string.IsNullOrEmpty(_tenant))
+            {
+                return _tenant;
+            }
+
+            if (Context != null 
+                && Context.Bag.TryGetValue(JustSayingAttributesName.Tenant, out var obj) 
+                && obj is string tenant && !string.IsNullOrEmpty(tenant))
+            {
+                return tenant;
+            }
+
+            return null;
+        }
     }
 
-    private string? Get(string? attributeValue, string propertyName)
+    private void SetRaisingComponent(JsonNode node, Message message, Publication publication)
     {
-        if (!string.IsNullOrEmpty(attributeValue))
+        var jsonNode = node[nameof(IJustSayingRequest.RaisingComponent)];
+        if (jsonNode != null && jsonNode.GetValueKind() == JsonValueKind.String)
         {
-            return attributeValue;
+            return;
+        }
+
+        node[nameof(IJustSayingRequest.RaisingComponent)] = GetRaisingComponent();
+        return;
+
+        string GetRaisingComponent()
+        {
+            if (!string.IsNullOrEmpty(_raisingComponent))
+            {
+                return _raisingComponent!;
+            }
+
+            if (Context != null
+                && Context.Bag.TryGetValue(JustSayingAttributesName.RaisingComponent, out var obj)
+                && obj is string component && !string.IsNullOrEmpty(component))
+            {
+                return component;
+            }
+
+            if (message.Header.Source.ToString() != MessageHeader.DefaultSource)
+            {
+                return message.Header.Source.ToString();
+            }
+
+            return publication.Source.ToString();
+        }
+    }
+
+    private void SetVersion(JsonNode node)
+    {
+        var jsonNode = node[nameof(IJustSayingRequest.Version)];
+        if (jsonNode != null && jsonNode.GetValueKind() == JsonValueKind.String)
+        {
+            return;
         }
         
-        if (Context != null && Context.Bag.TryGetValue(propertyName, out var propertyValue))
-        {
-            return (string)propertyValue;
-        }
+        node[nameof(IJustSayingRequest.Version)] = GetVersion();
+        return;
         
-        return null;
+        string GetVersion()
+        {
+            if (!string.IsNullOrEmpty(_version))
+            {
+                return _version!;
+            }
+
+            if (Context != null
+                && Context.Bag.TryGetValue(JustSayingAttributesName.Version, out var obj)
+                && obj is string version && !string.IsNullOrEmpty(version))
+            {
+                return version;
+            }
+
+            return "1.0.0";
+        }
     }
 }
