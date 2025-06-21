@@ -23,14 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using Amazon;
 using Amazon.IdentityManagement;
-using Amazon.Runtime;
 using Amazon.S3;
-using Amazon.SecurityToken;
-using Amazon.SimpleNotificationService;
-using Amazon.SQS;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.AWS.Tests.Helpers;
@@ -50,4 +44,5 @@ public static class AWSClientFactoryExtensions
         factory.ClientConfigAction?.Invoke(config);
         return new AmazonIdentityManagementServiceClient(factory.Credentials, config);
     }
+
 }

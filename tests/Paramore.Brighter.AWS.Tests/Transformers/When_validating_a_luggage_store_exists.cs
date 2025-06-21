@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.SecurityToken;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -38,6 +36,8 @@ public class S3LuggageStoreExistsTests
         var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
         {
             HttpClientFactory = _httpClientFactory,
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
         });
         
@@ -50,7 +50,8 @@ public class S3LuggageStoreExistsTests
         luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
         {
             Strategy = StorageStrategy.Validate,
-            HttpClientFactory = _httpClientFactory,
+            HttpClientFactory = _httpClientFactory, 
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
         });
 
@@ -60,7 +61,6 @@ public class S3LuggageStoreExistsTests
         var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
         var client = factory.CreateS3Client();
         await client.DeleteBucketAsync(bucketName);
-
     }
     
     [Fact]
@@ -74,16 +74,15 @@ public class S3LuggageStoreExistsTests
                      {
                          Strategy = StorageStrategy.Validate,
                          HttpClientFactory = _httpClientFactory,
+                         BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+                         ACLs = S3CannedACL.Private,
                          Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
                      });
 
                  await luggageStore.EnsureStoreExistsAsync();
              });
          
-         
-
          Assert.NotNull(doesNotExist);
          Assert.True(doesNotExist is InvalidOperationException);
-
     }
 }
