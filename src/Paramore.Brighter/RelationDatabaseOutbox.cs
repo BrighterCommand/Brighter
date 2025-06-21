@@ -51,7 +51,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", message.Id},
+                {"db.operation.parameter.message.id", message.Id.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.AddCommand)},
                 {"db.query.text", queries.AddCommand}
             };
@@ -132,7 +132,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", message.Id},
+                {"db.operation.parameter.message.id", message.Id.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.AddCommand)},
                 {"db.query.text", queries.AddCommand}
             };
@@ -177,7 +177,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id))},
+                {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.BulkAddCommand)},
                 {"db.query.text", queries.BulkAddCommand}
             };
@@ -209,7 +209,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(m => m.ToString()))},
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.DeleteMessagesCommand)},
                 {"db.query.text", queries.DeleteMessagesCommand}
             };
@@ -244,11 +244,9 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(m => m.ToString()))},
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.DeleteMessagesCommand)},
                 {"db.query.text", queries.DeleteMessagesCommand},
-                {"db.operation.name", ExtractSqlOperationName(queries.DeleteMessagesCommand)},
-                {"db.query.text", queries.DeleteMessagesCommand}
             };
             
             var span = Tracer?.CreateDbSpan(
@@ -483,7 +481,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", messageId},
+                {"db.operation.parameter.message.id", messageId.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.GetMessageCommand)},
                 {"db.query.text", queries.GetMessageCommand}
             };
@@ -523,7 +521,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", messageId},
+                {"db.operation.parameter.message.id", messageId.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.GetMessageCommand)},
                 {"db.query.text", queries.GetMessageCommand}
             };
@@ -563,7 +561,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", messageIds)},
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.GetMessagesCommand)},
                 {"db.query.text", queries.GetMessagesCommand}
             };
@@ -575,7 +573,7 @@ namespace Paramore.Brighter
             try
             {
                 var result = await ReadFromStoreAsync(
-                connection => InitGetMessagesCommand(connection, messageIds.Select(m => m.ToString()).ToList(), outBoxTimeout),
+                connection => InitGetMessagesCommand(connection, messageIds.Select(m => m.Value).ToList(), outBoxTimeout),
                 async (dr) => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
 
                 span?.AddTag("db.response.returned_rows", result.Count());
@@ -623,6 +621,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Returns all messages in the store
         /// </summary>
+        /// <param name="requestContext">The context from the request pipeline</param>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="args">Additional parameters required for search, if any</param>
@@ -730,7 +729,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", id},
+                {"db.operation.parameter.message.id", id.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.MarkDispatchedCommand)},
                 {"db.query.text", queries.MarkDispatchedCommand}
             };
@@ -768,7 +767,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", ids)},
+                {"db.operation.parameter.message.ids", string.Join(",", ids.Select(m => m.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.MarkMultipleDispatchedCommand)},
                 {"db.query.text", queries.MarkMultipleDispatchedCommand}
             };
@@ -804,7 +803,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", id},
+                {"db.operation.parameter.message.id", id.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.MarkDispatchedCommand)},
                 {"db.query.text", queries.MarkDispatchedCommand}
             };
@@ -1016,7 +1015,7 @@ namespace Paramore.Brighter
 
         private DbCommand InitMarkDispatchedCommand(DbConnection connection, Id messageId, DateTimeOffset? dispatchedAt)
             => CreateCommand(connection, GenerateSqlText(queries.MarkDispatchedCommand), 0,
-                CreateSqlParameter("MessageId", messageId),
+                CreateSqlParameter("MessageId", messageId.Value),
                 CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()));
 
         private DbCommand InitMarkDispatchedCommand(DbConnection connection, IEnumerable<Id> messageIds, DateTimeOffset? dispatchedAt)
@@ -1030,7 +1029,7 @@ namespace Paramore.Brighter
 
         private DbCommand InitGetMessageCommand(DbConnection connection, Id messageId, int outBoxTimeout = -1)
             => CreateCommand(connection, GenerateSqlText(queries.GetMessageCommand), outBoxTimeout,
-                CreateSqlParameter("MessageId", messageId));
+                CreateSqlParameter("MessageId", messageId.Value));
 
         private DbCommand InitGetMessagesCommand(DbConnection connection, List<string> messageIds,
             int outBoxTimeout = -1)
@@ -1095,12 +1094,16 @@ namespace Paramore.Brighter
         private (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(List<Message> messages)
         {
             var messageParams = new List<string>();
-            var parameters = new List<IDbDataParameter>();
+            var parameters    = new List<IDbDataParameter>();
 
             for (int i = 0; i < messages.Count(); i++)
             {
+                // include all columns in the same order as the CREATE TABLE DDL:
                 messageParams.Add(
-                    $"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body)");
+                    $"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, " +
+                    $"@p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body, " +
+                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, @p{i}_Baggage)");
+
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
             }
 

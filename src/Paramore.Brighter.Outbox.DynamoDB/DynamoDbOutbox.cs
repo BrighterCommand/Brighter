@@ -393,7 +393,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             try
             {
-                var messageItem = await _context.LoadAsync<MessageItem>(messageId, _dynamoOverwriteTableConfig, cancellationToken)
+                var messageItem = await _context.LoadAsync<MessageItem>(messageId.Value, _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
                 return messageItem?.ConvertToMessage() ?? new Message();
             }
@@ -429,7 +429,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             try
             {
-                var message = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken)
+                var message = await _context.LoadAsync<MessageItem>(id.Value, _dynamoOverwriteTableConfig, cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
                 MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
 
@@ -556,7 +556,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
         }
 
-        private async Task DeleteAsync(string messageId,
+        private async Task DeleteAsync(
+            Id messageId,
             RequestContext? requestContext,
             Dictionary<string, object>? args,
             CancellationToken cancellationToken)
@@ -572,7 +573,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             try
             {
-                await _context.DeleteAsync<MessageItem>(messageId, _dynamoOverwriteTableConfig, cancellationToken);
+                await _context.DeleteAsync<MessageItem>(messageId.Value, _dynamoOverwriteTableConfig, cancellationToken);
             }
             finally
             {

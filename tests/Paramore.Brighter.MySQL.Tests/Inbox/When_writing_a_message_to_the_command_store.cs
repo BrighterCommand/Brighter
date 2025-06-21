@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         private readonly MySqlInbox _mysqlInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
-        private MyCommand _storedCommand;
+        private MyCommand? _storedCommand;
 
         public SqlInboxAddMessageTests()
         {

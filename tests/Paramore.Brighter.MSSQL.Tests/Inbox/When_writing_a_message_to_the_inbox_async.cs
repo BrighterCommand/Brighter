@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         private readonly MsSqlInbox _sqlInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
-        private MyCommand _storedCommand;
+        private MyCommand? _storedCommand;
 
         public SqlInboxAddMessageAsyncTests()
         {

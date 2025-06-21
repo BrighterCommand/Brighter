@@ -28,6 +28,7 @@ using System.Net.Mime;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -55,6 +56,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         {
             var command = new MyCommand { Value = "Test", WasCancelled = false, TaskCompleted = false };
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+            var characterEncoding = CharacterEncoding.UTF8;
 
             var messageHeader = new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
@@ -65,7 +67,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyAddress"),
-                contentType: new ContentType(MediaTypeNames.Text.Plain));
+                contentType: new ContentType(MediaTypeNames.Text.Plain){CharSet = characterEncoding.FromCharacterEncoding()});
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -73,7 +75,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _messageEarliest = new Message(messageHeader,
-                new MessageBody(body, new ContentType(MediaTypeNames.Application.Json), CharacterEncoding.UTF8));
+                new MessageBody(body, new ContentType(MediaTypeNames.Application.Json){CharSet = characterEncoding.FromCharacterEncoding()}));
             var fakeTimeProvider = new FakeTimeProvider();
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
                 new DynamoDbConfiguration(OutboxTableName),
