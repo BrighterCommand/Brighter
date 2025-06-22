@@ -27,6 +27,7 @@ using System;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.Sqlite;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
@@ -46,6 +47,16 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly int _value3 = 123;
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
+
+        // new fields for full header
+        private readonly Uri _source;
+        private readonly string _type;
+        private readonly Uri _dataSchema;
+        private readonly string _subject;
+        private readonly TraceParent _traceParent;
+        private readonly TraceState _traceState;
+        private readonly Baggage _baggage;
+
         private readonly Message _messageEarliest;
         private Message _storedMessage;
 
@@ -54,17 +65,35 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
+
+            // define and assign the extra header properties
+            _source = new Uri("http://example.org/source");
+            _type = "custom-message-type";
+            _dataSchema = new Uri("http://example.org/schema");
+            _subject = "custom-subject";
+            _traceParent = new TraceParent("00-abcdef1234567890abcdef1234567890-abcdef1234567890-01");
+            _traceState = new TraceState("state");
+            _baggage = Baggage.FromString("userId=123,sessionId=xyz");
+
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid().ToString(),
-                topic: new RoutingKey("test_topic"), 
-                messageType:MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5,
-                delayed:TimeSpan.FromMilliseconds(5),
+                messageId: Guid.NewGuid().ToString(),
+                topic: new RoutingKey("test_topic"),
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyTo"),
                 contentType: new ContentType(MediaTypeNames.Text.Plain),
-                partitionKey: Guid.NewGuid().ToString());
+                partitionKey: Guid.NewGuid().ToString(),
+                source: _source,
+                type: _type,
+                dataSchema: _dataSchema,
+                subject: _subject,
+                traceParent: _traceParent,
+                traceState: _traceState,
+                baggage: _baggage
+            );
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -104,6 +133,15 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
             Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
+
+            // assert the newly set header properties round-trip
+            Assert.Equal(_source, _storedMessage.Header.Source);
+            Assert.Equal(_type, _storedMessage.Header.Type);
+            Assert.Equal(_dataSchema, _storedMessage.Header.DataSchema);
+            Assert.Equal(_subject, _storedMessage.Header.Subject);
+            Assert.Equal(_traceParent, _storedMessage.Header.TraceParent);
+            Assert.Equal(_traceState, _storedMessage.Header.TraceState);
+            Assert.Equal(_baggage.ToString(), _storedMessage.Header.Baggage.ToString());
         }
 
         public async ValueTask DisposeAsync()
