@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
@@ -28,7 +29,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _myCommand = new MyCommand { Value = "Test" };
         _correlationId = Guid.NewGuid().ToString();
         _replyTo = new RoutingKey( "http:\\queueUrl");
-        _contentType = new ContentType( "text\\plain");
+        _contentType = new ContentType(MediaTypeNames.Text.Plain){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_queueName);

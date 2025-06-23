@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// Creates a Brighter <see cref="Message"/> from an Azure Service Bus message.
 /// </summary>
 /// <param name="subscription">Subscription information, used to help populate the message</param>
-public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscription)
+public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscription)
 {
     private readonly RoutingKey _topic = subscription.RoutingKey;
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMesssageCreator>();
@@ -128,13 +128,20 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private Uri GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
     {
+        var defaultSchemaUri = new Uri("http://goparamore.io"); // Default schema URI
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSchema, out object? property))
         {
             s_logger.LogWarning("No Cloud Events data schema found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
-            return new Uri(string.Empty);
+            return defaultSchemaUri;
         }
 
-        var dataSchema = property.ToString() ?? string.Empty;
+        var dataSchema = property.ToString() ;
+        
+        if (string.IsNullOrEmpty(dataSchema))
+        {
+            s_logger.LogWarning("Empty Cloud Events data schema in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return defaultSchemaUri;
+        }
 
         return new Uri(dataSchema);
     }
@@ -186,7 +193,10 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private static ContentType GetContentType(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        return new ContentType(azureServiceBusMessage.ContentType);
+        if (!string.IsNullOrEmpty(azureServiceBusMessage.ContentType))
+            return new ContentType(azureServiceBusMessage.ContentType);
+
+        return new ContentType(MediaTypeNames.Text.Plain);
     }
     
     private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
@@ -223,16 +233,22 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private Uri GetSource(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        
+        var defaultSourceUri = new Uri("http://goparamore.io"); // Default source URI
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSource, out object? property))
         {
             s_logger.LogWarning("No source found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
-            return new Uri(string.Empty);
+            return defaultSourceUri;
         }
 
-        var source = property.ToString() ?? string.Empty;
+        if (property is not string sourceString || string.IsNullOrEmpty(sourceString))
+        {
+            s_logger.LogWarning("Empty or invalid source in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return defaultSourceUri;
+        }
+        
+        var source = property.ToString();
 
-        return new Uri(source );
+        return new Uri(source!);
     }
     
    private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)

@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.SecurityToken;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tranformers.AWS;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
@@ -40,6 +37,8 @@ public class S3LuggageUploadTests
         var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
         {
             HttpClientFactory = _httpClientFactory,
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
             RetryPolicy = GetSimpleHandlerRetryPolicy()
         });
