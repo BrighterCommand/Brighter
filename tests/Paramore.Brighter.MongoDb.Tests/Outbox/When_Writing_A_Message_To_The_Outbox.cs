@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Net.Mime;
+using Paramore.Brighter;                   
+using Paramore.Brighter.Observability;     
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
@@ -53,16 +55,24 @@ public class MongoDbOutboxWritingMessageTests : IDisposable
         _collection = $"outbox-{Guid.NewGuid():N}";
         _outbox = new(Configuration.Create(_collection));
         var messageHeader = new MessageHeader(
-            messageId: Guid.NewGuid().ToString(),
-            topic: new RoutingKey("test_topic"),
-            messageType: MessageType.MT_DOCUMENT,
-            timeStamp: DateTime.UtcNow.AddDays(-1),
-            handledCount: 5,
-            delayed: TimeSpan.FromMilliseconds(5),
-            correlationId: Guid.NewGuid().ToString(),
-            replyTo: new RoutingKey("ReplyTo"),
-            contentType: new ContentType(MediaTypeNames.Text.Plain),
-            partitionKey: Guid.NewGuid().ToString());
+            messageId:       Guid.NewGuid().ToString(),
+            topic:           new RoutingKey("test_topic"),
+            messageType:     MessageType.MT_DOCUMENT,
+            source:          new Uri("https://source.example.com"),
+            type:            "unit.test.type",
+            timeStamp:       DateTime.UtcNow.AddDays(-1),
+            correlationId:   Guid.NewGuid().ToString(),
+            replyTo:         new RoutingKey("ReplyTo"),
+            contentType:     new ContentType(MediaTypeNames.Text.Plain),
+            partitionKey:    Guid.NewGuid().ToString(),
+            dataSchema:      new Uri("https://schema.example.com"),
+            subject:         "TestSubject",
+            handledCount:    5,
+            delayed:         TimeSpan.FromMilliseconds(5),
+            traceParent:     new TraceParent("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"),
+            traceState:      new TraceState("rojo=1,congo=2"),
+            baggage:         new Baggage()
+        );
         messageHeader.Bag.Add(Key1, Value1);
         messageHeader.Bag.Add(Key2, Value2);
         messageHeader.Bag.Add(Key3, Value3);
@@ -76,7 +86,7 @@ public class MongoDbOutboxWritingMessageTests : IDisposable
     }
 
     [Fact]
-    public void When_Writing_A_Message_To_The_PostgreSql_Outbox()
+    public void When_Writing_A_Message_To_The_MongoDb_Outbox()
     {
         var storedMessage = _outbox.Get(_messageEarliest.Id, _context);
 
@@ -88,10 +98,17 @@ public class MongoDbOutboxWritingMessageTests : IDisposable
         Assert.Equal(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
         Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
-        Assert.Equal(_messageEarliest.Header.CorrelationId, storedMessage.Header.CorrelationId);
-        Assert.Equal(_messageEarliest.Header.ReplyTo, storedMessage.Header.ReplyTo);
-        Assert.Equal(_messageEarliest.Header.ContentType, storedMessage.Header.ContentType);
-        Assert.Equal(_messageEarliest.Header.PartitionKey, storedMessage.Header.PartitionKey);
+        Assert.Equal(_messageEarliest.Header.CorrelationId,  storedMessage.Header.CorrelationId);
+        Assert.Equal(_messageEarliest.Header.ReplyTo,  storedMessage.Header.ReplyTo);
+        Assert.Equal(_messageEarliest.Header.ContentType,  storedMessage.Header.ContentType);
+        Assert.Equal(_messageEarliest.Header.PartitionKey,  storedMessage.Header.PartitionKey);
+        Assert.Equal(_messageEarliest.Header.Source,  storedMessage.Header.Source);
+        Assert.Equal(_messageEarliest.Header.Type,  storedMessage.Header.Type);
+        Assert.Equal(_messageEarliest.Header.SpecVersion, storedMessage.Header.SpecVersion);
+        Assert.Equal(_messageEarliest.Header.DataSchema, storedMessage.Header.DataSchema);
+        Assert.Equal(_messageEarliest.Header.Subject,  storedMessage.Header.Subject);
+        Assert.Equal(_messageEarliest.Header.TraceParent, storedMessage.Header.TraceParent);
+        Assert.Equal(_messageEarliest.Header.TraceState, storedMessage.Header.TraceState);
 
         //Bag serialization
         Assert.True(storedMessage.Header.Bag.ContainsKey(Key1));
