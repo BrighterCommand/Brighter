@@ -90,9 +90,11 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         CancellationToken cancellationToken = default
     )
     {
+        var ids = messageIds.Select(id => id.Value ).ToArray();
+        
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.ids", string.Join(",", messageIds)}
+            {"db.operation.parameter.message.ids", string.Join(",", ids)}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -105,7 +107,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(x => x.ToString()));
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, ids);
 
             var cursor = await Collection.FindAsync(filter,
                     cancellationToken: cancellationToken)
@@ -163,7 +165,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.id", message.Id}
+            {"db.operation.parameter.message.id", message.Id.Value}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -171,7 +173,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 BoxDbOperation.Add,
                 Configuration.CollectionName,
                 dbAttributes: dbAttributes),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -216,7 +218,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-          {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id))}
+          {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id.Value))}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -259,7 +261,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(m => m.ToString()))}
+            {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.Value))}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -267,12 +269,12 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 BoxDbOperation.Delete,
                 Configuration.CollectionName,
                 dbAttributes: dbAttributes),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
 
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(x => x.ToString()));
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(id => id.Value));
             await Collection.DeleteManyAsync(filter, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
         finally
@@ -294,7 +296,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 Configuration.DatabaseName,
                 BoxDbOperation.DispatchedMessages,
                 Configuration.CollectionName),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
         try
         {
@@ -339,7 +341,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.id", messageId}
+            {"db.operation.parameter.message.id", messageId.Value}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -347,13 +349,13 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 BoxDbOperation.Get,
                 Configuration.CollectionName,
                 dbAttributes: dbAttributes),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
 
         try
         {
             var find = await Collection
-                .FindAsync(x => x.MessageId == messageId, cancellationToken: cancellationToken)
+                .FindAsync(x => x.MessageId == messageId.Value, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
             var first = await find
@@ -382,7 +384,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 BoxDbOperation.MarkDispatched,
                 Configuration.CollectionName,
                 dbAttributes: dbAttributes),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -409,9 +411,10 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         DateTimeOffset? dispatchedAt = null,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
+        var idStrings = ids.Select(id => id.Value).ToArray();
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.ids", string.Join(",", ids)}
+            {"db.operation.parameter.message.ids", string.Join(",", idStrings)}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -419,11 +422,11 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 BoxDbOperation.MarkDispatched,
                 Configuration.CollectionName,
                 dbAttributes: dbAttributes),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, ids.Select(x => x.ToString()));
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, idStrings);
 
             dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
@@ -451,7 +454,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 Configuration.DatabaseName,
                 BoxDbOperation.OutStandingMessages,
                 Configuration.CollectionName),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
         try
         {
@@ -543,9 +546,11 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         int outBoxTimeout = -1
     )
     {
+        var ids = messageIds.Select(id => id.Value).ToArray();
+        
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.ids", string.Join(",", messageIds)}
+            {"db.operation.parameter.message.ids", string.Join(",", ids)}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -558,7 +563,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(x => x.ToString()));
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, ids);
 
             var cursor = Collection.FindSync(filter);
 
@@ -607,7 +612,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.id", message.Id}
+            {"db.operation.parameter.message.id", message.Id.Value}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -615,7 +620,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 BoxDbOperation.Add,
                 Configuration.CollectionName,
                 dbAttributes: dbAttributes),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -651,7 +656,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id))}
+            {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id.Value))}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -685,7 +690,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(m => m.ToString()))}
+            {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.Value))}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -697,7 +702,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             options: Configuration.InstrumentationOptions);
         try
         {
-            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(x => x.ToString()));
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds.Select(id => id.Value));
             Collection.DeleteMany(filter);
         }
         finally
@@ -718,7 +723,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 Configuration.DatabaseName,
                 BoxDbOperation.DispatchedMessages,
                 Configuration.CollectionName),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -758,7 +763,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.message.id", messageId}
+            {"db.operation.parameter.message.id", messageId.Value}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -766,12 +771,12 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 BoxDbOperation.Get,
                 Configuration.CollectionName,
                 dbAttributes: dbAttributes),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
 
         try
         {
-            var find = Collection.FindSync(x => x.MessageId == messageId);
+            var find = Collection.FindSync(x => x.MessageId == messageId.Value);
             var first = find.FirstOrDefault();
             return first?.ConvertToMessage() ?? new Message();
         }
@@ -784,16 +789,12 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc />
     public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
     {
-        var dbAttributes = new Dictionary<string, string>()
-        {
-            {"db.operation.parameter.message.id", id}
-        };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.MarkDispatched,
                 Configuration.CollectionName),
-            requestContext?.Span,
+            requestContext.Span,
             options: Configuration.InstrumentationOptions);
 
         try
