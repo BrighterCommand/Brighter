@@ -12,12 +12,13 @@ public class S3LuggageUploadMissingParametersTests
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName;
-
+    
     public S3LuggageUploadMissingParametersTests()
     {
         var services = new ServiceCollection();
         services.AddHttpClient();
         var provider = services.BuildServiceProvider();
+        
         _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
@@ -29,7 +30,7 @@ public class S3LuggageUploadMissingParametersTests
         var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(null!,  null!)));
 
         Assert.NotNull(exception);
-        Assert.True(exception is ArgumentNullException);
+        Assert.IsType<ArgumentNullException>(exception);
     }
 
     [Theory]
@@ -41,7 +42,7 @@ public class S3LuggageUploadMissingParametersTests
         var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(),  bucketName!)));
 
         Assert.NotNull(exception);
-        Assert.True(exception is ArgumentNullException);
+        Assert.IsType<ArgumentNullException>(exception);
     }
     
     [Fact]
@@ -51,7 +52,7 @@ public class S3LuggageUploadMissingParametersTests
         var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), "A" )));
 
         Assert.NotNull(exception);
-        Assert.True(exception is ArgumentException);
+        Assert.IsType<ArgumentException>(exception);
     }
     
     [Fact]
@@ -65,7 +66,7 @@ public class S3LuggageUploadMissingParametersTests
         });
 
         Assert.NotNull(exception);
-        Assert.True(exception is ArgumentNullException);
+        Assert.IsType<ConfigurationException>(exception);
     }
     
     [Fact]
@@ -76,12 +77,13 @@ public class S3LuggageUploadMissingParametersTests
         {
             var store = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
             {
-                HttpClientFactory = _httpClientFactory
+                HttpClientFactory = _httpClientFactory,
+                BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple() 
             });
             await store.EnsureStoreExistsAsync();
         });
     
         Assert.NotNull(exception);
-        Assert.True(exception is ArgumentNullException);
+        Assert.IsType<ConfigurationException>(exception);
     }
 }

@@ -105,7 +105,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
         
         if(_options.HttpClientFactory == null)
         {
-            throw new ConfigurationException("No HTTP Factory setup on S3Luggage Store ");
+            throw new ConfigurationException("No HTTP Factory setup on S3Luggage Store");
         }
         
         try
@@ -125,6 +125,11 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
             if (_options.Strategy == StorageStrategy.Validate)
             {
                 throw new InvalidOperationException($"There was no luggage store with the bucket {_options.BucketName}");
+            }
+
+            if (_options.ACLs == null)
+            {
+                throw new ConfigurationException("No ACL setup on S3Luggage Store");
             }
 
             var policy = _options.RetryPolicy ?? GetDefaultS3Policy();
@@ -275,11 +280,6 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
     /// <inheritdoc />
     public string Store(Stream stream) => BrighterAsyncContext.Run(async () => await StoreAsync(stream));
 
-    private void ReleaseUnmanagedResources()
-    {
-        // TODO release unmanaged resources here
-    }
-
     private static async Task<bool> BucketExistsAsync(IHttpClientFactory httpClientFactory, 
         string accountId, 
         string bucketName, 
@@ -291,11 +291,13 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
             .Replace("{BucketName}", bucketName)
             .Replace("{BucketRegion}", bucketRegion.Value)
         );
+        
         using var headRequest = new HttpRequestMessage(HttpMethod.Head, "/");
         headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
+        
         using var response = await httpClient.SendAsync(headRequest);
         //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 
-        return (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden);
+        return response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden;
     }
 
     private static async Task CreateBucketAsync(
@@ -314,10 +316,25 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
         {
             var bucketRequest = new PutBucketRequest
             {
-                BucketName = bucketName, BucketRegionName = region.Value, CannedACL = cannedAcl, UseClientRegion = false
+                BucketName = bucketName, 
+                BucketRegionName = region.Value,
+                CannedACL = cannedAcl, 
+                UseClientRegion = false
             };
-            var createBucketResponse = await client.PutBucketAsync(bucketRequest);
-            if (createBucketResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException($"Could not create {bucketName} on {region}");
+
+            try
+            {
+                var createBucketResponse = await client.PutBucketAsync(bucketRequest);
+                if (createBucketResponse.HttpStatusCode != HttpStatusCode.OK)
+                {
+                    throw new InvalidOperationException($"Could not create {bucketName} on {region}");
+                }
+            }
+            catch (BucketAlreadyOwnedByYouException)
+            {
+                // Ignoring this exception since it was created by another requests 
+            }
+            
         });
 
         await asyncRetryPolicy.ExecuteAsync(async () =>
