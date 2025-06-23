@@ -276,7 +276,6 @@ namespace Paramore.Brighter.Outbox.MsSql
                     DbType = DbType.String,
                     Value = message.Header.PartitionKey.Value
                 },
-                // Individual MessageHeader properties as columns
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}Source",
@@ -656,7 +655,6 @@ namespace Paramore.Brighter.Outbox.MsSql
             var contentType = GetContentType(dr);
             var partitionKey = GetPartitionKey(dr);
 
-            // Read individual MessageHeader properties from columns
             var source = GetSource(dr);
             var type = GetType(dr);
             var dataSchema = GetDataSchema(dr);
