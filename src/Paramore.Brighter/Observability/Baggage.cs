@@ -41,6 +41,7 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
     private const int MaxKeyValuePairs = 32;
     private static readonly Regex KeyRegex = new("^[a-zA-Z0-9][a-zA-Z0-9_\\-*/]{0,255}$", RegexOptions.Compiled);
     private static readonly Regex ValueRegex = new("^[\\x20-\\x2b\\x2d-\\x3c\\x3e-\\x7e]{0,255}[\\x21-\\x2b\\x2d-\\x3c\\x3e-\\x7e]$", RegexOptions.Compiled);
+    public static Baggage Empty { get; } = new Baggage();
 
     /// <summary>
     /// Adds a vendor-specific key-value pair to the TraceState.
@@ -120,6 +121,18 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
     public override string ToString()
     {
         return string.Join(",", _entries.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+    }
+
+    /// <summary>
+    /// Baggage can be created from a string representation of the W3C Baggage header.
+    /// </summary>
+    /// <param name="baggageString">The comma seperated string representing the W3C baggage</param>
+    /// <returns></returns>
+    public static Baggage FromString(string baggageString)
+    {
+       var baggage = new Baggage();
+        baggage.LoadBaggage(baggageString);
+        return baggage;
     }
 }
 

@@ -162,11 +162,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var contentType = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, true);
             
-            if (contentType.Success)
+            if (contentType.Success && !string.IsNullOrEmpty(contentType.Result))
                 return new HeaderResult<ContentType?>( new ContentType(contentType.Result!), true);
 
             contentType = ReadHeader(headers, HeaderNames.CONTENT_TYPE);
-            if (contentType.Success)
+            if (contentType.Success && !string.IsNullOrEmpty(contentType.Result))
                 return new HeaderResult<ContentType?>(new ContentType(contentType.Result!), true);
 
             return new HeaderResult<ContentType?>(null, false);
@@ -324,12 +324,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private static HeaderResult<PartitionKey?> ReadPartitionKey(Message<string, byte[]> message)
         {
-            if (!string.IsNullOrEmpty(message.Key))
-            {
-                return new HeaderResult<PartitionKey?>(message.Key, true);
-            }
-            
-            return ReadHeader(message.Headers, HeaderNames.PARTITIONKEY)
+
+            var pKey = ReadHeader(message.Headers, HeaderNames.PARTITIONKEY)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
@@ -340,6 +336,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                     return new HeaderResult<PartitionKey?>(new PartitionKey(s!), true);
                 });
+
+            //if we set the partition key in the message bag, we assume it is a Brighter message, and we use that
+            if (pKey.Success)
+            {
+                return pKey;
+            }
+           
+            //if we have no partition key header, but we have a message key, we assume it is not a Brighter message,
+            //and we use the message key as the partition key
+            if (!string.IsNullOrEmpty(message.Key))
+            {
+                return new HeaderResult<PartitionKey?>(message.Key, true);
+            }
+            
+            //if we have no partition key header, and no message key, we return empty
+            return new HeaderResult<PartitionKey?>(PartitionKey.Empty, false); 
         }
 
         private static HeaderResult<string?> ReadSubject(Headers headers)

@@ -113,6 +113,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 

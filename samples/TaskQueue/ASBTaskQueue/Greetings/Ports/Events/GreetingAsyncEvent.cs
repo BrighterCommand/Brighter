@@ -3,6 +3,7 @@ using Paramore.Brighter;
 
 namespace Greetings.Ports.Events
 {
+    [PublicationTopic("greeting.Asyncevent")]
     public class GreetingAsyncEvent : Event
     {
         public GreetingAsyncEvent() : base(Guid.NewGuid()) { }

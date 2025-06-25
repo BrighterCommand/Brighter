@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Net.Mime;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -41,28 +42,44 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private readonly string _key4 = "name4";
         private readonly string _key5 = "name5";
         private readonly Message _messageEarliest;
-        private Message _storedMessage;
+        private Message? _storedMessage;
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
         private readonly int _value3 = 123;
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
+        private readonly Uri _dataSchema = new("http://schema.example.com");
+        private readonly string _subject = "TestSubject";
+        private readonly string _type = "custom.type";
+        private readonly Uri _source = new("http://source.example.com");
+        private readonly TraceParent _traceParent = new("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
+        private readonly TraceState _traceState = new("congo=t61rcWkgMzE");
+        private readonly Baggage _baggage = new();
+
         public MySqlOutboxWritingMessageTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid().ToString(), 
-                topic: new RoutingKey("test_topic"), 
+                messageId: Id.Random,
+                topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5, 
-                delayed: TimeSpan.FromMilliseconds(5),
-                correlationId: Guid.NewGuid().ToString(),
+                source: _source,
+                type: _type,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                correlationId: Id.Random,
                 replyTo: new RoutingKey("ReplyTo"),
                 contentType: new ContentType(MediaTypeNames.Text.Plain),
-                partitionKey: Guid.NewGuid().ToString());
+                partitionKey: new PartitionKey(Guid.NewGuid().ToString()),
+                dataSchema: _dataSchema,
+                subject: _subject,
+                handledCount: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
+                traceParent: _traceParent,
+                traceState: _traceState,
+                baggage: _baggage);
+
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -90,8 +107,8 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             Assert.Equal(_messageEarliest.Header.ReplyTo, _storedMessage.Header.ReplyTo);
             Assert.Equal(_messageEarliest.Header.ContentType, _storedMessage.Header.ContentType);
             Assert.Equal(_messageEarliest.Header.PartitionKey, _storedMessage.Header.PartitionKey);
-             
-            
+
+
             //Bag serialization
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));
             Assert.Equal(_value1, _storedMessage.Header.Bag[_key1]);
@@ -103,7 +120,15 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
             Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
- 
+
+            // Additional asserts for Cloud Events and W3C Tracing properties
+            Assert.Equal(_messageEarliest.Header.Source, _storedMessage.Header.Source);
+            Assert.Equal(_messageEarliest.Header.Type, _storedMessage.Header.Type);
+            Assert.Equal(_messageEarliest.Header.DataSchema, _storedMessage.Header.DataSchema);
+            Assert.Equal(_messageEarliest.Header.Subject, _storedMessage.Header.Subject);
+            Assert.Equal(_messageEarliest.Header.TraceParent, _storedMessage.Header.TraceParent);
+            Assert.Equal(_messageEarliest.Header.TraceState, _storedMessage.Header.TraceState);
+            Assert.Equal(_messageEarliest.Header.Baggage, _storedMessage.Header.Baggage);
         }
 
         public void Dispose()

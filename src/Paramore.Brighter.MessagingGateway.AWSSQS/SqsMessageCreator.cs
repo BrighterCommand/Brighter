@@ -310,7 +310,10 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
     {
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.DataContentType, out var value))
         {
-            return new HeaderResult<ContentType>(new ContentType(value.StringValue), true);
+            if (!string.IsNullOrEmpty(value.StringValue))
+                return new HeaderResult<ContentType>(new ContentType(value.StringValue), true);
+            else
+                return new HeaderResult<ContentType>(new ContentType(MediaTypeNames.Text.Plain), true);
         }
         
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ContentType, out value))

@@ -79,8 +79,8 @@ public class AzureServiceBusMessagePublisher
         //required Cloud Event headers
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSource, message.Header.Source?.ToString() ?? string.Empty);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsId, message.Id.ToString());
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSpecVersion, message.Header.SpecVersion.ToString());
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsType, message.Header.Type ?? string.Empty);
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSpecVersion, message.Header.SpecVersion);
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsType, message.Header.Type);
 
         //optional Cloud Event headers
         if (message.Header.ContentType is not null)
