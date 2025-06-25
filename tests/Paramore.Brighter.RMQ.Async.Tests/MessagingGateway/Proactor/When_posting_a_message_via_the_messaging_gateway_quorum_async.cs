@@ -101,6 +101,9 @@ public class RmqMessageProducerSendMessageQuorumTestsAsync : IDisposable, IAsync
     {
         await _messageProducer.SendAsync(_message);
 
+        // Give quorum queue a moment to become consistent across replicas
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
+
         var result = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First(); 
 
         // Assert message body

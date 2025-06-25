@@ -100,6 +100,9 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
     {
         _messageProducer.Send(_message);
 
+        // Give quorum queue a moment to become consistent across replicas
+        System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(500));
+
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
 
         // Assert message body
