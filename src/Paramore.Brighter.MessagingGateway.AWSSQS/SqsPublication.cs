@@ -63,3 +63,18 @@ public class SqsPublication : Publication
     /// </remarks>    
     public SqsAttributes? QueueAttributes { get; }
 }
+
+/// <summary>
+/// The SQS Message publication
+/// </summary>
+public class SqsPublication<T> : SqsPublication 
+    where T: class, IRequest
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqsPublication{T}"/> class.
+    /// </summary>
+    public SqsPublication()
+    {
+        RequestType = typeof(T);
+    }
+}
