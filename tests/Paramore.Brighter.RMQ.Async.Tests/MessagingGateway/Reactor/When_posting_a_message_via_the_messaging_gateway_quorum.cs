@@ -88,15 +88,11 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
         // Create consumer with Quorum queue type, ensuring durability is enabled
+        // The consumer will handle queue creation automatically
         _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, 
             isDurable: true, // Required for quorum queues
             highAvailability: false, // Not supported for quorum queues
             queueType: QueueType.Quorum);
-
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic))
-            .CreateAsync()
-            .GetAwaiter()
-            .GetResult();
     }
 
     [Fact]
