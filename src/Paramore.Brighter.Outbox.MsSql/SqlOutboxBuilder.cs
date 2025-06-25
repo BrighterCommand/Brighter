@@ -46,6 +46,13 @@ namespace Paramore.Brighter.Outbox.MsSql
               [Dispatched] DATETIME NULL,
               [HeaderBag] NVARCHAR(MAX) NULL,
               [Body] NVARCHAR(MAX) NULL,
+              [Source] NVARCHAR(255) NULL,
+              [Type] NVARCHAR(255) NULL,
+              [DataSchema] NVARCHAR(255) NULL,
+              [Subject] NVARCHAR(255) NULL,
+              [TraceParent] NVARCHAR(255) NULL,
+              [TraceState] NVARCHAR(255) NULL,
+              [Baggage] NVARCHAR(MAX) NULL,
               PRIMARY KEY ( [Id] )
             );
         ";
@@ -65,6 +72,13 @@ namespace Paramore.Brighter.Outbox.MsSql
               [Dispatched] DATETIME NULL,
               [HeaderBag] NVARCHAR(MAX) NULL,
               [Body] VARBINARY(MAX) NULL,
+              [Source] NVARCHAR(255) NULL,
+              [Type] NVARCHAR(255) NULL,
+              [DataSchema] NVARCHAR(255) NULL,
+              [Subject] NVARCHAR(255) NULL,
+              [TraceParent] NVARCHAR(255) NULL,
+              [TraceState] NVARCHAR(255) NULL,
+              [Baggage] NVARCHAR(MAX) NULL,
               PRIMARY KEY ( [Id] )
             );
         ";

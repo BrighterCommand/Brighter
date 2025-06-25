@@ -138,7 +138,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateNpgsqlParameter("CommandID", command.Id),
+                CreateNpgsqlParameter("CommandID", command.Id.Value),
                 CreateNpgsqlParameter("CommandType", typeof (T).Name),
                 CreateNpgsqlParameter("CommandBody", commandJson),
                 CreateNpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz, DateTimeOffset.UtcNow),

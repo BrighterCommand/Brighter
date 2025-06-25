@@ -127,8 +127,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests
 
     internal sealed class PostgreSqlSettings
     {
-        public string TestsBrighterConnectionString { get; set; } = "Host=localhost;Username=postgres;Password=password;Database=brightertests;";
+        public string TestsBrighterConnectionString { get; set; }
+            = "Host=localhost;Username=postgres;Password=password;Database=brightertests;Include Error Detail=true;";
 
-        public string TestsMasterConnectionString { get; set; } = "Host=localhost;Username=postgres;Password=password;";
+        public string TestsMasterConnectionString { get; set; }
+            = "Host=localhost;Username=postgres;Password=password;Include Error Detail=true;";
     }
 }

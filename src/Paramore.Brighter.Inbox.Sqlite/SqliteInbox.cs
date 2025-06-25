@@ -150,7 +150,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", command.Id), //was CommandId
+                CreateSqlParameter("CommandId", command.Id.Value), //was CommandId
                 CreateSqlParameter("CommandType", typeof (T).Name),
                 CreateSqlParameter("CommandBody", commandJson),
                 CreateSqlParameter("Timestamp", DateTime.UtcNow),
