@@ -17,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessagingGateway
     {
         protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageProducer>();
-        protected ClientConfig _clientConfig;
+        protected ClientConfig ClientConfig;
         protected OnMissingChannel MakeChannels;
         protected RoutingKey Topic;
         protected int NumPartitions;
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private async Task MakeTopic()
         {
-            using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
+            using (var adminClient = new AdminClientBuilder(ClientConfig).Build())
             {
                 try
                 {
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private bool FindTopic()
         {
-            using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
+            using (var adminClient = new AdminClientBuilder(ClientConfig).Build())
             {
                 try
                 {

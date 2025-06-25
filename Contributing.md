@@ -9,13 +9,13 @@ It isn't wise to build something that can be a part of someone's ecosystem witho
 - Submit a ticket for the issue, using the GitHub Issue Tracker
 - It's worth checking first to see if someone else has raised your issue. We might have responded to them, or someone might be fixing it.
 - If you want to add a feature, as opposed to fixing something that is broken, you should still raise an issue. 
-	- That helps us understand what you want to add, so we can give more specific advice and check it does not conflict with some work in progress on a branch etc. 
-	- If someone else is already working on the suggestion, then hopefully you can collaborate with them.
-	- Add a comment to an issue if you pick it up to work on, so everyone else knows.
+ 	- That helps us understand what you want to add, so we can give more specific advice and check it does not conflict with some work in progress on a branch etc. 
+  - If someone else is already working on the suggestion, then hopefully you can collaborate with them.
+   	- Add a comment to an issue if you pick it up to work on, so everyone else knows.
 - If you have a defect please include the following:
-	- Steps to reproduce the issue
-	- A failing test if possible (see below)
-	- The stacktrace for any errors you encountered
+ 	- Steps to reproduce the issue
+  - A failing test if possible (see below)
+ 	- The stacktrace for any errors you encountered
 
 
 ### Submitting Changes ###
