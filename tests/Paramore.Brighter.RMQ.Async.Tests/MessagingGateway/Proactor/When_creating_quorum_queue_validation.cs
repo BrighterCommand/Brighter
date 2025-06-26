@@ -91,6 +91,11 @@ public class RmqMessageConsumerQuorumValidationTests
             highAvailability: false, // Must be false for quorum
             queueType: QueueType.Quorum);
 
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey), isDurable: true, queueType: QueueType.Quorum)
+            .CreateAsync()
+            .GetAwaiter()
+            .GetResult();
+
         Assert.NotNull(consumer);
     }
 
