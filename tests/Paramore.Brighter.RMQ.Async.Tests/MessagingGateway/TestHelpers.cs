@@ -32,7 +32,7 @@ using Xunit;
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
-internal sealed class QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys)
+internal sealed class QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys, bool isDurable = false)
 {
     public async Task CreateAsync()
     {
@@ -44,7 +44,7 @@ internal sealed class QueueFactory(RmqMessagingGatewayConnection connection, Cha
                 publisherConfirmationTrackingEnabled: true));
 
         await channel.DeclareExchangeForConnection(connection, OnMissingChannel.Create);
-        await channel.QueueDeclareAsync(channelName.Value, false, false, false, null);
+        await channel.QueueDeclareAsync(channelName.Value, isDurable, false, false, null);
         if (routingKeys.Any())
         {
             foreach (RoutingKey routingKey in routingKeys)

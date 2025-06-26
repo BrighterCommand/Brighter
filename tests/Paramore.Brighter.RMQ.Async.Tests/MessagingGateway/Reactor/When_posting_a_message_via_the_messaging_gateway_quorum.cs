@@ -95,7 +95,7 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
             highAvailability: false, // Not supported for quorum queues
             queueType: QueueType.Quorum);
 
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic))
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic), isDurable: true)
             .CreateAsync()
             .GetAwaiter()
             .GetResult();

@@ -112,7 +112,7 @@ public class RmqMessageConsumerQuorumValidationTests
             highAvailability: true,
             queueType: QueueType.Classic);
 
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey))
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey), isDurable: true)
             .CreateAsync()
             .GetAwaiter()
             .GetResult();
