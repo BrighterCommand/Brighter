@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Net.Mime;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.Observability;
 using Xunit;
@@ -93,6 +94,11 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
             isDurable: true, // Required for quorum queues
             highAvailability: false, // Not supported for quorum queues
             queueType: QueueType.Quorum);
+
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic))
+            .CreateAsync()
+            .GetAwaiter()
+            .GetResult();
     }
 
     [Fact]
@@ -101,7 +107,7 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
         _messageProducer.Send(_message);
 
         // Give quorum queue a moment to become consistent across replicas
-        System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(500));
+        Task.Delay(TimeSpan.FromMilliseconds(500)).Wait();
 
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
 

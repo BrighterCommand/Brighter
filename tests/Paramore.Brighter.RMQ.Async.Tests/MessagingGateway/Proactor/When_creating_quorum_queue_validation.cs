@@ -112,6 +112,11 @@ public class RmqMessageConsumerQuorumValidationTests
             highAvailability: true,
             queueType: QueueType.Classic);
 
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey))
+            .CreateAsync()
+            .GetAwaiter()
+            .GetResult();
+
         Assert.NotNull(consumer);
     }
 }
