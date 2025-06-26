@@ -37,7 +37,7 @@ public class RmqMessageConsumerQuorumValidationTests
         var rmqConnection = new RmqMessagingGatewayConnection
         {
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-            Exchange = new Exchange("paramore.brighter.exchange")
+            Exchange = new Exchange("paramore.brighter.durableexchange", durable: true)
         };
 
         var queueName = new ChannelName(Guid.NewGuid().ToString());
@@ -100,7 +100,7 @@ public class RmqMessageConsumerQuorumValidationTests
         var rmqConnection = new RmqMessagingGatewayConnection
         {
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-            Exchange = new Exchange("paramore.brighter.exchange")
+            Exchange = new Exchange("paramore.brighter.durableexchange", durable: true)
         };
 
         var queueName = new ChannelName(Guid.NewGuid().ToString());

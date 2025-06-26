@@ -82,7 +82,7 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
         var rmqConnection = new RmqMessagingGatewayConnection
         {
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-            Exchange = new Exchange("paramore.brighter.exchange")
+            Exchange = new Exchange("paramore.brighter.durableexchange", durable: true)
         };
 
         _messageProducer = new RmqMessageProducer(rmqConnection);
