@@ -180,6 +180,7 @@ public class RequestContextPresentTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             fakeOutbox
         );
 
@@ -231,6 +232,7 @@ public class RequestContextPresentTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             fakeOutbox
         );
 
@@ -282,6 +284,7 @@ public class RequestContextPresentTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             fakeOutbox
         );
 
@@ -337,6 +340,7 @@ public class RequestContextPresentTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             fakeOutbox
         );
 
