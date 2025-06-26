@@ -30,14 +30,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaSubscription : Subscription
     {
         /// <summary>
-        /// <summary>
         /// We commit processed work (marked as acked or rejected) when a batch size worth of work has been completed
         /// If the batch size is 1, then there is a low risk of offsets not being committed and therefore duplicates appearing
         /// in the stream, but the latency per request and load on the broker increases. As the batch size rises the risk of
         /// a crashing worker process failing to commit a batch that is then represented rises.
         /// </summary>
         public long CommitBatchSize { get; set; } = 10;
-        
+
+        /// <summary>
+        /// Allows you to modify the Kafka client configuration before a consumer is created.
+        /// Used to set properties that Brighter does not expose
+        /// </summary>
+        public Action<ConsumerConfig> ConfigHook { get; set; }
+
         /// <summary>
         /// Only one consumer in a group can read from a partition at any one time; this preserves ordering
         /// We do not default this value, and expect you to set it
@@ -48,7 +53,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Default to read only committed messages, change if you want to read uncommited messages. May cause duplicates.
         /// </summary>
         public IsolationLevel IsolationLevel { get; set; } = IsolationLevel.ReadCommitted;
-        
+
         /// <summary>
         /// How often the consumer needs to poll for new messages to be considered alive, polling greater than this interval triggers a rebalance
         /// Uses Kafka default of 300000
@@ -68,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// AutoOffsetReset.Error - Consider it an error to be lacking a reset
         /// </summary>
         public AutoOffsetReset OffsetDefault { get; set; } = AutoOffsetReset.Earliest;
-        
+
         /// <summary>
         /// How should we assign partitions to consumers in the group?
         /// Range - Assign to co-localise partitions to consumers in the same group
@@ -81,12 +86,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// How long before we time out when we are reading the committed offsets back (mainly used for debugging)
         /// </summary>
         public int ReadCommittedOffsetsTimeOutMs { get; set; } = 5000;
-        
+
         /// <summary>
         /// What is the replication factor? How many nodes is the topic copied to on the broker?
         /// </summary>
         public short ReplicationFactor { get; set; } = 1;
-        
+
         /// <summary>
         /// If Kafka does not receive a heartbeat from the consumer within this time window, trigger a re-balance
         /// Default is Kafka default of 10s
@@ -97,7 +102,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// 
         /// </summary>
         public int SweepUncommittedOffsetsIntervalMs { get; set; } = 30000;
-        
+
         /// <summary>
         /// How long to wait when asking for topic metadata
         /// </summary>
@@ -131,33 +136,36 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
-        public KafkaSubscription (
-            Type dataType, 
-            SubscriptionName name = null, 
-            ChannelName channelName = null, 
+        /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created.
+        /// Used to set properties that Brighter does not expose</param>
+        public KafkaSubscription(
+            Type dataType,
+            SubscriptionName name = null,
+            ChannelName channelName = null,
             RoutingKey routingKey = null,
             string groupId = null,
-            int bufferSize = 1, 
-            int noOfPerformers = 1, 
-            int timeoutInMilliseconds = 300, 
-            int requeueCount = -1, 
-            int requeueDelayInMilliseconds = 0, 
-            int unacceptableMessageLimit = 0, 
+            int bufferSize = 1,
+            int noOfPerformers = 1,
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
             long commitBatchSize = 10,
             int sessionTimeoutMs = 10000,
-            int maxPollIntervalMs = 300000, 
+            int maxPollIntervalMs = 300000,
             int sweepUncommittedOffsetsIntervalMs = 30000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            bool isAsync = false, 
+            bool isAsync = false,
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000,
-            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
+            Action<ConsumerConfig> configHook = null)
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount,
                 requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
@@ -174,8 +182,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (PartitionAssignmentStrategy == PartitionAssignmentStrategy.CooperativeSticky)
                 throw new ArgumentOutOfRangeException("partitionAssignmentStrategy",
                     "CooperativeSticky is not supported for with manual commits, see https://github.com/confluentinc/librdkafka/issues/4059");
+
+            ConfigHook = configHook;
         }
     }
+
 
     public class KafkaSubscription<T> : KafkaSubscription where T : IRequest
     {
@@ -206,6 +217,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
+        /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created.
+        /// Used to set properties that Brighter does not expose</param>
         public KafkaSubscription(
             SubscriptionName name = null, 
             ChannelName channelName = null, 
@@ -230,12 +243,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000,
-            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
+            Action<ConsumerConfig> configHook = null)
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, 
                 requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
                 sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync, 
                 numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay,
-                partitionAssignmentStrategy)
+                partitionAssignmentStrategy, configHook)
         {
         }
     }

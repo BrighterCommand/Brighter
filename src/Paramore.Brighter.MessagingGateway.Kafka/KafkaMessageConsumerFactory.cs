@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             KafkaSubscription kafkaSubscription = subscription as KafkaSubscription;  
             if (kafkaSubscription == null)
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
-            
+
             return new KafkaMessageConsumer(
                 configuration: _configuration, 
                 routingKey:kafkaSubscription.RoutingKey, //topic
@@ -68,7 +68,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 partitionAssignmentStrategy: kafkaSubscription.PartitionAssignmentStrategy,
                 replicationFactor: kafkaSubscription.ReplicationFactor,
                 topicFindTimeoutMs: kafkaSubscription.TopicFindTimeoutMs,
-                makeChannels: kafkaSubscription.MakeChannels
+                makeChannels: kafkaSubscription.MakeChannels,
+                configHook: kafkaSubscription.ConfigHook
                 );
         }
     }

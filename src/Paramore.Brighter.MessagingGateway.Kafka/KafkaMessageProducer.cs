@@ -69,7 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (string.IsNullOrEmpty(publication.Topic))
                 throw new ConfigurationException("Topic is required for a publication");
 
-            _clientConfig = new ClientConfig
+            ClientConfig = new ClientConfig
             {
                 Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
                 BootstrapServers = string.Join(",", configuration.BootStrapServers),
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             };
 
-            _producerConfig = new ProducerConfig(_clientConfig)
+            _producerConfig = new ProducerConfig(ClientConfig)
             {
                 BatchNumMessages = publication.BatchNumberMessages,
                 EnableIdempotence = publication.EnableIdempotence,
