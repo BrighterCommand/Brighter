@@ -87,6 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="replicationFactor">If we are creating missing infrastructure, how many in-sync replicas do we need. Defaults to 1</param>
         /// <param name="topicFindTimeout">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
+        /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -103,7 +104,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
             short replicationFactor = 1,
             TimeSpan? topicFindTimeout = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            Action<ConsumerConfig>? configHook = null
             )
         {
             if (configuration is null)
@@ -162,6 +164,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
                 PartitionAssignmentStrategy = partitionAssignmentStrategy,
             };
+            
+            if (configHook != null)
+                configHook(_consumerConfig);
 
             _maxBatchSize = commitBatchSize;
             _sweepUncommittedInterval = sweepUncommittedOffsetsInterval.Value;
