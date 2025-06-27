@@ -144,14 +144,13 @@ public class DynamoDbTableFactory
 
     private static void AddGSIToMap(string indexName, GlobalSecondaryIndexDetails gsiHashKeyResult, Dictionary<string, GlobalSecondaryIndex> gsiMap)
     {
-        var gsi = new GlobalSecondaryIndex { IndexName = indexName };
+        var gsi = new GlobalSecondaryIndex { IndexName = indexName, KeySchema = [] };
         var gsiHashKey = new KeySchemaElement(gsiHashKeyResult.Prop.Name, KeyType.HASH);
         gsi.KeySchema.Add(gsiHashKey);
         gsiMap.Add(gsi.IndexName, gsi);
     }
          
-    private void AddTableProvisionedThroughput<T>(DynamoDbCreateProvisionedThroughput provisionedThroughput,
-        CreateTableRequest createTableRequest)
+    private static void AddTableProvisionedThroughput<T>(DynamoDbCreateProvisionedThroughput? provisionedThroughput, CreateTableRequest createTableRequest)
     {
         if (provisionedThroughput != null)
         {
@@ -192,7 +191,7 @@ public class DynamoDbTableFactory
         return attributeDefinitions;
     }
 
-    private Dictionary<string, GlobalSecondaryIndex> GetGlobalSecondaryIndices<T>(Type docType)
+    private static Dictionary<string, GlobalSecondaryIndex> GetGlobalSecondaryIndices<T>(Type docType)
     {
         //global secondary indexes
         var gsiMap = new Dictionary<string, GlobalSecondaryIndex>();
@@ -293,7 +292,7 @@ public class DynamoDbTableFactory
         return lsiList;
     }
         
-    private IEnumerable<KeySchemaElement> GetPrimaryKey<T>(Type docType)
+    private static IEnumerable<KeySchemaElement> GetPrimaryKey<T>(Type docType)
     {
         //hash key
         var hashKey = (from prop in docType.GetProperties()
