@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Brighter.Outbox.DynamoDB.V4;
 

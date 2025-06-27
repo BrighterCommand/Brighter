@@ -8,6 +8,7 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.DynamoDB.V4.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Brighter.Outbox.DynamoDB.V4;

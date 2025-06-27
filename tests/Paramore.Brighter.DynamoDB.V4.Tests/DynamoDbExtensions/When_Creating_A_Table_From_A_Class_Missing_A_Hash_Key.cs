@@ -1,6 +1,7 @@
 using System;
 using Amazon.DynamoDBv2.DataModel;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 

@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.DynamoDB.V4.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB.V4;
 using Paramore.Brighter.Outbox.DynamoDB;
