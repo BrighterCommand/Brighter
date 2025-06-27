@@ -95,15 +95,15 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
             highAvailability: false, // Not supported for quorum queues
             queueType: QueueType.Quorum);
 
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic), isDurable: true, queueType: QueueType.Quorum)
-            .CreateAsync()
-            .GetAwaiter()
-            .GetResult();
     }
 
     [Fact]
     public void When_posting_a_message_via_the_messaging_gateway_with_quorum_queue()
     {
+        //we need to do this to create the queue 
+         _messageConsumer.Receive(TimeSpan.FromMilliseconds(100)); 
+        
+        // Send the message
         _messageProducer.Send(_message);
 
         // Give quorum queue a moment to become consistent across replicas
