@@ -64,6 +64,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// </summary>
         public TimeSpan? Ttl { get; }
         
+        /// <summary>
+        /// The type of queue to use - Classic or Quorum
+        /// </summary>
+        public QueueType QueueType { get; }
+        
         /// <inheritdoc />
         public override Type ChannelFactoryType => typeof(ChannelFactory); 
 
@@ -91,6 +96,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="maxQueueLength">The maximum number of messages in a queue before we reject messages; defaults to no limit</param>
+        /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
         public RmqSubscription(
             Type dataType, 
             SubscriptionName? subscriptionName = null, 
@@ -112,7 +118,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
-            int? maxQueueLength = null) 
+            int? maxQueueLength = null,
+            QueueType queueType = QueueType.Classic) 
             : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
@@ -121,6 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             IsDurable = isDurable;
             Ttl = ttl;
             MaxQueueLength = maxQueueLength;
+            QueueType = queueType;
         }
     }
 
@@ -148,6 +156,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
         public RmqSubscription(
             SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
@@ -167,9 +176,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             TimeSpan? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
-            TimeSpan? channelFailureDelay = null)
+            TimeSpan? channelFailureDelay = null,
+            QueueType queueType = QueueType.Classic)
             : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
-                unacceptableMessageLimit, isDurable, messagePumpType, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels, emptyChannelDelay, channelFailureDelay)
+                unacceptableMessageLimit, isDurable, messagePumpType, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels, emptyChannelDelay, channelFailureDelay, null, queueType)
         { }
 
     }
