@@ -26,5 +26,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.JustSaying\Paramore.Brighter.Transformers.JustSaying.csproj" />
+      <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.MassTransit\Paramore.Brighter.Transformers.MassTransit.csproj" />
     </ItemGroup>
 </Project>

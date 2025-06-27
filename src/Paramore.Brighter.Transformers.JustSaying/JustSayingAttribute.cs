@@ -17,10 +17,6 @@ namespace Paramore.Brighter.Transformers.JustSaying;
 /// (specified by <see cref="GetHandlerType"/>) will use the values provided by this attribute
 /// to populate or read message metadata relevant to JustSaying's message routing and versioning.
 /// </para>
-/// <para>
-/// The <see cref="FromContextRequest"/> property determines how some metadata fields
-/// are sourced during the transformation.
-/// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)] 
 public class JustSayingAttribute : WrapWithAttribute

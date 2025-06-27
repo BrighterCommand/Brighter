@@ -407,7 +407,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MassTransitSide", "samples\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Transformers.MassTransit", "src\Paramore.Brighter.Transformers.MassTransit\Paramore.Brighter.Transformers.MassTransit.csproj", "{5D74F344-7050-4721-8CC3-C9D5A705931F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Transforms.Adaptors", "tests\Paramore.Brighter.Transforms.Adaptors\Paramore.Brighter.Transforms.Adaptors.csproj", "{D5B65576-F375-46E9-8A00-CC3C32E8DBDE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Transforms.Adaptors.Tests", "tests\Paramore.Brighter.Transforms.Adaptors.Tests\Paramore.Brighter.Transforms.Adaptors.Tests.csproj", "{D5B65576-F375-46E9-8A00-CC3C32E8DBDE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

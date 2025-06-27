@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Paramore.Brighter.Transformers.MassTransit;
 
-public class MassTransitMessageEnvelop<T>
+public sealed class MassTransitMessageEnvelop<T>
 {
     public string? MessageId { get; set; }
     public string? RequestId { get; set; }
@@ -39,4 +40,21 @@ public sealed class HostInfo
     public string? MassTransitVersion { get; set; }
 
     public string? OperatingSystemVersion { get; set; }
+
+    public static HostInfo Create()
+    {
+        var process = Process.GetCurrentProcess();
+
+        var assembly = System.Reflection.Assembly.GetEntryAssembly();
+
+        return new HostInfo
+        {
+            MachineName = Environment.MachineName,
+            ProcessName = process.ProcessName,
+            ProcessId = process.Id,
+            OperatingSystemVersion = Environment.OSVersion.VersionString,
+            Assembly = assembly?.GetName().Name,
+            AssemblyVersion = assembly?.GetName().Version?.ToString()
+        };    
+    }
 }

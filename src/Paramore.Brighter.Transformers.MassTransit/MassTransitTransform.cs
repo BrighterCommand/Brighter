@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -9,9 +9,37 @@ using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Transformers.MassTransit;
 
+/// <summary>
+/// A message transform that wraps messages in a MassTransit-compatible envelope for interoperability.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This transform integrates Brighter with MassTransit by wrapping messages in a <see cref="MassTransitMessageEnvelop{TMessage}"/> 
+/// structure during message publication. It ensures compatibility with MassTransit's default envelope format, including required 
+/// metadata like CorrelationId, HostInfo, and routing addresses.
+/// </para>
+/// <para>
+/// <strong>Performance Note:</strong> Prefer using <see cref="MassTransitMessageMapper{TMessage}"/> for better efficiency. 
+/// This transform dynamically manipulates JSON payloads, which incurs higher overhead compared to the strongly-typed mapping 
+/// approach in <see cref="MassTransitMessageMapper{TMessage}"/>. 
+/// </para>
+/// <para>
+/// <strong>Key Features:</strong>
+/// - Wraps messages in MassTransit's expected envelope format
+/// - Sets standard MassTransit headers (DestinationAddress, SourceAddress, etc.)
+/// - Serializes messages with <c>application/vnd.masstransit+json</c> content type
+/// - Supports both synchronous and asynchronous transformation
+/// </para>
+/// <para>
+/// <strong>Configuration:</strong>
+/// - Parameters like <c>destinationAddress</c>, <c>responseAddress</c>, and <c>messageType</c> can be set via attribute constructor arguments
+/// - Missing values are sourced from message context or defaults (e.g., publication source for SourceAddress)
+/// - Preserves existing message headers in the envelope's <c>Headers</c> property
+/// </para>
+/// </remarks>
 public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAsync
 {
-    private static HostInfo?  s_hostInfo;
+    private static readonly HostInfo?  s_hostInfo = HostInfo.Create();
     private static readonly ContentType s_massTransitContentType = new("application/vnd.masstransit+json");
 
     private string? _destinationAddress; 
@@ -20,8 +48,10 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
     private string? _sourceAddress;
     private string[]? _messageType;
     
+    /// <inheritdoc cref="IAmAMessageTransform.Context"/>
     public IRequestContext? Context { get; set; }
     
+    /// <inheritdoc cref="IAmAMessageTransform.InitializeWrapFromAttributeParams"/>
     public void InitializeWrapFromAttributeParams(params object?[] initializerList)
     {
         if (initializerList[0] is string destinationAddress)
@@ -50,6 +80,7 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
         }
     }
 
+    /// <inheritdoc cref="IAmAMessageTransform.InitializeUnwrapFromAttributeParams"/>
     public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
     {
     }
@@ -73,22 +104,20 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
 
         var envelop = new MassTransitMessageEnvelop<JsonElement>
         {
-            ConversationId = GetConversationId(message),
+            ConversationId = GetConversationId(),
             CorrelationId = message.Header.CorrelationId,
-            DestinationAddress = GetDestinationAddress(message), 
-            ExpirationTime = GetExpirationTime(message), 
-            FaultAddress = GetFaultAddress(message), 
-            Headers = message.Header.Bag
-                .Where(x => !x.Key.StartsWith("MT-"))
-                .ToDictionary(x => x.Key, x => x.Value)!,
-            Host = GetHostInfo(),
-            InitiatorId = GetInitiatorId(message), 
+            DestinationAddress = GetDestinationAddress(), 
+            ExpirationTime = GetExpirationTime(), 
+            FaultAddress = GetFaultAddress(), 
+            Headers = message.Header.Bag!,
+            Host = s_hostInfo,
+            InitiatorId = GetInitiatorId(), 
             Message = data,
             MessageId = message.Header.MessageId,
-            MessageType = _messageType,
-            RequestId = GetRequestId(message),
+            MessageType = GetMessageType(),
+            RequestId = GetRequestId(),
             ResponseAddress = GetResponseAddress(message),
-            SourceAddress = GetSourceAddress(message),
+            SourceAddress = GetSourceAddress(),
             SentTime = message.Header.TimeStamp.DateTime
         };
 
@@ -97,19 +126,19 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
         return message;
     }
 
-    private string? GetConversationId(Message message) => Get(message, MassTransitHeaderNames.ConversationId);
+    private string? GetConversationId() => Get(MassTransitHeaderNames.ConversationId);
     
-    private string? GetDestinationAddress(Message message)
+    private string? GetDestinationAddress()
     {
         if(!string.IsNullOrEmpty(_destinationAddress)) 
         { 
             return _destinationAddress;
         }
         
-        return Get(message, MassTransitHeaderNames.DestinationAddress);
+        return Get(MassTransitHeaderNames.DestinationAddress);
     }
     
-    private DateTime? GetExpirationTime(Message message)
+    private DateTime? GetExpirationTime()
     {
         if (Context != null && Context.Bag.TryGetValue(MassTransitHeaderNames.ExpirationTime, out var val))
         {
@@ -124,33 +153,20 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
             }
         }
         
-        if (message.Header.Bag.TryGetValue(MassTransitHeaderNames.ExpirationTime, out val))
-        {
-            if (val is DateTimeOffset offset)
-            {
-                return offset.DateTime;
-            }
-
-            if (val is DateTime dateTime)
-            {
-                return dateTime;
-            }
-        }
-
         return null;
     }
-    private string? GetFaultAddress(Message message)
+    private string? GetFaultAddress()
     {
         if (!string.IsNullOrEmpty(_faultAddress)) 
         { 
             return _faultAddress;
         }
         
-        return Get(message, MassTransitHeaderNames.FaultAddress);
+        return Get(MassTransitHeaderNames.FaultAddress);
     }
-    private string? GetInitiatorId(Message message) => Get(message, MassTransitHeaderNames.InitiatorId);
+    private string? GetInitiatorId() => Get(MassTransitHeaderNames.InitiatorId);
     
-    private string? GetRequestId(Message message) => Get(message, MassTransitHeaderNames.RequestId);
+    private string? GetRequestId() => Get(MassTransitHeaderNames.RequestId);
     
     private string? GetResponseAddress(Message message)
     {
@@ -164,28 +180,47 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
             return message.Header.ReplyTo!; 
         }
         
-        return Get(message, MassTransitHeaderNames.ResponseAddress);
+        return Get(MassTransitHeaderNames.ResponseAddress);
     }
     
-    private string? GetSourceAddress(Message message)
+    private string? GetSourceAddress()
     {
         if (!string.IsNullOrEmpty(_sourceAddress)) 
         { 
             return _sourceAddress;
         }
         
-        return Get(message, MassTransitHeaderNames.SourceAddress);
+        return Get(MassTransitHeaderNames.SourceAddress);
     }
-
-    private string? Get(Message message, string headerName)
+    
+    
+    private string[]? GetMessageType()
     {
-        if (Context != null
-            && Context.Bag.TryGetValue(headerName, out var val))
+        if (_messageType is { Length: > 0 })
         {
-            return val?.ToString();
+            return _messageType;
         }
         
-        if (message.Header.Bag.TryGetValue(headerName, out val))
+        if (Context != null && Context.Bag.TryGetValue(MassTransitHeaderNames.MessageType, out var obj))
+        {
+            if (obj is string type && !string.IsNullOrEmpty(type))
+            {
+                return [type];
+            }
+
+            if (obj is IEnumerable<string> types)
+            {
+                return types.ToArray();
+            }
+
+        }
+        
+        return null;
+    }
+
+    private string? Get(string headerName)
+    {
+        if (Context != null && Context.Bag.TryGetValue(headerName, out var val))
         {
             return val?.ToString();
         }
@@ -200,30 +235,60 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
 
         if (envelop != null)
         {
-            message.Body = new MessageBody(JsonSerializer.SerializeToUtf8Bytes(envelop.Message, JsonSerialisationOptions.Options));
+            var messageId = Guid.NewGuid().ToString();
+            if (!string.IsNullOrEmpty(envelop.MessageId))
+            {
+               messageId = envelop.MessageId!;
+            }
+            
+            var timestamp = DateTimeOffset.UtcNow;
+            if (envelop.SentTime != null)
+            {
+                timestamp = envelop.SentTime.Value;
+            }
+            
+            if (!string.IsNullOrEmpty(envelop.CorrelationId))
+            {
+                message.Header.CorrelationId = envelop.CorrelationId!;
+            }
+
+            var bag = message.Header.Bag;
+            if (envelop.Headers != null && envelop.Headers.Count > 0)
+            {
+                bag = new Dictionary<string, object>(bag);
+                foreach (KeyValuePair<string, object?> obj in  envelop.Headers)
+                {
+                    bag[obj.Key] = obj.Value!;
+                }    
+            }
+
+            return new Message(
+                new MessageHeader(
+                    new Id(messageId),
+                    message.Header.Topic,
+                    message.Header.MessageType,
+                    source: message.Header.Source,
+                    type: message.Header.Type,
+                    timeStamp: timestamp!,
+                    correlationId: message.Header.CorrelationId, 
+                    partitionKey: message.Header.PartitionKey,
+                    dataSchema: message.Header.DataSchema,
+                    subject: message.Header.Subject,
+                    handledCount: message.Header.HandledCount,
+                    delayed: message.Header.Delayed,
+                    traceParent: message.Header.TraceParent,
+                    traceState: message.Header.TraceState,
+                    baggage:  message.Header.Baggage)
+                {
+                    Bag = bag
+                },
+                new MessageBody(JsonSerializer.SerializeToUtf8Bytes(envelop.Message, JsonSerialisationOptions.Options))
+            );
         }
 
         return message;
     }
 
-    private static HostInfo GetHostInfo()
-    {
-        if (s_hostInfo != null)
-        {
-            return s_hostInfo;
-        }
-
-        var process = Process.GetCurrentProcess();
-
-        return s_hostInfo = new HostInfo
-        {
-            MachineName = Environment.MachineName,
-            ProcessName = process.ProcessName,
-            ProcessId = process.Id,
-            OperatingSystemVersion = Environment.OSVersion.VersionString
-        };
-    }
-    
     public void Dispose()
     {
     }

@@ -5,7 +5,7 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transformers.JustSaying;
 using Xunit;
 
-namespace Paramore.Brighter.Transforms.Adaptors.JustSaying;
+namespace Paramore.Brighter.Transforms.Adaptors.Tests.JustSaying;
 
 public class JustSayingMessageMapperTest
 {
