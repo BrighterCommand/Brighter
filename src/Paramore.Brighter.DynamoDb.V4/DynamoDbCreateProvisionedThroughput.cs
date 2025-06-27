@@ -26,17 +26,10 @@ using Amazon.DynamoDBv2.Model;
 
 namespace Paramore.Brighter.DynamoDb.V4;
 
-public class DynamoDbCreateProvisionedThroughput
+public class DynamoDbCreateProvisionedThroughput(
+    ProvisionedThroughput? table = null,
+    Dictionary<string, ProvisionedThroughput>? gsiThroughputs = null)
 {
-    public ProvisionedThroughput Table { get; }
-    public Dictionary<string, ProvisionedThroughput> GSIThroughputs { get; }
-
-    public DynamoDbCreateProvisionedThroughput(
-        ProvisionedThroughput table = null,
-        Dictionary<string, ProvisionedThroughput> gsiThroughputs = null)
-    {
-        //TODO: Sensible default value for table throughput?
-        Table = table ?? new ProvisionedThroughput(readCapacityUnits: 100, writeCapacityUnits: 100);
-        GSIThroughputs = gsiThroughputs;
-    }
+    public ProvisionedThroughput Table { get; } = table ?? new ProvisionedThroughput(readCapacityUnits: 100, writeCapacityUnits: 100);
+    public Dictionary<string, ProvisionedThroughput>? GSIThroughputs { get; } = gsiThroughputs;
 }

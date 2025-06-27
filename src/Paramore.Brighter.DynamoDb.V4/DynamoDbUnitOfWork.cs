@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +35,7 @@ namespace Paramore.Brighter.DynamoDb.V4;
 
 public class DynamoDbUnitOfWork(IAmazonDynamoDB dynamoDb) : IAmADynamoDbTransactionProvider, IDisposable
 {
-    private TransactWriteItemsRequest _tx;
+    private TransactWriteItemsRequest? _tx;
         
     /// <summary>
     /// The AWS client for dynamoDb
@@ -44,7 +45,7 @@ public class DynamoDbUnitOfWork(IAmazonDynamoDB dynamoDb) : IAmADynamoDbTransact
     /// <summary>
     /// The response for the last transaction commit
     /// </summary>
-    public TransactWriteItemsResponse LastResponse { get; set; }
+    public TransactWriteItemsResponse? LastResponse { get; set; }
 
     public void Close()
     {
@@ -109,6 +110,7 @@ public class DynamoDbUnitOfWork(IAmazonDynamoDB dynamoDb) : IAmADynamoDbTransact
     /// Is there an existing transaction?
     /// </summary>
     /// <returns></returns>
+    [MemberNotNullWhen(true, nameof(_tx))]
     public bool HasOpenTransaction => _tx != null; 
 
     /// <summary>

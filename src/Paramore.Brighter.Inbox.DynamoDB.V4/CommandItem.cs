@@ -14,7 +14,7 @@ public class CommandItem<T> where T : class, IRequest
     [DynamoDBProperty]
     public string CommandId { get; set; }
         
-    public string CommandType { get; set; }
+    public string? CommandType { get; set; }
         
     public string CommandBody { get; set; }
         
@@ -22,9 +22,14 @@ public class CommandItem<T> where T : class, IRequest
         
     [DynamoDBRangeKey]
     [DynamoDBProperty]
-    public string ContextKey { get; set; } = null;
+    public string? ContextKey { get; set; } = null;
 
-    public CommandItem() {}
+    public CommandItem()
+    {
+        Time = $"{TimeStamp.Ticks}";
+        CommandId = string.Empty;
+        CommandBody = string.Empty;
+    }
 
     public CommandItem(T command, string contextKey)
     {
@@ -37,5 +42,5 @@ public class CommandItem<T> where T : class, IRequest
         ContextKey = contextKey;
     }
 
-    public T ConvertToCommand() => JsonSerializer.Deserialize<T>(CommandBody, JsonSerialisationOptions.Options);
+    public T ConvertToCommand() => JsonSerializer.Deserialize<T>(CommandBody, JsonSerialisationOptions.Options)!;
 }

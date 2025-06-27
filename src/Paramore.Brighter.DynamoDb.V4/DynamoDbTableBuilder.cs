@@ -7,15 +7,8 @@ using Amazon.DynamoDBv2.Model;
 
 namespace Paramore.Brighter.DynamoDb.V4;
 
-public class DynamoDbTableBuilder
+public class DynamoDbTableBuilder(IAmazonDynamoDB client)
 {
-    private readonly IAmazonDynamoDB _client;
-
-    public DynamoDbTableBuilder(IAmazonDynamoDB client)
-    {
-        _client = client;
-    }
-        
     /// <summary>
     /// Build a table from a create table request
     /// We filter out any attributes that are not B, S, or N because DynamoDB does not currently support
@@ -28,7 +21,7 @@ public class DynamoDbTableBuilder
     public async Task<CreateTableResponse> Build(CreateTableRequest createTableRequest, CancellationToken ct = default)
     {
         var modifiedTableRequest = RemoveNonSchemaAttributes(createTableRequest);
-        return await _client.CreateTableAsync(modifiedTableRequest, ct);
+        return await client.CreateTableAsync(modifiedTableRequest, ct);
     }
 
     /// <summary>
@@ -39,18 +32,18 @@ public class DynamoDbTableBuilder
     /// <returns>The response to table deletion</returns>
     public async Task<DeleteTableResponse[]> Delete(IEnumerable<string> tableNames, CancellationToken ct = default)
     {
-        var allDeletes = tableNames.Select(tn => _client.DeleteTableAsync(tn, ct)).ToList();
+        var allDeletes = tableNames.Select(tn => client.DeleteTableAsync(tn, ct)).ToList();
         return await Task.WhenAll(allDeletes);
     }
         
     //EnsureTablesGone. Deleting until cannot be found
     public async Task EnsureTablesDeleted(IEnumerable<string> tableNames, CancellationToken ct = default)
     {
-        Dictionary<string, bool> tableResults = null;
+        Dictionary<string, bool>? tableResults = null;
         do
         {
             var tableQuery = new DynamoDbTableQuery();
-            tableResults = await tableQuery.HasTables(_client, tableNames, ct: ct);
+            tableResults = await tableQuery.HasTables(client, tableNames, ct: ct);
         } while (tableResults.Any(tr => tr.Value));
     }
 
@@ -72,7 +65,7 @@ public class DynamoDbTableBuilder
             await Task.Delay(5000, ct);
             try
             {
-                var allQueries = tableStates.Where(ts => ts.IsReady == false).Select(ts => _client.DescribeTableAsync(ts.TableName, ct));
+                var allQueries = tableStates.Where(ts => ts.IsReady == false).Select(ts => client.DescribeTableAsync(ts.TableName, ct));
                 var allResults = await Task.WhenAll(allQueries);
 
                 foreach (var result in allResults)
@@ -98,10 +91,10 @@ public class DynamoDbTableBuilder
             
         var tableCheck = tableNames.ToDictionary(tableName => tableName, tableName => false);
             
-        string lastEvaluatedTableName = null;
+        string? lastEvaluatedTableName;
         do
         {
-            var tablesResponse = await _client.ListTablesAsync(ct);
+            var tablesResponse = await client.ListTablesAsync(ct);
 
             foreach (var tableName in tablesResponse.TableNames)
             {
@@ -123,7 +116,7 @@ public class DynamoDbTableBuilder
         var keyMatchedAttributes = new List<AttributeDefinition>();
             
         //get the unfiltered markup
-        var existingAttributes = tableRequest.AttributeDefinitions;
+        var existingAttributes = tableRequest.AttributeDefinitions ?? [];
 
         foreach (var attribute in existingAttributes)
         {
@@ -167,7 +160,7 @@ public class DynamoDbTableBuilder
     private static bool AddGlobalSecondaryIndexUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
         List<AttributeDefinition> keyMatchedAttributes)
     {
-        foreach (var index in tableRequest.GlobalSecondaryIndexes)
+        foreach (var index in tableRequest.GlobalSecondaryIndexes ?? [])
         {
             foreach (var keySchemaElement in index.KeySchema)
             {
@@ -185,7 +178,7 @@ public class DynamoDbTableBuilder
     private static bool AddKeyUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
         List<AttributeDefinition> keyMatchedAttributes)
     {
-        foreach (var keySchemaElement in tableRequest.KeySchema)
+        foreach (var keySchemaElement in tableRequest.KeySchema ?? [])
         {
             if (keySchemaElement.AttributeName == attribute.AttributeName)
             {
@@ -199,7 +192,7 @@ public class DynamoDbTableBuilder
 
     private sealed class DynamoDbTableStatus
     { 
-        public string TableName { get; init; }
+        public required string TableName { get; init; }
         public bool IsReady { get; set; }
     }
 }

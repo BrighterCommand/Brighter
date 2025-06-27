@@ -59,16 +59,21 @@ public class DynamoDbTableFactory
     /// <returns></returns>
     public CreateTableRequest GenerateCreateTableRequest<T>(
         DynamoDbCreateProvisionedThroughput provisionedThroughput,
-        DynamoGSIProjections gsiProjections = null,
-        BillingMode billingMode = null,
-        SSESpecification sseSpecification = null,
-        StreamSpecification streamSpecification = null,
-        IEnumerable<Tag> tags = null)
+        DynamoGSIProjections? gsiProjections = null,
+        BillingMode? billingMode = null,
+        SSESpecification? sseSpecification = null,
+        StreamSpecification? streamSpecification = null,
+        IEnumerable<Tag>? tags = null)
     {
         var docType = typeof(T);
         string tableName = GetTableName<T>(docType);
 
-        var createTableRequest = new CreateTableRequest(tableName, GetPrimaryKey<T>(docType).ToList());
+        var createTableRequest = new CreateTableRequest(tableName, GetPrimaryKey<T>(docType).ToList())
+        {
+            AttributeDefinitions = [],
+            GlobalSecondaryIndexes = [],
+            LocalSecondaryIndexes = []
+        };
         AddTableProvisionedThroughput<T>(provisionedThroughput, createTableRequest);
         createTableRequest.AttributeDefinitions.AddRange(GetAttributeDefinitions<T>(docType));
         createTableRequest.GlobalSecondaryIndexes.AddRange(GetGlobalSecondaryIndices<T>(docType).Select(entry => entry.Value));
@@ -78,19 +83,21 @@ public class DynamoDbTableFactory
         createTableRequest.BillingMode = billingMode ?? BillingMode.PROVISIONED;
         createTableRequest.SSESpecification = sseSpecification ?? new SSESpecification {Enabled = true};
         createTableRequest.StreamSpecification = streamSpecification ?? new StreamSpecification{StreamEnabled = true, StreamViewType = StreamViewType.NEW_IMAGE};
-        createTableRequest.Tags = tags  != null ? tags.ToList() : new List<Tag> {new Tag{Key="outbox", Value = "brighter_outbox"}};
+        createTableRequest.Tags = tags  != null ? tags.ToList() :
+        [
+            new Tag { Key = "outbox", Value = "brighter_outbox" }
+        ];
         return createTableRequest;
     }
 
 
-    private void AddGSIProjections(DynamoGSIProjections gsiProjections, CreateTableRequest createTableRequest)
+    private void AddGSIProjections(DynamoGSIProjections? gsiProjections, CreateTableRequest createTableRequest)
     {
         if (gsiProjections != null)
         {
             foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
             {
-                if (gsiProjections.Projections.TryGetValue(globalSecondaryIndex.IndexName,
-                        out Projection projection))
+                if (gsiProjections.Projections.TryGetValue(globalSecondaryIndex.IndexName, out var projection))
                 {
                     globalSecondaryIndex.Projection = projection;
                 }
@@ -109,15 +116,14 @@ public class DynamoDbTableFactory
         }
     }
 
-    private void AddGSIProvisionedThroughput<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput,
+    private void AddGSIProvisionedThroughput<T>(DynamoDbCreateProvisionedThroughput? provisonedThroughput,
         CreateTableRequest createTableRequest)
     {
         if (provisonedThroughput != null)
         {
             foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
             {
-                if (provisonedThroughput.GSIThroughputs.TryGetValue(globalSecondaryIndex.IndexName,
-                        out ProvisionedThroughput provisionedThroughput))
+                if (provisonedThroughput.GSIThroughputs != null && provisonedThroughput.GSIThroughputs.TryGetValue(globalSecondaryIndex.IndexName, out var provisionedThroughput))
                 {
                     globalSecondaryIndex.ProvisionedThroughput = provisionedThroughput;
                 }
@@ -138,8 +144,7 @@ public class DynamoDbTableFactory
 
     private static void AddGSIToMap(string indexName, GlobalSecondaryIndexDetails gsiHashKeyResult, Dictionary<string, GlobalSecondaryIndex> gsiMap)
     {
-        var gsi = new GlobalSecondaryIndex();
-        gsi.IndexName = indexName;
+        var gsi = new GlobalSecondaryIndex { IndexName = indexName };
         var gsiHashKey = new KeySchemaElement(gsiHashKeyResult.Prop.Name, KeyType.HASH);
         gsi.KeySchema.Add(gsiHashKey);
         gsiMap.Add(gsi.IndexName, gsi);
@@ -177,7 +182,7 @@ public class DynamoDbTableFactory
 
             string attributeName = !hasName
                 ? item.prop.Name
-                : (string)item.attribute.ConstructorArguments.FirstOrDefault().Value;
+                : (string)item.attribute.ConstructorArguments.FirstOrDefault().Value!;
                 
             var hasNameAndConverter = argumentCount == 2 && !hasStorage;
 
@@ -206,19 +211,19 @@ public class DynamoDbTableFactory
             }
             else
             {
-                IEnumerable<string> indexNames = null;
+                IEnumerable<string>? indexNames = null;
                 var value = gsiHashKeyResult.Attribute.ConstructorArguments.First().Value;
 
-                if (value is string)
+                if (value is string val)
                 {
-                    indexNames = new string[] {(string)value};
+                    indexNames = [val];
                 }
-                else if (value is ReadOnlyCollection<CustomAttributeTypedArgument>)
+                else if (value is ReadOnlyCollection<CustomAttributeTypedArgument> arguments)
                 {
-                    indexNames = ((ReadOnlyCollection<CustomAttributeTypedArgument>)value).Select(arg => (string)arg.Value);
+                    indexNames = arguments.Select(arg => (string)arg.Value!);
                 }
                     
-                foreach (var indexName in indexNames)
+                foreach (var indexName in indexNames ?? [])
                 {
                     AddGSIToMap(indexName, gsiHashKeyResult, gsiMap);
                 }
@@ -239,19 +244,19 @@ public class DynamoDbTableFactory
             }
             else
             {
-                IEnumerable<string> indexNames = null;
+                IEnumerable<string>? indexNames = null;
                 var value = gsiRangeKeyResult.Attribute.ConstructorArguments.First().Value;
 
-                if (value is string)
+                if (value is string val)
                 {
-                    indexNames = new string[] {(string)value};
+                    indexNames = [val];
                 }
-                else if (value is ReadOnlyCollection<CustomAttributeTypedArgument>)
+                else if (value is ReadOnlyCollection<CustomAttributeTypedArgument> arguments)
                 {
-                    indexNames = ((ReadOnlyCollection<CustomAttributeTypedArgument>)value).Select(arg => (string)arg.Value);
+                    indexNames = arguments.Select(arg => (string)arg.Value!);
                 }
                     
-                foreach (var indexName in indexNames)
+                foreach (var indexName in indexNames ?? [])
                 {
                     UpdateGSIMapWithRangeKey(gsiMap, indexName, gsiRangeKeyResult);        
                 }
@@ -275,11 +280,13 @@ public class DynamoDbTableFactory
         {
             var indexName = lsiRangeKeyResult.attribute.ConstructorArguments.Count == 0
                 ? lsiRangeKeyResult.prop.Name
-                : (string) lsiRangeKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
+                : (string) lsiRangeKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value!;
 
-            var lsi = new LocalSecondaryIndex();
-            lsi.IndexName = indexName;
-            lsi.KeySchema.Add(new KeySchemaElement(lsiRangeKeyResult.prop.Name, KeyType.RANGE));
+            var lsi = new LocalSecondaryIndex { IndexName = indexName, KeySchema =
+                [
+                    new KeySchemaElement(lsiRangeKeyResult.prop.Name, KeyType.RANGE)
+                ]
+            };
             lsiList.Add(lsi);
         }
 
@@ -317,16 +324,17 @@ public class DynamoDbTableFactory
 
         string tableName = tableAttribute.ConstructorArguments.Count == 0
             ? docType.Name
-            : (string) tableAttribute.ConstructorArguments.FirstOrDefault().Value;
+            : (string) tableAttribute.ConstructorArguments.FirstOrDefault().Value!;
         return tableName;
     }
 
     private static void UpdateGSIMapWithRangeKey(Dictionary<string, GlobalSecondaryIndex> gsiMap, string indexName,
         GlobalSecondaryIndexDetails gsiRangeKeyResult)
     {
-        if (!gsiMap.TryGetValue(indexName, out GlobalSecondaryIndex entry))
-            throw new InvalidOperationException(
-                $"The global secondary index {gsiRangeKeyResult.Prop.Name} lacks a hash key");
+        if (!gsiMap.TryGetValue(indexName, out var entry))
+        {
+            throw new InvalidOperationException($"The global secondary index {gsiRangeKeyResult.Prop.Name} lacks a hash key");
+        }
 
         var gsiRangeKey = new KeySchemaElement(gsiRangeKeyResult.Prop.Name, KeyType.RANGE);
         entry.KeySchema.Add(gsiRangeKey);
@@ -346,7 +354,7 @@ public class DynamoDbTableFactory
         if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
         {
             var baseType = Nullable.GetUnderlyingType(propertyType);
-            return GetDynamoDbType(baseType, hasConverter);
+            return GetDynamoDbType(baseType!, hasConverter);
         }
 
         if (propertyType == typeof(string))
@@ -401,7 +409,7 @@ public class DynamoDbTableFactory
 
     private sealed class GlobalSecondaryIndexDetails
     {
-        public PropertyInfo Prop { get; set; }
-        public CustomAttributeData Attribute { get; set; }
+        public required PropertyInfo Prop { get; set; }
+        public required CustomAttributeData Attribute { get; set; }
     }
 }

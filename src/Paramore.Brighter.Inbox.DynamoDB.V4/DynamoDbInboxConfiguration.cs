@@ -30,14 +30,16 @@ namespace Paramore.Brighter.Inbox.DynamoDB.V4;
 /// <summary>
 /// Class DynamoDbStoreConfiguration
 /// </summary>
-public class DynamoDbInboxConfiguration(string tableName = null)
+public class DynamoDbInboxConfiguration(string? tableName = null)
 {
     //What AWS Credentials to use
-    public AWSCredentials Credentials { get; }
+    public AWSCredentials? Credentials { get; set; }
+    
     /// <summary>
     /// Which AWS region
     /// </summary>
-    public RegionEndpoint Region { get; }
+    public RegionEndpoint? Region { get; set; }
+    
     /// <summary>
     /// The table that forms the Outbox
     /// </summary>

@@ -15,9 +15,9 @@ public class DynamoDbTableQuery
         int pageSize = 10,
         CancellationToken ct = default)
     {
-        var results = tableNames.ToDictionary(tableName => tableName, tableName => false);
+        var results = tableNames.ToDictionary(tableName => tableName, _ => false);
 
-        string startTableName = null;
+        string? startTableName = null;
         do
         {
             var response = await client.ListTablesAsync(

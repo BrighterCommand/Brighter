@@ -49,7 +49,7 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     public bool ContinueOnCapturedContext { get; set; }
 
     /// <inheritdoc/>
-    public IAmABrighterTracer Tracer { private get; set; }
+    public IAmABrighterTracer? Tracer { private get; set; }
 
     /// <summary>
     ///     Initialises a new instance of the <see cref="DynamoDbInbox"/> class.
@@ -84,7 +84,7 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
     /// <param name="requestContext">What is the context for this request; used to access the Span</param>
     /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
-    public void Add<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
+    public void Add<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         // Note: Don't add a span here as we call AddAsync
         AddAsync(command, contextKey, requestContext)
@@ -102,7 +102,7 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     /// <param name="requestContext">What is the context for this request; used to access the Span</param>
     /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
     /// <returns><see cref="T"/></returns>
-    public T Get<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
+    public T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         // Note: Don't add a span here as we call GetAsync
         return GetAsync<T>(id, contextKey, requestContext, timeoutInMilliseconds, CancellationToken.None)
@@ -120,7 +120,7 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     /// <param name="requestContext">What is the context for this request; used to access the Span</param>
     /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
     /// <returns><see langword="true"/> if it exists, otherwise <see langword="false"/>.</returns>
-    public bool Exists<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
+    public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         // Note: Don't add a span here as we call ExistsAsync
         return ExistsAsync<T>(id, contextKey, requestContext)
@@ -139,7 +139,7 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
     /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
     /// <returns><see cref="Task"/>.</returns>
-    public async Task AddAsync<T>(T command, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+    public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
     {
         var dbAttributes = new Dictionary<string, string>()
         {
@@ -172,7 +172,7 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
     /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
     /// <returns><see cref="Task{T}"/>.</returns>
-    public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+    public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
     {
         var dbAttributes = new Dictionary<string, string>()
         {
@@ -203,7 +203,7 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
     /// <typeparam name="T">Type of command being checked</typeparam>
     /// <returns><see cref="Task{true}"/> if it exists, otherwise <see cref="Task{false}"/>.</returns>
-    public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+    public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
     {
         var dbAttributes = new Dictionary<string, string>()
         {
