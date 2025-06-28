@@ -43,7 +43,7 @@ public static class Extensions
             
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
             
-            IAmAProducerRegistry producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+            IAmAProducerRegistry producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, configuration.GetConnectionString("messaging"));
 
             services.AddBrighter(options =>
                 {
@@ -87,7 +87,7 @@ public static class Extensions
                 throw new InvalidOperationException("DbType is not set");
             
             var dbType = DbResolver.GetDatabaseType(configDbType);
-
+        
             switch (dbType)
             {
                 case Rdbms.Sqlite:
@@ -111,7 +111,7 @@ public static class Extensions
                     .EnableSensitiveDataLogging();
             });
         }
-
+        
         private static void ConfigureSqlite(IServiceCollection services, string connectionString)
         {
             services.AddDbContext<GreetingsEntityGateway>(

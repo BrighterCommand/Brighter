@@ -5,15 +5,29 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-MigrationService-3cf4e369-1525-4a12-94dc-07d6be1d7274</UserSecretsId>
+      <!-- Make build happy with generated migrations -->
+      <NoWarn>$(NoWarn);IDE0161;IDE0005</NoWarn>
     </PropertyGroup>
 
+<!--  <ItemGroup>-->
+<!--    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">-->
+<!--      <PrivateAssets>all</PrivateAssets>-->
+<!--      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
+<!--    </PackageReference>-->
+<!--  </ItemGroup>-->
+  
     <ItemGroup>
+        <PackageReference Include="Aspire.Pomelo.EntityFrameworkCore.MySql" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
-      <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
+      <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj" />
+      <ProjectReference Include="..\SalutationApp\SalutationApp.csproj" />
       <ProjectReference Include="..\WebAPI_EFCore.ServiceDefaults\WebAPI_EFCore.ServiceDefaults.csproj" />
     </ItemGroup>
 </Project>

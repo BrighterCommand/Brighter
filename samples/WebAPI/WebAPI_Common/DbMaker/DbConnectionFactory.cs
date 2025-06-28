@@ -37,10 +37,5 @@ public static class DbConnectionFactory
             default:
                 throw new ArgumentOutOfRangeException(nameof(rdbms), rdbms, null);
         }
-
-        // var builder = new MySqlConnectionStringBuilder(connectionString);
-        // builder.Remove("Database");
-        //
-        // return new MySqlConnection(builder.ConnectionString);
     }
 }

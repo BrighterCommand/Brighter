@@ -89,7 +89,7 @@ namespace GreetingsWeb
 
             ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
             
-            var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport); 
+            var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, Configuration.GetConnectionString("messaging")); 
             
             services.AddBrighter(options =>
              {

@@ -1,4 +1,5 @@
-﻿using GreetingsApp.Requests;
+﻿using GreetingsApp.EntityGateway;
+using GreetingsApp.Requests;
 using GreetingsWeb;
 using GreetingsWeb.Models;
 using Paramore.Brighter;
@@ -9,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 builder.Configuration.AddEnvironmentVariables("BRIGHTER_");
+//builder.AddMySqlDbContext<GreetingsEntityGateway>("Greetings");
 
 // Add services to the container.
 builder.Services.AddProblemDetails();

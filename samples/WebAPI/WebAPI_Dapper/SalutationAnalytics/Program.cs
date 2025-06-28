@@ -65,7 +65,7 @@ static IHostBuilder CreateHostBuilder(string[] args)
         })
         .ConfigureServices((hostContext, services) =>
         {
-            SalutationsDbFactory.ConfigureMigration(hostContext, services);
+            SalutationsDbFactory.ConfigureMigration(hostContext.Configuration, services);
             ConfigureDapper(hostContext, services);
             ConfigureBrighter(hostContext, services);
             ConfigureObservability(services); 
@@ -108,7 +108,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport);
+            options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport, hostContext.Configuration.GetConnectionString("messaging") );
             options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
@@ -126,7 +126,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
         })
         .UseExternalBus(config =>
         {
-            config.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport);
+            config.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport, hostContext.Configuration.GetConnectionString("messaging"));
             config.Outbox = makeOutbox.outbox;
             config.ConnectionProvider = makeOutbox.connectionProvider;
             config.TransactionProvider = makeOutbox.transactionProvider;

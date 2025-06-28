@@ -1,4 +1,5 @@
 ﻿using FluentMigrator.Runner;
+using FluentMigrator.Runner.Processors;
 using Greetings_MySqlMigrations.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +51,8 @@ public static class GreetingsDbFactory
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
                 DbType = Rdbms.MsSql.ToString()
-            });
+            })
+            .Configure<SelectingProcessorAccessorOptions>(opt => opt.ProcessorId = "SqlServer");
     }
 
     private static void ConfigureMySql(IConfiguration configuration, IServiceCollection services)
@@ -64,7 +66,8 @@ public static class GreetingsDbFactory
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
                 DbType = Rdbms.MySql.ToString()
-            });
+            })
+            .Configure<SelectingProcessorAccessorOptions>(opt => opt.ProcessorId = "MySql5");
     }
 
     private static void ConfigurePostgreSql(IConfiguration configuration, IServiceCollection services)
@@ -79,7 +82,8 @@ public static class GreetingsDbFactory
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
                 DbType = Rdbms.Postgres.ToString()
-            });
+            })
+            .Configure<SelectingProcessorAccessorOptions>(opt => opt.ProcessorId = "Postgres");
     }
 
     private static void ConfigureSqlite(IConfiguration configuration, IServiceCollection services)
@@ -93,6 +97,7 @@ public static class GreetingsDbFactory
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
                 DbType = Rdbms.Sqlite.ToString()
-            });
+            })
+            .Configure<SelectingProcessorAccessorOptions>(opt => opt.ProcessorId = "SQLite");
     }
 }

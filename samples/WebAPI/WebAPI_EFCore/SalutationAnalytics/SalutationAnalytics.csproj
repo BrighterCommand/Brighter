@@ -41,6 +41,7 @@
 
     <ItemGroup>
       <PackageReference Include="Aspire.MySqlConnector" />
+      <PackageReference Include="Aspire.Pomelo.EntityFrameworkCore.MySql" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     </ItemGroup>
 

@@ -90,7 +90,7 @@ static void ConfigureBrighter(
 
     ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
             
-    var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport); 
+    var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, hostContext.Configuration.GetConnectionString("messaging")); 
 
     services.AddServiceActivator(options =>
         {

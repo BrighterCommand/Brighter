@@ -8,6 +8,7 @@
     <PackageVersion Include="Aspire.Hosting.MySql" Version="9.2.1" />
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="9.2.1" />
     <PackageVersion Include="Aspire.MySqlConnector" Version="9.2.1" />
+    <PackageVersion Include="Aspire.Pomelo.EntityFrameworkCore.MySql" Version="9.3.0" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.407.23, 4)" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.406.11, 4)" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400, 4)" />
@@ -46,6 +47,7 @@
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.0.2" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.5" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.5" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.5" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.5" />

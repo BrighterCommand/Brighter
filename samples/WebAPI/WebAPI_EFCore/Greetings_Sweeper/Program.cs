@@ -45,7 +45,7 @@ builder.Services.AddBrighter(options =>
     options.InstrumentationOptions = InstrumentationOptions.All;
 }).UseExternalBus(configure =>
 {
-    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, builder.Configuration.GetConnectionString("messaging"));
     configure.Outbox = makeOutbox.outbox;
     configure.TransactionProvider = makeOutbox.transactionProvider;
     configure.ConnectionProvider = makeOutbox.connectionProvider;

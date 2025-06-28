@@ -32,13 +32,14 @@ public static class ConfigureTransport
         };
     }
     
-    public static IAmAProducerRegistry MakeProducerRegistry<T>(MessagingTransport messagingTransport) where T : class, IRequest
+    public static IAmAProducerRegistry MakeProducerRegistry<T>(MessagingTransport messagingTransport,
+        string? connectionString) where T : class, IRequest
     {
         return messagingTransport switch
         {
-            MessagingTransport.Rmq => GetRmqProducerRegistry<T>(),
-            MessagingTransport.Kafka => GetKafkaProducerRegistry<T>(),
-            MessagingTransport.Asb => GetAsbProducerRegistry<T>(),
+            MessagingTransport.Rmq => GetRmqProducerRegistry<T>(connectionString),
+            MessagingTransport.Kafka => GetKafkaProducerRegistry<T>(connectionString),
+            MessagingTransport.Asb => GetAsbProducerRegistry<T>(connectionString),
             _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport),
                 "Messaging transport is not supported")
         };
@@ -62,12 +63,12 @@ public static class ConfigureTransport
         return TransportType(transport) == MessagingTransport.Kafka;
     }
     
-    static IAmAProducerRegistry GetRmqProducerRegistry<T>() where T : class, IRequest
+    static IAmAProducerRegistry GetRmqProducerRegistry<T>(string? connectionString) where T : class, IRequest
     {
         IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
                 new RmqMessagingGatewayConnection
                 {
-                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                    AmpqUri = new AmqpUriSpecification(new Uri(connectionString ?? throw new ArgumentNullException(nameof(connectionString)))),
                     Exchange = new Exchange("paramore.brighter.exchange")
                 },
                 new[]
@@ -86,7 +87,7 @@ public static class ConfigureTransport
         return producerRegistry;
     }
     
-    public static IAmAProducerRegistry GetKafkaProducerRegistry<T>() where T: class, IRequest
+    public static IAmAProducerRegistry GetKafkaProducerRegistry<T>(string? connectionString) where T: class, IRequest
     {
         IAmAProducerRegistry producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -110,7 +111,7 @@ public static class ConfigureTransport
         return producerRegistry;
     }
     
-    private static IAmAProducerRegistry GetAsbProducerRegistry<T>() where T : class, IRequest
+    private static IAmAProducerRegistry GetAsbProducerRegistry<T>(string? connectionString) where T : class, IRequest
     {
         IAmAProducerRegistry producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net"),
@@ -124,29 +125,29 @@ public static class ConfigureTransport
         return producerRegistry;
     }
     
-    public static IAmAChannelFactory GetChannelFactory(MessagingTransport messagingTransport)
+    public static IAmAChannelFactory GetChannelFactory(MessagingTransport messagingTransport, string? connectionString)
     {
         return messagingTransport switch
         {
-            MessagingTransport.Rmq => GetRmqChannelFactory(),
-            MessagingTransport.Kafka => GetKafkaChannelFactory(),
+            MessagingTransport.Rmq => GetRmqChannelFactory(connectionString),
+            MessagingTransport.Kafka => GetKafkaChannelFactory(connectionString),
             _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport),
                 "Messaging transport is not supported")
         };
     }
     
-    static IAmAChannelFactory GetRmqChannelFactory()
+    static IAmAChannelFactory GetRmqChannelFactory(string? connectionString)
     {
         return new Paramore.Brighter.MessagingGateway.RMQ.Async.ChannelFactory(
             new RmqMessageConsumerFactory(new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                AmpqUri = new AmqpUriSpecification(new Uri(connectionString)),
                 Exchange = new Exchange("paramore.brighter.exchange")
             })
         );
     }
 
-    static IAmAChannelFactory GetKafkaChannelFactory()
+    static IAmAChannelFactory GetKafkaChannelFactory(string? connectionString)
     {
         return new Paramore.Brighter.MessagingGateway.Kafka.ChannelFactory(
             new KafkaMessageConsumerFactory(

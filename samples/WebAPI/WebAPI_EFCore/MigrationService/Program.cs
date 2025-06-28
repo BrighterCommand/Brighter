@@ -1,18 +1,16 @@
-using DbMaker;
+using GreetingsApp.EntityGateway;
 using MigrationService;
+using SalutationApp.EntityGateway;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHostedService<Worker>();
+builder.Services.AddHostedService<GreetingsMigrator>();
 
-
-//builder.AddMySqlDataSource(connectionName: "Greetings");
 builder.AddServiceDefaults();
-//builder.Services.AddFluentMigratorCore();
 
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing => tracing.AddSource(builder.Environment.ApplicationName));
-GreetingsDbFactory.ConfigureMigration(builder.Configuration, builder.Services);
-//builder.AddSqlServerDbContext<MyDb1Context>("db1");
+builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddSource(builder.Environment.ApplicationName));
+
+builder.AddMySqlDbContext<GreetingsEntityGateway>("Greetings");
+//builder.AddMySqlDbContext<SalutationsEntityGateway>("Salutations");
 
 var app = builder.Build();
 

@@ -14,11 +14,13 @@ public static class ConnectionResolver
             throw new InvalidOperationException("DbType is not set");
 
         Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
-        
-       if (applicationType == ApplicationType.Greetings)
-           return GreetingsDbConnectionString(configuration, rdbms);
-       else
-           return GetSalutationsDbConnectionString(configuration, rdbms); 
+
+        return applicationType switch
+        {
+            ApplicationType.Greetings => configuration.GetConnectionString("Greetings"),
+            ApplicationType.Salutations => configuration.GetConnectionString("Salutations"),
+            _=> throw new ArgumentOutOfRangeException(nameof(applicationType), applicationType, null)
+        };
     }
 
     public static (Rdbms databaseType, string? connectionString) ServerConnectionString(
@@ -30,15 +32,13 @@ public static class ConnectionResolver
             throw new InvalidOperationException("DbType is not set");
 
         Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
-        string? connectionString = rdbms switch
-        {
-            Rdbms.MySql => configuration.GetConnectionString("Greetings"),
-            Rdbms.MsSql => configuration.GetConnectionString("MsSqlDb"),
-            Rdbms.Postgres => configuration.GetConnectionString("PostgreSqlDb"),
-            Rdbms.Sqlite => configuration.GetConnectionString(applicationType == ApplicationType.Greetings ? "GreetingsSqlite" : "SalutationsSqlite"), 
-            _ => throw new InvalidOperationException("Could not determine the database type")
-        };
 
+        string? connectionString = applicationType switch
+        {
+            ApplicationType.Greetings => configuration.GetConnectionString("Greetings"),
+            ApplicationType.Salutations => configuration.GetConnectionString("Salutations"),
+            _=> throw new ArgumentOutOfRangeException(nameof(applicationType), applicationType, null)
+        };
         
         return (rdbms, connectionString);
     }
@@ -66,33 +66,5 @@ public static class ConnectionResolver
         //you need to implement this if you want to use this with an AWS account
         throw new NotImplementedException();
     }
-    
-    private static string? GreetingsDbConnectionString(IConfiguration configuration, Rdbms rdbms)
-    {
-        switch (rdbms)
-        {
-            case Rdbms.MySql:
-                return configuration.GetConnectionString("Greetings");
-            case Rdbms.MsSql:
-                return configuration.GetConnectionString("GreetingsMsSql");
-            case Rdbms.Postgres:
-                return configuration.GetConnectionString("GreetingsPostgreSql");
-            case Rdbms.Sqlite:
-                return configuration.GetConnectionString("GreetingsSqlite");
-            default:
-                throw new InvalidOperationException("Could not determine the database type");
-        }
-    }
 
-    private static string? GetSalutationsDbConnectionString(IConfiguration config, Rdbms rdbms)
-    {
-        return rdbms switch
-        {
-            Rdbms.MySql => config.GetConnectionString("SalutationsMySql"),
-            Rdbms.MsSql => config.GetConnectionString("SalutationsMsSql"),
-            Rdbms.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
-            Rdbms.Sqlite => config.GetConnectionString("SalutationsSqlite"),
-            _ => throw new InvalidOperationException("Could not determine the database type")
-        };
-    }
 }

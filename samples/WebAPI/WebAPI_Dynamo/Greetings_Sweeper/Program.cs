@@ -27,7 +27,7 @@ builder.Services.AddBrighter(options =>
     options.InstrumentationOptions = InstrumentationOptions.All;
 }).UseExternalBus(configure =>
 {
-    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, builder.Configuration.GetConnectionString("messaging"));
     configure.Outbox = new DynamoDbOutbox(client, new DynamoDbConfiguration(), TimeProvider.System);;
     configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
     configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
