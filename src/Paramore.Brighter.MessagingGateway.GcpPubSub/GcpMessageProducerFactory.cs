@@ -1,24 +1,22 @@
-﻿using Google.Apis.Auth.OAuth2;
-using Google.Cloud.PubSub.V1;
-using Paramore.Brighter.Tasks;
+﻿using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 /// <summary>
 /// The Google Cloud PubSub producer factory.
 /// </summary>
-public class TopicProducerFactory : PubSubMessageGateway, IAmAMessageProducerFactory
+public class GcpMessageProducerFactory : GcpPubSubMessageGateway, IAmAMessageProducerFactory
 {
     private readonly GcpMessagingGatewayConnection _connection;
-    private readonly IEnumerable<TopicPublication> _publications;
+    private readonly IEnumerable<GcpPublication> _publications;
 
     /// <summary>
     /// The Google Cloud PubSub producer factory.
     /// </summary>
     /// <param name="connection">The <see cref="GcpMessagingGatewayConnection"/>.</param>
-    /// <param name="publications">The collection of <see cref="TopicPublication"/>.</param>
-    public TopicProducerFactory(GcpMessagingGatewayConnection connection,
-        IEnumerable<TopicPublication> publications) : base(connection)
+    /// <param name="publications">The collection of <see cref="GcpPublication"/>.</param>
+    public GcpMessageProducerFactory(GcpMessagingGatewayConnection connection,
+        IEnumerable<GcpPublication> publications) : base(connection)
     {
         _connection = connection;
         _publications = publications;
@@ -47,7 +45,7 @@ public class TopicProducerFactory : PubSubMessageGateway, IAmAMessageProducerFac
             }
 
             await EnsureTopicExistAsync(publication.TopicAttributes, publication.MakeChannels);
-            producers[publication.Topic] = new TopicProducer(_connection, publication);
+            producers[publication.Topic] = new GcpMessageProducer(_connection, publication);
         }
 
         return producers;

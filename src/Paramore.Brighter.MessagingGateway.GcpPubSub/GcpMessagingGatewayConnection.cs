@@ -35,21 +35,21 @@ public class GcpMessagingGatewayConnection
         return builder.Build();
     }
 
-    internal async Task<PublisherServiceApiClient> CreatePublisherServiceApiClientAsync()
+    public async Task<PublisherServiceApiClient> CreatePublisherServiceApiClientAsync()
     {
         var builder = new PublisherServiceApiClientBuilder { Credential = Credential };
         PublishConfiguration?.Invoke(builder);
         return await builder.BuildAsync();
     }
     
-    internal SubscriberServiceApiClient CreateSubscriberServiceApiClient()
+    public SubscriberServiceApiClient CreateSubscriberServiceApiClient()
     {
         var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
         SubscribeConfiguration?.Invoke(builder);
         return builder.Build();
     }
     
-    internal async Task<SubscriberServiceApiClient> CreateSubscriberServiceApiClientAsync()
+    public async Task<SubscriberServiceApiClient> CreateSubscriberServiceApiClientAsync()
     {
         var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
         SubscribeConfiguration?.Invoke(builder);

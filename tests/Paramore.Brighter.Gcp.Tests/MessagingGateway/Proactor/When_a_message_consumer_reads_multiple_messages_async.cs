@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
@@ -11,10 +12,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
 [Trait("Category", "GCP")]
 public class PubSubBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 {
-    private readonly TopicProducer _messageProducer;
-    private readonly SubscriptionConsumer _consumer;
+    private readonly GcpMessageProducer _messageProducer;
+    private readonly GcpSubscription _subscription;
+    private readonly GcpPullMessageConsumer _consumer;
     private readonly string _topicName;
-    private readonly PubSubChannelFactory _channelFactory;
+    private readonly GcpPubSubChannelFactory _channelFactory;
     private const string ContentType = "text\\plain";
     private const int BufferSize = 3;
     private const int MessageCount = 4;
@@ -23,14 +25,14 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
     {
         var gcpConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new PubSubChannelFactory(gcpConnection);
+        _channelFactory = new GcpPubSubChannelFactory(gcpConnection);
         var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_topicName);
 
-        var channel = _channelFactory.CreateAsyncChannelAsync(new PullSubscription<MyCommand>(
+        var channel = _channelFactory.CreateAsyncChannelAsync(_subscription = new GcpSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
@@ -41,9 +43,11 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SubscriptionConsumer(gcpConnection, channel.Name, BufferSize, false, TimeProvider.System);
-        _messageProducer = new TopicProducer(gcpConnection,
-            new TopicPublication { MakeChannels = OnMissingChannel.Create });
+        _consumer = new GcpPullMessageConsumer(gcpConnection, 
+            new Google.Cloud.PubSub.V1.SubscriptionName(gcpConnection.ProjectId, channel.Name), 
+            BufferSize, false, TimeProvider.System);
+        _messageProducer = new GcpMessageProducer(gcpConnection,
+            new GcpPublication { MakeChannels = OnMissingChannel.Create });
     }
 
     [Fact]
@@ -115,15 +119,15 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync();
-        await _channelFactory.DeleteQueueAsync();
+        await _channelFactory.DeleteSubscriptionAsync(_subscription);
+        await _channelFactory.DeleteTopicAsync(_subscription);
         await _messageProducer.DisposeAsync();
     }
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopicAsync().GetAwaiter().GetResult();
-        _channelFactory.DeleteQueueAsync().GetAwaiter().GetResult();
+        _channelFactory.DeleteSubscription(_subscription);
+        _channelFactory.DeleteTopic(_subscription);
         _messageProducer.DisposeAsync().GetAwaiter().GetResult();
     }
 }

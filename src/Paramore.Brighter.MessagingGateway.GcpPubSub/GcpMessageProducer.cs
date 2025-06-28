@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// <summary>
 /// The Google Cloud PubSub producer
 /// </summary>
-public class TopicProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync, IAmABulkMessageProducerAsync
+public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync, IAmABulkMessageProducerAsync
 {
     /// <inheritdoc />
     public Publication Publication => _publication;
@@ -22,12 +22,12 @@ public class TopicProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync, 
 
     private readonly TopicName _topicName;
     private readonly GcpMessagingGatewayConnection _connection;
-    private readonly TopicPublication _publication;
+    private readonly GcpPublication _publication;
 
     /// <summary>
     /// The Google Cloud PubSub producer
     /// </summary>
-    public TopicProducer(GcpMessagingGatewayConnection connection, TopicPublication publication)
+    public GcpMessageProducer(GcpMessagingGatewayConnection connection, GcpPublication publication)
     {
         _connection = connection;
         _publication = publication;
@@ -46,14 +46,14 @@ public class TopicProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync, 
     public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var client = await _connection.CreatePublisherServiceApiClientAsync();
-
         var msg = messages.ToArray();
         if (msg.Length == 0)
         {
             yield break;
         }
 
+        var client = await _connection.CreatePublisherServiceApiClientAsync();
+        
         foreach (var chuck in msg.Chunk(_publication.BatchSize))
         {
             var pubSubMessages = new List<PubsubMessage>();

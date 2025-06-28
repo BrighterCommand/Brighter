@@ -11,20 +11,20 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// Google Cloud Pub/Sub subscription settings. Configure these properties after creating an instance
 /// to define the desired Pub/Sub behavior when the subscription is provisioned or used.
 /// </remarks>
-public class PullSubscription : Subscription
+public class GcpSubscription : Subscription
 {
     /// <summary>
     /// Gets or sets the Google Cloud Project ID where the subscription resides or will be created.
     /// </summary>
     /// <value>The GCP Project ID.</value>
-    public string? ProjectId { get; set; }
+    public string? ProjectId { get; }
 
     /// <summary>
     /// Gets or sets the attributes to be applied to the associated Pub/Sub Topic.
     /// </summary>
     /// <value>A <see cref="TopicAttributes"/> object containing topic configuration, typically used if Brighter needs to create the topic.</value>
     /// <remarks>This might contain settings like schema or KMS key name for the Topic itself.</remarks>
-    public TopicAttributes? TopicAttributes { get; set; }
+    public TopicAttributes? TopicAttributes { get; internal set; }
 
     /// <summary>
     /// Gets or sets the acknowledgment deadline for messages pulled from this subscription, in seconds.
@@ -33,14 +33,14 @@ public class PullSubscription : Subscription
     /// <remarks>
     /// If not set, the Pub/Sub default (usually 30 seconds) applies when the subscription is created.
     /// </remarks>
-    public int AckDeadlineSeconds { get; set; } = 30;
+    public int AckDeadlineSeconds { get; } 
 
     /// <summary>
     /// Gets or sets a value indicating whether to retain acknowledged messages.
     /// </summary>
     /// <value><see langword="true"/> to retain acknowledged messages for the duration specified by <see cref="MessageRetentionDuration"/>; otherwise, <see langword="false"/>.</value>
     /// <remarks>Useful for features like 'seek to a time'. Defaults to <see langword="false"/>.</remarks>
-    public bool RetainAckedMessages { get; set; }
+    public bool RetainAckedMessages { get; }
 
     /// <summary>
     /// Gets or sets the duration for which Pub/Sub retains unacknowledged messages.
@@ -50,14 +50,14 @@ public class PullSubscription : Subscription
     /// If <see cref="RetainAckedMessages"/> is true, acknowledged messages are also retained for this duration.
     /// If not set, the Pub/Sub default (usually 7 days) applies when the subscription is created.
     /// </remarks>
-    public TimeSpan? MessageRetentionDuration { get; set; }
+    public TimeSpan? MessageRetentionDuration { get; }
 
     /// <summary>
     /// Gets or sets the collection of labels to apply to the Pub/Sub subscription resource.
     /// </summary>
     /// <value>A <see cref="MapField{TKey, TValue}"/> containing key-value string pairs.</value>
     /// <remarks>Labels can be used for organizing and filtering GCP resources.</remarks>
-    public MapField<string, string> Labels { get; set; } = new();
+    public MapField<string, string> Labels { get; } 
 
     /// <summary>
     /// Gets or sets a value indicating whether to enable message ordering.
@@ -67,21 +67,21 @@ public class PullSubscription : Subscription
     /// otherwise, <see langword="false"/>.
     /// </value>
     /// <remarks>Requires the publisher to set ordering keys on messages. Defaults to <see langword="false"/>.</remarks>
-    public bool EnableMessageOrdering { get; set; }
+    public bool EnableMessageOrdering { get; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to enable exactly-once delivery semantics for this subscription.
     /// </summary>
     /// <value><see langword="true"/> to enable exactly-once delivery; otherwise, <see langword="false"/>.</value>
     /// <remarks>Provides stronger guarantees but may impact performance. Defaults to <see langword="false"/>.</remarks>
-    public bool EnableExactlyOnceDelivery { get; set; }
+    public bool EnableExactlyOnceDelivery { get; }
 
     /// <summary>
     /// Gets or sets the configuration for exporting acknowledged messages to Google Cloud Storage.
     /// </summary>
     /// <value>A <see cref="CloudStorageConfig"/> object or <see langword="null"/> if not configured.</value>
     /// <remarks>This feature is typically used for loading data into BigQuery via subscriptions.</remarks>
-    public CloudStorageConfig? Storage { get; set; }
+    public CloudStorageConfig? Storage { get; }
 
     /// <summary>
     /// Gets or sets the policy governing the automatic deletion of the subscription based on inactivity.
@@ -90,7 +90,7 @@ public class PullSubscription : Subscription
     /// An <see cref="ExpirationPolicy"/> object specifying the conditions under which the subscription
     /// expires (e.g., TTL after no usage), or <see langword="null"/> for no expiration.
     /// </value>
-    public ExpirationPolicy? ExpirationPolicy { get; set; }
+    public ExpirationPolicy? ExpirationPolicy { get; }
 
     /// <summary>
     /// Gets or sets the full name of the Pub/Sub topic to be used as the dead-letter topic.
@@ -103,7 +103,7 @@ public class PullSubscription : Subscription
     /// Messages that fail delivery a specified number of times (configured separately on the subscription) will
     /// be sent here. Requires appropriate permissions.
     /// </remarks>
-    public string? DeadLetterTopic { get; set; }
+    public string? DeadLetterTopic { get; }
 
     /// <summary>
     /// Gets or sets the maximum delay between message redelivery attempts when using Pub/Sub's default retry policy (exponential backoff).
@@ -115,19 +115,19 @@ public class PullSubscription : Subscription
     /// This corresponds to the `maximum_backoff` setting in the Pub/Sub
     /// <see href="https://cloud.google.com/pubsub/docs/reference/rest/v1/projects.subscriptions#retrypolicy">RetryPolicy</see>.
     /// </remarks>
-    public TimeSpan MaxRequeueDelay { get; set; } = TimeSpan.FromSeconds(600);
+    public TimeSpan MaxRequeueDelay { get; }
 
     /// <summary>
     /// Gets or sets the <see cref="TimeProvider"/> used for time-related operations (e.g., calculating expiration).
     /// </summary>
     /// <value>Defaults to <see cref="TimeProvider.System"/>.</value>
-    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+    public TimeProvider TimeProvider { get; } 
 
     /// <inheritdoc />
-    public override Type ChannelFactoryType => typeof(PullConsumerFactory);
+    public override Type ChannelFactoryType => typeof(GcpConsumerFactory);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PullSubscription"/> class, configuring base Brighter subscription properties.
+    /// Initializes a new instance of the <see cref="GcpSubscription"/> class, configuring base Brighter subscription properties.
     /// </summary>
     /// <param name="dataType">The type of the message payload.</param>
     /// <param name="subscriptionName">The name of the subscription (logical name in Brighter).</param>
@@ -144,27 +144,59 @@ public class PullSubscription : Subscription
     /// <param name="makeChannels">Specifies whether Brighter should attempt to create (provision) the channel if it's missing.</param>
     /// <param name="emptyChannelDelay">The delay before re-polling an empty channel.</param>
     /// <param name="channelFailureDelay">The delay before retrying after a channel failure.</param>
+    /// <param name="projectId"></param>
+    /// <param name="topicAttributes"></param>
+    /// <param name="ackDeadlineSeconds"></param>
+    /// <param name="retainAckedMessages"></param>
+    /// <param name="messageRetentionDuration"></param>
+    /// <param name="labels"></param>
+    /// <param name="enableMessageOrdering"></param>
+    /// <param name="enableExactlyOnceDelivery"></param>
+    /// <param name="storage"></param>
+    /// <param name="expirationPolicy"></param>
+    /// <param name="maxRequeueDelay"></param>
+    /// <param name="timeProvider"></param>
+    /// <param name="deadLetterTopic"></param>
     /// <remarks>
     /// This constructor initializes the standard Brighter subscription properties.
     /// Google Cloud Pub/Sub specific settings (like <see cref="ProjectId"/>, <see cref="AckDeadlineSeconds"/>, <see cref="EnableMessageOrdering"/>, etc.)
     /// must be configured by setting the corresponding properties on the instance after creation. These settings are typically used
     /// during channel provisioning (<paramref name="makeChannels"/>  = <see cref="OnMissingChannel.Create"/> or <see cref="OnMissingChannel.Validate"/>)
-    /// or by the <see cref="PullConsumerFactory"/> when creating the consumer.
+    /// or by the <see cref="GcpConsumerFactory"/> when creating the consumer.
     /// </remarks>
-    public PullSubscription(Type dataType, SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
+    public GcpSubscription(Type dataType,  SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
         RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
-        TimeSpan? channelFailureDelay = null) : base(dataType, subscriptionName, channelName, routingKey, bufferSize,
+        TimeSpan? channelFailureDelay = null,
+        string? projectId = null, TopicAttributes? topicAttributes = null, int ackDeadlineSeconds = 30,
+        bool retainAckedMessages = false, TimeSpan? messageRetentionDuration = null, MapField<string, string>? labels = null, 
+        bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
+        ExpirationPolicy? expirationPolicy = null, string? deadLetterTopic = null, TimeSpan? maxRequeueDelay = null,
+        TimeProvider? timeProvider = null) 
+        : base(dataType, subscriptionName, channelName, routingKey, bufferSize,
         noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
         makeChannels, emptyChannelDelay, channelFailureDelay)
     {
+        Labels = labels ?? new MapField<string, string>();
+        MaxRequeueDelay = maxRequeueDelay ?? TimeSpan.FromSeconds(600);;
+        TimeProvider = timeProvider ?? TimeProvider.System;
+        DeadLetterTopic = deadLetterTopic;
+        ExpirationPolicy = expirationPolicy;
+        Storage = storage;
+        EnableMessageOrdering = enableMessageOrdering;
+        EnableExactlyOnceDelivery = enableExactlyOnceDelivery;
+        MessageRetentionDuration = messageRetentionDuration;
+        RetainAckedMessages = retainAckedMessages;
+        ProjectId = projectId;
+        TopicAttributes = topicAttributes;
+        AckDeadlineSeconds = ackDeadlineSeconds;
     }
 }
 
 /// <summary>
-/// Provides a generic version of <see cref="PullSubscription"/> for configuring a Google Cloud Pub/Sub
+/// Provides a generic version of <see cref="GcpSubscription"/> for configuring a Google Cloud Pub/Sub
 /// pull subscription for a specific message type <typeparamref name="T"/>.
 /// </summary>
 /// <typeparam name="T">The type of the message (<see cref="IRequest"/>) that this subscription handles. Must be a reference type.</typeparam>
@@ -172,11 +204,11 @@ public class PullSubscription : Subscription
 /// This class simplifies subscription configuration by automatically setting the <c>DataType</c> property based on <typeparamref name="T"/>.
 /// Like its base class, configure Google Cloud Pub/Sub specific properties on the instance after creation.
 /// </remarks>
-public class PullSubscription<T> : PullSubscription
+public class GcpSubscription<T> : GcpSubscription
     where T : class, IRequest
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="PullSubscription{T}"/> class, configuring base Brighter subscription properties.
+    /// Initializes a new instance of the <see cref="GcpSubscription{T}"/> class, configuring base Brighter subscription properties.
     /// </summary>
     /// <param name="subscriptionName">The name of the subscription (logical name in Brighter).</param>
     /// <param name="channelName">The name of the channel (often corresponds to the physical Pub/Sub subscription ID).</param>
@@ -192,19 +224,37 @@ public class PullSubscription<T> : PullSubscription
     /// <param name="makeChannels">Specifies whether Brighter should attempt to create (provision) the channel if it's missing.</param>
     /// <param name="emptyChannelDelay">The delay before re-polling an empty channel.</param>
     /// <param name="channelFailureDelay">The delay before retrying after a channel failure.</param>
+    /// <param name="projectId"></param>
+    /// <param name="topicAttributes"></param>
+    /// <param name="ackDeadlineSeconds"></param>
+    /// <param name="retainAckedMessages"></param>
+    /// <param name="messageRetentionDuration"></param>
+    /// <param name="labels"></param>
+    /// <param name="enableMessageOrdering"></param>
+    /// <param name="enableExactlyOnceDelivery"></param>
+    /// <param name="storage"></param>
+    /// <param name="expirationPolicy"></param>
+    /// <param name="deadLetterTopic"></param>
+    /// <param name="maxRequeueDelay"></param>
+    /// <param name="timeProvider"></param>
     /// <remarks>
     /// This constructor initializes the standard Brighter subscription properties.
     /// Google Cloud Pub/Sub specific settings (like <see cref="ProjectId"/>, <see cref="AckDeadlineSeconds"/>, <see cref="EnableMessageOrdering"/>, etc.)
     /// must be configured by setting the corresponding properties on the instance after creation. These settings are typically used
     /// during channel provisioning (<paramref name="makeChannels"/>  = <see cref="OnMissingChannel.Create"/> or <see cref="OnMissingChannel.Validate"/>)
-    /// or by the <see cref="PullConsumerFactory"/> when creating the consumer.
+    /// or by the <see cref="GcpConsumerFactory"/> when creating the consumer.
     /// </remarks>
-    public PullSubscription(SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
+    public GcpSubscription(SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
         RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
-        TimeSpan? channelFailureDelay = null)
+        TimeSpan? channelFailureDelay = null,
+        string? projectId = null, TopicAttributes? topicAttributes = null, int ackDeadlineSeconds = 30,
+        bool retainAckedMessages = false, TimeSpan? messageRetentionDuration = null, MapField<string, string>? labels = null, 
+        bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
+        ExpirationPolicy? expirationPolicy = null, string? deadLetterTopic = null, TimeSpan? maxRequeueDelay = null,
+        TimeProvider? timeProvider = null)
         : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
             channelFactory,

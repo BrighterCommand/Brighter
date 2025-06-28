@@ -7,9 +7,9 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 /// <summary>
-/// The Pull based implementation of Pub/Sub
+/// The pull-based implementation of Pub/Sub
 /// </summary>
-public partial class SubscriptionConsumer : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private readonly GcpMessagingGatewayConnection _connection;
     private readonly Google.Cloud.PubSub.V1.SubscriptionName _subscriptionName;
@@ -25,7 +25,7 @@ public partial class SubscriptionConsumer : IAmAMessageConsumerAsync, IAmAMessag
     /// <param name="batchSize">The pull batch size</param>
     /// <param name="hasDql">flag indicating it has a dead letter queue</param>
     /// <param name="timeProvider">The <see cref="System.TimeProvider"/></param>
-    public SubscriptionConsumer(
+    public GcpPullMessageConsumer(
         GcpMessagingGatewayConnection connection,
         Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
         int batchSize,
@@ -39,7 +39,7 @@ public partial class SubscriptionConsumer : IAmAMessageConsumerAsync, IAmAMessag
         _timeProvider = timeProvider;
     }
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SubscriptionConsumer>();
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();
 
     /// <inheritdoc />
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
@@ -313,7 +313,7 @@ public partial class SubscriptionConsumer : IAmAMessageConsumerAsync, IAmAMessag
     /// <summary>
     /// Internal logging class
     /// </summary>
-    internal static partial class Log
+    private static partial class Log
     {
         [LoggerMessage(LogLevel.Information,
             "PullPubSubConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]

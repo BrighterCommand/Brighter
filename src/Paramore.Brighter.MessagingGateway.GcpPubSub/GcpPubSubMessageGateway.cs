@@ -10,9 +10,9 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// The Pub/Sub message gateway
 /// </summary>
 /// <param name="connection">The <see cref="GcpMessagingGatewayConnection"/>.</param>
-public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
+public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PubSubMessageGateway>();
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPubSubMessageGateway>();
 
     /// <summary>
     /// The <see cref="GcpMessagingGatewayConnection"/>
@@ -21,14 +21,13 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
 
     internal async Task EnsureTopicExistAsync(TopicAttributes publication, OnMissingChannel makeChannel)
     {
-        var topicName = TopicName.FromProjectTopic(publication.ProjectId ?? Connection.ProjectId, publication.Name);
+        var topicName = GetTopicName(publication.ProjectId, publication.Name);
         if (makeChannel == OnMissingChannel.Assume)
         {
             return;
         }
 
         var publisher = await Connection.CreatePublisherServiceApiClientAsync();
-
         if (makeChannel == OnMissingChannel.Validate)
         {
             if (await DoesTopicExistAsync(publisher, topicName))
@@ -121,7 +120,7 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
         }
     }
 
-    internal async Task EnsureSubscriptionExistsAsync(PullSubscription subscription)
+    internal async Task EnsureSubscriptionExistsAsync(GcpSubscription subscription)
     {
         if (subscription.MakeChannels == OnMissingChannel.Assume)
         {
@@ -138,9 +137,7 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
 
         if (!Google.Cloud.PubSub.V1.SubscriptionName.TryParse(subscription.ChannelName.Value, out var subscriptionName))
         {
-            subscriptionName =
-                Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(
-                    subscription.ProjectId ?? Connection.ProjectId, subscription.ChannelName.Value);
+            subscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.ChannelName.Value);
         }
 
         var client = await Connection.CreateSubscriberServiceApiClientAsync();
@@ -175,7 +172,7 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
         static async Task CreateSubscriptionAsync(SubscriberServiceApiClient client,
             string projectId,
             Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-            PullSubscription subscription)
+            GcpSubscription subscription)
         {
             await client.CreateSubscriptionAsync(CreateSubscription(projectId, subscriptionName, subscription));
         }
@@ -183,7 +180,7 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
         static async Task UpdateSubscriptionAsync(SubscriberServiceApiClient client,
             string projectId,
             Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-            PullSubscription subscription)
+            GcpSubscription subscription)
         {
             var request = new UpdateSubscriptionRequest
             {
@@ -208,11 +205,11 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
 
         static Google.Cloud.PubSub.V1.Subscription CreateSubscription(string projectId,
             Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-            PullSubscription subscription)
+            GcpSubscription subscription)
         {
             var gpcSubscription = new Google.Cloud.PubSub.V1.Subscription
             {
-                TopicAsTopicName =
+                TopicAsTopicName = 
                     TopicName.FromProjectTopic(subscription.TopicAttributes!.ProjectId ?? projectId,
                         subscription.TopicAttributes.Name),
                 SubscriptionName = subscriptionName,
@@ -285,4 +282,10 @@ public class PubSubMessageGateway(GcpMessagingGatewayConnection connection)
             }
         }
     }
+    
+    protected TopicName GetTopicName(string? projectId, string topicName) 
+        => TopicName.FromProjectTopic(projectId ?? Connection.ProjectId, topicName);
+
+    protected Google.Cloud.PubSub.V1.SubscriptionName GetSubscriptionName(string? projectId, string subscriptionName)
+        => Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(projectId ?? Connection.ProjectId, subscriptionName);
 }

@@ -3,7 +3,7 @@
 /// <summary>
 /// The Google Cloud Pub/Sub publication
 /// </summary>
-public class TopicPublication : Publication
+public class GcpPublication : Publication
 {
     /// <summary>
     /// The attributes of the topic
@@ -14,4 +14,13 @@ public class TopicPublication : Publication
     /// The max batch size for publish
     /// </summary>
     public int BatchSize { get; set; } = 1_000;
+}
+
+
+/// <summary>
+/// The Google Cloud Pub/Sub publication
+/// </summary>
+public class GcpPublication<T> : GcpPublication
+{
+    
 }
