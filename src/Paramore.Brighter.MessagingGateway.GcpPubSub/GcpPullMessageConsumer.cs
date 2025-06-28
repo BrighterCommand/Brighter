@@ -63,11 +63,11 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
     }
 
     /// <inheritdoc />
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
         {
-            return;
+            return false;
         }
 
         try
@@ -88,6 +88,8 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
             Log.RejectError(s_logger, ex, message.Id, ackId, _subscriptionName.ToString());
             throw;
         }
+
+        return true;
     }
 
     /// <inheritdoc />
@@ -193,11 +195,11 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
     }
 
     /// <inheritdoc />
-    public void Reject(Message message)
+    public bool Reject(Message message)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
         {
-            return;
+            return false;
         }
 
         try
@@ -219,6 +221,8 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
             Log.RejectError(s_logger, ex, message.Id, ackId, _subscriptionName.ToString());
             throw;
         }
+
+        return true;
     }
 
     /// <inheritdoc />

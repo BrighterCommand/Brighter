@@ -43,7 +43,7 @@ public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerS
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
+    public async IAsyncEnumerable<Id[]> SendAsync(IEnumerable<Message> messages,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var msg = messages.ToArray();

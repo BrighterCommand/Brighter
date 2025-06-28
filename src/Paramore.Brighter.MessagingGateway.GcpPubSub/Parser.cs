@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net.Mime;
 using Google.Cloud.PubSub.V1;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
@@ -92,14 +93,14 @@ internal static class Parser
         return Guid.NewGuid().ToString();
     }
 
-    private static string ReadContentType(MapField<string, string> attributes)
+    private static ContentType ReadContentType(MapField<string, string> attributes)
     {
         if (attributes.TryGetValue(HeaderNames.ContentType, out var contentType))
         {
-            return contentType;
+            return new ContentType(contentType);
         }
 
-        return string.Empty;
+        return new ContentType("text/plain");
     }
 
     private static int ReadHandleCount(MapField<string, string> attributes)
@@ -220,9 +221,9 @@ internal static class Parser
             message.Header.TimeStamp.DateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz",
                 DateTimeFormatInfo.InvariantInfo));
 
-        if (!string.IsNullOrEmpty(message.Header.ContentType))
+        if (message.Header.ContentType != null )
         {
-            headers.Add(HeaderNames.ContentType, message.Header.ContentType!);
+            headers.Add(HeaderNames.ContentType, message.Header.ContentType.ToString());
         }
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
@@ -230,7 +231,7 @@ internal static class Parser
             headers.Add(HeaderNames.CorrelationId, message.Header.CorrelationId);
         }
 
-        if (!string.IsNullOrEmpty(message.Header.ReplyTo))
+        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
         {
             headers.Add(HeaderNames.ReplyTo, message.Header.ReplyTo!);
         }
