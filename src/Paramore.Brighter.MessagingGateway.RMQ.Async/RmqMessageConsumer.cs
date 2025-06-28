@@ -31,6 +31,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 using Polly.CircuitBreaker;
@@ -62,6 +63,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private readonly bool _hasDlq;
     private readonly TimeSpan? _ttl;
     private readonly int? _maxQueueLength;
+    private readonly QueueType _queueType;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -77,6 +79,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="ttl">How long before a message on the queue expires. Defaults to infinite</param>
     /// <param name="maxQueueLength">How lare can the buffer grow before we stop accepting new work?</param>
     /// <param name="makeChannels">Should we validate, or create missing channels</param>
+    /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
@@ -88,9 +91,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         RoutingKey? deadLetterRoutingKey = null,
         TimeSpan? ttl = null,
         int? maxQueueLength = null,
-        OnMissingChannel makeChannels = OnMissingChannel.Create)
+        OnMissingChannel makeChannels = OnMissingChannel.Create,
+        QueueType queueType = QueueType.Classic)
         : this(connection, queueName, new RoutingKeys(routingKey), isDurable, highAvailability,
-            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels)
+            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType)
     {
     }
 
@@ -108,6 +112,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="ttl">How long before a message on the queue expires. Defaults to infinite</param>
     /// <param name="maxQueueLength">The maximum number of messages on the queue before we begin to reject publication of messages</param>
     /// <param name="makeChannels">Should we validate or create missing channels</param>
+    /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
@@ -119,7 +124,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         RoutingKey? deadLetterRoutingKey = null,
         TimeSpan? ttl = null,
         int? maxQueueLength = null,
-        OnMissingChannel makeChannels = OnMissingChannel.Create)
+        OnMissingChannel makeChannels = OnMissingChannel.Create,
+        QueueType queueType = QueueType.Classic)
         : base(connection)
     {
         _queueName = queueName;
@@ -134,6 +140,16 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         _hasDlq = !string.IsNullOrEmpty(deadLetterQueueName!) && !string.IsNullOrEmpty(_deadLetterRoutingKey!);
         _ttl = ttl;
         _maxQueueLength = maxQueueLength;
+        _queueType = queueType;
+        
+        // Validate quorum queue requirements
+        if (_queueType == QueueType.Quorum)
+        {
+            if (!_isDurable)
+                throw new ConfigurationException("Quorum queues require durability to be enabled (isDurable must be true)");
+            if (_highAvailability)
+                throw new ConfigurationException("Quorum queues do not support high availability mirroring (highAvailability must be false)");
+        }
     }
 
     /// <summary>
@@ -330,9 +346,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -343,6 +359,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag);
             //if we have a DLQ, this will force over to the DLQ
             await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
+            return true;
         }
         catch (Exception exception)
         {
@@ -496,6 +513,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private Dictionary<string, object?> SetQueueArguments()
     {
         var arguments = new Dictionary<string, object?>();
+        
+        // Set queue type for quorum queues
+        if (_queueType == QueueType.Quorum)
+        {
+            arguments.Add("x-queue-type", "quorum");
+        }
+        
         if (_highAvailability)
         {
             // Only work for RabbitMQ Server version before 3.0

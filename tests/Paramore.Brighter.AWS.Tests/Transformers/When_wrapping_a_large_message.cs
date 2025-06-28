@@ -11,89 +11,85 @@ using Paramore.Brighter.Tranformers.AWS;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.Transformers
+namespace Paramore.Brighter.AWS.Tests.Transformers;
+
+public class LargeMessagePayloadWrapTests : IAsyncDisposable 
 {
-    public class LargeMessagePayloadWrapTests : IDisposable
+    private string? _id;
+    private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
+    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
+    private readonly MyLargeCommand _myCommand;
+    private readonly S3LuggageStore _luggageStore;
+    private readonly AmazonS3Client _client;
+    private readonly string _bucketName;
+
+    private readonly Publication _publication;
+
+    public LargeMessagePayloadWrapTests()
     {
-        private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
-        private readonly TransformPipelineBuilderAsync _pipelineBuilder;
-        private readonly MyLargeCommand _myCommand;
-        private readonly S3LuggageStore _luggageStore;
-        private readonly AmazonS3Client _client;
-        private readonly string _bucketName;
-        private string _id;
-        private readonly Publication _publication;
-
-        public LargeMessagePayloadWrapTests()
-        {
-            //arrange
-            TransformPipelineBuilderAsync.ClearPipelineCache();
-
-            var mapperRegistry =
-                new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
-                    _ => new MyLargeCommandMessageMapperAsync())
-                    );
+        //arrange
+        TransformPipelineBuilderAsync.ClearPipelineCache();
+            
+        var mapperRegistry =
+            new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
+                _ => new MyLargeCommandMessageMapperAsync())
+            );
            
-            mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
+        mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
             
-            _myCommand = new MyLargeCommand(6000);
+        _myCommand = new MyLargeCommand(6000);
 
-           var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
+        var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
+        _client = factory.CreateS3Client();
 
-            _client = factory.CreateS3Client();
-            var stsClient = factory.CreateStsClient();
+        var services = new ServiceCollection();
+        services.AddHttpClient();
+        var provider = services.BuildServiceProvider();
+        var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
 
-            var services = new ServiceCollection();
-            services.AddHttpClient();
-            var provider = services.BuildServiceProvider();
-            IHttpClientFactory httpClientFactory = provider.GetService<IHttpClientFactory>();
+        _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
 
-            _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-            
-            _luggageStore = S3LuggageStore
-                .CreateAsync(
-                    client: _client,
-                    bucketName: _bucketName,
-                    storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                    httpClientFactory: httpClientFactory,
-                    stsClient: stsClient, 
-#pragma warning disable CS0618 // It is obsolete, but we want the string value here not the replacement one
-                    bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618
-                    tags: [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-                    acl: S3CannedACL.Private,
-                    abortFailedUploadsAfterDays: 1,
-                    deleteGoodUploadsAfterDays: 1)
-                .GetAwaiter()
-                .GetResult();
-
-            var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
-
-            _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
-
-            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync);
-        }
-
-        [Fact]
-        public async Task When_wrapping_a_large_message()
+        _luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
         {
-            //act
-            _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-            var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
-
-            //assert
-            Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK));
-            _id = (string)message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
-            Assert.Equal($"Claim Check {_id}", message.Body.Value);
+            HttpClientFactory = httpClientFactory,
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            ACLs = S3CannedACL.Private,
+            Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
+        });
             
-            Assert.True((await _luggageStore.HasClaimAsync(_id)));
-        }
+        _luggageStore.EnsureStoreExists();
 
-        public void Dispose()
-        {
-            //We have to empty objects from a bucket before deleting it
-            _luggageStore.DeleteAsync(_id).GetAwaiter().GetResult();
-            _client.DeleteBucketAsync(_bucketName).GetAwaiter().GetResult();
-        }
+        var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
+
+        _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
+
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync);
+    }
+
+    [Fact]
+    public async Task When_wrapping_a_large_message()
+    {
+        //act
+        _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
+        var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
+
+        //assert
+        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
+        Assert.NotNull(message.Header.DataRef);
+        _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
+        Assert.Equal($"Claim Check {_id}", message.Body.Value);
+            
+        Assert.True(await _luggageStore.HasClaimAsync(_id));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+         //We have to empty objects from a bucket before deleting it
+         if (_id != null)
+         {
+             await _luggageStore.DeleteAsync(_id);
+         }
+
+         await _client.DeleteBucketAsync(_bucketName);
     }
 }

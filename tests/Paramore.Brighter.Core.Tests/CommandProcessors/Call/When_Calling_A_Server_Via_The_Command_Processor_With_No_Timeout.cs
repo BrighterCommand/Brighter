@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider)
                     {
                         Publication = {Topic = routingKey, RequestType = typeof(MyRequest)}
                     } 
@@ -80,6 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 new InMemoryOutbox( timeProvider) {Tracer = tracer}
             );
 

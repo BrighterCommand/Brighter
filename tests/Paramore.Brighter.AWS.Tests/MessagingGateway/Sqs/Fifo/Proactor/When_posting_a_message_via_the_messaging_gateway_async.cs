@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -16,9 +19,9 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
-    private readonly string _correlationId;
-    private readonly string _replyTo;
-    private readonly string _contentType;
+    private readonly Id _correlationId;
+    private readonly RoutingKey _replyTo;
+    private readonly ContentType _contentType;
     private readonly string _queueName;
     private readonly string _messageGroupId;
     private readonly string _deduplicationId;
@@ -26,9 +29,9 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
     public SqsMessageProducerSendAsyncTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        _correlationId = Guid.NewGuid().ToString();
-        _replyTo = "http:\\queueUrl";
-        _contentType = "text\\plain";
+        _correlationId = Id.Random;
+        _replyTo = new RoutingKey("http:\\queueUrl");
+        _contentType = new ContentType(MediaTypeNames.Text.Plain){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         _messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         _deduplicationId = $"DeduplicationId{Guid.NewGuid():N}";
         _queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

@@ -39,7 +39,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         public async Task When_a_message_is_sent_keep_order()
         {
             IAmAMessageConsumerAsync consumer = _consumer;
-            //Send a sequence of messages to Kafka
             var msgId = await SendMessageAsync();
             var msgId2 = await SendMessageAsync();
             var msgId3 = await SendMessageAsync();
@@ -96,8 +95,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 }
                 catch (ChannelFailureException)
                 {
-                    //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                    //_output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
             } while (maxTries <= 3);
 

@@ -26,6 +26,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
@@ -64,18 +65,8 @@ internal sealed partial class RmqMessagePublisher
         /// </exception>
         public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection) 
         {
-            if (channel is null)
-            {
-                throw new ArgumentNullException(nameof(channel));
-            }
-            if (connection is null)
-            {
-                throw new ArgumentNullException(nameof(connection));
-            }
-
-            _connection = connection;
-            
-            _channel = channel;
+            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            _channel = channel ?? throw new ArgumentNullException(nameof(channel));
        }
 
        /// <summary>
@@ -87,65 +78,34 @@ internal sealed partial class RmqMessagePublisher
         {
             if (_connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessagePublisher.PublishMessage: Connections Exchange is null");
-            
-            var messageId = message.Id;
+
             var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.DeliveryTag.ToString() : null;
 
-            var headers = new Dictionary<string, object>
-            {
-                // Cloud event
-                [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId,
-                [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
-                [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
-                [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
-                [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRcf3339(),
+            Dictionary<string, object> headers = AddCloudEventHeaders(message);
 
-                // Brighter custom headers
-                [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
-                [HeaderNames.TOPIC] = message.Header.Topic.Value,
-                [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
-            };
+            AddUserDefinedHeaders(message, delay, headers, deliveryTag);
             
-            if (!string.IsNullOrEmpty(message.Header.Subject))
-            {
-                headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject!);
-            }
-        
-            if (message.Header.DataSchema != null)
-            {
-                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
-            }
+            AddDeliveryHeaders(delay, headers, deliveryTag);
 
-            if (message.Header.CorrelationId != string.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
-
-            message.Header.Bag.Each(header =>
-            {
-                if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
-            });
-
-            if (!string.IsNullOrEmpty(deliveryTag))
-                headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag!);
-
-            if (delay > TimeSpan.Zero)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.TotalMilliseconds);
-
+            var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+            var bodyContentType = message.Body.ContentType ?? contentType; 
+            
             _channel.BasicPublish(
                 _connection.Exchange.Name,
                 message.Header.Topic,
                 false,
                 CreateBasicProperties(
-                    messageId, 
+                    message.Id, 
                     message.Header.TimeStamp, 
-                    message.Body.ContentType, 
-                    message.Header.ContentType ?? "plain/text", 
+                    bodyContentType.ToString(),
+                    contentType.ToString(), 
                     message.Header.ReplyTo ?? string.Empty,
                     message.Persist,
                     headers),
                 message.Body.Bytes);
         }
 
-       /// <summary>
+        /// <summary>
         /// Requeues the message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -158,46 +118,16 @@ internal sealed partial class RmqMessagePublisher
 
             Log.RequeueMessageInformation(s_logger, message.Id, deliveryTag, messageId, 1);
 
-            var headers = new Dictionary<string, object>
-            {
-                // Cloud event
-                [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId,
-                [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
-                [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
-                [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
-                [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRcf3339(),
+            Dictionary<string, object> headers = AddCloudEventHeaders(message);
 
-                // Brighter custom headers
-                [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
-                [HeaderNames.TOPIC] = message.Header.Topic.Value,
-                [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
-             };
+            AddUserDefinedHeaders(message, timeOut, headers, deliveryTag);
             
-            if (!string.IsNullOrEmpty(message.Header.Subject))
-            {
-                headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject!);
-            }
-        
-            if (message.Header.DataSchema != null)
-            {
-                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
-            }
+            AddDeliveryHeaders(TimeSpan.Zero, headers, deliveryTag);
 
-            if (message.Header.CorrelationId != string.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
-
-            message.Header.Bag.Each((header) =>
-            {
-                if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
-            });
-
-            headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
-
-            if (timeOut > TimeSpan.Zero)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, timeOut.TotalMilliseconds);
-
-            if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
-                headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id);
+            AddOriginalMessageIdOnRepublish(message, headers);
+            
+            var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+            var bodyContentType = message.Body.ContentType ?? contentType;
 
             // To send it to the right queue use the default (empty) exchange
             _channel.BasicPublish(
@@ -207,12 +137,73 @@ internal sealed partial class RmqMessagePublisher
                 CreateBasicProperties(
                     messageId, 
                     message.Header.TimeStamp, 
-                    message.Body.ContentType, 
-                    message.Header.ContentType ?? "plain/text", 
+                    bodyContentType.ToString(),
+                    contentType.ToString(), 
                     message.Header.ReplyTo ?? string.Empty,
                     message.Persist,
                     headers),
                 message.Body.Bytes);
+        }
+ 
+        private static Dictionary<string, object> AddCloudEventHeaders(Message message)
+        {
+            var headers = new Dictionary<string, object>
+            {
+                // Cloud event
+                [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId.Value,
+                [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
+                [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
+                [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
+                [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRfc3339(),
+
+                // Brighter custom headers
+                [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
+                [HeaderNames.TOPIC] = message.Header.Topic.Value,
+                [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
+            };
+            
+            if (!string.IsNullOrEmpty(message.Header.Subject))
+                headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject!);
+        
+            if (message.Header.DataSchema != null)
+                headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
+
+            if (message.Header.CorrelationId != string.Empty)
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId?.Value!);
+            
+            if (!string.IsNullOrEmpty(message.Header.TraceParent?.Value))
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent?.Value!);
+            
+            if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
+                headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState?.Value!);
+            
+            if (message.Header.Baggage.Any())
+                headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString());
+            return headers;
+        }
+        
+        private static void AddOriginalMessageIdOnRepublish(Message message, Dictionary<string, object> headers)
+        {
+            if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
+                headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id.Value);
+        }
+        
+        private static void AddUserDefinedHeaders(Message message, TimeSpan? delay, Dictionary<string, object> headers, string? deliveryTag)
+        {
+            message.Header.Bag.Each(header =>
+            {
+                if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
+            });
+
+        }
+
+        private static void AddDeliveryHeaders(TimeSpan? delay, Dictionary<string, object> headers, string? deliveryTag)
+        {
+            if (!string.IsNullOrEmpty(deliveryTag))
+                headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag!);
+
+            if (delay > TimeSpan.Zero)
+                headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.TotalMilliseconds);
         }
 
         private IBasicProperties CreateBasicProperties(string id, DateTimeOffset timeStamp, string type, string contentType,
@@ -254,7 +245,7 @@ internal sealed partial class RmqMessagePublisher
             return value switch
             {
                 null or string _ or byte[] _ or int _ or uint _ or decimal _ or AmqpTimestamp _ or IDictionary _
-                    or IList _ or byte _ or sbyte _ or double _ or float _ or long _ or short _ or bool _ => true,
+                    or IList _ or byte _ or sbyte _ or double _ or float _ or long _ or short _ or bool _  => true,
                 _ => false
             };
         }

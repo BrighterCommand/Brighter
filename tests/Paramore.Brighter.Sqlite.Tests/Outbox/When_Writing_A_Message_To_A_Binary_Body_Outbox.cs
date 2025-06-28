@@ -1,4 +1,5 @@
 using System;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.Sqlite;
@@ -30,15 +31,15 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid().ToString(),
-                topic: new RoutingKey("test_topic"), 
-                messageType:MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5,
-                delayed:TimeSpan.FromMilliseconds(5),
-                correlationId: Guid.NewGuid().ToString(),
+                messageId: Id.Random, 
+                topic: new RoutingKey("test_topic"),
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
+                correlationId: Id.Random,
                 replyTo: new RoutingKey("ReplyTo"),
-                contentType: "application/octet-stream",
+                contentType: new ContentType(MediaTypeNames.Application.Octet),
                 partitionKey: "123456789");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             //get the string as raw bytes
             var bytes = System.Text.Encoding.UTF8.GetBytes("message body"); 
             
-            _messageEarliest = new Message(messageHeader, new MessageBody(bytes, contentType:"application/octet-stream", CharacterEncoding.Raw));
+            _messageEarliest = new Message(messageHeader, new MessageBody(bytes, contentType:new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw));
             _sqlOutbox.Add(_messageEarliest, new RequestContext());
         }
         

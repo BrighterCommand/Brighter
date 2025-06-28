@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Amazon.S3;
-using Amazon.S3.Model;
-using Amazon.SecurityToken;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tranformers.AWS;
 using Xunit;
 
@@ -15,102 +10,49 @@ namespace Paramore.Brighter.AWS.Tests.Transformers;
 
 public class S3LuggageUploadMissingParametersTests
 {
-    private readonly AmazonS3Client _client;
-    private readonly AmazonSecurityTokenServiceClient _stsClient;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName;
-
+    
     public S3LuggageUploadMissingParametersTests()
     {
-        //arrange
-        var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
-
-        _client = factory.CreateS3Client();
-        _stsClient = factory.CreateStsClient(); 
-
         var services = new ServiceCollection();
         services.AddHttpClient();
         var provider = services.BuildServiceProvider();
-        _httpClientFactory = provider.GetService<IHttpClientFactory>();
+        
+        _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
 
     [Fact]
-    public async Task When_creating_luggagestore_missing_client()
+    public void When_creating_luggagestore_missing_client()
     {
         //arrange
-        var exception = await Catch.ExceptionAsync(async () =>
-        {
-            var luggageStore = await S3LuggageStore.CreateAsync(
-                client: null,
-                bucketName: _bucketName,
-                storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                httpClientFactory: _httpClientFactory,
-                stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-                bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618 // turn warning back on
-                tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
-                acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
-                deleteGoodUploadsAfterDays: 1);
-        });
+        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(null!,  null!)));
 
         Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentNullException);
+        Assert.IsType<ArgumentNullException>(exception);
     }
 
-    [Fact]
-    public async Task When_creating_luggagestore_missing_bucketName()
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    public void When_creating_luggagestore_missing_bucketName(string? bucketName)
     {
         //arrange
-        var exception = await Catch.ExceptionAsync(async () =>
-        {
-            var luggageStore = await S3LuggageStore.CreateAsync(
-                client: _client,
-                bucketName: null,
-                storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                httpClientFactory: _httpClientFactory,
-                stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-                bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618 // turn warning back on
-                tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
-                acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
-                deleteGoodUploadsAfterDays: 1);
-        });
+        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(),  bucketName!)));
 
         Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentNullException);
+        Assert.IsType<ArgumentNullException>(exception);
     }
     
     [Fact]
     public async Task When_creating_luggagestore_bad_bucketName()
     {
         //arrange
-        var exception = await Catch.ExceptionAsync(async () =>
-        {
-            var luggageStore = await S3LuggageStore.CreateAsync(
-                client: _client,
-                bucketName: "A",
-                storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                httpClientFactory: _httpClientFactory,
-                stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-                bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618 // turn warning back on
-                tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
-                acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
-                deleteGoodUploadsAfterDays: 1);
-        });
+        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), "A" )));
 
         Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentException);
+        Assert.IsType<ArgumentException>(exception);
     }
     
     [Fact]
@@ -119,99 +61,29 @@ public class S3LuggageUploadMissingParametersTests
         //arrange
         var exception = await Catch.ExceptionAsync(async () =>
         {
-            var luggageStore = await S3LuggageStore.CreateAsync(
-                client: _client,
-                bucketName: _bucketName,
-                storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                httpClientFactory: null,
-                stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-                bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618 // turn warning back on
-                tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
-                acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
-                deleteGoodUploadsAfterDays: 1);
+            var store = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName));
+            await store.EnsureStoreExistsAsync();
         });
 
         Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentNullException);
+        Assert.IsType<ConfigurationException>(exception);
     }
-
+    
     [Fact]
-    public async Task When_creating_luggagestore_missing_stsClient()
+    public async Task When_creating_luggagestore_missing_ACL() 
     {
         //arrange
         var exception = await Catch.ExceptionAsync(async () =>
         {
-            var luggageStore = await S3LuggageStore.CreateAsync(
-                client: _client,
-                bucketName: _bucketName,
-                storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                httpClientFactory: _httpClientFactory,
-                stsClient: null,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-                bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618 // turn warning back on
-                tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
-                acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
-                deleteGoodUploadsAfterDays: 1);
-        });
-
-        Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentNullException);
-    }
-    
-    [Fact]
-    public async Task When_creating_luggagestore_missing_bucketRegion()
-    {
-        //arrange
-        var exception = await Catch.ExceptionAsync(async () =>
-        {
-            var luggageStore = await S3LuggageStore.CreateAsync(
-                client: _client,
-                bucketName: _bucketName,
-                storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                httpClientFactory: _httpClientFactory,
-                stsClient: _stsClient,
-                bucketRegion: null,
-                tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
-                acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
-                deleteGoodUploadsAfterDays: 1);
-        });
-
-        Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentNullException);
-    }
-    
-      [Fact]
-        public async Task When_creating_luggagestore_missing_ACL()
-        {
-            //arrange
-            var exception = await Catch.ExceptionAsync(async () =>
+            var store = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
             {
-                var luggageStore = await S3LuggageStore.CreateAsync(
-                    client: _client,
-                    bucketName: _bucketName,
-                    storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-                    httpClientFactory: _httpClientFactory,
-                    stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-                    bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618 // turn warning back on
-                    tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
-                    acl: null,
-                    policy: null, 
-                    abortFailedUploadsAfterDays: 1, 
-                    deleteGoodUploadsAfterDays: 1);
+                HttpClientFactory = _httpClientFactory,
+                BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple() 
             });
+            await store.EnsureStoreExistsAsync();
+        });
     
-            Assert.NotNull(exception);
-            Assert.True((exception) is ArgumentNullException);
-        }
+        Assert.NotNull(exception);
+        Assert.IsType<ConfigurationException>(exception);
+    }
 }

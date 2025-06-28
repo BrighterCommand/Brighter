@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
@@ -48,7 +49,7 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
                 Guid.NewGuid().ToString(), 
                 routingKey,
                 MessageType.MT_COMMAND,
-                contentType: "text/plain"), 
+                contentType: new ContentType(MediaTypeNames.Text.Plain)), 
             new MessageBody("test content"));
 
         var queueName = new ChannelName(Guid.NewGuid().ToString());

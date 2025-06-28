@@ -43,7 +43,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 PartitionKey character varying(128) NULL,  
                 Dispatched timestamptz NULL,
                 HeaderBag text NULL,
-                Body text NULL
+                Body text NULL,
+                Source character varying (255) NULL,
+                Type character varying (255) NULL,
+                DataSchema character varying (255) NULL,
+                Subject character varying (255) NULL,
+                TraceParent character varying (255) NULL,
+                TraceState character varying (255) NULL,
+                Baggage text NULL
             );
         ";
         
@@ -61,7 +68,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 PartitionKey character varying(128) NULL,  
                 Dispatched timestamptz NULL,
                 HeaderBag text NULL,
-                Body bytea NULL
+                Body bytea NULL,
+                Source character varying (255) NULL,
+                Type character varying (255) NULL,
+                DataSchema character varying (255) NULL,
+                Subject character varying (255) NULL,
+                TraceParent character varying (255) NULL,
+                TraceState character varying (255) NULL,
+                Baggage text NULL
             );
         ";
         

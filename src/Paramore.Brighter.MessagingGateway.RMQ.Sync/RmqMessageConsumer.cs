@@ -30,6 +30,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client.Exceptions;
@@ -233,7 +234,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        public bool Reject(Message message)
         {
             try
             {
@@ -241,6 +242,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag);
                 //if we have a DLQ, this will force over to the DLQ
                 Channel!.BasicReject(message.DeliveryTag, false);
+                return true;
             }
             catch (Exception exception)
             {

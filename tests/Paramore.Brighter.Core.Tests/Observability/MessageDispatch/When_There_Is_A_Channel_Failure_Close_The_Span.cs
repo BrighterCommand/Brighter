@@ -9,6 +9,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -73,26 +74,21 @@ public class MessagePumpChannelFailureOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactory(), 
                 new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
             };
             
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
-            
-            var header = new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT)
-            {
-                TraceParent = externalActivity?.Id, TraceState = externalActivity?.TraceStateString
-            };
-            
-            externalActivity?.Stop();
 
             _message = new Message(
-                header, 
+                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT), 
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
             
+            externalActivity?.Stop();
+
             channel.Enqueue(_message);
             
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
@@ -107,7 +103,7 @@ public class MessagePumpChannelFailureOberservabilityTests
         _traceProvider.ForceFlush();
             
         Assert.Equal(7, _exportedActivities.Count);
-        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
+        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter"); 
         
         var errorMessageActivity = _exportedActivities.FirstOrDefault(a => 
             a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
@@ -115,6 +111,6 @@ public class MessagePumpChannelFailureOberservabilityTests
             );
         
         Assert.NotNull(errorMessageActivity);
-        Assert.Equal(ActivityStatusCode.Error, errorMessageActivity!.Status);
+        Assert.Equal(ActivityStatusCode.Error, errorMessageActivity.Status);
     }
 }

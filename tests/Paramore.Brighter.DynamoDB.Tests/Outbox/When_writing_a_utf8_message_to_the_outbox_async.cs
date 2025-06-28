@@ -24,10 +24,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -46,7 +49,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private readonly string _value2 = "value2";
         private readonly int _value3 = 123;
         private readonly DateTime _value4 = DateTime.UtcNow;
-        private readonly Guid _value5 = new Guid();
+        private readonly Guid _value5 = Guid.Empty;
 
         private Message _storedMessage;
         private DynamoDbOutbox _dynamoDbOutbox;
@@ -54,6 +57,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         public DynamoDbOutboxWritingUTF8MessageAsyncTests()
         {
             var command = new MyCommand { Value = "Test", WasCancelled = false, TaskCompleted = false };
+            var characterEncoding = CharacterEncoding.UTF8;
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
             var messageHeader = new MessageHeader(
@@ -65,15 +69,16 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyAddress"),
-                contentType: "text/plain");
+                contentType: new ContentType(MediaTypeNames.Text.Plain){CharSet = characterEncoding.FromCharacterEncoding()});
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
             messageHeader.Bag.Add(_key4, _value4);
             messageHeader.Bag.Add(_key5, _value5);
 
+            
             _messageEarliest = new Message(messageHeader,
-                new MessageBody(body, "application/json", CharacterEncoding.UTF8));
+                new MessageBody(body, new ContentType(MediaTypeNames.Application.Json){CharSet = characterEncoding.FromCharacterEncoding()}, characterEncoding));
             var fakeTimeProvider = new FakeTimeProvider();
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
                 new DynamoDbConfiguration(OutboxTableName),

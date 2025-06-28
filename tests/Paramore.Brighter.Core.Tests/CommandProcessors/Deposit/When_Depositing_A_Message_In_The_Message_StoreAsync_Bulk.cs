@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -36,15 +37,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 
             var timeProvider = new FakeTimeProvider();
 
-            InMemoryProducer commandProducer = new(_internalBus, timeProvider);
-            commandProducer.Publication = new Publication
+            InMemoryMessageProducer commandMessageProducer = new(_internalBus, timeProvider);
+            commandMessageProducer.Publication = new Publication
             {
                 Topic =  new RoutingKey(_commandTopic),
                 RequestType = typeof(MyCommand)
             };
 
-            InMemoryProducer eventProducer = new(_internalBus, timeProvider);
-            eventProducer.Publication = new Publication
+            InMemoryMessageProducer eventMessageProducer = new(_internalBus, timeProvider);
+            eventMessageProducer.Publication = new Publication
             {
                 Topic =  new RoutingKey(_eventTopic),
                 RequestType = typeof(MyEvent)
@@ -94,8 +95,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { _commandTopic, commandProducer },
-                    { _eventTopic, eventProducer }
+                    { _commandTopic, commandMessageProducer },
+                    { _eventTopic, eventMessageProducer }
                 }); 
             
             var tracer = new BrighterTracer(new FakeTimeProvider());
@@ -108,6 +109,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 _outbox
             );
 

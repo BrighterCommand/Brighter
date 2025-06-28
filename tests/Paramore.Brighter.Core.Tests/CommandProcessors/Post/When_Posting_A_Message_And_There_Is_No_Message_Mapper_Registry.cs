@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(new InternalBus(), timeProvider)
+            InMemoryMessageProducer messageProducer = new(new InternalBus(), timeProvider)
             {
                 Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
             };
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, producer },
+                { routingKey, messageProducer },
             });
 
             var policyRegistry = new PolicyRegistry
@@ -62,6 +62,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 outbox
             );
         

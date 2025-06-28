@@ -8,6 +8,7 @@ using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -175,19 +176,16 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Not implemented Reject Method.
         /// </summary>
         /// <param name="message"></param>
-        public void Reject(Message message)
-        {
-        }
+        public bool Reject(Message message)
+          => false;
 
         /// <summary>
         /// Not implemented Reject Method.
         /// </summary>
         /// <param name="message"></param>
         /// <param name="cancellationToken"></param>
-        public Task RejectAsync(Message message, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
+        public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
 
 
         /// <summary>

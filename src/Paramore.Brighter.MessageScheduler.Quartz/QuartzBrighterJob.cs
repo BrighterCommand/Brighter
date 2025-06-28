@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using Quartz;
 

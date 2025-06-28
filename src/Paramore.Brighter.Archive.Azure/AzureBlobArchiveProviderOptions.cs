@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net.Mime;
 using Azure.Core;
 using Azure.Storage.Blobs.Models;
 
@@ -52,7 +53,7 @@ public class AzureBlobArchiveProviderOptions(
         { "correlationId", message.Header.CorrelationId?.ToString() },
         { "message_type", message.Header.MessageType.ToString() },
         { "timestamp", message.Header.TimeStamp.ToString(CultureInfo.InvariantCulture) },
-        { "content_type", message.Header.ContentType }
+        { "content_type", message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain }
     };
 
     /// <summary>

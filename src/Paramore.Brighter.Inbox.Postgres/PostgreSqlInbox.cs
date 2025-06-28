@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
@@ -137,7 +138,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateNpgsqlParameter("CommandID", command.Id),
+                CreateNpgsqlParameter("CommandID", command.Id.Value),
                 CreateNpgsqlParameter("CommandType", typeof (T).Name),
                 CreateNpgsqlParameter("CommandBody", commandJson),
                 CreateNpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz, DateTimeOffset.UtcNow),

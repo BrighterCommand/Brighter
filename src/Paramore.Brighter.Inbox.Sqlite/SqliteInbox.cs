@@ -31,6 +31,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Sqlite;
@@ -149,7 +150,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", command.Id), //was CommandId
+                CreateSqlParameter("CommandId", command.Id.Value), //was CommandId
                 CreateSqlParameter("CommandType", typeof (T).Name),
                 CreateSqlParameter("CommandBody", commandJson),
                 CreateSqlParameter("Timestamp", DateTime.UtcNow),

@@ -38,10 +38,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public long CommitBatchSize { get; set; }
         
         /// <summary>
+        /// Allows you to modify the Kafka client configuration before a consumer is created.
+        /// Used to set properties that Brighter does not expose
+        /// </summary>
+        public Action<ConsumerConfig>? ConfigHook { get; set; }
+        
+        /// <summary>
         /// Only one consumer in a group can read from a partition at any one time; this preserves ordering
         /// We do not default this value, and expect you to set it
         /// </summary>
-        public string GroupId { get; set; }
+        public string? GroupId { get; set; }
 
         /// <summary>
         /// Default to read only committed messages, change if you want to read uncommited messages. May cause duplicates.
@@ -132,12 +138,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
+        /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
         public KafkaSubscription (
             Type dataType, 
-            SubscriptionName subscriptionName = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null,
-            string groupId = null,
+            SubscriptionName? subscriptionName = null, 
+            ChannelName? channelName = null, 
+            RoutingKey? routingKey = null,
+            string? groupId = null,
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -153,11 +160,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             MessagePumpType messagePumpType = MessagePumpType.Unknown, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
-            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
+            Action<ConsumerConfig>? configHook = null) 
             : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
@@ -175,6 +183,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (PartitionAssignmentStrategy == PartitionAssignmentStrategy.CooperativeSticky)
                 throw new ArgumentOutOfRangeException(nameof(partitionAssignmentStrategy),
                     "CooperativeSticky is not supported for with manual commits, see https://github.com/confluentinc/librdkafka/issues/4059");
+            
+            ConfigHook = configHook;
         }
     }
 
@@ -207,11 +217,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
+        /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
         public KafkaSubscription(
-            SubscriptionName subscriptionName = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null, 
-            string groupId = null,
+            SubscriptionName? subscriptionName = null, 
+            ChannelName? channelName = null, 
+            RoutingKey? routingKey = null, 
+            string? groupId = null,
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -227,16 +238,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             MessagePumpType messagePumpType = MessagePumpType.Reactor, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
-            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
+            Action<ConsumerConfig>? configHook = null) 
             : base(typeof(T), subscriptionName, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeOut, 
                 requeueCount, requeueDelay, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
                 sessionTimeout, maxPollInterval, sweepUncommittedOffsetsInterval, isolationLevel, messagePumpType, 
                 numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay,
-                partitionAssignmentStrategy)
+                partitionAssignmentStrategy, configHook)
         {
         }
     }

@@ -51,7 +51,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", message.Id},
+                {"db.operation.parameter.message.id", message.Id.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.AddCommand)},
                 {"db.query.text", queries.AddCommand}
             };
@@ -132,7 +132,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", message.Id},
+                {"db.operation.parameter.message.id", message.Id.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.AddCommand)},
                 {"db.query.text", queries.AddCommand}
             };
@@ -177,7 +177,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id))},
+                {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.BulkAddCommand)},
                 {"db.query.text", queries.BulkAddCommand}
             };
@@ -205,11 +205,11 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The id of the message to delete</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="args">Additional parameters required for search, if any</param>
-        public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
+        public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", messageIds)},
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.DeleteMessagesCommand)},
                 {"db.query.text", queries.DeleteMessagesCommand}
             };
@@ -221,7 +221,7 @@ namespace Paramore.Brighter
             try
             {
                 if (messageIds.Any())
-                    WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+                    WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds.Select(m => m.ToString())), null);
             }
             finally
             {
@@ -237,17 +237,18 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         public Task DeleteAsync(
-            string[] messageIds,
+            Id[] messageIds,
             RequestContext? requestContext,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", messageIds)},
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.DeleteMessagesCommand)},
-                {"db.query.text", queries.DeleteMessagesCommand}
+                {"db.query.text", queries.DeleteMessagesCommand},
             };
+            
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Delete, outboxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
@@ -258,7 +259,7 @@ namespace Paramore.Brighter
                 if (!messageIds.Any())
                     return Task.CompletedTask;
 
-                return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null,
+                return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds.Select(m => m.ToString())), null,
                     cancellationToken);
             }
             finally
@@ -432,7 +433,9 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public IEnumerable<Message> Get(IEnumerable<string> messageIds, RequestContext requestContext,
+        public IEnumerable<Message> Get(
+            IEnumerable<Id> messageIds, 
+            RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
@@ -449,7 +452,7 @@ namespace Paramore.Brighter
 
             try
             {
-                var result = ReadFromStore(connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout),
+                var result = ReadFromStore(connection => InitGetMessagesCommand(connection, messageIds.Select(m => m.ToString()).ToList(), outBoxTimeout),
                     MapListFunction);
 
                 span?.AddTag("db.response.returned_rows", result.Count());
@@ -469,12 +472,16 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1,
-            Dictionary<string, object>? args = null)
+        public Message Get(
+            Id messageId, 
+            RequestContext requestContext, 
+            int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null
+            )
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", messageId},
+                {"db.operation.parameter.message.id", messageId.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.GetMessageCommand)},
                 {"db.query.text", queries.GetMessageCommand}
             };
@@ -506,7 +513,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(
-            string messageId,
+            Id messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
@@ -514,7 +521,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", messageId},
+                {"db.operation.parameter.message.id", messageId.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.GetMessageCommand)},
                 {"db.query.text", queries.GetMessageCommand}
             };
@@ -546,7 +553,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Cancellation Token.</param>
         /// <returns></returns>
         public async Task<IEnumerable<Message>> GetAsync(
-            IEnumerable<string> messageIds,
+            IEnumerable<Id> messageIds,
             RequestContext requestContext,
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default
@@ -554,7 +561,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", messageIds)},
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.GetMessagesCommand)},
                 {"db.query.text", queries.GetMessagesCommand}
             };
@@ -566,7 +573,7 @@ namespace Paramore.Brighter
             try
             {
                 var result = await ReadFromStoreAsync(
-                connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout),
+                connection => InitGetMessagesCommand(connection, messageIds.Select(m => m.Value).ToList(), outBoxTimeout),
                 async (dr) => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
 
                 span?.AddTag("db.response.returned_rows", result.Count());
@@ -614,6 +621,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Returns all messages in the store
         /// </summary>
+        /// <param name="requestContext">The context from the request pipeline</param>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="args">Additional parameters required for search, if any</param>
@@ -713,7 +721,7 @@ namespace Paramore.Brighter
         /// <param name="args">Allows additional arguments for specific Outbox Db providers</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(
-            string id,
+            Id id,
             RequestContext? requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,
@@ -721,7 +729,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", id},
+                {"db.operation.parameter.message.id", id.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.MarkDispatchedCommand)},
                 {"db.query.text", queries.MarkDispatchedCommand}
             };
@@ -751,7 +759,7 @@ namespace Paramore.Brighter
         /// <param name="args">Allows additional arguments to be passed for specific Db providers</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(
-            IEnumerable<string> ids,
+            IEnumerable<Id> ids,
             RequestContext? requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,
@@ -759,7 +767,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.ids", string.Join(",", ids)},
+                {"db.operation.parameter.message.ids", string.Join(",", ids.Select(m => m.Value))},
                 {"db.operation.name", ExtractSqlOperationName(queries.MarkMultipleDispatchedCommand)},
                 {"db.query.text", queries.MarkMultipleDispatchedCommand}
             };
@@ -787,12 +795,15 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Allows additional arguments to be provided for specific Outbox Db providers</param>
-        public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
+        public void MarkDispatched(
+            Id id, 
+            RequestContext requestContext, 
+            DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null)
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", id},
+                {"db.operation.parameter.message.id", id.Value},
                 {"db.operation.name", ExtractSqlOperationName(queries.MarkDispatchedCommand)},
                 {"db.query.text", queries.MarkDispatchedCommand}
             };
@@ -1002,25 +1013,23 @@ namespace Paramore.Brighter
                 insertClause.parameters);
         }
 
-        private DbCommand InitMarkDispatchedCommand(DbConnection connection, string messageId,
-            DateTimeOffset? dispatchedAt)
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Id messageId, DateTimeOffset? dispatchedAt)
             => CreateCommand(connection, GenerateSqlText(queries.MarkDispatchedCommand), 0,
-                CreateSqlParameter("MessageId", messageId),
+                CreateSqlParameter("MessageId", messageId.Value),
                 CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()));
 
-        private DbCommand InitMarkDispatchedCommand(DbConnection connection, IEnumerable<string> messageIds,
-            DateTimeOffset? dispatchedAt)
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, IEnumerable<Id> messageIds, DateTimeOffset? dispatchedAt)
         {
-            var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
+            var inClause = GenerateInClauseAndAddParameters(messageIds.Select(m => m.ToString()).ToList());
             return CreateCommand(connection, GenerateSqlText(queries.MarkMultipleDispatchedCommand, inClause.inClause),
                 0,
                 inClause.parameters.Append(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()))
                     .ToArray());
         }
 
-        private DbCommand InitGetMessageCommand(DbConnection connection, string messageId, int outBoxTimeout = -1)
+        private DbCommand InitGetMessageCommand(DbConnection connection, Id messageId, int outBoxTimeout = -1)
             => CreateCommand(connection, GenerateSqlText(queries.GetMessageCommand), outBoxTimeout,
-                CreateSqlParameter("MessageId", messageId));
+                CreateSqlParameter("MessageId", messageId.Value));
 
         private DbCommand InitGetMessagesCommand(DbConnection connection, List<string> messageIds,
             int outBoxTimeout = -1)
@@ -1085,12 +1094,16 @@ namespace Paramore.Brighter
         private (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(List<Message> messages)
         {
             var messageParams = new List<string>();
-            var parameters = new List<IDbDataParameter>();
+            var parameters    = new List<IDbDataParameter>();
 
             for (int i = 0; i < messages.Count(); i++)
             {
+                // include all columns in the same order as the CREATE TABLE DDL:
                 messageParams.Add(
-                    $"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body)");
+                    $"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, " +
+                    $"@p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body, " +
+                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, @p{i}_Baggage)");
+
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
             }
 

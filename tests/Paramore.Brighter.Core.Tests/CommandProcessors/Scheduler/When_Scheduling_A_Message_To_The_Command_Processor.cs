@@ -30,6 +30,7 @@ using System.Text.Json;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
@@ -70,7 +71,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryProducer(_internalBus, _timeProvider)
+        var producer = new InMemoryMessageProducer(_internalBus, _timeProvider)
         {
             Publication = { Topic = routingKey, RequestType = typeof(MyCommand) }
         };
@@ -112,6 +113,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 

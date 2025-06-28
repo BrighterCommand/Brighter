@@ -31,6 +31,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyAddress"),
-                contentType: "text/plain");
+                contentType: new ContentType(MediaTypeNames.Text.Plain));
 
             var fakeTimeProvider = new FakeTimeProvider();
             var dynamoDbOutbox = new DynamoDbOutbox(Client,
@@ -69,7 +70,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             var messageEarliest = new Message(
                 messageHeader,
-                new MessageBody(serdesBody, MediaTypeNames.Application.Octet, CharacterEncoding.Raw));
+                new MessageBody(serdesBody, new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw));
             
             var context = new RequestContext();
 

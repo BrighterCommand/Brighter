@@ -35,11 +35,9 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 using Polly.Retry;
 using System.Threading.Tasks;
 using Azure.Messaging;
-using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
-
 
 /// <summary>
 /// A Sync and Async Message Producer for Azure Service Bus.
@@ -126,7 +124,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// <param name="cancellationToken">The Cancellation Token.</param>
     /// <returns>List of Messages successfully sent.</returns>
     /// <exception cref="NotImplementedException"></exception>
-    public async IAsyncEnumerable<string[]> SendAsync(
+    public async IAsyncEnumerable<Id[]> SendAsync(
         IEnumerable<Message> messages,
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
@@ -152,7 +150,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         {
             foreach (var batch in batches)
             {
-                var asbMessages = batch.Select(message => ConvertToServiceBusMessage(message, _publication)).ToArray();
+                var asbMessages = batch.Select(message => AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message, _publication)).ToArray();
 
                 Logger.LogDebug("Publishing {NumberOfMessages} messages to topic {Topic}.",
                     asbMessages.Length, topic);
@@ -197,7 +195,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
                 "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}",
                 message.Header.Topic, delay, message.Body.Value, message.Id);
 
-            var azureServiceBusMessage = ConvertToServiceBusMessage(message, _publication);
+            var azureServiceBusMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message, _publication);
             if (delay == TimeSpan.Zero)
             {
                 await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage, cancellationToken);
@@ -246,29 +244,6 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
             Logger.LogError(e, "Failed to connect to topic {Topic}, aborting.", topic);
             throw;
         }
-    }
-
-    private static ServiceBusMessage ConvertToServiceBusMessage(Message message, AzureServiceBusPublication publication)
-    {
-        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Value);
-        
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
-
-        foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
-        {
-            azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
-        }
-            
-        if(!string.IsNullOrEmpty(message.Header.CorrelationId))
-            azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
-        azureServiceBusMessage.ContentType = message.Header.ContentType;
-        azureServiceBusMessage.MessageId = message.Header.MessageId;
-        if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
-            azureServiceBusMessage.SessionId = value.ToString();
-
-        return azureServiceBusMessage;
     }
 
     protected abstract Task EnsureChannelExistsAsync(string channelName);

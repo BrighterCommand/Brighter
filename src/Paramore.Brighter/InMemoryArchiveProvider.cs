@@ -48,7 +48,7 @@ public class InMemoryArchiveProvider: IAmAnArchiveProvider
         return Task.CompletedTask;
     }
 
-    public Task<string[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+    public Task<Id[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
     {
         foreach (var message in messages)
         {

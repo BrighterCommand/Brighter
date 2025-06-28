@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace Greetings.Ports.Mappers
 {
@@ -48,7 +49,7 @@ namespace Greetings.Ports.Mappers
             var body = new MessageBody(ms.ToArray());
             
             //This won't have repeats that need to go to the same partition, but it's a good example of how to set the partition key
-            header.PartitionKey = request.Id;
+            header.PartitionKey = request.Id.Value;
 
             var message = new Message(header, body);
             return message;

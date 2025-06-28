@@ -25,6 +25,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Net.Mime;
+using System.Text.Json.Serialization;
+using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.NJsonConverters;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -94,7 +99,15 @@ namespace Paramore.Brighter
         /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Bag { get; set; } = new();
+        
+        /// <summary>
+        /// The Baggage header is a W3C standard and is used to convey user-defined request or workflow information across systems.
+        /// It is not intended for telemetry data, but rather for user-defined metadata about a trace.
+        /// Each entry consists of a key-value pair where the key identifies the vendor and the value contains user-defined request or workflow data.
+        /// Whereas the <see cref="Bag"/> property is used for extended header attributes, the Baggage property is specifically for W3C Baggage.
+        /// </summary>
+        public Baggage Baggage { get; set; } = new();
         
         /// <summary>
         /// OPTIONAL [Cloud Events] REQUIRED [Brighter]
@@ -105,15 +118,17 @@ namespace Paramore.Brighter
         /// though Cloud Events does not.
         /// Default value is "text/plain"
         /// </summary>
-        public string? ContentType { get; set; }
+        public ContentType? ContentType { get; set; }
 
         /// <summary>
         /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,
         /// allows the originator to match responses to requests
         /// </summary>
         /// <value>The correlation identifier.</value>
-        public string CorrelationId { get; set; } = string.Empty;
-        
+        [JsonConverter(typeof(IdConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+        public Id CorrelationId { get; set; } = new("");
+
         /// <summary>
         /// OPTIONAL
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
@@ -152,8 +167,10 @@ namespace Paramore.Brighter
         /// Consumers MAY assume that Events with identical source and id are duplicates.
         /// </summary>
         /// <value>The identifier.</value>
-        public string MessageId { get; init; } = string.Empty;
-        
+        [JsonConverter(typeof(IdConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+        public Id MessageId { get; init; } = new("");
+
         /// <summary>
         /// REQUIRED
         /// Gets the type of the message (command, event). Internal usage, Used when routing the message to a handler
@@ -167,7 +184,7 @@ namespace Paramore.Brighter
         /// If we are working with consistent hashing to distribute writes across multiple channels according to the
         /// hash value of a partition key then we need to be able to set that key, so that we can distribute writes effectively.
         /// </summary>
-        public string PartitionKey { get; set; } = "";
+        public PartitionKey PartitionKey { get; set; } = PartitionKey.Empty;
         
         /// <summary>
         /// OPTIONAL
@@ -176,7 +193,9 @@ namespace Paramore.Brighter
         /// do not have to filter replies intended for other listeners.
         /// </summary>
         /// <value>The reply to.</value>
-        public string? ReplyTo { get; set; }
+        [JsonConverter(typeof(RoutingKeyConvertor))]
+        [Newtonsoft.Json.JsonConverter(typeof(RoutingKeyConvertor))]
+        public RoutingKey? ReplyTo { get; set; }
         
         /// <summary>
         /// OPTIONAL
@@ -212,6 +231,8 @@ namespace Paramore.Brighter
         /// used internally when we send the message to its destination
         /// </summary>
         /// <value>The topic.</value>
+        [JsonConverter(typeof(RoutingKeyConvertor))]
+        [Newtonsoft.Json.JsonConverter(typeof(RoutingKeyConvertor))]
         public RoutingKey Topic { get; init; } = RoutingKey.Empty;
 
         /// <summary>
@@ -232,8 +253,10 @@ namespace Paramore.Brighter
         ///     - trace-flags
         /// In .NET it is set from Activity.Current.Id
         /// </summary>
-        public string? TraceParent { get; set; }
-        
+        [JsonConverter(typeof(TraceParentConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(TraceParentConverter))]
+        public TraceParent? TraceParent { get; set; }
+
         /// <summary>
         /// OPTIONAL
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md">Cloud Events Spec</see>
@@ -243,7 +266,9 @@ namespace Paramore.Brighter
         /// in multiple distributed tracing graphs.
         /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
         /// </summary>
-        public string? TraceState { get; set; }
+        [JsonConverter(typeof(TraceStateConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(TraceStateConverter))]
+        public TraceState? TraceState { get; set; }
 
         /// <summary>
         /// REQUIRED
@@ -259,7 +284,7 @@ namespace Paramore.Brighter
         /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'
         /// </summary>
         public MessageHeader() { }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
         /// </summary>
@@ -277,37 +302,45 @@ namespace Paramore.Brighter
         /// <param name="subject">Describes the subject of the event in the context of the event producer</param>
         /// <param name="handledCount">The number of attempts to handle this message</param>
         /// <param name="delayed">The delay in milliseconds to this message (usually to retry)</param>
+        /// <param name="traceParent">The traceparent for this message; follows the W3C standard</param>
+        /// <param name="traceState">The tracestate for this message; follows the W3C standard</param>
+        /// <param name="baggage">The baggage for this message; follows the W3C standard</param>
         public MessageHeader(
-            string messageId,
+            Id messageId,
             RoutingKey topic,
             MessageType messageType,
             Uri? source = null,
             string? type = null,
             DateTimeOffset? timeStamp = null,
-            string? correlationId = null,
+            Id? correlationId = null,
             RoutingKey? replyTo = null,
-            string contentType = "text/plain",
-            string partitionKey = "",
+            ContentType? contentType = null,
+            PartitionKey? partitionKey = null,
             Uri? dataSchema = null,
             string? subject = null,
             int handledCount = 0,
-            TimeSpan? delayed = null)
+            TimeSpan? delayed = null,
+            TraceParent? traceParent = null,
+            TraceState? traceState = null,
+            Baggage? baggage = null)
         {
             MessageId = messageId;
             Topic = topic;
             MessageType = messageType;
             if (source != null) Source = source;
-            Type = type  ?? "goparamore.io.Paramore.Brighter.Message";
+            Type = type ?? DefaultType;
             TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
             HandledCount = handledCount;
             Delayed = delayed ?? TimeSpan.Zero;
-            CorrelationId = correlationId ?? string.Empty;
+            CorrelationId = correlationId ?? new Id(string.Empty);
             ReplyTo = replyTo ?? RoutingKey.Empty;
-            ContentType = contentType;
-            PartitionKey = partitionKey;
-            ReplyTo = replyTo ?? string.Empty;
+            ContentType = contentType; 
+            PartitionKey = partitionKey ?? PartitionKey.Empty;
             DataSchema = dataSchema;
             Subject = subject;
+            TraceParent = traceParent;
+            TraceState = traceState;
+            Baggage = baggage ?? new Baggage();
         }
 
         /// <summary>
@@ -324,8 +357,8 @@ namespace Paramore.Brighter
                 delayed : TimeSpan.Zero,
                 correlationId: CorrelationId,
                 replyTo : new RoutingKey($"{ReplyTo}"),
-                contentType : $"{ContentType}",
-                partitionKey : $"{PartitionKey}"
+                contentType : ContentType,
+                partitionKey : PartitionKey
             );
 
             foreach (var item in Bag)
@@ -334,6 +367,21 @@ namespace Paramore.Brighter
             }
 
             return newHeader;
+        }
+        
+        /// <summary>
+        /// We return an MT_UNACCEPTABLE message because we cannot process. Really this should go on to an
+        /// Invalid Message Queue provided by the Control Bus
+        /// </summary>
+        /// <param name="topic"></param>
+        /// <param name="messageId"></param>
+        /// <returns></returns>
+        public static MessageHeader FailureMessageHeader(RoutingKey? topic, Id? messageId)
+        {
+            return new MessageHeader(
+                messageId ?? Id.Empty,
+                topic ?? RoutingKey.Empty,
+                MessageType.MT_UNACCEPTABLE);
         }
 
         /// <summary>

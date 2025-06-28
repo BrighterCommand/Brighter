@@ -23,8 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.MsSql;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox
@@ -37,38 +39,53 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly string _key3 = "name3";
         private readonly string _key4 = "name4";
         private readonly string _key5 = "name5";
+        private readonly Uri _dataSchema = new Uri("http://schema.example.com");
+        private readonly string _subject = "TestSubject";
+        private readonly string _type = "custom.type";
+        private readonly Uri _source = new Uri("http://source.example.com");
+        private readonly TraceParent _traceParent = new TraceParent("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
+        private readonly TraceState _traceState = new TraceState("congo=t61rcWkgMzE");
+        private readonly Baggage _baggage = new Baggage();
         private readonly Message _message;
         private readonly MsSqlOutbox _sqlOutbox;
-        private Message _storedMessage;
-        private readonly string _value1 = "value1";
-        private readonly string _value2 = "value2";
-        private readonly int _value3 = 123;
-        private readonly Guid _value4 = Guid.NewGuid();
-        private readonly DateTime _value5 = DateTime.UtcNow;
+        private Message? _storedMessage;
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly RequestContext _requestContext = new();
+        private readonly Guid _testbagUuid = Guid.NewGuid();
+        private readonly DateTime _testBagDateTime = DateTime.UtcNow;
 
-        public SqlOutboxWritingMessageAsyncTests ()
+        public SqlOutboxWritingMessageAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
+
+            _baggage.LoadBaggage("userId=alice,server=node01");
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid().ToString(),
+                messageId:Id.Random,
                 topic: new RoutingKey("test_topic"), 
                 messageType: MessageType.MT_DOCUMENT, 
+                source: _source,
+                type: _type,
                 timeStamp: DateTime.UtcNow.AddDays(-1), 
+                correlationId: Id.Random,
+                replyTo: new RoutingKey("ReplyAddress"),
+                contentType: new ContentType(MediaTypeNames.Text.Plain),
+                partitionKey: new PartitionKey(Guid.NewGuid().ToString()),
+                dataSchema: _dataSchema,
+                subject: _subject,
                 handledCount:5, 
                 delayed:TimeSpan.FromMilliseconds(5),
-                correlationId: Guid.NewGuid().ToString(),
-                replyTo: new RoutingKey("ReplyAddress"),
-                contentType: "text/plain");
-            messageHeader.Bag.Add(_key1, _value1);
-            messageHeader.Bag.Add(_key2, _value2);
-            messageHeader.Bag.Add(_key3, _value3);
-            messageHeader.Bag.Add(_key4, _value4);
-            messageHeader.Bag.Add(_key5, _value5);
+                traceParent: _traceParent,
+                traceState: _traceState,
+                baggage: _baggage
+            );
+            messageHeader.Bag.Add(_key1, "value1");
+            messageHeader.Bag.Add(_key2, "value2");
+            messageHeader.Bag.Add(_key3, 123);
+            messageHeader.Bag.Add(_key4, _testbagUuid);
+            messageHeader.Bag.Add(_key5, _testBagDateTime);
 
             _message = new Message(messageHeader, new MessageBody("message body"));
             _sqlOutbox.Add(_message, _requestContext);
@@ -95,15 +112,24 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             
             //Bag serialization
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));
-            Assert.Equal(_value1, _storedMessage.Header.Bag[_key1]);
+            Assert.Equal("value1", _storedMessage.Header.Bag[_key1]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key2));
-            Assert.Equal(_value2, _storedMessage.Header.Bag[_key2]);
+            Assert.Equal("value2", _storedMessage.Header.Bag[_key2]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key3));
-            Assert.Equal(_value3, _storedMessage.Header.Bag[_key3]);
+            Assert.Equal(123, _storedMessage.Header.Bag[_key3]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key4));
-            Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
+            Assert.Equal(_testbagUuid, _storedMessage.Header.Bag[_key4]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
-            Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
+            Assert.Equal(_testBagDateTime, _storedMessage.Header.Bag[_key5]);
+
+            // Additional asserts for Cloud Events and W3C Tracing properties
+            Assert.Equal(_message.Header.Source, _storedMessage.Header.Source);
+            Assert.Equal(_message.Header.Type, _storedMessage.Header.Type);
+            Assert.Equal(_message.Header.DataSchema, _storedMessage.Header.DataSchema);
+            Assert.Equal(_message.Header.Subject, _storedMessage.Header.Subject);
+            Assert.Equal(_message.Header.TraceParent, _storedMessage.Header.TraceParent);
+            Assert.Equal(_message.Header.TraceState, _storedMessage.Header.TraceState);
+            Assert.Equal(_message.Header.Baggage, _storedMessage.Header.Baggage);
         }
 
         public void Dispose()

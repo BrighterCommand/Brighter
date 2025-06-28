@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -23,8 +25,8 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
-        var correlationId = Guid.NewGuid().ToString();
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
+        var correlationId = Id.Random;
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);

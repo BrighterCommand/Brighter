@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 #endregion
 
-
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -46,9 +45,14 @@ namespace Paramore.Brighter
         /// </summary>
         UTF8,
 
+       /// <summary>
+       /// UTF-16 Text
+       /// </summary>
+        UTF16,
+        
         /// <summary>
         /// Raw bytes, conversion to string may be lossy
         /// </summary>
-        Raw
+        Raw,
     }
 }

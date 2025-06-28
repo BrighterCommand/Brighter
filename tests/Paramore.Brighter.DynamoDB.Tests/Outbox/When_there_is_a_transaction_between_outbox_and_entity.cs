@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
@@ -63,7 +64,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             delayed: TimeSpan.FromMilliseconds(5),
             correlationId: Guid.NewGuid().ToString(),
             replyTo: new RoutingKey("ReplyAddress"),
-            contentType: "text/plain");
+            contentType: new ContentType(MediaTypeNames.Text.Plain));
         var body = new MessageBody(myItem.Value);
         _message = new Message(myMessageHeader, body);
     }

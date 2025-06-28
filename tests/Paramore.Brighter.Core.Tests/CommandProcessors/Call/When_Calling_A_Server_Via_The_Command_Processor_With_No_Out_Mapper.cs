@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var timeProvider = new FakeTimeProvider();
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { new RoutingKey("MyRequest"), new InMemoryProducer(new InternalBus(), timeProvider) },
+                { new RoutingKey("MyRequest"), new InMemoryMessageProducer(new InternalBus(), timeProvider) },
             });
 
             var tracer = new BrighterTracer(timeProvider);
@@ -67,6 +67,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 new InMemoryOutbox(timeProvider){Tracer = tracer}
             );
 

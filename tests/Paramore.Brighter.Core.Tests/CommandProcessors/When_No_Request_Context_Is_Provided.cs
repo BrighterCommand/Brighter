@@ -123,7 +123,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -139,6 +139,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             fakeOutbox
         );
 
@@ -170,7 +171,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -186,6 +187,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             fakeOutbox
         );
 
@@ -218,7 +220,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -234,6 +236,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             fakeOutbox
         );
 
@@ -270,7 +273,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -286,6 +289,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             fakeOutbox
         );
 

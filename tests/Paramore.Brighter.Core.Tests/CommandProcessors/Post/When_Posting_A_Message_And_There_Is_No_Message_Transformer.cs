@@ -5,6 +5,7 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.CircuitBreaker;
@@ -57,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider())
                     {
                         Publication = {Topic = routingKey, RequestType = typeof(MyCommand) }
                     }
@@ -80,6 +81,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                  null,
                 new EmptyMessageTransformerFactoryAsync(),
                 _tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 _outbox)
             );               
 
