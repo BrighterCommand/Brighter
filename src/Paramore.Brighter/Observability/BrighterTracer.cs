@@ -113,15 +113,17 @@ public class BrighterTracer : IAmABrighterTracer
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection
+        var tags = GetNewTagsCollection(options);
+            
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.RequestId, request.Id.Value },
-            { BrighterSemanticConventions.RequestType, request.GetType().Name },
-            { BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request, JsonSerialisationOptions.Options) }
-        };
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.RequestId, request.Id.ToString());
+            tags.Add(BrighterSemanticConventions.RequestType, request.GetType().Name);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+        }
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
 
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -161,34 +163,45 @@ public class BrighterTracer : IAmABrighterTracer
         var baggage = message.Header.Baggage.ToString();
         var traceState = message.Header.TraceState?.Value;
         var now = _timeProvider.GetUtcNow();
+        
+        var tags = GetNewTagsCollection(options);
 
-        var tags = new ActivityTagsCollection()
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
-            { BrighterSemanticConventions.MessageId, message.Id.Value },
-            { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value },
-            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.CeMessageId, message.Id.Value },
-            { BrighterSemanticConventions.CeSource, message.Header.Source },
-            { BrighterSemanticConventions.CeVersion, "1.0"},
-            { BrighterSemanticConventions.CeSubject, message.Header.Subject },
-            { BrighterSemanticConventions.CeType, message.Header.Type},
-            { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value },
-            { BrighterSemanticConventions.HandledCount, message.Header.HandledCount }
-            
-        };
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+
+            tags.Add(BrighterSemanticConventions.CeType, message.Header.Type);
+            tags.Add(BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value);
+            tags.Add(BrighterSemanticConventions.HandledCount, message.Header.HandledCount);
+
+            //Cloud Events
+            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.CeSource, message.Header.Source);
+            tags.Add(BrighterSemanticConventions.CeVersion, "1.0");
+            tags.Add(BrighterSemanticConventions.CeSubject, message.Header.Subject);
+        }
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+        }
+
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+        {
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        }
         
         var activity = ActivitySource.StartActivity(
             name: spanName,
             kind: kind,
-            parentId: parentId ,
+            parentId: parentId,
             tags: tags,
             startTime: now);
 
@@ -223,15 +236,15 @@ public class BrighterTracer : IAmABrighterTracer
         var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {operation.ToSpanName()}";
         var kind = ActivityKind.Producer;
         var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow();  
-        var tags = new ActivityTagsCollection()
-        
+        var now = _timeProvider.GetUtcNow();
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds }
-        };
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName()); 
+            tags.Add(BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds);
+        }
         
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -267,13 +280,14 @@ public class BrighterTracer : IAmABrighterTracer
         var kind = ActivityKind.Internal;
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
-
-        var tags = new ActivityTagsCollection
+        
+        var tags = GetNewTagsCollection(options);
+        
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.RequestType, requestType.Name },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.RequestType, requestType.Name);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
         };
 
         var activity = ActivitySource.StartActivity(
@@ -292,32 +306,37 @@ public class BrighterTracer : IAmABrighterTracer
     }
 
     /// <inheritdoc />
-    public Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info)
+    public Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info, InstrumentationOptions options = InstrumentationOptions.All)
     {
         var spanName = $"{info.Operation.ToSpanName()} {info.ProviderName} {info.BucketName}";
 
         const ActivityKind kind = ActivityKind.Client;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection
+        var tags = GetNewTagsCollection(options, BrighterSemanticConventions.ClaimCheckInstrumentationDomain);
+        
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            [BrighterSemanticConventions.InstrumentationDomain] = BrighterSemanticConventions.ClaimCheckInstrumentationDomain,
-            [BrighterSemanticConventions.ClaimCheckOperation] = info.Operation.ToSpanName(),
-            [BrighterSemanticConventions.ClaimCheckProvider] = info.ProviderName,
-            [BrighterSemanticConventions.ClaimCheckBucketName] = info.BucketName,
-            [BrighterSemanticConventions.ClaimCheckId] = info.Id
-        };
-
-        if (info.ContentLenght.HasValue)
-        {
-            tags[BrighterSemanticConventions.ClaimCheckContentLenght] = info.ContentLenght;
+            tags.Add(BrighterSemanticConventions.ClaimCheckOperation, info.Operation.ToSpanName());
         }
 
-        if (info.Attributes != null)
+        if (options.HasFlag(InstrumentationOptions.ClamCheck))
         {
-            foreach (var attribute in  info.Attributes)
+            tags.Add(BrighterSemanticConventions.ClaimCheckProvider, info.ProviderName);
+            tags.Add(BrighterSemanticConventions.ClaimCheckBucketName, info.BucketName);
+            tags.Add(BrighterSemanticConventions.ClaimCheckId, info.Id);
+            
+            if (info.ContentLenght.HasValue)
             {
-                tags.Add(attribute.Key, attribute.Value);
+                tags[BrighterSemanticConventions.ClaimCheckContentLenght] = info.ContentLenght;
+            }
+            
+            if (info.Attributes != null)
+            {
+                foreach (var attribute in  info.Attributes)
+                {
+                    tags.Add(attribute.Key, attribute.Value);
+                }
             }
         }
 
@@ -348,16 +367,16 @@ public class BrighterTracer : IAmABrighterTracer
         var spanName = $"{BrighterSemanticConventions.ClearMessages} {operation.ToSpanName()}";
         var kind = ActivityKind.Producer;
         var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow(); 
-        
-        var tags = new ActivityTagsCollection
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName() }
-        };
-        
-        if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() );
+            tags.Add(BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName());
+            if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
+        }
         
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -390,26 +409,31 @@ public class BrighterTracer : IAmABrighterTracer
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.DbInstrumentationDomain },
-            { BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName() },
-            { BrighterSemanticConventions.DbName, info.dbName },
-            { BrighterSemanticConventions.DbTable, info.dbTable },
-            { BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName() }
-        };
-
-        if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
-        if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
-        if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
-        if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
-        if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
-        if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
-        if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
+        var tags = GetNewTagsCollection(options, BrighterSemanticConventions.DbInstrumentationDomain);
         
-        if (info.dbAttributes != null)
-           foreach (var pair in info.dbAttributes)
-               tags.Add(pair.Key, pair.Value);
+        if (options.HasFlag(InstrumentationOptions.DatabaseInformation))
+        {
+            tags.Add(BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.DbName, info.dbName);
+            tags.Add(BrighterSemanticConventions.DbTable, info.dbTable);
+            tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName());
+
+            if (!string.IsNullOrEmpty(info.dbStatement))
+                tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
+            if (!string.IsNullOrEmpty(info.dbInstanceId))
+                tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
+            if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
+            if (!string.IsNullOrEmpty(info.networkPeerAddress))
+                tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
+            if (!string.IsNullOrEmpty(info.serverAddress))
+                tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
+            if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
+            if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
+
+            if (info.dbAttributes != null)
+                foreach (var pair in info.dbAttributes)
+                    tags.Add(pair.Key, pair.Value);
+        }
 
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -424,7 +448,7 @@ public class BrighterTracer : IAmABrighterTracer
 
         return activity;
     }
-    
+
     /// <summary>
     /// The parent span for the message pump. This is the entry point for the message pump
     /// </summary>
@@ -441,26 +465,32 @@ public class BrighterTracer : IAmABrighterTracer
     {
         if (operation != MessagePumpSpanOperation.Begin)
             throw new ArgumentOutOfRangeException(nameof(operation), "Operation must be Begin or End");
-        
+
         var spanName = $"{topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection()
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.MessagingDestination, topic },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
-        };
-        
-        Activity? activity = ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
-        
-        if(activity is not null)
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+        }
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+            tags.Add(BrighterSemanticConventions.MessagingDestination, topic);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+        }
+
+        Activity? activity =
+            ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
+
+        if (activity is not null)
             Activity.Current = activity;
 
-        return activity; 
+        return activity;
     }
 
     /// <summary>
@@ -484,16 +514,21 @@ public class BrighterTracer : IAmABrighterTracer
         var kind = ActivityKind.Consumer;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection()
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.MessagingDestination, topic },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
-        };
-        
-       Activity? activity;
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+        }
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+            tags.Add(BrighterSemanticConventions.MessagingDestination, topic);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+        }
+
+        Activity? activity;
         if (Activity.Current != null)
             activity = ActivitySource.StartActivity(name: spanName, kind: kind, parentContext: Activity.Current.Context, tags: tags, links: null,  now);
         else
@@ -517,46 +552,53 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="instrumentationOptions"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     /// <returns>A new span named channel publish</returns>
     public Activity? CreateProducerSpan(
-        Publication publication, 
-        Message? message, 
+        Publication publication,
+        Message? message,
         Activity? parentActivity,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
     )
     {
         var spanName = $"{publication.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}";
-        
+
         var kind = ActivityKind.Producer;
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+        var tags = GetNewTagsCollection(instrumentationOptions);
 
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
+        {
             //OTel specification attributes
-            { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
-            
+            tags.Add(BrighterSemanticConventions.MessagingOperationType,
+                CommandProcessorSpanOperation.Publish.ToSpanName());
+
             //cloud events attributes
-            { BrighterSemanticConventions.CeSource, publication.Source },
-            { BrighterSemanticConventions.CeVersion, "1.0" },
-            { BrighterSemanticConventions.CeSubject, publication.Subject },
-            { BrighterSemanticConventions.CeType, publication.Type }
-        };
+            tags.Add(BrighterSemanticConventions.CeSource, publication.Source);
+            tags.Add(BrighterSemanticConventions.CeVersion, "1.0");
+            tags.Add(BrighterSemanticConventions.CeSubject, publication.Subject);
+            tags.Add(BrighterSemanticConventions.CeType, publication.Type);
+        }
 
         if (message is not null)
         {
-            //OTel specification attributes
-            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
-            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
-            tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
-            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
-            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
-            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
-            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options ));
-            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value); 
-            
-            //cloud events attributes
-            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+            if(instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
+            {
+                //OTel specification attributes
+                tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+                tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+                tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
+                tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId,
+                    message.Header.PartitionKey.Value);
+                tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+                tags.Add(BrighterSemanticConventions.MessageHeaders,
+                    JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+                tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
+
+                //cloud events attributes
+                tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+            }
+            if(instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
+                tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
         }
 
         var activity = ActivitySource.StartActivity(
@@ -565,12 +607,12 @@ public class BrighterTracer : IAmABrighterTracer
             parentId: parentId,
             tags: tags,
             startTime: now);
-        
+
         Propogate(parentActivity, activity);
-        
+
         Activity.Current = activity;
 
-        return activity; 
+        return activity;
     }
 
     /// <summary>
@@ -630,18 +672,20 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="span">The <see cref="Activity"/> to raise an event for</param>
     /// <param name="handlerName">The name of the handler</param>
     /// <param name="isAsync">Is the handler async?</param>
+    /// <param name="options"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     /// <param name="isSink">Is this the last handler in the chain?</param>
-    public static void WriteHandlerEvent(Activity? span, string handlerName, bool isAsync, bool isSink = false)
+    public static void WriteHandlerEvent(Activity? span, string handlerName, bool isAsync,
+        InstrumentationOptions options, bool isSink = false)
     {
         if (span == null) return;
-        
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.HandlerName, handlerName },
-            { BrighterSemanticConventions.HandlerType, isAsync ? "async" : "sync" },
-            { BrighterSemanticConventions.IsSink, isSink }
-        };
 
+        var tags = GetNewTagsCollection(options);
+        if (options.HasFlag(InstrumentationOptions.Brighter))
+        {
+            tags.Add(BrighterSemanticConventions.HandlerName, handlerName);
+            tags.Add(BrighterSemanticConventions.HandlerType, isAsync ? "async" : "sync");
+            tags.Add(BrighterSemanticConventions.IsSink, isSink);
+        }
         span.AddEvent(new ActivityEvent(handlerName, DateTimeOffset.UtcNow, tags));
     }
 
@@ -655,6 +699,7 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="span">The <see cref="Activity"/> to add the event to</param>
     /// <param name="mapperName">The name of this mapper</param>
     /// <param name="isAsync">Is this an async pipeline?</param>
+    /// <param name="options"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     /// <param name="isSink">Is this the mapper, true, or a transform, false?</param>
     public static void WriteMapperEvent(
         Message message, 
@@ -662,22 +707,29 @@ public class BrighterTracer : IAmABrighterTracer
         Activity? span, 
         string mapperName,
         bool isAsync,
+        InstrumentationOptions options,
         bool isSink = false)
     {
         if (span == null) return;
         
-        var tags = new ActivityTagsCollection
+        var tags = GetNewTagsCollection(options);
+        
+        if (options.HasFlag(InstrumentationOptions.Messaging))
         {
-            { BrighterSemanticConventions.MapperName, mapperName },
-            { BrighterSemanticConventions.MapperType, isAsync ? "async" : "sync" },
-            { BrighterSemanticConventions.IsSink, isSink },
-            { BrighterSemanticConventions.MessageId, message.Id.Value },
-            { BrighterSemanticConventions.MessagingDestination, publication.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) }
+            tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
         };
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        if (options.HasFlag(InstrumentationOptions.Brighter))
+        {
+            tags.Add(BrighterSemanticConventions.MapperName, mapperName);
+            tags.Add(BrighterSemanticConventions.MapperType, isAsync ? "async" : "sync");
+            tags.Add(BrighterSemanticConventions.IsSink, isSink);
+        }
 
         span.AddEvent(new ActivityEvent(mapperName, DateTimeOffset.UtcNow, tags));
     }
@@ -706,18 +758,24 @@ public class BrighterTracer : IAmABrighterTracer
         
         var outBoxType = isAsync ? "async" : "sync";
         
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction },
-            { BrighterSemanticConventions.OutboxType, outBoxType },
-            { BrighterSemanticConventions.MessageId, message.Id.Value },
-            { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
+        var tags = GetNewTagsCollection(instrumentationOptions);
+            
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.Brighter))
+        {   
+            tags.Add(BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction);
+            tags.Add(BrighterSemanticConventions.OutboxType, outBoxType);
         };
+        if(instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header));
+        }
 
         span.AddEvent(new ActivityEvent(operation.ToSpanName(), DateTimeOffset.UtcNow, tags));
  
@@ -756,29 +814,37 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="span">The owning <see cref="Activity"/> to which we will write the event; nothing written if null</param>
     /// <param name="messagingSystem">Which <see cref="MessagingSystem"/> is the producer</param>
     /// <param name="message">The <see cref="Message"/> being produced</param>
-    public static void WriteProducerEvent(Activity? span, MessagingSystem messagingSystem, Message message)
+    /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
+    public static void WriteProducerEvent(Activity? span, MessagingSystem messagingSystem, Message message,InstrumentationOptions instrumentationOptions)
     {
         if (span == null) return;
-        
-        var tags = new ActivityTagsCollection
+
+        var tags = GetNewTagsCollection(instrumentationOptions);
+
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
         {
-            { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
-            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value },
-            { BrighterSemanticConventions.MessageId, message.Id.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
-            { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value },
-            
-            { BrighterSemanticConventions.CeMessageId, message.Id.Value },
-            { BrighterSemanticConventions.CeSource, message.Header.Source },
-            { BrighterSemanticConventions.CeVersion, "1.0"},
-            { BrighterSemanticConventions.CeSubject, message.Header.Subject },
-            { BrighterSemanticConventions.CeType, message.Header.Type }
-        };
+            tags.Add(BrighterSemanticConventions.MessagingOperationType,
+                CommandProcessorSpanOperation.Publish.ToSpanName());
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+            tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.MessageHeaders,
+                JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
+        }
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.CeSource, message.Header.Source);
+            tags.Add(BrighterSemanticConventions.CeVersion, "1.0");
+            tags.Add(BrighterSemanticConventions.CeSubject, message.Header.Subject);
+            tags.Add(BrighterSemanticConventions.CeType, message.Header.Type);
+        }
 
         span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}", DateTimeOffset.UtcNow, tags));
 
@@ -810,5 +876,15 @@ public class BrighterTracer : IAmABrighterTracer
             foreach (var baggageItem in parentActivity!.Baggage)
                 activity.SetBaggage(baggageItem.Key, baggageItem.Value);
         }
+    }
+
+    private static ActivityTagsCollection GetNewTagsCollection(InstrumentationOptions instrumentationOptions, string domain =BrighterSemanticConventions.MessagingInstrumentationDomain)
+    {
+        var tags = new ActivityTagsCollection();
+        
+        if(instrumentationOptions != InstrumentationOptions.None)
+            tags.Add(BrighterSemanticConventions.InstrumentationDomain, domain);
+        
+        return tags;
     }
 }

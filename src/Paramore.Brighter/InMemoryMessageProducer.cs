@@ -39,7 +39,8 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
     /// <param name="timeProvider"></param>
-    public sealed class InMemoryMessageProducer(IAmABus bus, TimeProvider timeProvider)
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    public sealed class InMemoryMessageProducer(IAmABus bus, TimeProvider timeProvider, InstrumentationOptions instrumentationOptions)
         : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         private ITimer? _requeueTimer;
@@ -92,7 +93,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, instrumentationOptions);
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
@@ -116,7 +117,7 @@ namespace Paramore.Brighter
             var msgs = messages as Message[] ?? messages.ToArray();
             foreach (var msg in msgs)
             {
-                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg);
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg, instrumentationOptions);
                 bus.Enqueue(msg);
                 OnMessagePublished?.Invoke(true, msg.Id);
                 yield return [msg.Id];
@@ -129,7 +130,7 @@ namespace Paramore.Brighter
         /// <param name="message">The message to send</param>
         public void Send(Message message)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, instrumentationOptions);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
         }

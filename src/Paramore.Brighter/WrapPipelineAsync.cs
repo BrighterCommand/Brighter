@@ -44,24 +44,28 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<WrapPipelineAsync<TRequest>>();
         
+        private readonly InstrumentationOptions _instrumentationOptions;
+
         /// <summary>
         /// Constructs an instance of a wrap pipeline
         /// </summary>
         /// <param name="messageMapperAsync">The message mapper that forms the pipeline source</param>
         /// <param name="messageTransformerFactoryAsync">Factory for transforms, required to release</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         public WrapPipelineAsync(
             IAmAMessageMapperAsync<TRequest> messageMapperAsync, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync, 
-            IEnumerable<IAmAMessageTransformAsync> transforms
+            IEnumerable<IAmAMessageTransformAsync> transforms,
+            InstrumentationOptions instrumentationOptions
             ) : base(messageMapperAsync, transforms)
         {
+            _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactoryAsync != null)
             {
                 InstanceScope = new TransformLifetimeScopeAsync(messageTransformerFactoryAsync);
                 Transforms.Each(transform => InstanceScope.Add(transform));
             }
-
         }
 
         /// <summary>        
@@ -98,13 +102,13 @@ namespace Paramore.Brighter
                 Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic);
             }
             
-            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, true, true);
+            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, true, _instrumentationOptions, true);
             
             await Transforms.EachAsync(async transform =>
             {
                 transform.Context = requestContext;
                 message = await transform.WrapAsync(message, publication, cancellationToken);
-                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, true);
+                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, true, _instrumentationOptions);
             }); 
             
             if (!string.IsNullOrEmpty(publication.ReplyTo))

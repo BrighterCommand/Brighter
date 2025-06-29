@@ -163,7 +163,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider, InstrumentationOptions.All)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -216,7 +216,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, InstrumentationOptions.All)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -268,7 +268,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, InstrumentationOptions.All)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -324,7 +324,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, InstrumentationOptions.All)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
