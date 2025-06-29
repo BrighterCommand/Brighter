@@ -43,47 +43,7 @@ public class CommandProcessorClearObservabilityTests
         
         Brighter.CommandProcessor.ClearServiceBus();
         
-        var registry = new SubscriberRegistry();
-
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .Retry();
-        
-        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
-
         _timeProvider  = new FakeTimeProvider();
-        var tracer = new BrighterTracer(_timeProvider);
-        InMemoryOutbox outbox = new(_timeProvider){Tracer = tracer};
-        
-        var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-        
-        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            policyRegistry, 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
-            maxOutStandingMessages: -1
-        );
-        
-        _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
-            new InMemoryRequestContextFactory(),
-            policyRegistry, 
-            bus,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
     }
     
     [Theory]
@@ -290,6 +250,7 @@ public class CommandProcessorClearObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             outbox,
             maxOutStandingMessages: -1,
             instrumentationOptions: instrumentationOptions

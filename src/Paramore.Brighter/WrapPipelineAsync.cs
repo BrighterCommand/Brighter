@@ -102,7 +102,7 @@ namespace Paramore.Brighter
                 Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic);
             }
             
-            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, true, true);
+            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, true, _instrumentationOptions, true);
             
             await Transforms.EachAsync(async transform =>
             {
