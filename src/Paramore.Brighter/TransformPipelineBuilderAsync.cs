@@ -69,7 +69,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="mapperRegistryAsync">The async message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactoryAsync">The async transform factory, can be null</param>
-        /// <param name="instrumentationOptions"></param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
         public TransformPipelineBuilderAsync(
             IAmAMessageMapperRegistryAsync mapperRegistryAsync,

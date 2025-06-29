@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
@@ -49,6 +48,7 @@ namespace Paramore.Brighter
     /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     public abstract partial class RequestHandler<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandler<TRequest>>();

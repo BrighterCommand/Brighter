@@ -68,7 +68,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="mapperRegistry">The message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactory">The transform factory, can be null</param>
-        /// <param name="instrumentationOptions"></param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
         public TransformPipelineBuilder(
             IAmAMessageMapperRegistry mapperRegistry, 

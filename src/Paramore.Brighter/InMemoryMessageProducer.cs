@@ -39,6 +39,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
     /// <param name="timeProvider"></param>
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     public sealed class InMemoryMessageProducer(IAmABus bus, TimeProvider timeProvider, InstrumentationOptions instrumentationOptions)
         : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {

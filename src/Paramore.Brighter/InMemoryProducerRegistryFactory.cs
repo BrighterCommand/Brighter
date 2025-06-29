@@ -34,6 +34,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="InternalBus"/> typically used for testing</param>
     /// <param name="publications">The list of topics that we want to publish to</param>
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     public class InMemoryProducerRegistryFactory(InternalBus bus, IEnumerable<Publication> publications, InstrumentationOptions instrumentationOptions)
         : IAmAProducerRegistryFactory
     {

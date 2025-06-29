@@ -50,6 +50,7 @@ namespace Paramore.Brighter
     /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandlerAsync<TRequest>>();

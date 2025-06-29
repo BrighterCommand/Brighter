@@ -48,7 +48,7 @@ namespace Paramore.Brighter
         /// <param name="messageMapper">The message mapper that forms the pipeline source</param>
         /// <param name="messageTransformerFactory">Factory for transforms, required to release</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
-        /// <param name="instrumentationOptions"></param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
             IAmAMessageTransformerFactory? messageTransformerFactory, 

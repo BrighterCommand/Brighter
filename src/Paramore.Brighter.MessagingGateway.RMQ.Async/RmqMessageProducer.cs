@@ -80,7 +80,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
     /// </summary>
     /// <param name="connection">The subscription information needed to talk to RMQ</param>
-    /// <param name="instrumentationOptions"></param>
+    /// <param name="instrumentationOptions"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     /// Make Channels = Create
     public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create })
