@@ -28,15 +28,15 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
     public GcpPullMessageConsumer(
         GcpMessagingGatewayConnection connection,
         Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-        int batchSize,
-        bool hasDql,
-        TimeProvider timeProvider)
+        int batchSize = 1,
+        bool hasDql = false,
+        TimeProvider? timeProvider = null)
     {
         _connection = connection;
         _subscriptionName = subscriptionName;
         _batchSize = batchSize;
         _hasDql = hasDql;
-        _timeProvider = timeProvider;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();

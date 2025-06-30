@@ -22,5 +22,8 @@ public class GcpPublication : Publication
 /// </summary>
 public class GcpPublication<T> : GcpPublication
 {
-    
+    public GcpPublication()
+    {
+        RequestType = typeof(T);
+    }
 }

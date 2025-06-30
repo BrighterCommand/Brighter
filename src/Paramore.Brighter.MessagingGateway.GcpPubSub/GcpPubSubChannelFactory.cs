@@ -1,5 +1,6 @@
 ﻿using Google.Api.Gax.Grpc;
 using Google.Cloud.PubSub.V1;
+using Grpc.Core;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -59,36 +60,93 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
     public async Task DeleteTopicAsync(GcpSubscription subscription, CancellationToken cancellation = default)
     {
         var publisher = await Connection.CreatePublisherServiceApiClientAsync();
-        await publisher.DeleteTopicAsync(new DeleteTopicRequest
+        
+        try
         {
-            TopicAsTopicName = GetTopicName(subscription.ProjectId, subscription.RoutingKey.Value)
-        }, CallSettings.FromCancellationToken(cancellation));
+            await publisher.DeleteTopicAsync(new DeleteTopicRequest
+            {
+                TopicAsTopicName = GetTopicName(subscription.ProjectId, subscription.RoutingKey)
+            }, CallSettings.FromCancellationToken(cancellation));
+
+            if (subscription.DeadLetter != null)
+            {
+                await publisher.DeleteTopicAsync(new DeleteTopicRequest
+                {
+                    TopicAsTopicName = GetTopicName(subscription.ProjectId, subscription.DeadLetter.TopicName)
+                }, CallSettings.FromCancellationToken(cancellation));
+            }
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+        }
     }
-    
+
     public void DeleteTopic(GcpSubscription subscription)
     {
         var publisher = Connection.CreatePublisherServiceApiClient();
-        publisher.DeleteTopic(new DeleteTopicRequest
+        try
         {
-            TopicAsTopicName = GetTopicName(subscription.ProjectId, subscription.RoutingKey.Value)
-        });
+            publisher.DeleteTopic(new DeleteTopicRequest
+            {
+                TopicAsTopicName = GetTopicName(subscription.ProjectId, subscription.RoutingKey.Value)
+            });
+
+            if (subscription.DeadLetter != null)
+            {
+                publisher.DeleteTopic(new DeleteTopicRequest
+                {
+                    TopicAsTopicName = GetTopicName(subscription.ProjectId, subscription.DeadLetter.TopicName)
+                });
+            }
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+        }
     }
     
     public async Task DeleteSubscriptionAsync(GcpSubscription subscription, CancellationToken cancellation = default)
     {
         var publisher = await Connection.CreateSubscriberServiceApiClientAsync();
-        await publisher.DeleteSubscriptionAsync(new DeleteSubscriptionRequest() 
+        try
         {
-            SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.ChannelName.Value)
-        }, CallSettings.FromCancellationToken(cancellation));
+            await publisher.DeleteSubscriptionAsync(new DeleteSubscriptionRequest
+            {
+                SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.ChannelName.Value)
+            }, CallSettings.FromCancellationToken(cancellation));
+
+            if (subscription.DeadLetter != null && subscription.DeadLetter.SubscriptionName != null)
+            {
+                await publisher.DeleteSubscriptionAsync(new DeleteSubscriptionRequest() 
+                {
+                    SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.DeadLetter.SubscriptionName.Value)
+                }, CallSettings.FromCancellationToken(cancellation));
+            }
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+        }
     }
-    
+
     public void DeleteSubscription(GcpSubscription subscription)
     {
         var publisher = Connection.CreateSubscriberServiceApiClient();
-        publisher.DeleteSubscription(new DeleteSubscriptionRequest
+        try
         {
-            SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.ChannelName.Value)
-        });
+            publisher.DeleteSubscription(new DeleteSubscriptionRequest
+            {
+                SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.ChannelName.Value)
+            });
+            
+            if (subscription.DeadLetter != null && subscription.DeadLetter.SubscriptionName != null)
+            {
+                publisher.DeleteSubscription(new DeleteSubscriptionRequest() 
+                {
+                    SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.DeadLetter.SubscriptionName.Value)
+                });
+            }
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+        }
     }
 }

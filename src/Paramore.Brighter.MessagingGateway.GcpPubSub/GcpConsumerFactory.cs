@@ -49,7 +49,7 @@ public class GcpConsumerFactory : GcpPubSubMessageGateway, IAmAMessageConsumerFa
             Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(
                 subscription.ProjectId ?? _connection.ProjectId, subscription.ChannelName.Value),
             subscription.BufferSize,
-            subscription.DeadLetterTopic != null,
+            subscription.DeadLetter != null,
             subscription.TimeProvider);
     }
 }

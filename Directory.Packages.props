@@ -33,7 +33,7 @@
     <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="7.1.0" />
     <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="7.1.0" />
     <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="7.1.0" />
-    <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.21.0" />
+    <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.26.0" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="2.4.1" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.20" />
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />

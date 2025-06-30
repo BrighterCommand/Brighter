@@ -103,8 +103,9 @@ public class GcpSubscription : Subscription
     /// Messages that fail delivery a specified number of times (configured separately on the subscription) will
     /// be sent here. Requires appropriate permissions.
     /// </remarks>
-    public string? DeadLetterTopic { get; }
-
+    public DeadLetterPolicy? DeadLetter { get; }
+    
+    
     /// <summary>
     /// Gets or sets the maximum delay between message redelivery attempts when using Pub/Sub's default retry policy (exponential backoff).
     /// </summary>
@@ -156,7 +157,7 @@ public class GcpSubscription : Subscription
     /// <param name="expirationPolicy"></param>
     /// <param name="maxRequeueDelay"></param>
     /// <param name="timeProvider"></param>
-    /// <param name="deadLetterTopic"></param>
+    /// <param name="deadLetter"></param>
     /// <remarks>
     /// This constructor initializes the standard Brighter subscription properties.
     /// Google Cloud Pub/Sub specific settings (like <see cref="ProjectId"/>, <see cref="AckDeadlineSeconds"/>, <see cref="EnableMessageOrdering"/>, etc.)
@@ -173,7 +174,7 @@ public class GcpSubscription : Subscription
         string? projectId = null, TopicAttributes? topicAttributes = null, int ackDeadlineSeconds = 30,
         bool retainAckedMessages = false, TimeSpan? messageRetentionDuration = null, MapField<string, string>? labels = null, 
         bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
-        ExpirationPolicy? expirationPolicy = null, string? deadLetterTopic = null, TimeSpan? maxRequeueDelay = null,
+        ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null, TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null) 
         : base(dataType, subscriptionName, channelName, routingKey, bufferSize,
         noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
@@ -182,7 +183,7 @@ public class GcpSubscription : Subscription
         Labels = labels ?? new MapField<string, string>();
         MaxRequeueDelay = maxRequeueDelay ?? TimeSpan.FromSeconds(600);;
         TimeProvider = timeProvider ?? TimeProvider.System;
-        DeadLetterTopic = deadLetterTopic;
+        DeadLetter = deadLetter;
         ExpirationPolicy = expirationPolicy;
         Storage = storage;
         EnableMessageOrdering = enableMessageOrdering;
@@ -234,7 +235,7 @@ public class GcpSubscription<T> : GcpSubscription
     /// <param name="enableExactlyOnceDelivery"></param>
     /// <param name="storage"></param>
     /// <param name="expirationPolicy"></param>
-    /// <param name="deadLetterTopic"></param>
+    /// <param name="deadLetter"></param>
     /// <param name="maxRequeueDelay"></param>
     /// <param name="timeProvider"></param>
     /// <remarks>
@@ -253,12 +254,13 @@ public class GcpSubscription<T> : GcpSubscription
         string? projectId = null, TopicAttributes? topicAttributes = null, int ackDeadlineSeconds = 30,
         bool retainAckedMessages = false, TimeSpan? messageRetentionDuration = null, MapField<string, string>? labels = null, 
         bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
-        ExpirationPolicy? expirationPolicy = null, string? deadLetterTopic = null, TimeSpan? maxRequeueDelay = null,
+        ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null, TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null)
         : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
-            channelFactory,
-            makeChannels, emptyChannelDelay, channelFailureDelay)
+            channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, projectId, topicAttributes,
+            ackDeadlineSeconds, retainAckedMessages, messageRetentionDuration, labels, enableMessageOrdering, 
+            enableExactlyOnceDelivery, storage, expirationPolicy, deadLetter, maxRequeueDelay, timeProvider)
     {
     }
 }

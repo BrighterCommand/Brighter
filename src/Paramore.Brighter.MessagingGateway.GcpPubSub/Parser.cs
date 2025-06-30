@@ -217,9 +217,7 @@ internal static class Parser
         headers.Add(HeaderNames.SpecVersion, message.Header.SpecVersion);
         headers.Add(HeaderNames.Source, message.Header.Source.ToString());
         headers.Add(HeaderNames.Type, message.Header.Type);
-        headers.Add(HeaderNames.Timestamp,
-            message.Header.TimeStamp.DateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz",
-                DateTimeFormatInfo.InvariantInfo));
+        headers.Add(HeaderNames.Timestamp, message.Header.TimeStamp.ToRfc3339());
 
         if (message.Header.ContentType != null )
         {
