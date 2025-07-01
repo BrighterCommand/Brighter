@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Cloud.PubSub.V1" />
+    <PackageReference Include="Google.Cloud.ResourceManager.V3" />
   </ItemGroup>
 
   <ItemGroup>

@@ -7,10 +7,10 @@ using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "GCP")]
-public class PubSubBufferedConsumerTestsAsync : IAsyncDisposable
+public class PubSubBufferedConsumerTestsAsync : IDisposable
 {
     private readonly ContentType _contentType = new("text/plain");
     private readonly GcpMessageProducer _messageProducer;
@@ -37,7 +37,7 @@ public class PubSubBufferedConsumerTestsAsync : IAsyncDisposable
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             bufferSize: BufferSize,
-            messagePumpType: MessagePumpType.Proactor,
+            messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create
         )).GetAwaiter().GetResult();
 
@@ -51,7 +51,7 @@ public class PubSubBufferedConsumerTestsAsync : IAsyncDisposable
     }
 
     [Fact]
-    public async Task When_a_message_consumer_reads_multiple_messages_async()
+    public  void When_a_message_consumer_reads_multiple_messages()
     {
         var routingKey = new RoutingKey(_topicName);
 
@@ -80,10 +80,10 @@ public class PubSubBufferedConsumerTestsAsync : IAsyncDisposable
         );
 
         //send MESSAGE_COUNT messages
-        await _messageProducer.SendAsync(messageOne);
-        await _messageProducer.SendAsync(messageTwo);
-        await _messageProducer.SendAsync(messageThree);
-        await _messageProducer.SendAsync(messageFour);
+        _messageProducer.Send(messageOne);
+        _messageProducer.Send(messageTwo);
+        _messageProducer.Send(messageThree);
+        _messageProducer.Send(messageFour);
 
         int iteration = 0;
         var messagesReceived = new List<Message>();
@@ -94,7 +94,7 @@ public class PubSubBufferedConsumerTestsAsync : IAsyncDisposable
             var outstandingMessageCount = MessageCount - messagesReceivedCount;
 
             //retrieve  messages
-            var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+            var messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
 
             Assert.True(messages.Length <= outstandingMessageCount);
 
@@ -105,22 +105,22 @@ public class PubSubBufferedConsumerTestsAsync : IAsyncDisposable
             foreach (var message in moreMessages)
             {
                 messagesReceived.Add(message);
-                await _consumer.AcknowledgeAsync(message);
+                _consumer.Acknowledge(message);
             }
 
             messagesReceivedCount = messagesReceived.Count;
 
-            await Task.Delay(1000);
+            Task.Delay(1000).GetAwaiter().GetResult();
 
         } while ((iteration <= 5) && (messagesReceivedCount < MessageCount));
 
         Assert.Equal(4, messagesReceivedCount);
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await _channelFactory.DeleteSubscriptionAsync(_subscription);
-        await _channelFactory.DeleteTopicAsync(_subscription);
-        await _messageProducer.DisposeAsync();
+        _channelFactory.DeleteSubscription(_subscription);
+        _channelFactory.DeleteTopic(_subscription);
+        _messageProducer.DisposeAsync().GetAwaiter().GetResult();
     }
 }

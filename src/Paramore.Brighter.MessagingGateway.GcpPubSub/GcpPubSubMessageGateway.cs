@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using Google.Api.Gax.ResourceNames;
+using Google.Cloud.Iam.V1;
 using Google.Cloud.PubSub.V1;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
@@ -12,7 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
 {
     private static readonly ConcurrentDictionary<string, bool> s_topicOrSubscriptionAlreadyCreatedUpdate = new();
-        
+
     /// <summary>
     /// The <see cref="GcpMessagingGatewayConnection"/>
     /// </summary>
@@ -30,7 +32,7 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
         {
             return;
         }
-        
+
         var topicName = GetTopicName(publication.ProjectId, publication.Name);
         if (!s_topicOrSubscriptionAlreadyCreatedUpdate.TryAdd(topicName.ToString(), true))
         {
@@ -46,9 +48,10 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
                 return;
             }
 
-            throw new InvalidOperationException($"Topic validation error: could not find topic {topicName}. Did you want Brighter to create infrastructure?");
+            throw new InvalidOperationException(
+                $"Topic validation error: could not find topic {topicName}. Did you want Brighter to create infrastructure?");
         }
-        
+
         if (topic != null)
         {
             await UpdateTopicAsync(publisher, topic, publication);
@@ -70,12 +73,12 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
             TopicAttributes publication)
         {
             var mask = new FieldMask();
-            
+
             mask.Paths.Add("labels");
             mask.Paths.Add("schema_settings");
             mask.Paths.Add("message_retention_duration");
             mask.Paths.Add("kms_key_name");
-            
+
             if (publication.StorePolicy != null)
             {
                 topic.MessageStoragePolicy = publication.StorePolicy;
@@ -142,10 +145,11 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
         }
     }
 
-    private static async Task<Google.Cloud.PubSub.V1.Topic?> GetGcpTopicExistAsync(PublisherServiceApiClient client, TopicName topicName)
+    private static async Task<Google.Cloud.PubSub.V1.Topic?> GetGcpTopicExistAsync(PublisherServiceApiClient client,
+        TopicName topicName)
     {
         try
-        { 
+        {
             return await client.GetTopicAsync(topicName);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
@@ -161,19 +165,10 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
             return;
         }
 
-        subscription.TopicAttributes ??= new TopicAttributes();
-        if (string.IsNullOrEmpty(subscription.TopicAttributes.Name))
-        {
-            subscription.TopicAttributes.Name = subscription.RoutingKey;
-        }
+        var projectId = subscription.ProjectId ?? Connection.ProjectId;
+        await EnsureTopicExistAsync(GetOrCreateTopicAttributes(subscription, projectId), subscription.MakeChannels);
 
-        await EnsureTopicExistAsync(subscription.TopicAttributes, subscription.MakeChannels);
-
-        if (!Google.Cloud.PubSub.V1.SubscriptionName.TryParse(subscription.ChannelName.Value, out var subscriptionName))
-        {
-            subscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.ChannelName.Value);
-        }
-        
+        var subscriptionName = ParseOrCreateSubscriptionName();
         if (!s_topicOrSubscriptionAlreadyCreatedUpdate.TryAdd(subscriptionName.ToString(), true))
         {
             return;
@@ -191,191 +186,51 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
             throw new InvalidOperationException("No subscription found");
         }
 
-
         if (subscription.DeadLetter != null)
         {
-            var topicAttribute = subscription.DeadLetter.TopicAttributes ??
-                                 new TopicAttributes { Name = subscription.DeadLetter.TopicName };
-            if (string.IsNullOrEmpty(topicAttribute.ProjectId))
-            {
-                topicAttribute.ProjectId = subscription.ProjectId;
-            }
-            
-            subscription.DeadLetter.TopicName = topicAttribute.Name;
-            
-            await EnsureTopicExistAsync(topicAttribute, OnMissingChannel.Create);
-            if (!ChannelName.IsNullOrEmpty(subscription.DeadLetter.SubscriptionName))
-            {
-                await EnsureSubscriptionExistsAsync(new GcpSubscription(subscription.DataType,
-                    new SubscriptionName($"dlq-{subscription.Name.Value}"),
-                    projectId: subscription.ProjectId,
-                    ackDeadlineSeconds: subscription.DeadLetter.AckDeadlineSeconds,
-                    makeChannels: OnMissingChannel.Create));
-            }
+            await EnsureSubscriptionExistsAsync(new GcpSubscription(subscription.DataType,
+                subscriptionName: new SubscriptionName($"dlq-{subscription.Name.Value}"),
+                channelName: subscription.DeadLetter.Subscription,
+                routingKey: subscription.DeadLetter.TopicName,
+                projectId: subscription.ProjectId,
+                ackDeadlineSeconds: subscription.DeadLetter.AckDeadlineSeconds,
+                makeChannels: OnMissingChannel.Create,
+                messagePumpType: MessagePumpType.Proactor));
+
+            await UpdateIAmRoleForDeadLetterAsync(projectId, subscription);
         }
 
         if (gcpSubscription != null)
         {
-            await UpdateSubscriptionAsync(client,
-                Connection.ProjectId,
-                gcpSubscription,
-                subscription);
+            await UpdateSubscriptionAsync(projectId, gcpSubscription, subscription);
         }
         else
         {
-            await CreateSubscriptionAsync(client,
-                Connection.ProjectId,
-                subscriptionName,
-                subscription);
+            await CreateSubscriptionAsync(projectId, subscriptionName, subscription);
         }
 
         return;
 
-        static async Task CreateSubscriptionAsync(SubscriberServiceApiClient client,
-            string projectId,
-            Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-            GcpSubscription subscription)
+        Google.Cloud.PubSub.V1.SubscriptionName ParseOrCreateSubscriptionName()
         {
-            await client.CreateSubscriptionAsync(CreateSubscription(projectId, subscriptionName, subscription));
+            if (Google.Cloud.PubSub.V1.SubscriptionName.TryParse(subscription.ChannelName, out var gcpSubName))
+            {
+                return gcpSubName;
+            }
+
+            return Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(projectId, subscription.ChannelName);
         }
 
-        static async Task UpdateSubscriptionAsync(SubscriberServiceApiClient client,
-            string projectId,
-            Google.Cloud.PubSub.V1.Subscription gcpSubscription,
-            GcpSubscription subscription)
+        static TopicAttributes GetOrCreateTopicAttributes(GcpSubscription subscription, string projectId)
         {
-            var request = new UpdateSubscriptionRequest
+            subscription.TopicAttributes ??= new TopicAttributes();
+            subscription.TopicAttributes.ProjectId ??= projectId;
+            if (string.IsNullOrEmpty(subscription.TopicAttributes.Name))
             {
-                Subscription =  gcpSubscription,
-                UpdateMask = new FieldMask()
-            };
-
-            request.UpdateMask.Paths.Add("ack_deadline_seconds");
-            request.UpdateMask.Paths.Add("retain_acked_messages");
-            request.UpdateMask.Paths.Add("enable_exactly_once_delivery");
-            request.UpdateMask.Paths.Add("message_retention_duration");
-            request.UpdateMask.Paths.Add("expiration_policy");
-            request.UpdateMask.Paths.Add("dead_letter_policy");
-            request.UpdateMask.Paths.Add("retry_policy");
-            request.UpdateMask.Paths.Add("labels");
-
-            gcpSubscription.AckDeadlineSeconds = subscription.AckDeadlineSeconds;
-            gcpSubscription.RetainAckedMessages = subscription.RetainAckedMessages;
-            gcpSubscription.EnableMessageOrdering = subscription.EnableMessageOrdering;
-            gcpSubscription.EnableExactlyOnceDelivery = subscription.EnableExactlyOnceDelivery;
-            gcpSubscription.State = Google.Cloud.PubSub.V1.Subscription.Types.State.Active;
-
-            if (subscription.MessageRetentionDuration != null)
-            {
-                gcpSubscription.MessageRetentionDuration =
-                    Duration.FromTimeSpan(subscription.MessageRetentionDuration.Value);
+                subscription.TopicAttributes.Name = subscription.RoutingKey;
             }
 
-            if (subscription.Storage != null)
-            { 
-                gcpSubscription.CloudStorageConfig = subscription.Storage;
-            }
-
-            if (subscription.ExpirationPolicy != null)
-            {
-                gcpSubscription.ExpirationPolicy = subscription.ExpirationPolicy;
-            }
-
-            if (subscription.DeadLetter != null)
-            {
-                if (!TopicName.TryParse(subscription.DeadLetter.TopicName, false, out var deadLetterTopic))
-                {
-                    deadLetterTopic = TopicName.FromProjectTopic(subscription.ProjectId ?? projectId, subscription.DeadLetter.TopicName);
-                }
-
-                gcpSubscription.DeadLetterPolicy = new Google.Cloud.PubSub.V1.DeadLetterPolicy
-                {
-                    MaxDeliveryAttempts = subscription.DeadLetter.MaxDeliveryAttempts,
-                    DeadLetterTopic = deadLetterTopic.ToString()
-                };
-            }
-
-            if (subscription.RequeueDelay != TimeSpan.Zero)
-            {
-                gcpSubscription.RetryPolicy = new RetryPolicy
-                {
-                    MinimumBackoff = Duration.FromTimeSpan(subscription.RequeueDelay),
-                    MaximumBackoff = Duration.FromTimeSpan(subscription.MaxRequeueDelay)
-                };
-            }
-
-            gcpSubscription.Labels["source"] = "brighter";
-            foreach (var label in subscription.TopicAttributes?.Labels ?? [])
-            {
-                gcpSubscription.Labels[label.Key] = label.Value;
-            }
-            
-            await client.UpdateSubscriptionAsync(request);
-        }
-
-        static Google.Cloud.PubSub.V1.Subscription CreateSubscription(string projectId,
-            Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-            GcpSubscription subscription)
-        {
-            var gpcSubscription = new Google.Cloud.PubSub.V1.Subscription
-            {
-                TopicAsTopicName = 
-                    TopicName.FromProjectTopic(subscription.TopicAttributes!.ProjectId ?? projectId,
-                        subscription.TopicAttributes.Name),
-                SubscriptionName = subscriptionName,
-                AckDeadlineSeconds = subscription.AckDeadlineSeconds,
-                RetainAckedMessages = subscription.RetainAckedMessages,
-                EnableMessageOrdering = subscription.EnableMessageOrdering,
-                EnableExactlyOnceDelivery = subscription.EnableExactlyOnceDelivery,
-                State = Google.Cloud.PubSub.V1.Subscription.Types.State.Active
-            };
-
-            if (subscription.MessageRetentionDuration != null)
-            {
-                gpcSubscription.MessageRetentionDuration =
-                    Duration.FromTimeSpan(subscription.MessageRetentionDuration.Value);
-            }
-
-            if (subscription.Storage != null)
-            {
-                gpcSubscription.CloudStorageConfig = subscription.Storage;
-            }
-
-            if (subscription.ExpirationPolicy != null)
-            {
-                gpcSubscription.ExpirationPolicy = subscription.ExpirationPolicy;
-            }
-
-            if (subscription.DeadLetter != null)
-            {
-                if (!TopicName.TryParse(subscription.DeadLetter.TopicName, false, out var deadLetterTopic))
-                {
-                    deadLetterTopic = TopicName.FromProjectTopic(subscription.ProjectId ?? projectId, subscription.DeadLetter.TopicName);
-                }
-
-                gpcSubscription.DeadLetterPolicy = new Google.Cloud.PubSub.V1.DeadLetterPolicy
-                {
-                    MaxDeliveryAttempts = subscription.DeadLetter.MaxDeliveryAttempts, 
-                    DeadLetterTopic = deadLetterTopic.ToString()
-                };
-            }
-
-            if (subscription.RequeueDelay != TimeSpan.Zero)
-            {
-                gpcSubscription.RetryPolicy = new RetryPolicy
-                {
-                    MinimumBackoff = Duration.FromTimeSpan(subscription.RequeueDelay),
-                    MaximumBackoff = Duration.FromTimeSpan(subscription.MaxRequeueDelay)
-                };
-            }
-
-            gpcSubscription.Labels.Add("source", "brighter");
-            foreach (var label in subscription.TopicAttributes.Labels)
-            {
-                gpcSubscription.Labels[label.Key] = label.Value;
-            }
-
-            return gpcSubscription;
+            return subscription.TopicAttributes;
         }
 
         static async Task<Google.Cloud.PubSub.V1.Subscription?> GetSubscriptionAsync(SubscriberServiceApiClient client,
@@ -391,10 +246,196 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
             }
         }
     }
-    
-    protected TopicName GetTopicName(string? projectId, string topicName) 
+
+    protected TopicName GetTopicName(string? projectId, string topicName)
         => TopicName.FromProjectTopic(projectId ?? Connection.ProjectId, topicName);
 
     protected Google.Cloud.PubSub.V1.SubscriptionName GetSubscriptionName(string? projectId, string subscriptionName)
-        => Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(projectId ?? Connection.ProjectId, subscriptionName);
+        => Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(projectId ?? Connection.ProjectId,
+            subscriptionName); 
+    
+    private static TopicName ParseOrCreateTopicName(string topicName, string projectId)
+    {
+        if (TopicName.TryParse(topicName, out var gcpTopicName))
+        {
+            return gcpTopicName;
+        }
+
+        return TopicName.FromProjectTopic(projectId, topicName);
+    }
+
+    private async Task CreateSubscriptionAsync(string projectId,
+        Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
+        GcpSubscription subscription)
+    {
+        var topicName = subscription.TopicAttributes!.Name;
+        var topicProjectId = subscription.TopicAttributes!.ProjectId ?? projectId;
+        var gpcSubscription = new Google.Cloud.PubSub.V1.Subscription
+        {
+            TopicAsTopicName = ParseOrCreateTopicName(topicName, topicProjectId),
+            SubscriptionName = subscriptionName,
+            AckDeadlineSeconds = subscription.AckDeadlineSeconds,
+            RetainAckedMessages = subscription.RetainAckedMessages,
+            EnableMessageOrdering = subscription.EnableMessageOrdering,
+            EnableExactlyOnceDelivery = subscription.EnableExactlyOnceDelivery,
+            State = Google.Cloud.PubSub.V1.Subscription.Types.State.Active
+        };
+
+        if (subscription.MessageRetentionDuration != null)
+        {
+            gpcSubscription.MessageRetentionDuration = Duration.FromTimeSpan(subscription.MessageRetentionDuration.Value);
+        }
+
+        if (subscription.Storage != null)
+        {
+            gpcSubscription.CloudStorageConfig = subscription.Storage;
+        }
+
+        if (subscription.ExpirationPolicy != null)
+        {
+            gpcSubscription.ExpirationPolicy = subscription.ExpirationPolicy;
+        }
+
+        if (subscription.DeadLetter != null)
+        {
+            gpcSubscription.DeadLetterPolicy = new Google.Cloud.PubSub.V1.DeadLetterPolicy
+            {
+                MaxDeliveryAttempts = subscription.DeadLetter.MaxDeliveryAttempts,
+                DeadLetterTopic = ParseOrCreateTopicName(subscription.DeadLetter.TopicName, projectId).ToString()
+            };
+        }
+
+        if (subscription.RequeueDelay != TimeSpan.Zero)
+        {
+            gpcSubscription.RetryPolicy = new RetryPolicy
+            {
+                MinimumBackoff = Duration.FromTimeSpan(subscription.RequeueDelay),
+                MaximumBackoff = Duration.FromTimeSpan(subscription.MaxRequeueDelay)
+            };
+        }
+
+        gpcSubscription.Labels.Add("source", "brighter");
+        foreach (var label in subscription.TopicAttributes.Labels)
+        {
+            gpcSubscription.Labels[label.Key] = label.Value;
+        }
+
+        var client = await Connection.CreateSubscriberServiceApiClientAsync();
+        await client.CreateSubscriptionAsync(gpcSubscription);
+    }
+    
+     private async Task UpdateSubscriptionAsync(string projectId,
+            Google.Cloud.PubSub.V1.Subscription gcpSubscription,
+            GcpSubscription subscription)
+     {
+         var request = new UpdateSubscriptionRequest
+         {
+             Subscription = gcpSubscription, UpdateMask = new FieldMask()
+         };
+
+         request.UpdateMask.Paths.Add("ack_deadline_seconds");
+         request.UpdateMask.Paths.Add("retain_acked_messages");
+         request.UpdateMask.Paths.Add("enable_exactly_once_delivery");
+         request.UpdateMask.Paths.Add("message_retention_duration");
+         request.UpdateMask.Paths.Add("expiration_policy");
+         request.UpdateMask.Paths.Add("dead_letter_policy");
+         request.UpdateMask.Paths.Add("retry_policy");
+         request.UpdateMask.Paths.Add("labels");
+
+         gcpSubscription.AckDeadlineSeconds = subscription.AckDeadlineSeconds;
+         gcpSubscription.RetainAckedMessages = subscription.RetainAckedMessages;
+         gcpSubscription.EnableMessageOrdering = subscription.EnableMessageOrdering;
+         gcpSubscription.EnableExactlyOnceDelivery = subscription.EnableExactlyOnceDelivery;
+         gcpSubscription.State = Google.Cloud.PubSub.V1.Subscription.Types.State.Active;
+
+         if (subscription.MessageRetentionDuration != null)
+         {
+             gcpSubscription.MessageRetentionDuration =
+                 Duration.FromTimeSpan(subscription.MessageRetentionDuration.Value);
+         }
+
+         if (subscription.Storage != null)
+         {
+             gcpSubscription.CloudStorageConfig = subscription.Storage;
+         }
+
+         if (subscription.ExpirationPolicy != null)
+         {
+             gcpSubscription.ExpirationPolicy = subscription.ExpirationPolicy;
+         }
+
+         if (subscription.DeadLetter != null)
+         {
+             gcpSubscription.DeadLetterPolicy = new Google.Cloud.PubSub.V1.DeadLetterPolicy
+             {
+                 MaxDeliveryAttempts = subscription.DeadLetter.MaxDeliveryAttempts,
+                 DeadLetterTopic = ParseOrCreateTopicName(subscription.DeadLetter.TopicName, projectId).ToString()
+             };
+         }
+
+         if (subscription.RequeueDelay != TimeSpan.Zero)
+         {
+             gcpSubscription.RetryPolicy = new RetryPolicy
+             {
+                 MinimumBackoff = Duration.FromTimeSpan(subscription.RequeueDelay),
+                 MaximumBackoff = Duration.FromTimeSpan(subscription.MaxRequeueDelay)
+             };
+         }
+
+         gcpSubscription.Labels["source"] = "brighter";
+         foreach (var label in subscription.TopicAttributes?.Labels ?? [])
+         {
+             gcpSubscription.Labels[label.Key] = label.Value;
+         }
+
+         var client = await Connection.CreateSubscriberServiceApiClientAsync();
+         await client.UpdateSubscriptionAsync(request);
+     }
+
+     private async Task UpdateIAmRoleForDeadLetterAsync(string projectId, GcpSubscription subscription)
+     {
+         var publishMember = subscription.DeadLetter!.PublisherMember;
+         var subscriberMember = subscription.DeadLetter.SubscriberMember;
+         if (string.IsNullOrEmpty(publishMember) || string.IsNullOrEmpty(subscriberMember))
+         {
+             var projectClient = await Connection.CreateProjectsClientAsync();
+             var project = await projectClient.GetProjectAsync(new ProjectName(projectId));
+             var projectNumber = project.Name.Split('/').Last();
+             publishMember ??= $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
+             subscriberMember ??= $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
+         }
+
+         var topicName = ParseOrCreateTopicName(subscription.DeadLetter.TopicName, projectId);
+         var publisher = await Connection.CreatePublisherServiceApiClientAsync();
+         var policy = await publisher.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest
+         {
+             ResourceAsResourceName = topicName,
+         });
+
+         var bindings = new List<Binding>();
+         const string publisherRole = "roles/pubsub.publisher";
+         if (!policy.Bindings.Any(x => x.Role == publisherRole && x.Members.Contains(publishMember)))
+         {
+             var binding = new Binding { Role = publisherRole };
+             binding.Members.Add(publishMember);
+             bindings.Add(binding);
+         }
+
+         const string subscriberRole = "roles/pubsub.subscriber";
+         if (!policy.Bindings.Any(x => x.Role == subscriberRole && x.Members.Contains(subscriberMember)))
+         {
+             var binding = new Binding { Role = publisherRole };
+             binding.Members.Add(subscriberMember);
+             bindings.Add(binding);
+         }
+
+         if (bindings.Count > 0)
+         {
+             policy.Bindings.AddRange(bindings);
+             await publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
+             {
+                 Policy = policy, ResourceAsResourceName = topicName
+             });
+         }
+     }
 }

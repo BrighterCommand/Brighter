@@ -1,5 +1,6 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Cloud.PubSub.V1;
+using Google.Cloud.ResourceManager.V3;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -28,6 +29,11 @@ public class GcpMessagingGatewayConnection
     /// </summary>
     public Action<SubscriberServiceApiClientBuilder>? SubscribeConfiguration { get; set; }
     
+    /// <summary>
+    /// The <see cref="ProjectsClientBuilder"/> configuration
+    /// </summary>
+    public Action<ProjectsClientBuilder>? ProjectsConfiguration { get; set; }
+    
     public PublisherServiceApiClient CreatePublisherServiceApiClient()
     {
         var builder = new PublisherServiceApiClientBuilder { Credential = Credential };
@@ -53,6 +59,14 @@ public class GcpMessagingGatewayConnection
     {
         var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
         SubscribeConfiguration?.Invoke(builder);
+        return await builder.BuildAsync();
+    }
+
+
+    public async Task<ProjectsClient> CreateProjectsClientAsync()
+    {
+        var  builder = new ProjectsClientBuilder { Credential = Credential };
+        ProjectsConfiguration?.Invoke(builder);
         return await builder.BuildAsync();
     }
 }

@@ -122,7 +122,11 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
         {
             var client = await _connection.CreateSubscriberServiceApiClientAsync();
             response = await client.PullAsync(
-                new PullRequest { SubscriptionAsSubscriptionName = _subscriptionName, MaxMessages = _batchSize },
+                new PullRequest
+                {
+                    SubscriptionAsSubscriptionName = _subscriptionName, 
+                    MaxMessages = _batchSize,
+                },
                 cancellationToken);
 
             if (response.ReceivedMessages.Count == 0)
@@ -161,7 +165,12 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
             Log.RequeueStart(s_logger, message.Id);
 
             // The requeue policy is defined by subscription, during its creation
-            await client.ModifyAckDeadlineAsync(_subscriptionName, [ackId], 0, cancellationToken);
+            await client.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest
+            {
+                SubscriptionAsSubscriptionName = _subscriptionName,
+                AckIds = { ackId },
+                AckDeadlineSeconds = 0
+            }, cancellationToken);
 
             Log.RequeueComplete(s_logger, message.Id);
             return true;

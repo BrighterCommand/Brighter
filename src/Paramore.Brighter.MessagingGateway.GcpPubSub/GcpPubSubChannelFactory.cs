@@ -114,11 +114,11 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
                 SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.ChannelName.Value)
             }, CallSettings.FromCancellationToken(cancellation));
 
-            if (subscription.DeadLetter != null && subscription.DeadLetter.SubscriptionName != null)
+            if (subscription.DeadLetter != null)
             {
                 await publisher.DeleteSubscriptionAsync(new DeleteSubscriptionRequest() 
                 {
-                    SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.DeadLetter.SubscriptionName.Value)
+                    SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.DeadLetter.Subscription.Value)
                 }, CallSettings.FromCancellationToken(cancellation));
             }
         }
@@ -137,11 +137,11 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
                 SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.ChannelName.Value)
             });
             
-            if (subscription.DeadLetter != null && subscription.DeadLetter.SubscriptionName != null)
+            if (subscription.DeadLetter != null)
             {
-                publisher.DeleteSubscription(new DeleteSubscriptionRequest() 
+                publisher.DeleteSubscription(new DeleteSubscriptionRequest
                 {
-                    SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.DeadLetter.SubscriptionName.Value)
+                    SubscriptionAsSubscriptionName = GetSubscriptionName(subscription.ProjectId, subscription.DeadLetter.Subscription.Value)
                 });
             }
         }

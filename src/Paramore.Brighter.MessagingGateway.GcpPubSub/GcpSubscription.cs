@@ -105,7 +105,6 @@ public class GcpSubscription : Subscription
     /// </remarks>
     public DeadLetterPolicy? DeadLetter { get; }
     
-    
     /// <summary>
     /// Gets or sets the maximum delay between message redelivery attempts when using Pub/Sub's default retry policy (exponential backoff).
     /// </summary>
