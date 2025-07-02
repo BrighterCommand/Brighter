@@ -24,4 +24,14 @@ public class GatewayFactory
             }
         };
     }
+
+    public static string GetProjectId()
+    {
+        return Environment.GetEnvironmentVariable("GCP_PROJECT_ID")!;
+    }
+    
+    public static ICredential GetCredential()
+    {
+        return GoogleCredential.GetApplicationDefault();
+    }
 }

@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.GcpPubSub\Paramore.Brighter.MessagingGateway.GcpPubSub.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Tranformers.Gcp\Paramore.Brighter.Tranformers.Gcp.csproj" />
   </ItemGroup>
 
 </Project>
