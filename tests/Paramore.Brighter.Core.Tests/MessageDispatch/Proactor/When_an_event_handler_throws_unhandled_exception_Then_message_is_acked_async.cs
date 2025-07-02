@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
@@ -39,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
-            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
+            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All)
                 .BuildWrapPipeline<MyEvent>()
                 .WrapAsync(new MyEvent(), new RequestContext(), new Publication{Topic = _routingKey})
                 .Result;

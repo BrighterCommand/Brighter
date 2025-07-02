@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
@@ -49,7 +48,8 @@ namespace Paramore.Brighter
     /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public abstract partial class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    public abstract partial class RequestHandler<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandler<TRequest>>();
 
@@ -105,7 +105,7 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, instrumentationOptions, isSink:_successor == null);
             }   
             
             if (_successor != null)
@@ -140,7 +140,7 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, instrumentationOptions, isSink:_successor == null);
             }   
             
             if (_successor != null)

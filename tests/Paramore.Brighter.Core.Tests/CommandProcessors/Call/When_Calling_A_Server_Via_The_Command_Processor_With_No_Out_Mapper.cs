@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var timeProvider = new FakeTimeProvider();
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { new RoutingKey("MyRequest"), new InMemoryMessageProducer(new InternalBus(), timeProvider) },
+                { new RoutingKey("MyRequest"), new InMemoryMessageProducer(new InternalBus(), timeProvider, InstrumentationOptions.All) },
             });
 
             var tracer = new BrighterTracer(timeProvider);

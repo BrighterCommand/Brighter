@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using FakeItEasy;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Observability;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
@@ -31,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
                     new []
                     {
                         new Publication{Topic = topic, RequestType = typeof(ConfigurationCommand)}
-                    }))
+                    }, InstrumentationOptions.All))
                 .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System));
 
             _controlBus = busReceiverBuilder.Build("tests");

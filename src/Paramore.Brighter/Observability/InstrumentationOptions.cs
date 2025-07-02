@@ -34,8 +34,13 @@ public enum InstrumentationOptions
 {
     None = 0,
     RequestInformation = 1,                                     //(.requestid, .requestids, .requesttype, .operation) => what is the request?
-    RequestBody = 2,                                            //(.requestbody) => what is the request body?
+    RequestBody = 2,                                            //(.requestbody, .body) => what is the request body?
     RequestContext = 4,                                         //(.requestcontext) => what is the request context?
-    All = RequestInformation | RequestBody | RequestContext     //(.requestid, .requestids, .requesttype, .operation, .requestbody, .requestcontext) => what is the whole request?
+    Messaging = 8,                                              //(messaging) => what are the messaging operations?
+    DatabaseInformation = 16,                                    //=> What is the database related context?
+    ClamCheck = 32,                                             //(claim_check) Information about the claim chek operation
+    Brighter = 64,                                              //Brighter Handler Instrumentation
+    All = RequestInformation | RequestBody | RequestContext | Messaging | DatabaseInformation | ClamCheck | Brighter
+    //(.requestid, .requestids, .requesttype, .operation, .requestbody, .requestcontext) => what is the whole request?
 }
 

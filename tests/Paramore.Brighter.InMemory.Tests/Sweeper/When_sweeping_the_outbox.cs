@@ -33,7 +33,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider)
+                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, InstrumentationOptions.All)
                     {
                         Publication =
                         {
@@ -111,7 +111,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider)
+                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, InstrumentationOptions.All)
                     {
                         Publication =
                         {
@@ -188,7 +188,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider)
+                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, InstrumentationOptions.All)
                     {
                         Publication =
                         {
@@ -274,7 +274,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider)
+                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, InstrumentationOptions.All)
                     {
                         Publication =
                         {

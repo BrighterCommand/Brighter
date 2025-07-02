@@ -60,7 +60,7 @@ public class AsyncCommandProcessorClearObservabilityTests
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-        _messageProducer = new InMemoryMessageProducer(_internalBus, timeProvider)
+        _messageProducer = new InMemoryMessageProducer(_internalBus, timeProvider, InstrumentationOptions.All)
         {
             Publication =
             {

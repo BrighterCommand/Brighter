@@ -40,18 +40,23 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<WrapPipeline<TRequest>>();
             
+        private readonly InstrumentationOptions _instrumentationOptions;
+
         /// <summary>
         /// Constructs an instance of a wrap pipeline
         /// </summary>
         /// <param name="messageMapper">The message mapper that forms the pipeline source</param>
         /// <param name="messageTransformerFactory">Factory for transforms, required to release</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
             IAmAMessageTransformerFactory? messageTransformerFactory, 
-            IEnumerable<IAmAMessageTransform> transforms
+            IEnumerable<IAmAMessageTransform> transforms,
+            InstrumentationOptions instrumentationOptions
             ) : base(messageMapper, transforms)
         {
+            _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactory != null)
             {
                 InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
@@ -90,13 +95,13 @@ namespace Paramore.Brighter
                 Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic);
             }
 
-            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, true);
+            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, _instrumentationOptions, true);
             
             Transforms.Each(transform =>
             {
                 transform.Context = requestContext;
                 message = transform.Wrap(message, publication);
-                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false);
+                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false, _instrumentationOptions);
             });
 
             if (!string.IsNullOrEmpty(publication.ReplyTo))
