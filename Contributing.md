@@ -11,7 +11,65 @@ Our code is organized as follows:
   - Within src, we use projects for modularity
     - We divide our projects by responsibility
       - Paramore.Brighter contains core functionality for our Command Processor and Command Dispatcher. It also contains core code allowing the framework to act as a message producer in an event driven architecture.
-      - Paramore.Brighter.ServiceActivator contains core functionality for our Message Pump which allows us to consume messages in an event driven architecture.
+      - Paramore.Brighter.Archive.Azure contains an archiver implementation for Azure, which archives Outbox messages to Blob storage.
+      - Paramore.Brighter.Dapper support for using Dapper with Brighter.
+      - Paramore.Brighter.DynamoDb support for using DynamoDb with Brighter.
+      - Paramore.Brighter.Extensions.DependencyInjection provides extensions for working with .NET's ServiceCollection.
+      - Paramore.Brighter.Extensions.Diagnostics extensions for adding Brighter's OpenTelemetry support into an application.
+      - Paramore.Brighter.Inbox.DynamoDB an implementation of Brighter's Inbox, backed by DynamoDb.
+      - Paramore.Brighter.Inbox.MongoDb an implementation of Brighter's Inbox, backed by MongoDb.
+      - Paramore.Brighter.Inbox.MsSql an implementation of Brighter's Inbox, backed by MSSQL.
+      - Paramore.Brighter.Inbox.MySql an implementation of Brighter's Inbox, backed by MySQL.
+      - Paramore.Brighter.Inbox.Postgres an implementation of Brighter's Inbox, backed by Postgres.
+      - Paramore.Brighter.Inbox.Sqlite an implementation of Brighter's Inbox, backed by Sqlite.
+      - Paramore.Brighter.Locking.Azure a locking provider using Azure Blob storage, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.DynamoDB a locking provider using DynamoDB allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.MongoDb a locking provider using MongoDb, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.MsSql a locking provider using MsSql, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.MySql a locking provider using MySql, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.PostgresSql a locking provider using Postgres, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.MessageScheduler.Aws a scheduler for delayed CommandProcessor operations, using Aws Scheduler to implement delays.
+      - Paramore.Brighter.MessageScheduler.Azure a scheduler for delayed CommandProcessor operations, using ASB Scheduler to implement delays.
+      - Paramore.Brighter.MessageScheduler.Hangfire a scheduler for delayed CommandProcessor operations, using Hangfire to implement delays.
+      - Paramore.Brighter.MessageScheduler.Quartz a scheduler for delayed CommandProcessor operations, using Quartz to implement delays.
+      - Paramore.Brighter.MessagingGateway.AWSSQS a messaging gateway that abstracts access to a broker, providing access to SNS & SQS.
+      - Paramore.Brighter.MessagingGateway.AzureServiceBus a messaging gateway that abstracts access to a broker, providing access to ASB.
+      - Paramore.Brighter.MessagingGateway.Kafka a messaging gateway that abstracts access to a broker, providing access to Kafka.
+      - Paramore.Brighter.MessagingGateway.MQTT a messaging gateway that abstracts access to a broker, providing access to MQTT.
+      - Paramore.Brighter.MessagingGateway.MsSql a messaging gateway that abstracts access to a broker, providing access to MSSQL used as a broker.
+      - Paramore.Brighter.MessagingGateway.Postgres a messaging gateway that abstracts access to a broker, providing access to Postgres used as a broker.
+      - Paramore.Brighter.MessagingGateway.Redis a messaging gateway that abstracts access to a broker, providing access to Redis used a broker.
+      - Paramore.Brighter.MessagingGateway.RMQ.Async a messaging gateway that abstracts access to a broker, providing access to RMQ used a broker. This uses RMQ client libraries of V7 or above, which are async-only.
+      - Paramore.Brighter.MessagingGateway.RMQ.Sync a messaging gateway that abstracts access to a broker, providing access to RMA used a broker. his uses RMQ client libraries of V6, which are sync-only.
+      - Paramore.Brighter.MongoDb support for using MongoDb with Brighter.
+      - Paramore.Brighter.MsSql support for using MSSQL with Brighter.
+      - Paramore.Brighter.MsSql.Azure support for using Azure MSSQL with Brighter.
+   	  - Paramore.Brighter.MsSql.Dapper support for using MSSQL via Dapper with Brighter.
+      - Paramore.Brighter.MsSql.EntityFrameworkCore support for using MSSQL via EF Core with Brighter.
+      - Paramore.Brighter.MySql support for using MySql with Brighter.
+      - Paramore.Brighter.MySql.Dapper support for using MySql via Dapper with Brighter.
+      - Paramore.Brighter.MySql.EntityFrameworkCore support for using MySql via EF Core with Brighter.
+      - Paramore.Brighter.Outbox.DynamoDB an implementation of Brighter's Outbox, backed by DynamoDb.
+      - Paramore.Brighter.Outbox.Hosting support for using HostedService to run an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Outbox.MongoDb an implementation of Brighter's Outbox, backed by MongoDb.
+      - Paramore.Brighter.Outbox.MsSql an implementation of Brighter's Outbox, backed by MSSQL.
+      - Paramore.Brighter.Outbox.MySql an implementation of Brighter's Outbox, backed by MySql.
+      - Paramore.Brighter.Outbox.PostgreSql an implementation of Brighter's Outbox, backed by PostgreSql.
+      - Paramore.Brighter.Outbox.Sqlite an implementation of Brighter's Outbox, backed by Sqlite.
+      - Paramore.Brighter.PostgreSql support for using Postgres with Brighter.
+      - Paramore.Brighter.PostgreSql.EntityFrameworkCore support for using Postgres via EF Core with Brighter.
+      - Paramore.Brighter.ServiceActivator.Control base library support for creating a control plane for dynamic configuration or Brighter.
+      - Paramore.Brighter.ServiceActivator.Control.Api HTTP API support for creating a control plane for dynamic configuration or Brighter.
+      - Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection provides extensions for working with .NET's ServiceCollection.
+      - Paramore.Brighter.ServiceActivator.Extensions.Diagnostics extensions for adding Brighter's Health Check support into an application.
+      - Paramore.Brighter.ServiceActivator.Extensions.Hosting support for running a Dispatcher as a background service. 
+      - Paramore.Brighter.Sqlite support for using Sqlite with Brighter.
+      - Paramore.Brighter.Sqlite.Dapper support for using Sqlite with Dapper for Brighter.
+      - Paramore.Brighter.Sqlite.EntityFrameworkCore support for using Sqlite with EF Core for Brighter.
+      - Paramore.Brighter.Tranformers.AWS support for using AWS with a Claim Check.
+      - Paramore.Brighter.Transformers.Azure support for using Azure with a Claim Check.
+      - Paramore.Brighter.Transformers.MongoGridFS support for using MongoGridFS with a Claim Check.
+
 
 ## Architecture Decision Records
 
@@ -27,7 +85,7 @@ Our code is organized as follows:
 
 - Use TDD where possible.
 - Write developer tests using xUnit.
-- Name test methods in the format: When_[condition]_should_[expected_behavior].
+- Name test methods in the format: When_[condition]_should_[expected_behavior]. Name test classes [behavior]Tests for the behavior being tested across all tests in the file, for example CommandProcessorPostBoxBulkClearAsyncTests.
 - Ensure all new features and bug fixes include appropriate test coverage.
 
 ### TDD Style
@@ -43,7 +101,9 @@ Our code is organized as follows:
   - Refactor: Improve the design of the code.
 - Where possible, avoid writing tests after.
   - This will not give you scope control - only writing the code required by tests.
+    - You should only write the code necessary for a test to pass; do not write speculative code.
   - It will not push you to focus on design of your classes for behavior.
+    - Pay attention to the usability of your class and method; it should be self-describing.
 - Tests should confirm the behavior of the SUT.
   - A test is a specification-first exploration of the behavior of the system.
     - A test provides an executable specification, of a given behavior.
@@ -64,6 +124,8 @@ Our code is organized as follows:
 - Do not expose more than is necessary from an assembly
   - An assembly is a module, it's surface area should be as narrow as possible.
   - Do not make export classes or methods from a module to test them; we only test exports from modules, not implementation details.
+  - By following the rules for only testing behaviors, you only need to write tests for the behaviors exposed from the module not its details.
+  - Private or Internal classes used in the implementation do not need tests - they are covered by the behavior that led to their creation.
 - Use fakes or mocks for I/O for testing core libraries such as Paramore.Brighter or Paramore.Brighter.ServiceActivator
   - Consider writing in-memory replacements for I/O, that could be used in a production system, over a fake or mock.
   - Look for existing classes that use the naming convention InMemory*
@@ -100,6 +162,19 @@ Our code is organized as follows:
   - As we support multiple schedulers, these should use their own assembly.
   - As we support multiple locking providers, these should use their own assembly.  
 - Default to a class per source file approach, unless one class is clearly only exists as the details of another.
+- Use Responsibility Driven Design
+  - Focus on the responsibilities that a class has.
+  - "Responsibility-driven design specifies object behavior before object structure and other implementation considerations are determined. We have found that it minimizes the rework required for major design changes."
+  - Maximize Abstraction
+    - Elide the distinction between data and behavior.
+    - Think of responsibilities for “knowing”, “doing”, and “deciding”
+  - Distribute Behavior
+    - Promote a delegated control architecture
+    - Make objects smart— give them behaviors, not just data
+  - Preserve Flexibility
+    - Design objects so interior details can be readily changed
+  - Objects have roles.
+    - Common roles are stereotypes: information holder, structurer, service provider, coordinator, controller, interfacer
 - Support optionality through interfaces.
   - If an interface describes a role that an implementor provides, use the naming convention IAmA* e.g. IAmAProducerRegistry.
   - Consider if a user might wish to override our implementation of a public class with theirs, for TDD, or extension.
@@ -110,14 +185,52 @@ Our code is organized as follows:
   - Where a primitive (string, int, bool, double, float etc.) could be replaced with a more expressive type, use a class, struct or record.
   - Only use int for numeric values that have no domain meaning; only use string for string values that have no domain meaning.
   - Where we need to serialize, or for interoperability, you may use primitive types as part of that serialization, instead of writing convertors, for simplicity.
-- Not all of our code follows these conventions.
-  - Some of our older code uses older conventions.
-  - Follow the boy scout rule, and fix these, as part of your work.
+- Principles
+  - Tidy is better than cluttered.
+  - Reveal intention; be explicit to support future readers.
+  - Prefer simplicity.
+  - Do not duplicate knowledge.
+  - Avoid having more than one level of indentation in a method.
+  - Do not add new types without necessity.
+  - There should be one-- and preferably only one --obvious way to do it.
+  - If the implementation is hard to explain, it's a bad idea.
+  - Keep methods small and focused on a single responsibility
+- Follow Beck's "Tidy First" approach by separating structural changes from behavioral changes
+  - Separate all changes into two distinct types:
+    1. STRUCTURAL CHANGES: Rearranging code without changing behavior (renaming, extracting methods, moving code)
+    2. BEHAVIORAL CHANGES: Adding or modifying actual functionality
+  - Never mix structural and behavioral changes in the same commit
+  - Always make structural changes first when both are needed
+  - Validate structural changes do not alter behavior by running tests before and after
+  - Not all of our code follows these conventions.
+    - Some of our older code uses older conventions.
+    - Follow the boy scout rule, and fix these, as part of your work.
 
 ## Documentation
 
-- Update or add XML comments for all exports from assemblies.
-  - To be clear, this means all public methods of public classes/structs/records/enums.
+- Update or add Documentation comments for all exports from assemblies.
+  - To be clear exports: means all public and protected methods of public classes/structs/records/enums.
+    - We do not add Documentation comments internal or private classes, or internal methods
+  - Documentation are indicated by `///`
+  - Documentation comments use XML
+  - Documentation comments show up in Intellisense for developers. Bear this in mind when writing comments, as they should be helpful to a developer using the API but not so verbose that a developer would not chose to read it when using intellisense. Use `<remarks>` for notes on implementation or more detailed instructions.
+  - They should also be helpful to a developer or LLM reading the code.
+  - We provide some guidance on specific elements:
+  - Use`<summary>` element to provide an overview of the purpose of the class or method. What behavior or state does it encapsulate? What would you use it for. Use `<paramref>` if you refer to parameters in the summary.
+  - Use the `<param>` tag to describe parameters to a constructor or method.
+    - Use `<see cref="">` to document the type of the parameter
+    - Indicate what the parameter is for, what effect setting it has and if it is optional. If it is optional describe any default value and its impact.
+    - The developer should be clear what values they need to provide for the parameter to control desired behavior.
+  - Use `<returns>` to indicate the `<see cref="">` of the return type, optionality, and what the value represents.
+  - Use `<typeparam>` to indicate the intent of a generic type parameter; document any constraints on the type.
+  - Use `<excepton>` to document any exceptions that the method call can throw.
+  - Use `<value>` to document a property. Like a `<summary>` it should indicate purpose. Like a `<param>` or `<return>` it should use `<see cref="">` to indicate type.
+  - Use `<remarks>` for advice to developers or LLMs working with the code directly. Include information on how the method is implemented where it is not obvious from the code or significant design decisions have been made. Consider what you would want to know if maintaining this method. Use `<see href="">` if you need to link to external documentation.  This can also be used for more detailed information than could be included in the `<summary>`.
+  - Prefer to use good variable and method names to express intent, over inline comments.
+    - Use the refactoring "Extract Method To Express Intent" to encapsulate code in a named method that explains intent, over using a comment.
+    - Do not add comments for what may be easily inferred from the code.
+    - In tests you may use //Arrange, //Act, //Assert.
+    - If code has a complex algorithm or non-obvious implementation, prefer to use `///<remarks>`
 - Document new features and changes in the Docs repository of the BrighterCommand organization.
 
 ## Dependency Management
@@ -126,12 +239,6 @@ Our code is organized as follows:
 - Align all Microsoft.Extensions._and System._ package versions.
 - Avoid mixing preview and stable package versions.
 - Enable CentralPackageTransitivePinningEnabled where possible.
-
-
-CloudEvents & Message Transformation
-
-- When wrapping messages as CloudEvents, ensure the data property is JSON if the original content type is JSON; otherwise, treat as plain text.
-- When unwrapping, restore the original content type and body.
 
 ## Making Changes
 
