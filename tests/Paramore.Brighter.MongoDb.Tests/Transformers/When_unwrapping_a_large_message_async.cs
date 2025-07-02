@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MongoDb.Tests.Helpers;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transformers.MongoGridFS;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
@@ -36,7 +37,7 @@ public class LargeMessagePayloadAsyncUnwrapTests
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

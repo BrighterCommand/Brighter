@@ -2,6 +2,7 @@
 using Azure.Storage.Blobs;
 using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transformers.Azure;
 using Paramore.Brighter.Transforms.Transformers;
 
@@ -44,7 +45,7 @@ public class LargeMessagePayloadAsyncWrapTests : IDisposable
         });
         
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
     }
     
     [Test]

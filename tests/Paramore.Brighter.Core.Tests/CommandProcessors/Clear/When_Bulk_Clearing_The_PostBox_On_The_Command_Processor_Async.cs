@@ -34,13 +34,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var routingKey = new RoutingKey("MyCommand");
 
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
             {
                 Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
             };
 
             var routingKeyTwo = new RoutingKey("MyCommand2");
-            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider)
+            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider, InstrumentationOptions.All)
             {
                 Publication = {Topic = routingKeyTwo, RequestType = typeof(MyCommand)}
             };

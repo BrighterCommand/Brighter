@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway;
@@ -25,8 +26,8 @@ public class CombinedProducerRegistryTests
             }
         };
 
-        var firstProducerFactory = new InMemoryMessageProducerFactory(bus, firstProducers);
-        var secondProducerFactory = new InMemoryMessageProducerFactory(bus, secondProducers);
+        var firstProducerFactory = new InMemoryMessageProducerFactory(bus, firstProducers, InstrumentationOptions.All);
+        var secondProducerFactory = new InMemoryMessageProducerFactory(bus, secondProducers, InstrumentationOptions.All);
 
         var combinedRegistryFactory = new CombinedProducerRegistryFactory(firstProducerFactory, secondProducerFactory);
         var producerRegistry = combinedRegistryFactory.Create();

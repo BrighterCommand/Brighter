@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -33,7 +34,8 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="InternalBus"/> typically used for testing</param>
     /// <param name="publications">The list of topics that we want to publish to</param>
-    public class InMemoryProducerRegistryFactory(InternalBus bus, IEnumerable<Publication> publications)
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    public class InMemoryProducerRegistryFactory(InternalBus bus, IEnumerable<Publication> publications, InstrumentationOptions instrumentationOptions)
         : IAmAProducerRegistryFactory
     {
         /// <summary>
@@ -42,7 +44,7 @@ namespace Paramore.Brighter
         /// <returns>An instance of <see cref="IAmAProducerRegistry"/></returns>
         public IAmAProducerRegistry Create()
         {
-            var producerFactory = new InMemoryMessageProducerFactory(bus, publications);
+            var producerFactory = new InMemoryMessageProducerFactory(bus, publications, instrumentationOptions);
             return new ProducerRegistry(producerFactory.Create());
         }
 
