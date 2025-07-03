@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
 /// <summary>
@@ -13,7 +11,15 @@ public static class HeaderNames
     /// <remarks>
     /// If not set, Brighter will set the message id
     /// </remarks>
-    public const string Keys = "Keys";
+    public const string Keys = "Brighter-RocketMQ-Keys";
+    
+    /// <summary>
+    /// The message tag 
+    /// </summary>
+    /// <remarks>
+    /// If not set, Brighter will set the tag in the <see cref="RocketPublication.Tag"/>
+    /// </remarks>
+    public const string Tag = "Brighter-RocketMQ-Tag";
     
     /// <summary>
     /// The message type
@@ -23,7 +29,7 @@ public static class HeaderNames
     /// <summary>
     /// The message identifier
     /// </summary>
-    public const string MessageId = "MessageId";
+    public const string MessageId = "CE_id";
     
     /// <summary>
     /// The correlation id
@@ -43,12 +49,12 @@ public static class HeaderNames
     /// <summary>
     /// The time stamp
     /// </summary>
-    public const string TimeStamp = "TimeStamp";
+    public const string TimeStamp = "CE_time";
     
     /// <summary>
     /// The subject
     /// </summary>
-    public const string Subject = "Subject";
+    public const string Subject = "CE_subject";
     
     /// <summary>
     /// The reply to
@@ -61,7 +67,27 @@ public static class HeaderNames
     public const string ContentType = "Content-Type";
     
     /// <summary>
-    /// The delay
+    /// The Content-Type
     /// </summary>
-    public const string Delay = "Delay";
+    public const string DataContentType = "CE_contenttype";
+    
+    /// <summary>
+    /// The source 
+    /// </summary>
+    public const string Source = "CE_source";
+    
+    /// <summary>
+    /// The spec version 
+    /// </summary>
+    public const string SpecVersion = "CE_specversion";
+    
+    /// <summary>
+    /// The type 
+    /// </summary>
+    public const string Type = "CE_type";
+    
+    /// <summary>
+    /// The data schema
+    /// </summary>
+    public const string DataSchema = "CE_dataschema";
 }

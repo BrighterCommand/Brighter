@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -8,6 +7,7 @@ using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
+using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;
 
@@ -15,7 +15,7 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;
 public class DispatchBuilderWithNamedGateway : IDisposable
 {
     private readonly IAmADispatchBuilder _builder;
-    private Dispatcher _dispatcher;
+    private Dispatcher? _dispatcher;
 
     public DispatchBuilderWithNamedGateway()
     {
@@ -39,7 +39,9 @@ public class DispatchBuilderWithNamedGateway : IDisposable
         };
 
         var connection = new RocketMessagingGatewayConnection(new ClientConfig.Builder()
-            .SetEndpoints("")
+            .SetEndpoints("localhost:8081")
+            .EnableSsl(false)
+            .SetRequestTimeout(TimeSpan.FromSeconds(10))
             .Build());
 
         var consumerFactory = new RocketMessageConsumerFactory(connection);
@@ -62,19 +64,19 @@ public class DispatchBuilderWithNamedGateway : IDisposable
                 new InMemoryRequestContextFactory()
             )
             .MessageMappers(messageMapperRegistry, null, new EmptyMessageTransformerFactory(), null)
-            .ChannelFactory(new ChannelFactory(consumerFactory))
+            .ChannelFactory(new RocketMqChannelFactory(consumerFactory))
             .Subscriptions(new []
             {
                 new RocketSubscription<MyEvent>(
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
-                    new RoutingKey("bob"),
+                    new RoutingKey("bt_named_gateway_dispatch"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200)),
                 new RocketSubscription<MyEvent>(
                     new SubscriptionName("bar"),
                     new ChannelName("alice"),
-                    new RoutingKey("simon"),
+                    new RoutingKey("bt_named_gateway_dispatch"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             })
@@ -85,8 +87,7 @@ public class DispatchBuilderWithNamedGateway : IDisposable
     public void When_building_a_dispatcher_with_named_gateway()
     {
         _dispatcher = _builder.Build();
-
-        _dispatcher.Should().NotBeNull();
+        Assert.NotNull(_dispatcher);
     }
 
     public void Dispose()

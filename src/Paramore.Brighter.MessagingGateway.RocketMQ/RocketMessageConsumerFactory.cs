@@ -6,21 +6,11 @@ using Paramore.Brighter.Tasks;
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
 /// <summary>
-/// The RocketMQ consumer factory
+/// RocketMQ message producer implementation for Brighter.
+/// Integrates RocketMQ's producer group pattern and transactional message support.
 /// </summary>
-public class RocketMessageConsumerFactory : IAmAMessageConsumerFactory
+public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection connection) : IAmAMessageConsumerFactory
 {
-    private readonly RocketMessagingGatewayConnection _connection;
-
-    /// <summary>
-    /// Initialize <see cref="RocketMessagingGatewayConnection"/> 
-    /// </summary>
-    /// <param name="connection">The connection.</param>
-    public RocketMessageConsumerFactory(RocketMessagingGatewayConnection connection)
-    {
-        _connection = connection;
-    }
-
     /// <inheritdoc />
     public IAmAMessageConsumerSync Create(Subscription subscription)
         => BrighterAsyncContext.Run(async () => await CreateConsumerAsync(subscription));
@@ -38,7 +28,7 @@ public class RocketMessageConsumerFactory : IAmAMessageConsumerFactory
 
         var builder = new SimpleConsumer.Builder();
         
-        builder.SetClientConfig(rocketSubscription.ClientConfig ?? _connection.ClientConfig)
+        builder.SetClientConfig(connection.ClientConfig)
             .SetConsumerGroup(rocketSubscription.ConsumerGroup)
             .SetAwaitDuration(rocketSubscription.ReceiveMessageTimeout)
             .SetSubscriptionExpression(new Dictionary<string, FilterExpression>

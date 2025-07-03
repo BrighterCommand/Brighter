@@ -3,38 +3,15 @@ using Org.Apache.Rocketmq;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
-/// <summary>
-/// The RocketMQ subscription
-/// </summary>
 public class RocketSubscription : Subscription
 {
-    /// <summary>
-    /// The <see cref="Org.Apache.Rocketmq.ClientConfig"/>
-    /// </summary>
-    /// <remarks>
-    /// It's not provided, Brighter will use <see cref="RocketMessagingGatewayConnection.ClientConfig"/>
-    /// </remarks>
-    public ClientConfig? ClientConfig { get; set; }
+    public string ConsumerGroup { get; }
 
-    /// <summary>
-    /// The consumer group
-    /// </summary>
-    public string ConsumerGroup { get; set; }
+    public TimeSpan ReceiveMessageTimeout { get; }
 
-    /// <summary>
-    /// The max await time when receive messages from the server. 
-    /// </summary>
-    public TimeSpan ReceiveMessageTimeout { get; set; }
+    public TimeSpan InvisibilityTimeout { get; }
 
-    /// <summary>
-    /// The maximum processing duration of a message
-    /// </summary>
-    public TimeSpan InvisibilityTimeout { get; set; }
-
-    /// <summary>
-    /// The <see cref="FilterExpression"/>.
-    /// </summary>
-    public FilterExpression Filter { get; set; }
+    public FilterExpression Filter { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -54,7 +31,6 @@ public class RocketSubscription : Subscription
     /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
     /// <param name="filter">The subscription filter</param>
-    /// <param name="clientConfig">The client config</param>
     /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     /// <param name="receiveMessageTimeout">How long it will wait to receive a message.</param>
@@ -74,7 +50,6 @@ public class RocketSubscription : Subscription
         IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         FilterExpression? filter = null,
-        ClientConfig? clientConfig = null,
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null,
         TimeSpan? receiveMessageTimeout = null,
@@ -86,7 +61,6 @@ public class RocketSubscription : Subscription
         ReceiveMessageTimeout = receiveMessageTimeout ?? TimeSpan.FromMinutes(1);
         InvisibilityTimeout = invisibilityTimeout ?? TimeSpan.FromSeconds(30);
         Filter = filter ?? new FilterExpression("*");
-        ClientConfig = clientConfig;
     }
 }
 
@@ -114,7 +88,6 @@ public class RocketSubscription<T> : RocketSubscription
     /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
     /// <param name="filter">The subscription filter</param>
-    /// <param name="clientConfig">The client config</param>
     /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     /// <param name="receiveMessageTimeout">How long it will wait to receive a message.</param>
@@ -124,11 +97,11 @@ public class RocketSubscription<T> : RocketSubscription
         TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0, MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null, OnMissingChannel makeChannels = OnMissingChannel.Create,
-        FilterExpression? filter = null, ClientConfig? clientConfig = null, TimeSpan? emptyChannelDelay = null,
+        FilterExpression? filter = null, TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null, TimeSpan? receiveMessageTimeout = null,
         TimeSpan? invisibilityTimeout = null) : base(typeof(T), name, channelName, routingKey, consumerGroup, bufferSize,
         noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
-        makeChannels, filter, clientConfig, emptyChannelDelay, channelFailureDelay, receiveMessageTimeout,
+        makeChannels, filter, emptyChannelDelay, channelFailureDelay, receiveMessageTimeout,
         invisibilityTimeout)
     {
     }

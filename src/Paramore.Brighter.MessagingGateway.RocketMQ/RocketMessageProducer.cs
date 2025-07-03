@@ -4,41 +4,25 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Org.Apache.Rocketmq;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
-/// <summary>
-/// The RocketMQ message producer
-/// </summary>
-public class RocketMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
+public class RocketMessageProducer(
+    RocketMessagingGatewayConnection connection,
+    Producer producer,
+    RocketPublication publication)
+    : IAmAMessageProducerSync, IAmAMessageProducerAsync
 {
-    private readonly Producer _producer;
-    private readonly RocketMessagingGatewayConnection _connection;
-
-    private readonly RocketPublication _publication;
-    
     /// <inheritdoc />
-    public Publication Publication => _publication;
+    public Publication Publication => publication;
 
     /// <inheritdoc />
     public Activity? Span { get; set; }
 
     /// <inheritdoc />
     public IAmAMessageScheduler? Scheduler { get; set; }
-
-    /// <summary>
-    /// Initialize new instance <see cref="RocketMessageProducer" />
-    /// </summary>
-    /// <param name="connection"></param>
-    /// <param name="producer"></param>
-    /// <param name="publication"></param>
-    public RocketMessageProducer(RocketMessagingGatewayConnection connection, Producer producer, RocketPublication publication)
-    {
-        _connection = connection;
-        _producer = producer;
-        _publication = publication;
-    }
 
     /// <inheritdoc />
     public void Send(Message message)
@@ -58,17 +42,41 @@ public class RocketMessageProducer : IAmAMessageProducerSync, IAmAMessageProduce
     {
         var builder = new Org.Apache.Rocketmq.Message.Builder()
             .SetBody(message.Body.Bytes)
-            .SetTopic(message.Header.Topic.Value);
+            .SetTopic(publication.Topic!.Value);
 
         builder.AddProperty(HeaderNames.MessageId, message.Id)
             .AddProperty(HeaderNames.Topic, message.Header.Topic.Value)
             .AddProperty(HeaderNames.HandledCount, message.Header.HandledCount.ToString())
             .AddProperty(HeaderNames.MessageType, message.Header.MessageType.ToString())
-            .AddProperty(HeaderNames.TimeStamp, Convert.ToString(message.Header.TimeStamp));
+            .AddProperty(HeaderNames.TimeStamp, message.Header.TimeStamp.ToRfc3339())
+            .AddProperty(HeaderNames.Source, message.Header.Source.ToString())
+            .AddProperty(HeaderNames.SpecVersion, message.Header.SpecVersion)
+            .AddProperty(HeaderNames.Type, message.Header.Type);
         
         if (!string.IsNullOrEmpty(message.Header.Subject))
         {
             builder.AddProperty(HeaderNames.Subject, message.Header.Subject);
+        }
+
+        if (message.Header.DataSchema != null)
+        {
+            builder.AddProperty(HeaderNames.DataSchema, message.Header.DataSchema.ToString());
+        }
+        
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+        {
+            builder.AddProperty(HeaderNames.Subject, message.Header.Subject);
+        }
+        
+        if (!string.IsNullOrEmpty(message.Header.Type))
+        {
+            builder.AddProperty(HeaderNames.Type, message.Header.Type);
+        }
+
+        if (message.Header.ContentType != null)
+        {
+            builder.AddProperty(HeaderNames.ContentType, message.Header.ContentType.ToString());
+            builder.AddProperty(HeaderNames.DataContentType, message.Header.ContentType.ToString());
         }
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
@@ -76,13 +84,13 @@ public class RocketMessageProducer : IAmAMessageProducerSync, IAmAMessageProduce
             builder.AddProperty(HeaderNames.CorrelationId, message.Header.CorrelationId);
         }
         
-        if (!string.IsNullOrEmpty(message.Header.ReplyTo))
+        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
         {
             builder.AddProperty(HeaderNames.ReplyTo, message.Header.ReplyTo);
         }
         
         foreach (var (key, val) in message.Header.Bag
-                     .Where(x => x.Key != HeaderNames.Keys))
+                     .Where(x => x.Key != HeaderNames.Keys && x.Key != HeaderNames.Tag))
         {
             builder.AddProperty(key, val.ToString());
         }
@@ -93,29 +101,38 @@ public class RocketMessageProducer : IAmAMessageProducerSync, IAmAMessageProduce
             {
                 builder.SetKeys(keysArray);
             }
+            else if (keys is string keyString)
+            {
+                builder.SetKeys(keyString);
+            }
         }
         else
         {
             builder.SetKeys(message.Id);
         }
-        
-        if (_publication.Tag != null)
+
+
+        if (message.Header.Bag.TryGetValue(HeaderNames.Tag, out var tag) && tag is string tagString)
         {
-            builder.SetTag(_publication.Tag);
+            builder.SetTag(tagString);
+        }
+        else if (!string.IsNullOrEmpty(publication.Tag))
+        {
+            builder.SetTag(publication.Tag);
         }
         
         if (delay.HasValue && delay.Value != TimeSpan.Zero)
         {
             builder
-                .SetDeliveryTimestamp(_connection.TimerProvider.GetUtcNow().Add(delay.Value).UtcDateTime);
+                .SetDeliveryTimestamp(connection.TimerProvider.GetUtcNow().Add(delay.Value).UtcDateTime);
         }
         
-        if (!string.IsNullOrEmpty(message.Header.PartitionKey))
+        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
         {
             builder.SetMessageGroup(message.Header.PartitionKey);
         }
         
-        await _producer.Send(builder.Build());
+        await producer.Send(builder.Build());
     }
     
     /// <inheritdoc />

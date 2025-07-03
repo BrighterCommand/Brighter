@@ -4,30 +4,32 @@ using Org.Apache.Rocketmq;
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
 /// <summary>
-/// The RocketMQ configuration
+/// Configuration class for RocketMQ messaging gateway in Brighter pipeline.
+/// Implements RocketMQ's high-throughput messaging configuration pattern.
 /// </summary>
 public class RocketMessagingGatewayConnection(ClientConfig config) : IAmGatewayConfiguration
 {
     /// <summary>
-    /// The <see cref="System.TimeProvider"/>
+    /// Gets or sets the time provider for time-sensitive operations.
+    /// Used for implementing RocketMQ's message delay and timeout features.
     /// </summary>
     public TimeProvider TimerProvider { get; set; } = TimeProvider.System;
     
     /// <summary>
-    /// The <see cref="ClientConfig" />
+    /// Gets the RocketMQ client configuration.
+    /// Contains core settings like broker addresses and connection pool size.
     /// </summary>
     public ClientConfig ClientConfig { get; } = config;
 
     /// <summary>
-    /// The max attempt during publish a message
+    /// Gets or sets the maximum retry attempts for failed message operations.
+    /// Implements RocketMQ's at-least-once delivery guarantee through retries.
     /// </summary>
-    /// <remarks>
-    /// Max attempts must be positive
-    /// </remarks>
     public int MaxAttempts { get; set; } = 3;
 
     /// <summary>
-    /// The  <see cref="ITransactionChecker" />
+    /// Gets or sets the transaction checker for RocketMQ transactional messages.
+    /// Handles local transaction state checks during message recovery.
     /// </summary>
     public ITransactionChecker? Checker { get; set; }
 }

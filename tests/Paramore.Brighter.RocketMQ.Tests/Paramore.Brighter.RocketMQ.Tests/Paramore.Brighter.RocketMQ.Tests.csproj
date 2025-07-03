@@ -9,14 +9,10 @@
     </PropertyGroup>
 
   <ItemGroup>
-    <RuntimeHostConfigurationOption Include="System.Net.Http.SocketsHttpHandler.Http2Support" Value="false" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="coverlet.collector">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
@@ -25,14 +21,11 @@
     </PackageReference>
   </ItemGroup>
 
-    <ItemGroup>
-        <Using Include="Xunit"/>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.RocketMQ\Paramore.Brighter.MessagingGateway.RocketMQ.csproj" />
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.RocketMQ\Paramore.Brighter.MessagingGateway.RocketMQ.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
 
 </Project>

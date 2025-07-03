@@ -24,8 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 
-internal class MyCommand : Command
+internal class MyCommand() : Command(Guid.NewGuid())
 {
     public string Value { get; set; }
-    public MyCommand() :base(Guid.NewGuid()) {}
 }

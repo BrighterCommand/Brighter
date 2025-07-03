@@ -3,17 +3,22 @@ version: '3.8'
 services:
   # RocketMQ Nameserver (Service Discovery)
   nameserver:
-    image: apache/rocketmq:4.9.4
+    image: apache/rocketmq
     container_name: rocketmq-nameserver
     ports:
       - "9876:9876"  # Nameserver port
     command: sh mqnamesrv
+    healthcheck: # Health check to ensure Nameserver is ready
+      test: [ "CMD", "sh", "-c", "netstat -an | grep 9876" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
     environment:
       - JAVA_OPT_EXT=-Xms512m -Xmx512m -Xmn256m -Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG # JVM memory settings
 
   # RocketMQ Broker (Message Storage)
   broker:
-    image: apache/rocketmq:4.9.4
+    image: apache/rocketmq
     container_name: rocketmq-broker
     ports:
       - "10909:10909"  # Broker HA port
@@ -29,9 +34,14 @@ services:
     command: sh mqbroker
     depends_on:
       - nameserver
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "netstat -an | grep 10911" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
   
   proxy:
-    image: apache/rocketmq:5.3.1
+    image: apache/rocketmq
     container_name: rmqproxy
     depends_on:
       - broker
@@ -44,9 +54,30 @@ services:
       - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
     command: sh mqproxy
     
+  # Service to create the RocketMQ topic
+  create-topic:
+    image: apache/rocketmq # Use the same RocketMQ image to get mqadmin tool
+    command: > # Multi-line command to create the topic
+      sh -c "
+            echo 'Waiting for broker to be healthy...' &&
+            until curl -s http://broker:10911/ &>/dev/null; do
+              echo 'Broker not fully ready yet, retrying in 2 seconds...'
+                sleep 2
+            done;
+            echo 'Broker is up. Creating multiple topics...' &&
+
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_building_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL && 
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_building_dispatch_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_named_gateway_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL
+        "
+    depends_on: # Ensure broker is healthy before attempting topic creation
+      - broker
+      - nameserver
+    restart: "no" # This service should run once and then exit
+    
   # RocketMQ Dashboard (Web UI - Optional)
   dashboard:
-    image: apacherocketmq/rocketmq-dashboard:latest
+    image: apacherocketmq/rocketmq-dashboard
     container_name: rocketmq-dashboard
     ports:
       - "8080:8080"  # Dashboard UI port

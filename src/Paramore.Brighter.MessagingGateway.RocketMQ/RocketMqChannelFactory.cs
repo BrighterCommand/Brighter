@@ -4,21 +4,11 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
 /// <summary>
-/// The channel factory for RocketMQ
+/// Factory class for creating RocketMQ channels in Brighter pipeline.
+/// Implements RocketMQ's consumer group pattern for parallel message processing [[4]].
 /// </summary>
-public class ChannelFactory : IAmAChannelFactory
+public class RocketMqChannelFactory(RocketMessageConsumerFactory factory) : IAmAChannelFactory
 {
-    private readonly RocketMessageConsumerFactory _factory;
-
-    /// <summary>
-    /// Initialize new instance of the <see cref="ChannelFactory"/>
-    /// </summary>
-    /// <param name="factory">The consumer factory.</param>
-    public ChannelFactory(RocketMessageConsumerFactory factory)
-    {
-        _factory = factory;
-    }
-
     /// <inheritdoc />
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
@@ -30,7 +20,7 @@ public class ChannelFactory : IAmAChannelFactory
         return new Channel(
             subscription.ChannelName,
             subscription.RoutingKey,
-            _factory.Create(subscription),
+            factory.Create(subscription),
             subscription.BufferSize);
     }
 
@@ -45,7 +35,7 @@ public class ChannelFactory : IAmAChannelFactory
         return new ChannelAsync(
             subscription.ChannelName,
             subscription.RoutingKey,
-            _factory.CreateAsync(subscription),
+            factory.CreateAsync(subscription),
             subscription.BufferSize);
     }
 
@@ -55,7 +45,7 @@ public class ChannelFactory : IAmAChannelFactory
         return new ChannelAsync(
             subscription.ChannelName,
             subscription.RoutingKey,
-            await _factory.CreateConsumerAsync(subscription),
+            await factory.CreateConsumerAsync(subscription),
             subscription.BufferSize);
     }
 }

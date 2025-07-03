@@ -1,16 +1,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Org.Apache.Rocketmq;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
 /// <summary>
-/// The RocketMQ message producer
+/// Factory class for creating RocketMQ message producers in Brighter.
+/// Implements RocketMQ's producer group pattern and transactional message support.
 /// </summary>
-public class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketPublication> publications) : IAmAMessageProducerFactory
+public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketPublication> publications) : IAmAMessageProducerFactory
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageProducerFactory>();
+    
     /// <inheritdoc />
     public Dictionary<RoutingKey, IAmAMessageProducer> Create() 
         => BrighterAsyncContext.Run(async () => await CreateAsync());
@@ -22,9 +27,14 @@ public class RocketMessageProducerFactory(RocketMessagingGatewayConnection conne
         var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
         foreach (var publication in publications)
         {
-            if (publication.Topic is null || RoutingKey.IsNullOrEmpty(publication.Topic))
+            if (RoutingKey.IsNullOrEmpty(publication.Topic))
             {
                 throw new ConfigurationException("A Rocket publication must have a topic");
+            }
+
+            if (publication.MakeChannels == OnMissingChannel.Create)
+            {
+                Log.CreateTopicIsNotSupported(s_logger, publication.Topic);
             }
             
             producers[publication.Topic] = new RocketMessageProducer(connection, rocketProducer, publication);
@@ -38,7 +48,7 @@ public class RocketMessageProducerFactory(RocketMessagingGatewayConnection conne
         builder.SetClientConfig(connection.ClientConfig)
             .SetMaxAttempts(connection.MaxAttempts)
             .SetTopics(publications
-                .Where(x => x.Topic is not null && !RoutingKey.IsNullOrEmpty(x.Topic))
+                .Where(x =>  !RoutingKey.IsNullOrEmpty(x.Topic))
                 .Select(x => x.Topic!.Value)
                 .ToArray());
 
@@ -48,5 +58,11 @@ public class RocketMessageProducerFactory(RocketMessagingGatewayConnection conne
         }
         
         return await builder.Build(); 
+    }
+    
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "RocketMQ doesn't support create topic via code ({Topic})")]
+        public static partial void CreateTopicIsNotSupported(ILogger logger, string topic);
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using Org.Apache.Rocketmq;
@@ -11,70 +11,48 @@ using Paramore.Brighter.Tasks;
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
 /// <summary>
-/// The RocketMQ consumer
+/// RocketMQ message consumer implementation for Brighter.
+/// Integrates RocketMQ's consumer group pattern and message filtering capabilities.
 /// </summary>
-public class RocketMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+public class RocketMessageConsumer(SimpleConsumer consumer, 
+    int bufferSize, 
+    TimeSpan invisibilityTimeout)
+    : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private readonly ConcurrentDictionary<Message, MessageView> _queue = new();
-    private readonly SimpleConsumer _consumer;
-    private readonly int _bufferSize;
-    private readonly TimeSpan _invisibilityTimeout;
-
-    /// <summary>
-    /// Initialize <see cref="RocketMessageConsumer"/>
-    /// </summary>
-    /// <param name="consumer">The <see cref="SimpleConsumer"/>.</param>
-    /// <param name="bufferSize">The consumer batch size</param>
-    /// <param name="invisibilityTimeout">The invisible timeout for getting a message</param>
-    public RocketMessageConsumer(SimpleConsumer consumer, int bufferSize, TimeSpan invisibilityTimeout)
-    {
-        _consumer = consumer;
-        _bufferSize = bufferSize;
-        _invisibilityTimeout = invisibilityTimeout;
-    }
-
     /// <inheritdoc />
-    public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
-        if (_queue.TryRemove(message, out var view))
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
         {
-            await _consumer.Ack(view);
+           return;
         }
+        
+        await consumer.Ack(view);
     }
     
     /// <inheritdoc />
-    public Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
-    {
-        Reject(message);
-        return Task.CompletedTask;
-    }
+    public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default) 
+        => Task.FromResult(Reject(message));
 
     /// <inheritdoc />
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var queue in _queue)
-        {
-            await _consumer.Ack(queue.Value);
-        }
-        
-        _queue.Clear();
-        
         while (true)
         {
-            var messages = await _consumer.Receive(_bufferSize, _invisibilityTimeout);
+            var messages = await consumer.Receive(bufferSize, invisibilityTimeout);
             if (messages == null || messages.Count == 0)
             {
                 break;
             }
             
-            await messages.EachAsync(async message => await _consumer.Ack(message));
+            await messages.EachAsync(async message => await consumer.Ack(message));
         }
     }
 
     /// <inheritdoc />
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
     {
-        var messageView = await _consumer.Receive(_bufferSize, _invisibilityTimeout);
+        var messageView = await consumer.Receive(bufferSize, invisibilityTimeout);
         if (messageView == null || messageView.Count == 0)
         {
             return [new Message()];
@@ -84,25 +62,14 @@ public class RocketMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsum
         for (int i = 0; i < messageView.Count; i++)
         {
             messages[i] = CreateMessage(messageView[i]);
-            _queue[messages[i]] = messageView[i];
         }
         
         return messages;
     }
 
-    /// <summary>
-    /// Requeues the specified message.
-    /// It's not support by RocketMQ
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="delay"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>False as no requeue support on RocketMQ</returns>
-    public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(false);
-    }
+    /// <inheritdoc />
+    public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Requeue(message, delay));
 
     private static Message CreateMessage(MessageView message)
     {
@@ -113,44 +80,47 @@ public class RocketMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsum
         var correlationId = ReadCorrelationId(message);
         var partitionKey = ReadPartitionKey(message);
         var replyTo = ReadReplyTo(message);
-        var contentType = ReadContentType(message);
+        var contentType = ReadContentType(message) ?? new ContentType("plain/text");
         var handledCount = ReadHandledCount(message);
         var delay = ReadDelay(message);
-
-        if (string.IsNullOrEmpty(topic) || string.IsNullOrEmpty(messageId) || timeStamp == DateTime.MinValue)
-        {
-            return new Message(
-                new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_UNACCEPTABLE),
-                new MessageBody(string.Empty));
-        }
+        var source = ReadSource(message);
+        var specVersion = ReadSpecVersion(message);
+        var type = ReadType(message);
+        var dateSchema = ReadDataSchema(message);
+        var subject = ReadSubject(message);
         
         var header = new MessageHeader(
             messageId: messageId,
-            topic: new RoutingKey(topic),
+            topic: topic,
             messageType,
-            source: null,
-            type: "",
+            source: source,
+            type: type,
             timeStamp: timeStamp,
+            contentType: contentType,
             correlationId: correlationId,
-            replyTo: string.IsNullOrEmpty(replyTo) ? RoutingKey.Empty : new RoutingKey(replyTo) ,
-            contentType: contentType ?? "plain/text",
-            partitionKey: string.IsNullOrEmpty(partitionKey) ? message.MessageGroup : partitionKey,
+            replyTo: replyTo,
+            partitionKey: partitionKey,
             handledCount: handledCount,
-            dataSchema: null,
-            subject: null,
+            dataSchema: dateSchema,
+            subject: subject,
             delayed: delay
-        );
+        )
+        {
+            SpecVersion = specVersion
+        };
 
         foreach (var property in message.Properties)
         {
             header.Bag[property.Key] = property.Value;
         }
+
+        header.Bag["ReceiptHandle"] = message;
         
-        var body = new MessageBody(message.Body, header.ContentType ?? "plain/text");
+        var body = new MessageBody(message.Body, header.ContentType);
         
         return new Message(header, body);
 
-        static string ReadTopic(MessageView message) => message.Topic;
+        static RoutingKey ReadTopic(MessageView message) => new(message.Topic);
         static string ReadMessageId(MessageView message) => message.Properties.TryGetValue(HeaderNames.MessageId, out var messageId) ? messageId : message.MessageId;
         static DateTimeOffset ReadTimeStamp(MessageView message)
         {
@@ -177,10 +147,55 @@ public class RocketMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsum
             return MessageType.MT_EVENT;
         }
 
-        static string? ReadCorrelationId(MessageView message) => message.Properties.GetValueOrDefault(HeaderNames.CorrelationId);
-        static string? ReadPartitionKey(MessageView message) => message.MessageGroup;
-        static string? ReadReplyTo(MessageView message) => message.Properties.GetValueOrDefault(HeaderNames.ReplyTo);
-        static string? ReadContentType(MessageView message) => message.Properties.GetValueOrDefault(HeaderNames.ContentType);
+        static Id? ReadCorrelationId(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.CorrelationId);
+            if (string.IsNullOrEmpty(val))
+            {
+                return null;
+            }
+
+            return Id.Create(val);
+        }
+
+        static PartitionKey? ReadPartitionKey(MessageView message)
+        {
+            if (string.IsNullOrEmpty(message.MessageGroup))
+            {
+                return null;
+            }
+            
+            return new PartitionKey(message.MessageGroup);
+        }
+
+        static RoutingKey? ReadReplyTo(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.ReplyTo);
+            if (string.IsNullOrEmpty(val))
+            {
+                return null;
+            }
+
+            return new RoutingKey(val);
+        }
+
+        static ContentType? ReadContentType(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.DataContentType);
+            if (!string.IsNullOrEmpty(val))
+            {
+                return new ContentType(val);
+            }
+            
+            val = message.Properties.GetValueOrDefault(HeaderNames.ContentType);
+            if (!string.IsNullOrEmpty(val))
+            {
+                return new ContentType(val);
+            }
+
+            return null;
+        }
+
         static int ReadHandledCount(MessageView message)
         {
             if (message.Properties.TryGetValue(HeaderNames.HandledCount, out var handledCount) 
@@ -202,6 +217,61 @@ public class RocketMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsum
 
             return TimeSpan.Zero;
         }
+        
+        static Uri ReadSource(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.Source);
+            if (!string.IsNullOrEmpty(val) && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out var source))
+            {
+                return source;
+            }
+
+            return new Uri(MessageHeader.DefaultSource);
+        }
+        
+        static string ReadSpecVersion(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.SpecVersion);
+            if (!string.IsNullOrEmpty(val))
+            {
+                return val;
+            }
+
+            return MessageHeader.DefaultSpecVersion;
+        }
+        
+        static string ReadType(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.Type);
+            if (!string.IsNullOrEmpty(val))
+            {
+                return val;
+            }
+
+            return MessageHeader.DefaultType;
+        }
+        
+        static Uri? ReadDataSchema(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.DataSchema);
+            if (!string.IsNullOrEmpty(val) && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out var source))
+            {
+                return source;
+            }
+
+            return null;
+        }
+        
+        static string? ReadSubject(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.Subject);
+            if (!string.IsNullOrEmpty(val))
+            {
+                return val;
+            }
+
+            return null;
+        }
     }
 
     /// <inheritdoc />
@@ -209,13 +279,7 @@ public class RocketMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsum
         => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
 
     /// <inheritdoc />
-    public void Reject(Message message)
-    {
-        if (_queue.TryRemove(message, out var view))
-        {
-            _consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
-        }
-    }
+    public bool Reject(Message message) => Requeue(message);
 
     /// <inheritdoc />
     public void Purge() 
@@ -225,19 +289,22 @@ public class RocketMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsum
     public Message[] Receive(TimeSpan? timeOut = null)
         => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
 
-    /// <summary>
-    /// Requeues the specified message.
-    /// It's not support by RocketMQ
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="delay"></param>
-    /// <returns>False as no requeue support on RocketMQ</returns>
+    
+    /// <inheritdoc />
     public bool Requeue(Message message, TimeSpan? delay = null)
-        => false;
+    {
+       if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
+       {
+           return false;
+       }
+        
+       consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
+       return true;
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => consumer.Dispose();
     
     /// <inheritdoc />
-    public void Dispose() => _consumer.Dispose();
-    
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync() => await _consumer.DisposeAsync();
+    public async ValueTask DisposeAsync() => await consumer.DisposeAsync();
 }

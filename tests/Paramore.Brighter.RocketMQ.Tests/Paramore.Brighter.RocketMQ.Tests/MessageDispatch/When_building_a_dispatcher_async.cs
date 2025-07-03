@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -8,6 +7,7 @@ using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
+using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;
 
@@ -26,21 +26,22 @@ public class DispatchBuilderTestsAsync : IDisposable
 
         var retryPolicy = Policy
             .Handle<Exception>()
-            .WaitAndRetry(new[]
-            {
+            .WaitAndRetry([
                 TimeSpan.FromMilliseconds(50),
                 TimeSpan.FromMilliseconds(100),
                 TimeSpan.FromMilliseconds(150)
-            });
+            ]);
 
         var circuitBreakerPolicy = Policy
             .Handle<Exception>()
             .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
         var connection = new RocketMessagingGatewayConnection(new ClientConfig.Builder()
-            .SetEndpoints("")
+            .SetEndpoints("localhost:8081")
+            .EnableSsl(false)
+            .SetRequestTimeout(TimeSpan.FromSeconds(10))
             .Build());
-
+        
         var consumerFactory = new RocketMessageConsumerFactory(connection);
         var container = new ServiceCollection();
 
@@ -64,36 +65,35 @@ public class DispatchBuilderTestsAsync : IDisposable
             .CommandProcessor(commandProcessor,
                 new InMemoryRequestContextFactory()
             )
-            .MessageMappers(null, messageMapperRegistry, null, new EmptyMessageTransformerFactoryAsync())
-            .ChannelFactory(new ChannelFactory(consumerFactory))
-            .Subscriptions(new []
-            {
+            .MessageMappers(null!, messageMapperRegistry, null, new EmptyMessageTransformerFactoryAsync())
+            .ChannelFactory(new RocketMqChannelFactory(consumerFactory))
+            .Subscriptions([
                 new RocketSubscription<MyEvent>(
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
-                    new RoutingKey("bob"),
+                    new RoutingKey("bt_building_dispatch_async"),
                     messagePumpType: MessagePumpType.Proactor,
                     timeOut: TimeSpan.FromMilliseconds(200)),
                 new RocketSubscription<MyEvent>(
                     new SubscriptionName("bar"),
                     new ChannelName("alice"),
-                    new RoutingKey("simon"),
+                    new RoutingKey("bt_building_dispatch_async"),
                     messagePumpType: MessagePumpType.Proactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
-            })
+            ])
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
                 
-    // [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
     [Fact]
     public async Task When_Building_A_Dispatcher_With_Async()
     {
         _dispatcher = _builder.Build();
 
-        _dispatcher.Should().NotBeNull();
-        GetConnection("foo").Should().NotBeNull();
-        GetConnection("bar").Should().NotBeNull();
-        _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+        Assert.NotNull(_dispatcher);
+        Assert.NotNull(GetConnection("foo"));
+        Assert.NotNull(GetConnection("bar"));
+        
+        Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
 
         await Task.Delay(1000);
 
@@ -101,7 +101,7 @@ public class DispatchBuilderTestsAsync : IDisposable
 
         await Task.Delay(1000);
 
-        _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
+        Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
 
         await _dispatcher.End();
     }
@@ -111,8 +111,8 @@ public class DispatchBuilderTestsAsync : IDisposable
         CommandProcessor.ClearServiceBus();
     }
 
-    private Subscription GetConnection(string name)
+    private Subscription? GetConnection(string name)
     {
-        return _dispatcher.Subscriptions.SingleOrDefault(conn => conn.Name == name);
+        return _dispatcher!.Subscriptions.SingleOrDefault(conn => conn.Name == name);
     }
 }
