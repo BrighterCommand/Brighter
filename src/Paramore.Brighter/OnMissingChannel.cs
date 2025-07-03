@@ -25,15 +25,32 @@ THE SOFTWARE. */
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// What action do we take for infrastructure dependencies?
-    /// -- Create: Make the required infrastructure via SDK calls
-    /// -- Validate: Check if the infrastructure requested exists, and raise an error if not
-    /// -- Assume: Don't check or create, assume it is there, and fail fast if not. Use to removes the cost of checks for existence on platforms where this is expensive
+    /// Defines the action to take when required messaging infrastructure is missing.
     /// </summary>
+    /// <remarks>
+    /// Used by messaging gateways and channel factories to determine how to handle
+    /// missing queues, topics, or other infrastructure components.
+    /// </remarks>
     public enum OnMissingChannel
     {
+        /// <summary>
+        /// Create the required infrastructure via SDK calls if it doesn't exist.
+        /// </summary>
         Create = 0,
+        
+        /// <summary>
+        /// Validate that the infrastructure exists and raise an error if not found.
+        /// </summary>
         Validate = 1,
+        
+        /// <summary>
+        /// Assume the infrastructure exists without checking, fail fast if missing.
+        /// </summary>
+        /// <remarks>
+        /// Use this option to remove the cost of existence checks on platforms 
+        /// where such checks are expensive or when you're confident the 
+        /// infrastructure is already in place.
+        /// </remarks>
         Assume = 2
     }
 }

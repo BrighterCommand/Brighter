@@ -27,7 +27,6 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -83,15 +82,15 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var remainingMessages = _mySqlOutbox.OutstandingMessages(TimeSpan.Zero, _context);
 
             var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
-            msgs.Should().HaveCount(2);
-            msgs.Should().Contain(_secondMessage);
-            msgs.Should().Contain(_thirdMessage);
+            Assert.Equal(2, (msgs)?.Count());
+            Assert.Contains(_secondMessage, msgs);
+            Assert.Contains(_thirdMessage, msgs);
             
             _mySqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id}, _context);
 
             var messages = _mySqlOutbox.OutstandingMessages(TimeSpan.Zero, _context);
 
-            messages.Should().HaveCount(0);
+            Assert.Empty(messages ?? []);
         }
         
         [Fact]
@@ -106,15 +105,15 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var remainingMessages = await _mySqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, _context);
 
             var messages = remainingMessages as Message[] ?? remainingMessages.ToArray();
-            messages.Should().HaveCount(2);
-            messages.Should().Contain(_secondMessage);
-            messages.Should().Contain(_thirdMessage);
+            Assert.Equal(2, (messages)?.Count());
+            Assert.Contains(_secondMessage, messages);
+            Assert.Contains(_thirdMessage, messages);
             
             await _mySqlOutbox.DeleteAsync(new []{_secondMessage.Id, _thirdMessage.Id}, _context, cancellationToken: CancellationToken.None);
 
             var finalMessages = await _mySqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, _context);
 
-            finalMessages.Should().HaveCount(0);
+            Assert.Empty(finalMessages ?? []);
         }
 
         [Fact]

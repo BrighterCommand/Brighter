@@ -30,7 +30,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    internal class HandlerLifetimeScope : IAmALifetime
+    internal sealed partial class HandlerLifetimeScope : IAmALifetime
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<HandlerLifetimeScope>();
 
@@ -60,7 +60,7 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new ArgumentException("An instance of a handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
-            s_logger.LogDebug("Tracking instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
+            Log.TrackingInstance(s_logger, instance.GetHashCode(), instance.GetType());
         }
 
         public void Add(IHandleRequestsAsync instance)
@@ -68,7 +68,7 @@ namespace Paramore.Brighter
             if (_asyncHandlerFactory == null)
                 throw new ArgumentException("An instance of an async handler can not be added without an AsyncHandlerFactory.");
             _trackedAsyncObjects.Add(instance);
-            s_logger.LogDebug("Tracking async handler instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
+            Log.TrackingAsyncHandlerInstance(s_logger, instance.GetHashCode(), instance.GetType());
         }
 
         public void Dispose()
@@ -77,19 +77,35 @@ namespace Paramore.Brighter
             {
                 //free disposable items
                 _handlerFactorySync?.Release(trackedItem, this);
-                s_logger.LogDebug("Releasing handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
+                Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             _trackedAsyncObjects.Each(trackedItem =>
             {
                 //free disposable items
                 _asyncHandlerFactory?.Release(trackedItem, this);
-                s_logger.LogDebug("Releasing async handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
+                Log.ReleasingAsyncHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             //clear our tracking
             _trackedObjects.Clear();
             _trackedAsyncObjects.Clear();
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "Tracking instance {InstanceHashCode} of type {HandlerType}")]
+            public static partial void TrackingInstance(ILogger logger, int instanceHashCode, Type handlerType);
+
+            [LoggerMessage(LogLevel.Debug, "Tracking async handler instance {InstanceHashCode} of type {HandlerType}")]
+            public static partial void TrackingAsyncHandlerInstance(ILogger logger, int instanceHashCode, Type handlerType);
+
+            [LoggerMessage(LogLevel.Debug, "Releasing handler instance {InstanceHashCode} of type {HandlerType}")]
+            public static partial void ReleasingHandlerInstance(ILogger logger, int instanceHashCode, Type handlerType);
+
+            [LoggerMessage(LogLevel.Debug, "Releasing async handler instance {InstanceHashCode} of type {HandlerType}")]
+            public static partial void ReleasingAsyncHandlerInstance(ILogger logger, int instanceHashCode, Type handlerType);
+        }
     }
 }
+

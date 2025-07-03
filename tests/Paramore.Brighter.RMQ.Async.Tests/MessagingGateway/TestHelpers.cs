@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -32,7 +33,7 @@ using Xunit;
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
-internal class QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys)
+internal sealed class QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys, bool isDurable = false, QueueType queueType = QueueType.Classic)
 {
     public async Task CreateAsync()
     {
@@ -44,7 +45,17 @@ internal class QueueFactory(RmqMessagingGatewayConnection connection, ChannelNam
                 publisherConfirmationTrackingEnabled: true));
 
         await channel.DeclareExchangeForConnection(connection, OnMissingChannel.Create);
-        await channel.QueueDeclareAsync(channelName.Value, false, false, false, null);
+        
+        // Create arguments for queue declaration
+        var arguments = new Dictionary<string, object?>();
+        
+        // Set queue type for quorum queues
+        if (queueType == QueueType.Quorum)
+        {
+            arguments.Add("x-queue-type", "quorum");
+        }
+        
+        await channel.QueueDeclareAsync(channelName.Value, isDurable, false, false, arguments.Any() ? arguments : null);
         if (routingKeys.Any())
         {
             foreach (RoutingKey routingKey in routingKeys)

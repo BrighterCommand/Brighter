@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using MySql</Description>
     <Authors>Derek Comartin</Authors>
@@ -6,7 +6,8 @@
     <PackageTags>MySql;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MySqlConnector" />

@@ -12,11 +12,12 @@ public class AWSValidateMissingTopicTestsAsync
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly RoutingKey _routingKey;
+    private readonly string _queueName;
 
     public AWSValidateMissingTopicTestsAsync()
     {
-         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        _routingKey = new RoutingKey(queueName);
+         _queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        _routingKey = new RoutingKey(_queueName);
 
         _awsConnection = GatewayFactory.CreateFactory();
 
@@ -27,11 +28,10 @@ public class AWSValidateMissingTopicTestsAsync
     public async Task When_topic_missing_verify_throws_async()
     {
         // arrange
-        var producer = new SqsMessageProducer(_awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Validate
-            });
+        var producer = new SqsMessageProducer(
+            _awsConnection,
+            new SqsPublication(channelName: new ChannelName(_queueName), makeChannels: OnMissingChannel.Validate)
+            );
 
         // act & assert
         await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => 

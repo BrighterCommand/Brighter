@@ -27,6 +27,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Logging.Handlers
 {
@@ -36,7 +37,7 @@ namespace Paramore.Brighter.Logging.Handlers
     /// The log shows the original <see cref="IRequest"/> properties as well as the timer handling.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public class RequestLoggingHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
+    public partial class RequestLoggingHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestLoggingHandlerAsync<TRequest>>();
 
@@ -59,7 +60,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
         public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
-            LogCommand(command);
+            Log.LogCommand(s_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
@@ -85,20 +86,18 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>TRequest.</returns>
         public override async Task<TRequest> FallbackAsync(TRequest command, CancellationToken cancellationToken = default)
         {
-            LogFailure(command);
+            Log.LogFailure(s_logger, typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return await base.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        private void LogCommand(TRequest request)
+        private static partial class Log
         {
-            //TODO: LibLog has no async support, so remains a blocking call for now
-            s_logger.LogInformation("Logging handler pipeline call. Pipeline timing {HandlerTiming} target, for {RequestType} with values of {Request} at: {Time}", _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
-        }
+            [LoggerMessage(LogLevel.Information, "Logging handler pipeline call. Pipeline timing {HandlerTiming} target, for {RequestType} with values of {Request} at: {Time}")]
+            public static partial void LogCommand(ILogger logger, string handlerTiming, Type requestType, string request, DateTime time);
 
-        private void LogFailure(TRequest request)
-        {
-            //TODO: LibLog has no async support, so remains a blocking call for now
-            s_logger.LogInformation("Failure in pipeline call for {RequestType} with values of {Request} at: {Time}", typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            [LoggerMessage(LogLevel.Information, "Failure in pipeline call for {RequestType} with values of {Request} at: {Time}")]
+            public static partial void LogFailure(ILogger logger, Type requestType, string request, DateTime time);
         }
     }
 }
+

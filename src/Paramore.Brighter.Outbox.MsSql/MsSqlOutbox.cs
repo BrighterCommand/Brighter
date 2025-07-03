@@ -27,12 +27,16 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.IO;
+using System.Net.Mime;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.MsSql
 {
@@ -52,7 +56,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
         public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration,
-            IAmARelationalDbConnectionProvider connectionProvider) : base(
+            IAmARelationalDbConnectionProvider connectionProvider) : base(DbSystem.MySql, configuration.DatabaseName,
             configuration.OutBoxTableName, new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlOutbox>())
         {
             _configuration = configuration;
@@ -70,9 +74,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction)
+            Action? loggingAction)
         {
             var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
@@ -86,7 +90,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             {
                 if (sqlException.Number != MsSqlDuplicateKeyError_UniqueIndexViolation &&
                     sqlException.Number != MsSqlDuplicateKeyError_UniqueConstraintViolation) throw;
-                loggingAction.Invoke();
+                loggingAction?.Invoke();
             }
             finally
             {
@@ -95,9 +99,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction,
+            Action? loggingAction,
             CancellationToken cancellationToken)
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
@@ -113,7 +117,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
                     sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    loggingAction.Invoke();
+                    loggingAction?.Invoke();
                     return;
                 }
 
@@ -213,7 +217,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         #region Parameter Helpers
 
-        protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
+        protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
         {
             return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
         }
@@ -221,104 +225,184 @@ namespace Paramore.Brighter.Outbox.MsSql
         protected override IDbDataParameter[] InitAddDbParameters(Message message, int? position = null)
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
-            var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-            return new[]
-            {
+
+            return
+            [
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}MessageId",
                     DbType = DbType.String,
-                    Value = (object)message.Id ?? DBNull.Value
+                    Value = message.Id.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}MessageType",
                     DbType = DbType.String,
-                    Value = (object)message.Header.MessageType.ToString() ?? DBNull.Value
+                    Value = message.Header.MessageType.ToString()
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}Topic",
                     DbType = DbType.String,
-                    Value = (object)message.Header.Topic.Value ?? DBNull.Value
+                    Value = message.Header.Topic.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}Timestamp",
                     DbType = DbType.DateTimeOffset,
-                    Value = (object)message.Header.TimeStamp.ToUniversalTime() ?? DBNull.Value
-                }, //always store in UTC, as this is how we query messages
+                    Value = message.Header.TimeStamp.ToUniversalTime()
+                },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}CorrelationId",
                     DbType = DbType.String,
-                    Value = (object)message.Header.CorrelationId ?? DBNull.Value
+                    Value = message.Header.CorrelationId.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}ReplyTo",
                     DbType = DbType.String,
-                    Value = (object)message.Header.ReplyTo ?? DBNull.Value
+                    Value = message.Header.ReplyTo is not null ? message.Header.ReplyTo.Value : DBNull.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}ContentType",
                     DbType = DbType.String,
-                    Value = (object)message.Header.ContentType ?? DBNull.Value
+                    Value = message.Header.ContentType is not null ? message.Header.ContentType.ToString() : DBNull.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}PartitionKey",
                     DbType = DbType.String,
-                    Value = (object)message.Header.PartitionKey ?? DBNull.Value
+                    Value = message.Header.PartitionKey.Value
                 },
-                new SqlParameter { ParameterName = $"{prefix}HeaderBag", Value = (object)bagJson ?? DBNull.Value },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}Source",
+                    DbType = DbType.String,
+                    Value = message.Header.Source.AbsoluteUri
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}Type",
+                    DbType = DbType.String,
+                    Value = message.Header.Type
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}DataSchema",
+                    DbType = DbType.String,
+                    Value = message.Header.DataSchema is not null ? message.Header.DataSchema.AbsoluteUri : DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}Subject",
+                    DbType = DbType.String,
+                    Value = message.Header.Subject is not null ? message.Header.Subject : DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}SpecVersion",
+                    DbType = DbType.String,
+                    Value = message.Header.SpecVersion
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}HandledCount",
+                    DbType = DbType.Int32,
+                    Value = message.Header.HandledCount
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}Delayed",
+                    DbType = DbType.Int64,
+                    Value = message.Header.Delayed.Ticks
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}TraceParent",
+                    DbType = DbType.String,
+                    Value = message.Header.TraceParent is not null ? message.Header.TraceParent.Value : DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}TraceState",
+                    DbType = DbType.String,
+                    Value = message.Header.TraceState is not null ? message.Header.TraceState.Value : DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}Baggage",
+                    DbType = DbType.String,
+                    Value = message.Header.Baggage.ToString()
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}DataRef",
+                    DbType = DbType.String,
+                    Value = message.Header.DataRef is not null ? message.Header.DataRef :  DBNull.Value
+                },
+                // Bag as JSON
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}HeaderBag",
+                    Value = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options)
+                },
                 _configuration.BinaryMessagePayload
                     ? new SqlParameter
                     {
                         ParameterName = $"{prefix}Body",
                         DbType = DbType.Binary,
-                        Value = (object)message.Body?.Bytes ?? DBNull.Value
+                        Value = message.Body.Bytes
                     }
                     : new SqlParameter
                     {
                         ParameterName = $"{prefix}Body",
                         DbType = DbType.String,
-                        Value = (object)message.Body?.Value ?? DBNull.Value
+                        Value = message.Body.Value
                     }
-            };
+            ];
         }
 
         #endregion
 
         #region Property Extractors
 
-        private static RoutingKey GetTopic(DbDataReader dr) => new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
-
-        private static MessageType GetMessageType(DbDataReader dr) =>
-            (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-
-        private static string GetMessageId(DbDataReader dr) => dr.GetString(dr.GetOrdinal("MessageId"));
-
-        private static string GetContentType(DbDataReader dr)
+        private static Baggage GetBaggage(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("ContentType");
+            var (i, err) = TryGetOrdinal(dr, "Baggage");
+            if (err || dr.IsDBNull(i))
+                return new Baggage(); // If the column does not exist or is null, return an empty Baggage
+            
+            var baggageString = dr.IsDBNull(i) ? string.Empty: dr.GetString(i);
+
+            var baggage = new Baggage();
+            baggage.LoadBaggage(baggageString);
+            return baggage;
+        }
+        
+        private static byte[]? GetBodyAsBytes(SqlDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Body");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var contentType = dr.GetString(ordinal);
-            return contentType;
+            var body = dr.GetStream(ordinal);
+            if (body is MemoryStream memoryStream) // No need to dispose a MemoryStream, I do not think they dare to ever change that
+                return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
+
+            MemoryStream ms = new();
+            body.CopyTo(ms);
+            body.Dispose();
+            return ms.ToArray();
         }
 
-        private static string GetReplyTo(DbDataReader dr)
+        private static string? GetBodyAsText(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("ReplyTo");
-            if (dr.IsDBNull(ordinal)) return null;
-
-            var replyTo = dr.GetString(ordinal);
-            return replyTo;
+            var ordinal = dr.GetOrdinal("Body");
+            return dr.IsDBNull(ordinal) ? null : dr.GetString(ordinal);
         }
 
-        private static Dictionary<string, object> GetContextBag(DbDataReader dr)
+        private static Dictionary<string, object>? GetContextBag(DbDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
@@ -327,14 +411,91 @@ namespace Paramore.Brighter.Outbox.MsSql
             return dictionaryBag;
         }
 
-        private static string GetCorrelationId(DbDataReader dr)
+        private static string? GetCorrelationId(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal)) return null;
+            var (ordinal, err) = TryGetOrdinal(dr, "CorrelationId");
+            if (err || dr.IsDBNull(ordinal)) return null; // If the column does not exist or is null, return null
 
             var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
+        
+        private static string? GetDataRef(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "DataRef");
+            if (err || dr.IsDBNull(ordinal)) return null;
+
+            var dataRef = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(dataRef) ? null : dataRef;
+        }
+        
+        private static Uri? GetDataSchema(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "DataSchema");
+            if (err || dr.IsDBNull(ordinal)) return null;
+            
+            var source = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(source) ? null : new Uri(source);
+        }
+        
+        private static string GetMessageId(DbDataReader dr) => dr.GetString(dr.GetOrdinal("MessageId"));
+
+        private static string? GetContentType(DbDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ContentType");
+            if (dr.IsDBNull(ordinal)) return null;
+
+            var contentType = dr.GetString(ordinal);
+            return contentType;
+        }
+        
+        private static MessageType GetMessageType(DbDataReader dr) =>
+            (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+        
+        private static string? GetPartitionKey(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "PartitionKey");
+            if (err || dr.IsDBNull(ordinal)) return null;
+
+            var partitionKey = dr.GetString(ordinal);
+            return partitionKey;
+        }
+        
+        private static string? GetReplyTo(DbDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ReplyTo");
+            if (dr.IsDBNull(ordinal)) return null;
+
+            var replyTo = dr.GetString(ordinal);
+            return replyTo;
+        }
+        
+        private static string? GetSpecVersion(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "SpecVersion");
+            if (err  || dr.IsDBNull(ordinal)) return null;;
+            
+            var source = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(source) ? null : source;
+        }
+
+        private static Uri? GetSource(DbDataReader dr)
+        {
+           var (ordinal, err) = TryGetOrdinal(dr, "Source");
+           if (err || dr.IsDBNull(ordinal)) return null;
+            
+            var source = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(source) ? null : new Uri(source);
+        }
+        
+        private static string? GetSubject(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "Subject");
+            if (err || dr.IsDBNull(ordinal)) return null;
+            
+            var source = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(source) ? null : source;
+        } 
 
         private static DateTimeOffset GetTimeStamp(DbDataReader dr)
         {
@@ -344,38 +505,47 @@ namespace Paramore.Brighter.Outbox.MsSql
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
-
-        private static string GetPartitionKey(DbDataReader dr)
+        
+        private static RoutingKey GetTopic(DbDataReader dr) => new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
+        
+        private static TraceParent GetTraceParent(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("PartitionKey");
-            if (dr.IsDBNull(ordinal)) return null;
+            var (ordinal, err) = TryGetOrdinal(dr, "TraceParent");
+            if (err || dr.IsDBNull(ordinal)) return TraceParent.Empty;
 
-            var partitionKey = dr.GetString(ordinal);
-            return partitionKey;
+            var source = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(source) ? TraceParent.Empty : new TraceParent(source);
         }
-
-        private static byte[] GetBodyAsBytes(DbDataReader dr)
+        
+        private static TraceState GetTraceState(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("Body");
-            if (dr.IsDBNull(ordinal)) return null;
+            var (ordinal, err) = TryGetOrdinal(dr, "TraceState");
+            if (dr.IsDBNull(ordinal)) return TraceState.Empty;
 
-            var body = dr.GetStream(ordinal);
-            long bodyLength = body.Length;
-            var buffer = new byte[bodyLength];
-            var bytesRemaining = bodyLength;
-            while (bytesRemaining > 0)
+            var source = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(source) ? TraceState.Empty : new TraceState(source);
+        }
+        
+        private static string? GetType(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "Type");
+            if (dr.IsDBNull(ordinal)) return null;
+            
+            var source = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(source) ? null : source;
+        } 
+        
+        private static (int, bool) TryGetOrdinal(DbDataReader dr, string columnName)
+        {
+            try
             {
-                var bytesRead = body.Read(buffer, 0, (int)bodyLength);
-                bytesRemaining -= bytesRead;
+                return (dr.GetOrdinal(columnName), false);
             }
-
-            return buffer;
-        }
-
-        private static string GetBodyAsText(DbDataReader dr)
-        {
-            var ordinal = dr.GetOrdinal("Body");
-            return dr.IsDBNull(ordinal) ? null : dr.GetString(ordinal);
+            catch (IndexOutOfRangeException)
+            {
+                // SpecVersion column does not exist, return -1 and true to indicate error
+                return (-1, true);
+            }
         }
 
         #endregion
@@ -384,7 +554,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         protected override Message MapFunction(DbDataReader dr)
         {
-            Message message = null;
+            Message? message = null;
             if (dr.Read())
             {
                 message = MapAMessage(dr);
@@ -396,7 +566,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         protected override async Task<Message> MapFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
         {
-            Message message = null;
+            Message? message = null;
             if (await dr.ReadAsync(cancellationToken))
             {
                 message = MapAMessage(dr);
@@ -479,40 +649,62 @@ namespace Paramore.Brighter.Outbox.MsSql
             var messageType = GetMessageType(dr);
             var topic = GetTopic(dr);
 
-            var header = new MessageHeader(id, topic, messageType);
-
             DateTimeOffset timeStamp = GetTimeStamp(dr);
             var correlationId = GetCorrelationId(dr);
             var replyTo = GetReplyTo(dr);
             var contentType = GetContentType(dr);
             var partitionKey = GetPartitionKey(dr);
 
-            header = new MessageHeader(
-                messageId: id,
+            var source = GetSource(dr);
+            var type = GetType(dr);
+            var dataSchema = GetDataSchema(dr);
+            var subject = GetSubject(dr);
+            var specVersion = GetSpecVersion(dr);
+            var traceParent = GetTraceParent(dr);
+            var traceState = GetTraceState(dr);
+            var baggage = GetBaggage(dr);
+            var dataRef = GetDataRef(dr);
+
+            var header = new MessageHeader(
+                messageId: new Id(id),
                 topic: topic,
                 messageType: messageType,
+                source: source,
+                type: type,
                 timeStamp: timeStamp,
-                handledCount: 0,
-                delayed: TimeSpan.Zero,
-                correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo),
-                contentType: contentType,
-                partitionKey: partitionKey);
+                correlationId: correlationId is not null ? new Id(correlationId) : Id.Empty,
+                replyTo: replyTo is not null ? new RoutingKey(replyTo) : RoutingKey.Empty,
+                contentType: contentType is not null ? new ContentType(contentType) : new ContentType(MediaTypeNames.Text.Plain),
+                partitionKey: partitionKey is not null ? new PartitionKey(partitionKey) : PartitionKey.Empty,
+                dataSchema: dataSchema,
+                subject: subject,
+                handledCount: 0, // HandledCount is zero when restored from the Outbox
+                delayed: TimeSpan.Zero, // Delayed is zero when restored from the Outbox
+                traceParent: traceParent,
+                traceState: traceState,
+                baggage: baggage
+            );
+            header.SpecVersion = specVersion ?? MessageHeader.DefaultSpecVersion;
+            header.DataRef = dataRef;
 
-            Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+            Dictionary<string, object>? dictionaryBag = GetContextBag(dr);
             if (dictionaryBag != null)
             {
-                foreach (var key in dictionaryBag.Keys)
+                foreach (var keyValue in dictionaryBag)
                 {
-                    header.Bag.Add(key, dictionaryBag[key]);
+                    header.Bag.Add(keyValue.Key, keyValue.Value);
                 }
             }
 
-            var bodyOrdinal = dr.GetOrdinal("Body");
-            string messageBody = string.Empty;
+#if NET462 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
-                : new MessageBody(GetBodyAsText(dr), "application/json", CharacterEncoding.UTF8);
+                ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsText(dr), new ContentType("applicaton/json"), CharacterEncoding.UTF8);
+#else
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsText(dr), new ContentType(MediaTypeNames.Application.Json), CharacterEncoding.UTF8);
+#endif
             return new Message(header, body);
         }
     }

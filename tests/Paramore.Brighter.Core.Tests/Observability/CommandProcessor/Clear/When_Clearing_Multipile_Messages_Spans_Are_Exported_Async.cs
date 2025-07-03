@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -64,7 +63,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
 
         var routingKey = new RoutingKey(_topic);
         
-        InMemoryProducer producer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
         {
             Publication =
             {
@@ -77,7 +76,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, producer}
+            {routingKey, messageProducer}
         });
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
@@ -87,6 +86,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             outbox,
             maxOutStandingMessages: -1
         );
@@ -127,24 +127,24 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert 
-        _exportedActivities.Count.Should().Be(21);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        Assert.Equal(21, _exportedActivities.Count);
+        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
         
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        createActivity.Should().NotBeNull();
+        Assert.NotNull(createActivity);
         
         //there should be a clear span for each message id
         var clearActivity = _exportedActivities.Where(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
-        clearActivity.Count().Should().Be(3);
+        Assert.Equal(3, clearActivity.Count());
 
         //there should be a span in the Db for retrieving the message
-        var outBoxActivity = _exportedActivities.Where(a => a.DisplayName == $"{OutboxDbOperation.Get.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
-        outBoxActivity.Count().Should().Be(3);
+        var outBoxActivity = _exportedActivities.Where(a => a.DisplayName == $"{BoxDbOperation.Get.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
+        Assert.Equal(3, outBoxActivity.Count());
 
         //there should be a span for publishing the message via the producer
         var producerActivity = _exportedActivities.Where(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
-        producerActivity.Count().Should().Be(3);
+        Assert.Equal(3, producerActivity.Count());
         
     }
 }

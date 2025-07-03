@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// Class SnsMessageProducer.
 /// </summary>
-public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync
+public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync
 {
     private readonly SnsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
@@ -110,7 +110,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
         var topicArn = await EnsureTopicAsync(
             routingKey,
             _publication.FindTopicBy,
-            _publication.SnsAttributes,
+            _publication.TopicAttributes,
             _publication.MakeChannels,
             cancellationToken);
 
@@ -122,7 +122,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="cancellationToken">Allows cancellation of the Send operation</param>
-    public async Task SendAsync(Message message, CancellationToken cancellationToken = default) 
+    public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         => await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
 
     /// <summary>
@@ -152,7 +152,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
         => await SendWithDelayAsync(message, delay, true, cancellationToken);
 
     private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken)
-    { 
+    {
         delay ??= TimeSpan.Zero;
         if (delay != TimeSpan.Zero)
         {
@@ -167,28 +167,33 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
             schedulerSync.Schedule(message, delay.Value);
             return;
         }
-        
-        s_logger.LogDebug(
-            "SNSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
-            message.Header.Topic, message.Id, message.Body);
-        
+
+        Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
+
         await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
-        
+
         if (string.IsNullOrEmpty(ChannelAddress))
             throw new InvalidOperationException(
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body} as the topic does not exist");
-        
+
         using var client = _clientFactory.CreateSnsClient();
         var publisher = new SnsMessagePublisher(ChannelAddress!, client,
-            _publication.SnsAttributes?.Type ?? SnsSqsType.Standard);
+            _publication.TopicAttributes?.Type ?? SqsType.Standard);
         var messageId = await publisher.PublishAsync(message);
-        
+
         if (messageId == null)
             throw new InvalidOperationException(
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
-        
-        s_logger.LogDebug(
-            "SNSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-            message.Header.Topic, message.Id, messageId);
+
+        Log.PublishedMessage(s_logger, message.Header.Topic, message.Id, messageId);
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Debug, "SNSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}")]
+        public static partial void PublishingMessage(ILogger logger, string topic, string id, MessageBody request);
+
+        [LoggerMessage(LogLevel.Debug, "SNSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}")]
+        public static partial void PublishedMessage(ILogger logger, string topic, string messageId, string snsMessageId);
     }
 }

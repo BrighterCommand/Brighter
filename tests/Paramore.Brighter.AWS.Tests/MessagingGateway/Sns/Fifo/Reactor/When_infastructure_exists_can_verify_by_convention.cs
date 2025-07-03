@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerSync _consumer;
@@ -20,25 +20,32 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByConventionTests()
+    public AwsValidateInfrastructureByConventionTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var correlationId = Guid.NewGuid().ToString();
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
+        var channelName = new ChannelName($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
+
+        var queueAttributes = new SqsAttributes(
+            type: SqsType.Fifo
+        );
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            subscriptionName: new SubscriptionName(channelName!),
+            channelName: channelName,
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: queueAttributes, 
+            topicAttributes: topicAttributes,
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -55,23 +62,15 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            findTopicBy: TopicFindBy.Convention,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo
-        );
+        subscription.FindTopicBy = TopicFindBy.Convention;
+        subscription.MakeChannels = OnMissingChannel.Validate;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
-            new SnsPublication
+            new SnsPublication(topicAttributes:topicAttributes )
             {
                 FindTopicBy = TopicFindBy.Convention,
                 MakeChannels = OnMissingChannel.Validate,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
             }
         );
 
@@ -90,7 +89,7 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
 
         //Assert
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         //clear the queue
         _consumer.Acknowledge(message);

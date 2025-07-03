@@ -54,7 +54,7 @@ namespace Greetings.Ports.Mappers
                 );
             
             var s = await serializer.SerializeAsync(request, _serializationContext);
-            var body = new MessageBody(s, MediaTypeNames.Application.Octet, CharacterEncoding.Raw);
+            var body = new MessageBody(s, new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw);
             header.PartitionKey = _partitionKey;
 
             return new Message(header, body);

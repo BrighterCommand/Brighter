@@ -34,7 +34,7 @@ using Serilog.Extensions.Logging;
 
 namespace GreetingsSender
 {
-    class Program
+    static class Program
     {
         static void Main(string[] args)
         {
@@ -63,14 +63,12 @@ namespace GreetingsSender
 
             var producerRegistry = new RmqProducerRegistryFactory(
                 rmqConnection,
-                new RmqPublication[]
-                {
+                [
                     new RmqPublication
                     {
                         Topic = new RoutingKey("Greeting.Request"),
-                        RequestType = typeof(GreetingRequest)
                     }
-                }).Create();
+                ]).Create();
             
             serviceCollection
                 .AddBrighter()

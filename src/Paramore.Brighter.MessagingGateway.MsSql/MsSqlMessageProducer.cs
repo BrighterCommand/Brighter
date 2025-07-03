@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     /// <summary>
     /// The <see cref="MsSqlMessageProducer"/> class is responsible for producing messages to an MS SQL database.
     /// </summary>
-    public class MsSqlMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
+    public partial class MsSqlMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageProducer>();
         private readonly MsSqlMessageQueue<Message> _sqlQ;
@@ -127,12 +127,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     return;
                 } 
                   
-                s_logger.LogWarning("MsSqlMessageProducer: no scheduler configured, message will be sent immediately");
+                Log.NoSchedulerConfigured(s_logger);
             }
               
             var topic = message.Header.Topic;
 
-            s_logger.LogDebug("MsSqlMessageProducer: send message with topic {Topic} and id {Id}", topic, message.Id);
+            Log.SendMessage(s_logger, topic, message.Id);
 
             _sqlQ.Send(message, topic);
         }
@@ -162,13 +162,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     return;
                 }
                 
-                s_logger.LogWarning("MsSqlMessageProducer: no scheduler configured, message will be sent immediately");
+                Log.NoSchedulerConfigured(s_logger);
             }
 
             var topic = message.Header.Topic;
 
-            s_logger.LogDebug(
-                "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}", topic, message.Id);
+            Log.SendMessageAsync(s_logger, topic, message.Id);
 
             await _sqlQ.SendAsync(message, topic, TimeSpan.Zero, cancellationToken);
         }
@@ -182,5 +181,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             return new ValueTask(Task.CompletedTask);
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "MsSqlMessageProducer: no scheduler configured, message will be sent immediately")]
+            public static partial void NoSchedulerConfigured(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessageProducer: send message with topic {Topic} and id {Id}")]
+            public static partial void SendMessage(ILogger logger, string topic, string id);
+            
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}")]
+            public static partial void SendMessageAsync(ILogger logger, string topic, string id);
+        }
     }
 }
+

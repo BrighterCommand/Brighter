@@ -1,32 +1,7 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -42,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
-        private Exception _exception;
+        private Exception? _exception;
 
         public CommandProcessorNoMessageMapperAsyncTests()
         {
@@ -50,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(new InternalBus(), timeProvider)
+            InMemoryMessageProducer messageProducer = new(new InternalBus(), timeProvider, InstrumentationOptions.All)
             {
                 Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
             };
@@ -68,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
             
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, producer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, messageProducer},});
 
             var tracer = new BrighterTracer(timeProvider);
             var outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
@@ -80,6 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 outbox
             );
 
@@ -95,8 +71,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         public async Task When_Posting_A_Message_And_There_Is_No_Message_Mapper_Factory_Async()
         {
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
-
-            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
+            Assert.IsType<ArgumentOutOfRangeException>(_exception); 
         }
 
         public void Dispose()

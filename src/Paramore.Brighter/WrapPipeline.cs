@@ -21,13 +21,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
@@ -38,20 +36,27 @@ namespace Paramore.Brighter
     /// Takes a request and maps it to a message
     /// Runs transforms on that message
     /// </summary>
-    public class WrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
+    public partial class WrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<WrapPipeline<TRequest>>();
+            
+        private readonly InstrumentationOptions _instrumentationOptions;
+
         /// <summary>
         /// Constructs an instance of a wrap pipeline
         /// </summary>
         /// <param name="messageMapper">The message mapper that forms the pipeline source</param>
         /// <param name="messageTransformerFactory">Factory for transforms, required to release</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
             IAmAMessageTransformerFactory? messageTransformerFactory, 
-            IEnumerable<IAmAMessageTransform> transforms
+            IEnumerable<IAmAMessageTransform> transforms,
+            InstrumentationOptions instrumentationOptions
             ) : base(messageMapper, transforms)
         {
+            _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactory != null)
             {
                 InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
@@ -84,15 +89,33 @@ namespace Paramore.Brighter
 
             MessageMapper.Context = requestContext;
             var message = MessageMapper.MapToMessage(request, publication);
-            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, true);
+
+            if (message.Header.Topic != publication.Topic)
+            {
+                Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic);
+            }
+
+            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, _instrumentationOptions, true);
             
             Transforms.Each(transform =>
             {
                 transform.Context = requestContext;
                 message = transform.Wrap(message, publication);
-                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false);
+                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false, _instrumentationOptions);
             });
+
+            if (!string.IsNullOrEmpty(publication.ReplyTo))
+            {
+                message.Header.ReplyTo = publication.ReplyTo!;
+            } 
+            
             return message;
+        }
+        
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Topic mismatch detected: The found topic ({FindPublicationTopic}) differs from the message topic ({MessageTopic}). This discrepancy could lead to invalid data in the pipeline")]
+            public static partial void DifferentPublicationAndMessageTopic(ILogger logger, string findPublicationTopic, string messageTopic);
         }
     }
 }

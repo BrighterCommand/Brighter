@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -10,7 +10,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
@@ -30,12 +29,15 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
 
         // Set rawMessageDelivery to false
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            makeChannels: OnMissingChannel.Create,
-            rawMessageDelivery: false));
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: new SqsAttributes(
+                rawMessageDelivery: false), 
+            makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
@@ -54,7 +56,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             MessageType.MT_COMMAND,
             correlationId: Guid.NewGuid().ToString(),
             replyTo: RoutingKey.Empty,
-            contentType: "text\\plain");
+            contentType: new ContentType(MediaTypeNames.Text.Plain));
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
         messageHeader.Bag.Add(customHeaderItem.Key, customHeaderItem.Value);
@@ -69,14 +71,15 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         await _channel.AcknowledgeAsync(messageReceived);
 
         // Assert
-        messageReceived.Id.Should().Be(messageToSend.Id);
-        messageReceived.Header.Topic.Should().Be(messageToSend.Header.Topic);
-        messageReceived.Header.MessageType.Should().Be(messageToSend.Header.MessageType);
-        messageReceived.Header.CorrelationId.Should().Be(messageToSend.Header.CorrelationId);
-        messageReceived.Header.ReplyTo.Should().Be(messageToSend.Header.ReplyTo);
-        messageReceived.Header.ContentType.Should().Be(messageToSend.Header.ContentType);
-        messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
-        messageReceived.Body.Value.Should().Be(messageToSend.Body.Value);
+        Assert.Equal(messageToSend.Id, messageReceived.Id);
+        Assert.Equal(messageToSend.Header.Topic, messageReceived.Header.Topic);
+        Assert.Equal(messageToSend.Header.MessageType, messageReceived.Header.MessageType);
+        Assert.Equal(messageToSend.Header.CorrelationId, messageReceived.Header.CorrelationId);
+        Assert.Equal(messageToSend.Header.ReplyTo, messageReceived.Header.ReplyTo);
+        Assert.Equal(messageToSend.Header.ContentType, messageReceived.Header.ContentType);
+        Assert.Contains(customHeaderItem.Key, messageReceived.Header.Bag);
+        Assert.Equal(customHeaderItem.Value, messageReceived.Header.Bag[customHeaderItem.Key]);
+        Assert.Equal(messageToSend.Body.Value, messageReceived.Body.Value);
     }
         
     public void Dispose()

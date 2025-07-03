@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
@@ -48,12 +47,12 @@ public class MongoDbOutboxEmptyStoreTests : IDisposable
     }
 
     [Fact]
-    public void When_There_Is_No_Message_In_The_Sql_Outbox()
+    public void When_There_Is_No_Message_In_The_MongoDb_Outbox()
     {
         var storedMessage = _outbox.Get(_messageEarliest.Id, new RequestContext());
 
         //should return a empty message
-        storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+        Assert.Equal(MessageType.MT_NONE, storedMessage.Header.MessageType);
     }
 
     public void Dispose()

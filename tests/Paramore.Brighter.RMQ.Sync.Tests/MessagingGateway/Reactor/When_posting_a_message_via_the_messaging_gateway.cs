@@ -24,14 +24,16 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FluentAssertions;
+using System.Net.Mime;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.RMQ.Tests.MessagingGateway;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqMessageProducerSendMessageTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -40,9 +42,42 @@ public class RmqMessageProducerSendMessageTests : IDisposable
 
     public RmqMessageProducerSendMessageTests()
     {
+        var messageId = Guid.NewGuid().ToString();
+        var topic = new RoutingKey(Guid.NewGuid().ToString());
+        var messageType = MessageType.MT_COMMAND;
+        var source = new Uri("http://testing.example");
+        var type = "test-type";
+        var timestamp = DateTimeOffset.UtcNow;
+        var correlationId = Guid.NewGuid().ToString();
+        var replyTo = new RoutingKey("reply-queue");
+        var contentType = new ContentType(MediaTypeNames.Application.Json);
+        var handledCount = 5;
+        var dataSchema = new Uri("http://schema.example");
+        var subject = "test-subject";
+        var delayed = TimeSpan.FromSeconds(30);
+        var traceParent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+        var traceState = "congo=t61rcWkgMzE";
+        var baggage = new Baggage();
+        baggage.LoadBaggage("userId=alice");
+
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(
+                messageId: messageId,
+                topic: topic,
+                messageType: messageType,
+                source: source,
+                type: type,
+                timeStamp: timestamp,
+                correlationId: correlationId,
+                replyTo: replyTo,
+                contentType: contentType,
+                handledCount: handledCount,
+                dataSchema: dataSchema,
+                subject: subject,
+                delayed: delayed,
+                traceParent: traceParent,
+                traceState: traceState,
+                baggage: baggage),
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -66,7 +101,26 @@ public class RmqMessageProducerSendMessageTests : IDisposable
 
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
 
-        result.Body.Value.Should().Be(_message.Body.Value);
+        // Assert message body
+        Assert.Equal(_message.Body.Value, result.Body.Value);
+
+        // Assert header values
+        Assert.Equal(_message.Header.MessageId, result.Header.MessageId);
+        Assert.Equal(_message.Header.Topic, result.Header.Topic);
+        Assert.Equal(_message.Header.MessageType, result.Header.MessageType);
+        Assert.Equal(_message.Header.Source, result.Header.Source);
+        Assert.Equal(_message.Header.Type, result.Header.Type);
+        Assert.Equal(_message.Header.TimeStamp, result.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(_message.Header.CorrelationId, result.Header.CorrelationId);
+        Assert.Equal(_message.Header.ReplyTo, result.Header.ReplyTo);
+        Assert.Equal(_message.Header.ContentType, result.Header.ContentType);
+        Assert.Equal(_message.Header.HandledCount, result.Header.HandledCount);
+        Assert.Equal(_message.Header.DataSchema, result.Header.DataSchema);
+        Assert.Equal(_message.Header.Subject, result.Header.Subject);
+        Assert.Equal(TimeSpan.Zero, result.Header.Delayed);                                //we clear any delay from the producer, as it represents delay in the pipeline 
+        Assert.Equal(_message.Header.TraceParent, result.Header.TraceParent);
+        Assert.Equal(_message.Header.TraceState, result.Header.TraceState);
+        Assert.Equal(_message.Header.Baggage, result.Header.Baggage);
     }
 
     public void Dispose()
@@ -74,3 +128,4 @@ public class RmqMessageProducerSendMessageTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

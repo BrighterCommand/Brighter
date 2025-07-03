@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Tests.MessagingGateway;
 using Xunit;
@@ -10,6 +9,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
 [Trait("Fragile", "CI")]
+[Collection("RMQ")]
 public class RmqMessageConsumerMultipleTopicTests : IDisposable
 {        
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -62,12 +62,12 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
         _messageConsumer.Acknowledge(topic2Result);
 
         // should_received_a_message_from_test1_with_same_topic_and_body
-        topic1Result.Header.Topic.Should().Be(_messageTopic1.Header.Topic);
-        topic1Result.Body.Value.Should().BeEquivalentTo(_messageTopic1.Body.Value);
+        Assert.Equal(_messageTopic1.Header.Topic, topic1Result.Header.Topic);
+        Assert.Equivalent(_messageTopic1.Body.Value, topic1Result.Body.Value);
 
         // should_received_a_message_from_test2_with_same_topic_and_body
-        topic2Result.Header.Topic.Should().Be(_messageTopic2.Header.Topic);
-        topic2Result.Body.Value.Should().BeEquivalentTo(_messageTopic2.Body.Value);            
+        Assert.Equal(_messageTopic2.Header.Topic, topic2Result.Header.Topic);
+        Assert.Equivalent(_messageTopic2.Body.Value, topic2Result.Body.Value);            
     }
 
     public void Dispose()

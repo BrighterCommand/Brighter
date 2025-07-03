@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -65,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider, InstrumentationOptions.All)
                     {
                         Publication = {Topic = routingKey, RequestType = typeof(MyRequest)}
                     } 
@@ -81,6 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 new InMemoryOutbox( timeProvider) {Tracer = tracer}
             );
 
@@ -109,7 +109,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             );
             
             //should throw an exception as we require a timeout to be set
-            exception.Should().BeOfType<InvalidOperationException>();
+            Assert.IsType<InvalidOperationException>(exception);
         }
 
 

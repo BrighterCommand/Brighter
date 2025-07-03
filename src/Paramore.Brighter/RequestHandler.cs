@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
@@ -49,7 +48,8 @@ namespace Paramore.Brighter
     /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    public abstract partial class RequestHandler<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandler<TRequest>>();
 
@@ -105,12 +105,12 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, instrumentationOptions, isSink:_successor == null);
             }   
             
             if (_successor != null)
             {
-                s_logger.LogDebug("Passing request from {HandlerName} to {NextHandler}", Name, _successor.Name);
+                Log.PassingRequestFromTo(s_logger, Name, _successor.Name);
                 return _successor.Handle(command);
             }
 
@@ -140,12 +140,12 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, instrumentationOptions, isSink:_successor == null);
             }   
             
             if (_successor != null)
             {
-                s_logger.LogDebug("Falling back from {HandlerName} to {NextHandler}", Name, _successor.Name);
+                Log.FallingBackFromTo(s_logger, Name, _successor.Name);
                 return _successor.Fallback(command);
             }
 
@@ -167,5 +167,15 @@ namespace Paramore.Brighter
                 .Where(method => method.Name == nameof(Handle))
                 .Single(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "Passing request from {HandlerName} to {NextHandler}")]
+            public static partial void PassingRequestFromTo(ILogger logger, HandlerName handlerName, HandlerName nextHandler);
+
+            [LoggerMessage(LogLevel.Debug, "Falling back from {HandlerName} to {NextHandler}")]
+            public static partial void FallingBackFromTo(ILogger logger, HandlerName handlerName, HandlerName nextHandler);
+        }
     }
 }
+

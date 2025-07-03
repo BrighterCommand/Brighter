@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -23,22 +24,24 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var correlationId = Guid.NewGuid().ToString();
         var subscriptionName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(queueName);
 
+        var queueAttributes = new SqsAttributes( type: SqsType.Fifo);
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor, 
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -48,11 +51,12 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+        _sender = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(
+                channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create
+                )
+            );
 
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
@@ -69,7 +73,7 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
 
         _channel.Acknowledge(_requeuedMessage);
 
-        _requeuedMessage.Body.Value.Should().Be(_receivedMessage.Body.Value);
+        Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
     }
 
     public void Dispose()

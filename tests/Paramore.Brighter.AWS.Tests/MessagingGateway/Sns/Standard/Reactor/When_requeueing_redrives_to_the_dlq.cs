@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -29,17 +30,22 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         MyCommand myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
+            ),
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(
@@ -51,7 +57,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SnsMessageProducer(_awsConnection,  new SnsPublication { MakeChannels = OnMissingChannel.Create });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
 
@@ -77,7 +83,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         Task.Delay(5000);
 
         //inspect the dlq
-        GetDLQCount(_dlqChannelName).Should().Be(1);
+        Assert.Equal(1, GetDLQCount(_dlqChannelName));
     }
 
     private int GetDLQCount(string queueName)

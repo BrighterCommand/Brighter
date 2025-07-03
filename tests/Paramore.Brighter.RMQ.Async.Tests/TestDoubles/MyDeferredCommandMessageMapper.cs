@@ -1,9 +1,10 @@
 ﻿using System.Text.Json;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
-internal class MyDeferredCommandMessageMapper : IAmAMessageMapper<MyDeferredCommand>
+internal sealed class MyDeferredCommandMessageMapper : IAmAMessageMapper<MyDeferredCommand>
 {
     public IRequestContext Context { get; set; }
 

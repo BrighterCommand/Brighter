@@ -50,7 +50,8 @@ namespace Paramore.Brighter
     /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public abstract class RequestHandlerAsync<TRequest> : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
+    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandlerAsync<TRequest>>();
 
@@ -119,12 +120,12 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:true, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:true, instrumentationOptions, isSink:_successor == null);
             }   
             
             if (_successor != null)
             {
-                s_logger.LogDebug("Passing request from {HandlerName} to {NextHandler}", Name, _successor.Name);
+                Log.PassingRequest(s_logger, Name, _successor.Name);
                 return await _successor.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 
@@ -155,12 +156,12 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:true, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:true, instrumentationOptions, isSink:_successor == null);
             }   
             
             if (_successor != null)
             {
-                s_logger.LogDebug("Falling back from {HandlerName} to {NextHandler}", Name, _successor.Name);
+                Log.FallingBack(s_logger, Name, _successor.Name);
                 return await _successor.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 
@@ -184,5 +185,14 @@ namespace Paramore.Brighter
                     && method.GetParameters()[1].ParameterType == typeof(CancellationToken));
         }
 
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "Passing request from {HandlerName} to {NextHandler}")]
+            public static partial void PassingRequest(ILogger logger, HandlerName handlerName, HandlerName nextHandler);
+
+            [LoggerMessage(LogLevel.Debug, "Falling back from {HandlerName} to {NextHandler}")]
+            public static partial void FallingBack(ILogger logger, HandlerName handlerName, HandlerName nextHandler);
+        }
     }
 }
+

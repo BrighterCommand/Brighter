@@ -27,17 +27,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
+    public partial class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
         /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
         /// </summary>
-        public event Action<bool, string> OnMessagePublished;
+        public event Action<bool, string>? OnMessagePublished;
       
         /// <summary>
         /// The publication configuration for this producer
@@ -47,30 +46,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         /// <inheritdoc />
-        public IAmAMessageScheduler Scheduler { get; set; }
+        public IAmAMessageScheduler? Scheduler { get; set; }
 
-        private IProducer<string, byte[]> _producer;
+        private IProducer<string, byte[]>? _producer;
         private readonly IKafkaMessageHeaderBuilder _headerBuilder;
         private readonly ProducerConfig _producerConfig;
-        private KafkaMessagePublisher _publisher;
+        private KafkaMessagePublisher? _publisher;
         private bool _hasFatalProducerError;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
             KafkaPublication publication)
         {
-            if (publication == null)
+            if (publication is null)
                 throw new ArgumentNullException(nameof(publication));
             
-            if (string.IsNullOrEmpty(publication.Topic))
+            if (string.IsNullOrEmpty(publication.Topic!))
                 throw new ConfigurationException("Topic is required for a publication");
 
             Publication = publication;
 
-            _clientConfig = new ClientConfig
+            ClientConfig = new ClientConfig
             {
                 Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
                 BootstrapServers = string.Join(",", configuration.BootStrapServers),
@@ -83,7 +82,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int)configuration.SecurityProtocol.Value) : null,
                 SslCaLocation = configuration.SslCaLocation,
                 SslKeyLocation = configuration.SslKeystoreLocation,
-
             };
 
             //We repeat properties because copying them from them to the producer config updates in client config in place
@@ -175,9 +173,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     _hasFatalProducerError = error.IsFatal;
                     
                     if (_hasFatalProducerError) 
-                        s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason, true);
+                        Log.FatalProducerError(s_logger, error.Code, error.Reason, true);
                     else
-                        s_logger.LogWarning("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason, false);
+                        Log.NonFatalProducerError(s_logger, error.Code, error.Reason, false);
                     
                 })
                 .Build();
@@ -230,60 +228,42 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 return;
             }
             
-            if (message == null)
-            {
+            if (message is null)
                 throw new ArgumentNullException(nameof(message));
-            }
+
+            if (_publisher is null)
+                throw new InvalidOperationException("The publisher cannot be null");
 
             if (_hasFatalProducerError)
-            {
-                throw new ChannelFailureException($"Producer is in unrecoverable state");
-            }
+                throw new ChannelFailureException("Producer is in unrecoverable state");
             
             try
             {
-                s_logger.LogDebug(
-                    "Sending message to Kafka. Servers {Servers} Topic: {Topic} Body: {Request}",
-                    _producerConfig.BootstrapServers,
-                    message.Header.Topic,
-                    message.Body.Value
-                );
+                Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic, message.Body.Value);
             
                 _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
             
             }
             catch (ProduceException<string, string> pe)
             {
-                s_logger.LogError(pe,
-                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                    _producerConfig.BootstrapServers,
-                    pe.Error.Reason
-                );
+                Log.ErrorSendingMessageToKafka(s_logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
             }
             catch (InvalidOperationException ioe)
             {
-                s_logger.LogError(ioe,
-                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                    _producerConfig.BootstrapServers,
-                    ioe.Message
-                );
+                Log.ErrorSendingMessageToKafka(s_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
             
             }
             catch (ArgumentException ae)
             {
-                s_logger.LogError(ae,
-                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                    _producerConfig.BootstrapServers,
-                    ae.Message
-                );
+                Log.ErrorSendingMessageToKafka(s_logger, ae, _producerConfig.BootstrapServers, ae.Message);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
                            
             }
             catch (KafkaException kafkaException)
             {
-                s_logger.LogError(kafkaException, "KafkaMessageProducer: There was an error sending to topic {Topic})", Topic);
+                Log.KafkaExceptionError(s_logger, kafkaException, Topic ?? RoutingKey.Empty);
                             
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
@@ -311,54 +291,36 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 return;
              }
                         
-             if (message == null)
-             {
+             if (message is null)
                  throw new ArgumentNullException(nameof(message));
-             }
 
+             if (_publisher is null)
+                 throw new InvalidOperationException("The publisher cannot be null");
+             
              if (_hasFatalProducerError)
-             {
                  throw new ChannelFailureException("Producer is in unrecoverable state");
-             }
               
              try
              {
-                 s_logger.LogDebug(
-                     "Sending message to Kafka. Servers {Servers} Topic: {Topic} Body: {Request}",
-                     _producerConfig.BootstrapServers,
-                     message.Header.Topic,
-                     message.Body.Value
-                 );
+                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic, message.Body.Value);
             
                  await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
             
              }
              catch (ProduceException<string, string> pe)
              {
-                 s_logger.LogError(pe,
-                     "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                     _producerConfig.BootstrapServers,
-                     pe.Error.Reason
-                 );
+                 Log.ErrorSendingMessageToKafka(s_logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
              }
              catch (InvalidOperationException ioe)
              {
-                 s_logger.LogError(ioe,
-                     "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                     _producerConfig.BootstrapServers,
-                     ioe.Message
-                 );
+                 Log.ErrorSendingMessageToKafka(s_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
             
              }
              catch (ArgumentException ae)
              {
-                 s_logger.LogError(ae,
-                     "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                     _producerConfig.BootstrapServers,
-                     ae.Message
-                 );
+                 Log.ErrorSendingMessageToKafka(s_logger, ae, _producerConfig.BootstrapServers, ae.Message);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
                            
              }
@@ -377,7 +339,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (status == PersistenceStatus.Persisted)
             {
-                if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
+                if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[]? messageIdBytes))
                 {
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val))
@@ -394,5 +356,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 () =>OnMessagePublished?.Invoke(false, string.Empty)
             );
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Error, "Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}")]
+            public static partial void FatalProducerError(ILogger logger, ErrorCode errorCode, string errorMessage, bool fatalError);
+
+            [LoggerMessage(LogLevel.Warning, "Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}")]
+            public static partial void NonFatalProducerError(ILogger logger, ErrorCode errorCode, string errorMessage, bool fatalError);
+
+            [LoggerMessage(LogLevel.Debug, "Sending message to Kafka. Servers {Servers} Topic: {Topic} Body: {Request}")]
+            public static partial void SendingMessageToKafka(ILogger logger, string servers, string topic, object request);
+
+            [LoggerMessage(LogLevel.Error, "Error sending message to Kafka servers {Servers} because {ErrorMessage} ")]
+            public static partial void ErrorSendingMessageToKafka(ILogger logger, Exception exception, string servers, string errorMessage);
+            
+            [LoggerMessage(LogLevel.Error, "KafkaMessageProducer: There was an error sending to topic {Topic})")]
+            public static partial void KafkaExceptionError(ILogger logger, Exception exception, string topic);
+
+        }
     }
 }
+

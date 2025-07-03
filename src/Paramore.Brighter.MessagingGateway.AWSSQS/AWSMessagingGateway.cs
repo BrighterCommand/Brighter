@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
@@ -35,14 +36,17 @@ using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.AWSSQS.Extensions;
+using Paramore.Brighter.Tasks;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
+public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 {
-    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AWSMessagingGateway>();
+    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AwsMessagingGateway>();
 
     private readonly AWSClientFactory _awsClientFactory = new(awsConnection);
     protected readonly AWSMessagingGatewayConnection AwsConnection = awsConnection;
@@ -68,6 +72,72 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
     /// </summary>
     protected string? ChannelDeadLetterQueueArn { get; set; }
 
+
+    protected async Task<string?> EnsureQueueAsync(
+        string queue,
+        ChannelType channelType,
+        QueueFindBy findQueueBy,
+        SqsAttributes? sqsAttributes,
+        OnMissingChannel makeChannel = OnMissingChannel.Create,
+        CancellationToken cancellationToken = default)
+    {
+        if (sqsAttributes is null)
+            throw new ConfigurationException("No SQS attributes provided for channel");
+
+        ChannelQueueUrl = makeChannel switch
+        {
+            //on validate or assume, turn a routing key into a queueUrl
+            OnMissingChannel.Assume or OnMissingChannel.Validate => 
+                await ValidateQueueAsync(queue, findQueueBy, sqsAttributes.Type, makeChannel, cancellationToken),
+            OnMissingChannel.Create => 
+                await CreateQueueAsync(queue, sqsAttributes, cancellationToken),
+            _ => ChannelQueueUrl
+        };
+
+        return ChannelQueueUrl;
+    }
+    
+    protected RoutingKey EnsureSubscription(
+        bool isFifo,
+        string queueUrl,
+        RoutingKey routingKey,
+        TopicFindBy findTopicBy,
+        SnsAttributes? snsAttributes,
+        SqsAttributes? sqsAttributes,
+        OnMissingChannel makeChannels = OnMissingChannel.Create)
+    => BrighterAsyncContext.Run(async () => await EnsureSubscriptionAsync(isFifo, queueUrl, routingKey, findTopicBy, snsAttributes, sqsAttributes, makeChannels));
+    
+
+    protected async Task<RoutingKey> EnsureSubscriptionAsync(
+        bool isFifo,
+        string queueUrl,
+        RoutingKey routingKey,
+        TopicFindBy findTopicBy,
+        SnsAttributes? snsAttributes,
+        SqsAttributes? sqsAttributes,
+        OnMissingChannel makeChannels = OnMissingChannel.Create,
+        CancellationToken ct = default)
+    {
+        var topicAttributes = snsAttributes ?? new SnsAttributes();
+        var queueAttributes = sqsAttributes ?? new SqsAttributes();
+        var topic = routingKey.ToValidSNSTopicName(isFifo);
+
+        await EnsureTopicAsync(
+            topic,
+            findTopicBy,
+            topicAttributes,
+            makeChannels,
+            ct);
+
+        await CheckQueueSubscribedAsync(
+            queueUrl,
+            queueAttributes,
+            makeChannels,
+            ct
+        );
+        return routingKey;
+    }
+
     protected async Task<string?> EnsureTopicAsync(
         RoutingKey topic,
         TopicFindBy topicFindBy,
@@ -75,181 +145,100 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         OnMissingChannel makeTopic = OnMissingChannel.Create,
         CancellationToken cancellationToken = default)
     {
-        var type = attributes?.Type ?? SnsSqsType.Standard;
+        var type = attributes?.Type ?? SqsType.Standard;
         ChannelTopicArn = makeTopic switch
         {
             //on validate or assume, turn a routing key into a topicARN
-            OnMissingChannel.Assume or OnMissingChannel.Validate => await ValidateTopicAsync(topic, topicFindBy, type,
-                cancellationToken),
-            OnMissingChannel.Create => await CreateTopicAsync(topic, attributes),
+            OnMissingChannel.Assume or OnMissingChannel.Validate => 
+                await ValidateTopicAsync(topic, topicFindBy, type, cancellationToken),
+            OnMissingChannel.Create =>
+                await CreateTopicAsync(topic, attributes),
             _ => ChannelAddress
         };
 
         return ChannelTopicArn;
     }
+    
+    private async Task CheckQueueSubscribedAsync(
+        string queueUrl,
+        SqsAttributes? sqsAttributes,
+        OnMissingChannel makeChannel = OnMissingChannel.Create,
+        CancellationToken cancellationToken = default)
+    {
+        using var snsClient = _awsClientFactory.CreateSnsClient();
+        using var sqsClient = _awsClientFactory.CreateSqsClient();
+        await CheckSubscriptionAsync(makeChannel, ChannelTopicArn!, queueUrl, sqsAttributes, sqsClient, snsClient, cancellationToken);
+    }
+
+    private async Task CheckSubscriptionAsync(OnMissingChannel makeSubscriptions,
+        string topicArn,
+        string queueUrl,
+        SqsAttributes? sqsAttributes,
+        AmazonSQSClient sqsClient,
+        AmazonSimpleNotificationServiceClient snsClient, CancellationToken cancellationToken)
+    {
+        if (makeSubscriptions == OnMissingChannel.Assume)
+        {
+            return;
+        }
+
+        if (!await SubscriptionExistsAsync(topicArn, queueUrl, sqsClient, snsClient, cancellationToken))
+        {
+            if (makeSubscriptions == OnMissingChannel.Validate)
+            {
+                throw new BrokerUnreachableException(
+                    $"Subscription validation error: could not find subscription for {queueUrl}");
+            }
+
+            if (makeSubscriptions == OnMissingChannel.Create)
+            {
+                await SubscribeToTopicAsync(topicArn, queueUrl, sqsAttributes, sqsClient, snsClient, cancellationToken);
+            }
+        }
+    }
 
     private async Task<string> CreateTopicAsync(RoutingKey topic, SnsAttributes? snsAttributes)
     {
+        snsAttributes ??= SnsAttributes.Empty;
+        
         using var snsClient = _awsClientFactory.CreateSnsClient();
 
-
         var topicName = topic.Value;
-        var attributes = new Dictionary<string, string?>();
-        if (snsAttributes != null)
+        
+        if (snsAttributes.Type == SqsType.Fifo)
         {
-            if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy))
-            {
-                attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
-            }
-
-            if (!string.IsNullOrEmpty(snsAttributes.Policy))
-            {
-                attributes.Add("Policy", snsAttributes.Policy);
-            }
-
-            if (snsAttributes.Type == SnsSqsType.Fifo)
-            {
-                topicName = topic.ToValidSNSTopicName(true);
-                attributes.Add("FifoTopic", "true");
-                if (snsAttributes.ContentBasedDeduplication)
-                {
-                    attributes.Add("ContentBasedDeduplication", "true");
-                }
-            }
+            topicName = topic.ToValidSNSTopicName(true);
         }
 
-        var createTopicRequest = new CreateTopicRequest(topicName)
-        {
-            Attributes = attributes, Tags = [new Tag { Key = "Source", Value = "Brighter" }]
-        };
+        Dictionary<string, string?> attributes = CreateTopicAttributes(snsAttributes);
+
+        var createTopicRequest = new CreateTopicRequest(topicName) { Attributes = attributes, Tags = [new Tag { Key = "Source", Value = "Brighter" }] };
 
         //create topic is idempotent, so safe to call even if topic already exists
         var createTopic = await snsClient.CreateTopicAsync(createTopicRequest);
         if (!string.IsNullOrEmpty(createTopic.TopicArn))
-        {
             return createTopic.TopicArn;
-        }
 
         throw new InvalidOperationException(
             $"Could not create Topic topic: {topic} on {AwsConnection.Region}");
     }
 
-    private async Task<string?> ValidateTopicAsync(RoutingKey topic, TopicFindBy findTopicBy, SnsSqsType snsSqsType,
-        CancellationToken cancellationToken = default)
-    {
-        var topicValidationStrategy = GetTopicValidationStrategy(findTopicBy, snsSqsType);
-        var (exists, topicArn) = await topicValidationStrategy.ValidateAsync(topic, cancellationToken);
-
-        if (exists)
-        {
-            return topicArn;
-        }
-
-        throw new BrokerUnreachableException(
-            $"Topic validation error: could not find topic {topic}. Did you want Brighter to create infrastructure?");
-    }
-
-    private IValidateTopic GetTopicValidationStrategy(TopicFindBy findTopicBy, SnsSqsType type)
-        => findTopicBy switch
-        {
-            TopicFindBy.Arn => new ValidateTopicByArn(_awsClientFactory.CreateSnsClient()),
-            TopicFindBy.Name => new ValidateTopicByName(_awsClientFactory.CreateSnsClient(), type),
-            TopicFindBy.Convention => new ValidateTopicByArnConvention(AwsConnection.Credentials,
-                AwsConnection.Region,
-                AwsConnection.ClientConfigAction,
-                type),
-            _ => throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey")
-        };
-
-
-    protected async Task<string?> EnsureQueueAsync(
-        string queue,
-        QueueFindBy queueFindBy,
-        SqsAttributes? sqsAttributes,
-        OnMissingChannel makeChannel = OnMissingChannel.Create,
-        CancellationToken cancellationToken = default)
-    {
-        var type = sqsAttributes?.Type ?? SnsSqsType.Standard;
-        ChannelQueueUrl = makeChannel switch
-        {
-            //on validate or assume, turn a routing key into a queueUrl
-            OnMissingChannel.Assume or OnMissingChannel.Validate => await ValidateQueueAsync(queue, queueFindBy, type, makeChannel, cancellationToken),
-            OnMissingChannel.Create => await CreateQueueAsync(queue, sqsAttributes, makeChannel, cancellationToken),
-            _ => ChannelQueueUrl
-        };
-
-        return ChannelQueueUrl;
-    }
-
     private async Task<string> CreateQueueAsync(
         string queueName,
         SqsAttributes? sqsAttributes,
-        OnMissingChannel makeChannel,
         CancellationToken cancellationToken)
     {
-        if (sqsAttributes?.RedrivePolicy != null)
-        {
+        sqsAttributes ??= SqsAttributes.Empty;
+
+        if (sqsAttributes.RedrivePolicy != null)
             ChannelDeadLetterQueueArn = await CreateDeadLetterQueueAsync(sqsAttributes, cancellationToken);
-        }
 
         using var sqsClient = _awsClientFactory.CreateSqsClient();
 
+        queueName = queueName.ToValidSQSQueueName(sqsAttributes.Type == SqsType.Fifo);
 
-        var tags = new Dictionary<string, string> { { "Source", "Brighter" } };
-        var attributes = new Dictionary<string, string?>();
-        if (sqsAttributes != null)
-        {
-            if (sqsAttributes.RedrivePolicy != null)
-            {
-                var policy = new
-                {
-                    maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount,
-                    deadLetterTargetArn = ChannelDeadLetterQueueArn
-                };
-
-                attributes.Add(QueueAttributeName.RedrivePolicy,
-                    JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
-            }
-
-            attributes.Add(QueueAttributeName.DelaySeconds, sqsAttributes.DelaySeconds.ToString());
-            attributes.Add(QueueAttributeName.MessageRetentionPeriod, sqsAttributes.MessageRetentionPeriod.ToString());
-            attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds, sqsAttributes.TimeOut.Seconds.ToString());
-            attributes.Add(QueueAttributeName.VisibilityTimeout, sqsAttributes.LockTimeout.ToString());
-            if (sqsAttributes.IAMPolicy != null)
-            {
-                attributes.Add(QueueAttributeName.Policy, sqsAttributes.IAMPolicy);
-            }
-
-            if (sqsAttributes.Tags != null)
-            {
-                foreach (var tag in sqsAttributes.Tags)
-                {
-                    tags.Add(tag.Key, tag.Value);
-                }
-            }
-
-            if (sqsAttributes.Type == SnsSqsType.Fifo)
-            {
-                queueName = queueName.ToValidSQSQueueName(true);
-
-                attributes.Add(QueueAttributeName.FifoQueue, "true");
-                if (sqsAttributes.ContentBasedDeduplication)
-                {
-                    attributes.Add(QueueAttributeName.ContentBasedDeduplication, "true");
-                }
-
-                if (sqsAttributes is { DeduplicationScope: not null, FifoThroughputLimit: not null })
-                {
-                    attributes.Add(QueueAttributeName.FifoThroughputLimit,
-                        sqsAttributes.FifoThroughputLimit.Value.ToString());
-                    attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
-                    {
-                        DeduplicationScope.MessageGroup => "messageGroup",
-                        _ => "queue"
-                    });
-                }
-            }
-        }
+        Dictionary<string, string?> attributes = CreateQueueAttributes(sqsAttributes);
+        Dictionary<string, string> tags = CreateQueueTags(sqsAttributes);
 
         string queueUrl;
         var createQueueRequest = new CreateQueueRequest(queueName) { Attributes = attributes, Tags = tags };
@@ -270,12 +259,6 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
             throw new InvalidOperationException($"Could not create Queue queue: {queueName} on {AwsConnection.Region}");
         }
 
-        if (sqsAttributes == null || sqsAttributes.ChannelType == ChannelType.PubSub)
-        {
-            using var snsClient = _awsClientFactory.CreateSnsClient();
-            await CheckSubscriptionAsync(makeChannel, ChannelTopicArn!, queueUrl, sqsAttributes, sqsClient, snsClient);
-        }
-
         return queueUrl;
     }
 
@@ -287,29 +270,13 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         var queueName = sqsAttributes.RedrivePolicy!.DeadlLetterQueueName;
 
-        var tags = new Dictionary<string, string> { { "Source", "Brighter" } };
-        var attributes = new Dictionary<string, string?>();
-        if (sqsAttributes.Type == SnsSqsType.Fifo)
+        if (sqsAttributes.Type == SqsType.Fifo)
         {
             queueName = queueName.ToValidSQSQueueName(true);
-
-            attributes.Add(QueueAttributeName.FifoQueue, "true");
-            if (sqsAttributes.ContentBasedDeduplication)
-            {
-                attributes.Add(QueueAttributeName.ContentBasedDeduplication, "true");
-            }
-
-            if (sqsAttributes is { DeduplicationScope: not null, FifoThroughputLimit: not null })
-            {
-                attributes.Add(QueueAttributeName.FifoThroughputLimit,
-                    sqsAttributes.FifoThroughputLimit.Value.ToString());
-                attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
-                {
-                    DeduplicationScope.MessageGroup => "messageGroup",
-                    _ => "queue"
-                });
-            }
         }
+
+        Dictionary<string, string?> attributes = CreateQueueAttributes(sqsAttributes, true);
+        Dictionary<string, string> tags = CreateQueueTags(sqsAttributes);
 
         string queueUrl;
 
@@ -341,70 +308,128 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         return attributesResponse.QueueARN;
     }
 
-    private async Task<string?> ValidateQueueAsync(string queueName, 
-        QueueFindBy findBy, 
-        SnsSqsType type,
-        OnMissingChannel makeChannel,
-        CancellationToken cancellationToken)
+    private Dictionary<string, string?> CreateQueueAttributes(SqsAttributes sqsAttributes, bool isDLQ = false)
     {
-        var validationStrategy = GetQueueValidationStrategy(findBy, type);
-        var (exists, queueUrl) = await validationStrategy.ValidateAsync(queueName, cancellationToken);
+        var attributes = new Dictionary<string, string?>();
 
-        if (exists)
-        {
-            return queueUrl;
-        }
+        CreateCommonQueueAttributes(sqsAttributes, isDLQ, attributes);
 
-        if (makeChannel == OnMissingChannel.Assume)
-        {
-            return null;
-        }
+        if (sqsAttributes.Type != SqsType.Fifo) return attributes;
 
-        throw new QueueDoesNotExistException(
-            $"Queue validation error: could not find queue {queueName}. Did you want Brighter to create infrastructure?");
+        CreateFifoQueueAttributes(sqsAttributes, attributes);
+
+        return attributes;
     }
 
-    private IValidateQueue GetQueueValidationStrategy(QueueFindBy findQueueBy, SnsSqsType type)
-        => findQueueBy switch
+    private static void CreateFifoQueueAttributes(SqsAttributes sqsAttributes, Dictionary<string, string?> attributes)
+    {
+        attributes.Add(QueueAttributeName.FifoQueue, "true");
+        if (sqsAttributes.ContentBasedDeduplication)
         {
-            QueueFindBy.Url => new ValidateQueueByUrl(_awsClientFactory.CreateSqsClient()),
-            QueueFindBy.Name => new ValidateQueueByName(_awsClientFactory.CreateSqsClient(), type),
+            attributes.Add(QueueAttributeName.ContentBasedDeduplication, "true");
+        }
+
+        if (sqsAttributes.DeduplicationScope == null || sqsAttributes.FifoThroughputLimit == null)
+            return ;
+     
+        attributes.Add(QueueAttributeName.FifoThroughputLimit, Convert.ToString(sqsAttributes.FifoThroughputLimit.Value.AsString()));
+        attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
+        {
+            DeduplicationScope.MessageGroup => "messageGroup",
+            _ => "queue"
+        });
+    }
+
+    private void CreateCommonQueueAttributes(SqsAttributes sqsAttributes, bool isDLQ, Dictionary<string, string?> attributes)
+    {
+        if (!isDLQ && sqsAttributes.RedrivePolicy != null)
+        {
+            var policy = new
+            {
+                maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount, 
+                deadLetterTargetArn = ChannelDeadLetterQueueArn
+            };
+
+            attributes.Add(QueueAttributeName.RedrivePolicy, JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
+        }
+
+        attributes.Add(QueueAttributeName.DelaySeconds, Convert.ToString(Convert.ToInt32(sqsAttributes.DelaySeconds.TotalSeconds)));
+        attributes.Add(QueueAttributeName.MessageRetentionPeriod, Convert.ToString(Convert.ToInt32(sqsAttributes.MessageRetentionPeriod.TotalSeconds)));
+        if (sqsAttributes.TimeOut != null)
+            attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds,
+                Convert.ToString(Convert.ToInt32(sqsAttributes.TimeOut.Value.TotalSeconds), CultureInfo.InvariantCulture));
+        attributes.Add(QueueAttributeName.VisibilityTimeout, Convert.ToString(Convert.ToInt32(sqsAttributes.LockTimeout.TotalSeconds), CultureInfo.InvariantCulture));
+
+        if (sqsAttributes.IamPolicy != null)
+        {
+            attributes.Add(QueueAttributeName.Policy, sqsAttributes.IamPolicy);
+        }
+    }
+
+    private Dictionary<string, string> CreateQueueTags(SqsAttributes? sqsAttributes)
+    {
+        var tags = new Dictionary<string, string> { { "Source", "Brighter" } };
+        if (sqsAttributes?.Tags == null) return tags;
+        
+        foreach (var tag in sqsAttributes.Tags)
+        {
+            tags.Add(tag.Key, tag.Value);
+        }
+
+        return tags;
+    }
+    
+    private static Dictionary<string, string?> CreateTopicAttributes(SnsAttributes snsAttributes)
+    {
+        var attributes = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy))
+            attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
+
+        if (!string.IsNullOrEmpty(snsAttributes.Policy))
+            attributes.Add("Policy", snsAttributes.Policy);
+
+        if (snsAttributes.Type != SqsType.Fifo) return attributes;
+        
+        attributes.Add("FifoTopic", "true");
+        if (snsAttributes.ContentBasedDeduplication)
+        {
+            attributes.Add("ContentBasedDeduplication", "true");
+        }
+
+        return attributes;
+    }
+
+    private static async Task<string?> GetQueueArnForChannelAsync(string queueUrl, AmazonSQSClient sqsClient)
+    {
+        var result = await sqsClient.GetQueueAttributesAsync(
+            new GetQueueAttributesRequest { QueueUrl = queueUrl, AttributeNames = [QueueAttributeName.QueueArn] }
+        );
+
+        if (result.HttpStatusCode == HttpStatusCode.OK)
+        {
+            return result.QueueARN;
+        }
+
+        return null;
+    }
+
+    private IValidateTopic GetTopicValidationStrategy(TopicFindBy findTopicBy, SqsType type)
+        => findTopicBy switch
+        {
+            TopicFindBy.Arn => new ValidateTopicByArn(_awsClientFactory.CreateSnsClient()),
+            TopicFindBy.Name => new ValidateTopicByName(_awsClientFactory.CreateSnsClient(), type),
+            TopicFindBy.Convention => new ValidateTopicByArnConvention(AwsConnection.Credentials,
+                AwsConnection.Region,
+                AwsConnection.ClientConfigAction,
+                type),
             _ => throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey")
         };
 
-    private async Task CheckSubscriptionAsync(OnMissingChannel makeSubscriptions,
-        string topicArn,
+    private async Task SubscribeToTopicAsync(string topicArn,
         string queueUrl,
         SqsAttributes? sqsAttributes,
         AmazonSQSClient sqsClient,
-        AmazonSimpleNotificationServiceClient snsClient)
-    {
-        if (makeSubscriptions == OnMissingChannel.Assume)
-        {
-            return;
-        }
-
-        if (!await SubscriptionExistsAsync(topicArn, queueUrl, sqsClient, snsClient))
-        {
-            if (makeSubscriptions == OnMissingChannel.Validate)
-            {
-                throw new BrokerUnreachableException(
-                    $"Subscription validation error: could not find subscription for {queueUrl}");
-            }
-
-            if (makeSubscriptions == OnMissingChannel.Create)
-            {
-                await SubscribeToTopicAsync(topicArn, queueUrl, sqsAttributes, sqsClient, snsClient);
-            }
-        }
-    }
-
-    private async Task SubscribeToTopicAsync(
-        string topicArn,
-        string queueUrl,
-        SqsAttributes? sqsAttributes,
-        AmazonSQSClient sqsClient,
-        AmazonSimpleNotificationServiceClient snsClient)
+        AmazonSimpleNotificationServiceClient snsClient, CancellationToken cancellationToken)
     {
         var arn = await snsClient.SubscribeQueueAsync(topicArn, sqsClient, queueUrl);
         if (string.IsNullOrEmpty(arn))
@@ -416,8 +441,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         var response = await snsClient.SetSubscriptionAttributesAsync(
             new SetSubscriptionAttributesRequest(arn,
                 "RawMessageDelivery",
-                sqsAttributes?.RawMessageDelivery.ToString())
-        );
+                sqsAttributes?.RawMessageDelivery.ToString()), cancellationToken);
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
@@ -425,11 +449,10 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         }
     }
 
-    private static async Task<bool> SubscriptionExistsAsync(
-        string topicArn,
+    private static async Task<bool> SubscriptionExistsAsync(string topicArn,
         string queueUrl,
         AmazonSQSClient sqsClient,
-        AmazonSimpleNotificationServiceClient snsClient)
+        AmazonSimpleNotificationServiceClient snsClient, CancellationToken cancellationToken)
     {
         var queueArn = await GetQueueArnForChannelAsync(queueUrl, sqsClient);
 
@@ -443,31 +466,50 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         do
         {
             response = await snsClient.ListSubscriptionsByTopicAsync(
-                new ListSubscriptionsByTopicRequest { TopicArn = topicArn });
-            exists = response.Subscriptions.Any(sub => sub.Protocol.ToLower() == "sqs" && sub.Endpoint == queueArn);
+                new ListSubscriptionsByTopicRequest { TopicArn = topicArn }, cancellationToken);
+            exists = response.Subscriptions.Any(sub => "sqs".Equals(sub.Protocol, StringComparison.OrdinalIgnoreCase) && sub.Endpoint == queueArn);
         } while (!exists && response.NextToken != null);
 
         return exists;
     }
 
-    /// <summary>
-    /// Gets the ARN of the queue for the channel.
-    /// Sync over async is used here; should be alright in context of channel creation.
-    /// </summary>
-    /// <param name="queueUrl">The queue url.</param>
-    /// <param name="sqsClient">The SQS client.</param>
-    /// <returns>The ARN of the queue.</returns>
-    private static async Task<string?> GetQueueArnForChannelAsync(string queueUrl, AmazonSQSClient sqsClient)
+    private async Task<string?> ValidateQueueAsync(
+        string queueName,
+        QueueFindBy findBy,
+        SqsType type,
+        OnMissingChannel makeChannel,
+        CancellationToken cancellationToken)
     {
-        var result = await sqsClient.GetQueueAttributesAsync(
-            new GetQueueAttributesRequest { QueueUrl = queueUrl, AttributeNames = [QueueAttributeName.QueueArn] }
-        );
+        var validationStrategy = GetQueueValidationStrategy(findBy, type);
+        var (exists, queueUrl) = await validationStrategy.ValidateAsync(queueName, cancellationToken);
 
-        if (result.HttpStatusCode == HttpStatusCode.OK)
+        if (exists)
+            return queueUrl;
+
+        throw new QueueDoesNotExistException(
+            $"Queue validation error: could not find queue {queueName}. Did you want Brighter to create infrastructure?");
+    }
+
+    private IValidateQueue GetQueueValidationStrategy(QueueFindBy findQueueBy, SqsType type)
+        => findQueueBy switch
         {
-            return result.QueueARN;
+            QueueFindBy.Url => new ValidateQueueByUrl(_awsClientFactory.CreateSqsClient()),
+            QueueFindBy.Name => new ValidateQueueByName(_awsClientFactory.CreateSqsClient(), type),
+            _ => throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey")
+        };
+
+    private async Task<string?> ValidateTopicAsync(RoutingKey topic, TopicFindBy findTopicBy, SqsType sqsType,
+        CancellationToken cancellationToken = default)
+    {
+        var topicValidationStrategy = GetTopicValidationStrategy(findTopicBy, sqsType);
+        var (exists, topicArn) = await topicValidationStrategy.ValidateAsync(topic, cancellationToken);
+
+        if (exists)
+        {
+            return topicArn;
         }
 
-        return null;
+        throw new BrokerUnreachableException(
+            $"Topic validation error: could not find topic {topic}. Did you want Brighter to create infrastructure?");
     }
 }

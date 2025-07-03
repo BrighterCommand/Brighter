@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -29,21 +29,29 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         const int bufferSize = 10;
 
         // Set rawMessageDelivery to false
+        var queueAttributes = new SqsAttributes(
+            rawMessageDelivery: true,
+            type: SqsType.Fifo);
+        var channelName = new ChannelName(queueName);
+        
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(queueName),
-            channelName: new ChannelName(queueName),
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            makeChannels: OnMissingChannel.Create,
-            rawMessageDelivery: true,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint));
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create)
+        );
 
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+        _messageProducer = new SqsMessageProducer(
+            awsConnection,
+            new SqsPublication(
+                channelName: channelName, 
+                queueAttributes: queueAttributes,  
+                makeChannels: OnMissingChannel.Create)
+            );
     }
 
     [Fact]
@@ -58,7 +66,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             MessageType.MT_COMMAND,
             correlationId: Guid.NewGuid().ToString(),
             replyTo: RoutingKey.Empty,
-            contentType: "text\\plain",
+            contentType: new ContentType(MediaTypeNames.Text.Plain),
             partitionKey: messageGroupId) { Bag = { [HeaderNames.DeduplicationId] = deduplicationId } };
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
@@ -74,17 +82,18 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         await _channel.AcknowledgeAsync(messageReceived);
 
         // Assert
-        messageReceived.Id.Should().Be(messageToSend.Id);
-        messageReceived.Header.Topic.Should().Be(messageToSend.Header.Topic.ToValidSNSTopicName(true));
-        messageReceived.Header.MessageType.Should().Be(messageToSend.Header.MessageType);
-        messageReceived.Header.CorrelationId.Should().Be(messageToSend.Header.CorrelationId);
-        messageReceived.Header.ReplyTo.Should().Be(messageToSend.Header.ReplyTo);
-        messageReceived.Header.ContentType.Should().Be(messageToSend.Header.ContentType);
-        messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
-        messageReceived.Body.Value.Should().Be(messageToSend.Body.Value);
-        messageReceived.Header.PartitionKey.Should().Be(messageGroupId);
-        messageReceived.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
-        messageReceived.Header.Bag[HeaderNames.DeduplicationId].Should().Be(deduplicationId);
+        Assert.Equal(messageToSend.Id, messageReceived.Id);
+        Assert.Equal(messageToSend.Header.Topic.ToValidSNSTopicName(true), messageReceived.Header.Topic);
+        Assert.Equal(messageToSend.Header.MessageType, messageReceived.Header.MessageType);
+        Assert.Equal(messageToSend.Header.CorrelationId, messageReceived.Header.CorrelationId);
+        Assert.Equal(messageToSend.Header.ReplyTo, messageReceived.Header.ReplyTo);
+        Assert.StartsWith(messageToSend.Header.ContentType?.ToString(), messageReceived.Header.ContentType?.ToString());
+        Assert.Contains(customHeaderItem.Key, messageReceived.Header.Bag);
+        Assert.Equal(customHeaderItem.Value, messageReceived.Header.Bag[customHeaderItem.Key]);
+        Assert.Equal(messageToSend.Body.Value, messageReceived.Body.Value);
+        Assert.Equal(messageGroupId, messageReceived.Header.PartitionKey);
+        Assert.Contains(HeaderNames.DeduplicationId, messageReceived.Header.Bag);
+        Assert.Equal(deduplicationId, messageReceived.Header.Bag[HeaderNames.DeduplicationId]);
     }
 
     public void Dispose()

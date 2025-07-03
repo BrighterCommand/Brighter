@@ -236,7 +236,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             throw new NotImplementedException();
         }
 
-        public string DepositPost<TRequest>(
+        public Id DepositPost<TRequest>(
             TRequest request, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null) 
@@ -246,25 +246,25 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return request.Id;
         }
 
-        public string DepositPost<TRequest, TTransaction>(
+        public Id DepositPost<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> provider,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
-            string batchId = null) 
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            string? batchId = null) 
             where TRequest : class, IRequest
         {
             return DepositPost(request);
         }
 
 
-        public string[] DepositPost<TRequest>(
+        public Id[] DepositPost<TRequest>(
             IEnumerable<TRequest> request, 
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null) 
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null) 
             where TRequest : class, IRequest
         {
-            var ids = new List<string>();
+            var ids = new List<Id>();
             foreach (TRequest r in request)
             {
                 ids.Add(DepositPost(r));
@@ -273,20 +273,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return ids.ToArray();
         }
 
-        public string[] DepositPost<TRequest, TTransaction>(
+        public Id[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> request, 
             IAmABoxTransactionProvider<TTransaction> provider,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null)
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null)
             where TRequest : class, IRequest
         {
             return DepositPost(request);
         }
 
-        public async Task<string> DepositPostAsync<TRequest>(
+        public async Task<Id> DepositPostAsync<TRequest>(
             TRequest request,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
@@ -298,14 +298,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return await tcs.Task;
         }
 
-        public async Task<string> DepositPostAsync<TRequest, TTransaction>(
+        public async Task<Id> DepositPostAsync<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> provider,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default,
-            string batchId = null)
+            string? batchId = null)
             where TRequest : class, IRequest
         {
             _postBox.Add(request.Id, request);
@@ -315,15 +315,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return await tcs.Task;
         }
 
-        public async Task<string[]> DepositPostAsync<TRequest>(
+        public async Task<Id[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
-            var ids = new List<string>();
+            var ids = new List<Id>();
             foreach (TRequest r in requests)
             {
                 ids.Add(await DepositPostAsync(r, cancellationToken: cancellationToken));
@@ -332,22 +332,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return ids.ToArray();
         }
 
-        public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(
+        public async Task<Id[]> DepositPostAsync<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> provider,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await DepositPostAsync(requests, cancellationToken: cancellationToken);
         }
 
-        public void ClearOutbox(string[] posts, RequestContext requestContext = null, Dictionary<string, object> args = null)
+        public void ClearOutbox(Id[] posts, RequestContext? requestContext = null, Dictionary<string, object>? args = null)
         {
             foreach (var messageId in posts)
             {
-                if (_postBox.TryGetValue(messageId, out IRequest request))
+                if (_postBox.TryGetValue(messageId, out IRequest? request))
                 {
                     _requests.Enqueue(request);
                 }
@@ -355,9 +355,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
  
         public async Task ClearOutboxAsync(
-            IEnumerable<string> posts, 
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
+            IEnumerable<Id> posts, 
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
@@ -406,7 +406,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
     }
 
-    internal class SpyRequeueCommandProcessor : SpyCommandProcessor
+    internal sealed class SpyRequeueCommandProcessor : SpyCommandProcessor
     {
         public int SendCount { get; set; }
         public int PublishCount { get; set; }
@@ -464,7 +464,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
     }
 
-    internal class SpyExceptionCommandProcessor : SpyCommandProcessor
+    internal sealed class SpyExceptionCommandProcessor : SpyCommandProcessor
     {
         public int SendCount { get; set; }
         public int PublishCount { get; set; }

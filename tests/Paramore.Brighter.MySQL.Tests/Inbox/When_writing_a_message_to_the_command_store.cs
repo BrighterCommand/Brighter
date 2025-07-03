@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.MySQL.Tests.TestDoubles;
 using Xunit;
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         private readonly MySqlInbox _mysqlInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
-        private MyCommand _storedCommand;
+        private MyCommand? _storedCommand;
 
         public SqlInboxAddMessageTests()
         {
@@ -47,20 +46,20 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
             _mysqlInbox = new MySqlInbox(_mysqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "test-context";
-            _mysqlInbox.Add(_raisedCommand, _contextKey);
+            _mysqlInbox.Add(_raisedCommand, _contextKey, null, -1);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Inbox()
         {
-            _storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
+            _storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey, null, -1);
 
             //_should_read_the_command_from_the__sql_inbox
-            _storedCommand.Should().NotBeNull();
+            Assert.NotNull(_storedCommand);
             //_should_read_the_command_value
-            _storedCommand.Value.Should().Be(_raisedCommand.Value);
+            Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
             //_should_read_the_command_id
-            _storedCommand.Id.Should().Be(_raisedCommand.Id);
+            Assert.Equal(_raisedCommand.Id, _storedCommand.Id);
         }
 
         public void Dispose()

@@ -20,15 +20,18 @@ public class AWSValidateQueuesTests : IAsyncDisposable
         var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
+        
+        var queueAttributes = new SqsAttributes(type:SqsType.Fifo);
+        var channelName = new ChannelName(queueName);
 
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey, 
+            queueAttributes: queueAttributes, 
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Validate);
 
         _awsConnection = GatewayFactory.CreateFactory();
     }

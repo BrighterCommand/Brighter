@@ -1,41 +1,21 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Paramore.Brighter.MessagingGateway.MQTT;
+using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 {
     [Trait("Category", "MQTT")]
     [Collection("MQTT")]
-    public class WhenQueueIsPurgedAsync : IAsyncDisposable, IDisposable
+    public class WhenQueueIsPurgedAsync : MqttTestClassBase<WhenQueueIsPurgedAsync>
     {
-        private const string MqttHost = "localhost";
         private const string ClientId = "BrighterIntegrationTests-Purge";
-        private readonly IAmAMessageProducerAsync _messageProducer;
-        private readonly IAmAMessageConsumerAsync _messageConsumer;
-        private readonly string _topicPrefix = "BrighterIntegrationTests/PurgeTests";
-        private readonly Message _noopMessage = new();
+        private const string TopicPrefix = "BrighterIntegrationTests/PurgeTests";
 
-        public WhenQueueIsPurgedAsync()
+        public WhenQueueIsPurgedAsync(ITestOutputHelper testOutputHelper)
+        : base(ClientId, TopicPrefix, testOutputHelper)
         {
-            var mqttProducerConfig = new MQTTMessagingGatewayProducerConfiguration
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix
-            };
-
-            MQTTMessagePublisher mqttMessagePublisher = new(mqttProducerConfig);
-            _messageProducer = new MQTTMessageProducer(mqttMessagePublisher);
-
-            MQTTMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
-            {
-                Hostname = MqttHost,
-                TopicPrefix = _topicPrefix,
-                ClientID = ClientId
-            };
-
-            _messageConsumer = new MQTTMessageConsumer(mqttConsumerConfig);
         }
 
         [Fact]
@@ -48,31 +28,18 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
                     new MessageBody($"test message")
                 );
 
-                await _messageProducer.SendAsync(message);
+                await MessageProducerAsync.SendAsync(message);
             }
 
             await Task.Delay(100);
 
-            await _messageConsumer.PurgeAsync();
+            await MessageConsumerAsync.PurgeAsync();
 
-            Message[] receivedMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
-            receivedMessages.Should().NotBeEmpty()
-                .And.HaveCount(1)
-                .And.ContainInOrder(new[] { _noopMessage })
-                .And.ContainItemsAssignableTo<Message>();
-        }
-        
-        public void Dispose()
-        {
-            ((IAmAMessageProducerSync)_messageProducer).Dispose();
-            ((IAmAMessageConsumerSync)_messageConsumer).Dispose();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _messageProducer.DisposeAsync();
-            await _messageConsumer.DisposeAsync();
+            Assert.NotEmpty(receivedMessages);
+            Assert.Single(receivedMessages);
+            Assert.Contains(_noopMessage, receivedMessages);
         }
     }
 }

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
 using Polly.CircuitBreaker;
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.Logging.Handlers
     /// The log shows the original <see cref="IRequest"/> properties as well as the timer handling.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public class RequestLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+    public partial class RequestLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestLoggingHandler<TRequest>>();
 
@@ -59,7 +60,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest command)
         {
-            LogCommand(command);
+            Log.LogCommand(s_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return base.Handle(command);
         }
 
@@ -84,18 +85,18 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Fallback(TRequest command)
         {
-            LogFailure(command);
+            Log.LogFailure(s_logger, typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return base.Fallback(command);
         }
 
-        private void LogCommand(TRequest request)
+        private static partial class Log
         {
-            s_logger.LogInformation("Logging handler pipeline call. Pipeline timing {HandlerTiming} target, for {RequestType} with values of {Request} at: {Time}", _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
-        }
+            [LoggerMessage(LogLevel.Information, "Logging handler pipeline call. Pipeline timing {HandlerTiming} target, for {RequestType} with values of {Request} at: {Time}")]
+            public static partial void LogCommand(ILogger logger, string handlerTiming, Type requestType, string request, DateTime time);
 
-        private void LogFailure(TRequest request)
-        {
-            s_logger.LogInformation("Failure in pipeline call for {RequestType} with values of {Request} at: {Time}", typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            [LoggerMessage(LogLevel.Information, "Failure in pipeline call for {RequestType} with values of {Request} at: {Time}")]
+            public static partial void LogFailure(ILogger logger, Type requestType, string request, DateTime time);
         }
     }
 }
+

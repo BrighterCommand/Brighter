@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 
 namespace Paramore.Brighter
 {
@@ -34,17 +35,6 @@ namespace Paramore.Brighter
     /// </summary>
     public class Publication
     {
-        /// <summary>
-        /// OPTIONAL [Cloud Events] REQUIRED [Brighter]
-        /// Content type of data value. This attribute enables data to carry any type of content, whereby format and
-        /// encoding might differ from that of the chosen event format.
-        /// MUST adhere to the format specified in <see href="https://datatracker.ietf.org/doc/html/rfc2046">RFC 2046</see>
-        /// Because of the complexity of serializing if you do not know the type, we regard this as required even
-        /// though Cloud Events does not.
-        /// Default value is text/plain
-        /// </summary>
-        public string ContentType { get; set; } = "text/plain";
-        
         /// <summary>
         /// OPTIONAL
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
@@ -84,8 +74,15 @@ namespace Paramore.Brighter
         public string? Subject { get; set; }
         
         /// <summary>
-        /// The topic this publication is for
+        /// The topic this publication is for defined by a <see cref="RoutingKey"/>
         /// </summary>
+        /// <remarks>
+        /// In a pub-sub scenario there is typically a topic, to which we publish and then a subscriber creates its own
+        /// queue which the broker delivers messages to. Typically, the <see cref="ChannelName"/> on the Subscription
+        /// will be used as that queue name.
+        /// For point-to-point scenarios, implementers will need to add a <see cref="ChannelName"/> to their derived <see cref="Publication"/>
+        /// to hold the name of the queue being used for message exchange, or  a platform dependent proxy for that (for example a URI)
+        /// </remarks>
         public RoutingKey? Topic { get; set; }
 
         /// <summary>
@@ -97,5 +94,53 @@ namespace Paramore.Brighter
         /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
         /// </summary>
         public string Type { get; set; } = "goparamore.io.Paramore.Brighter.Message";
+        
+        /// <summary>
+        /// Gets or sets a dictionary of additional properties related to CloudEvents.
+        /// This property enables the inclusion of custom or vendor-specific metadata beyond the standard CloudEvents attributes.
+        /// These properties are serialized alongside the core CloudEvents attributes when mapping to a CloudEvent message.
+        /// </summary>
+        /// <value>
+        /// A dictionary where keys represent the names of the additional CloudEvents attributes and values are their corresponding data.
+        /// This can be <c>null</c> if no additional properties are provided.
+        /// </value>
+        /// <remarks>
+        /// Use this dictionary to attach any non-standard CloudEvents attributes pertinent to your specific application or integration requirements.
+        /// During serialization to a CloudEvent JSON structure, the key-value pairs within this dictionary are added as top-level properties in the resulting JSON.
+        /// This mechanism facilitates forward compatibility and allows for seamless extensibility in accordance with the CloudEvents specification and its extensions.
+        /// <para>
+        /// This property is utilized by the <see cref="Paramore.Brighter.MessageMappers.CloudEventJsonMessageMapper{T}"/> for mapping and by the <see cref="Paramore.Brighter.Transforms.Transformers.CloudEventsTransformer"/> for transforming messages into CloudEvents.
+        /// </para>
+        /// <para>
+        /// **Important:** If any key in this dictionary conflicts with the name of a standard CloudEvents JSON property (e.g., "id", "source", "type"), the serializer (<c>System.Text.Json</c>) will prioritize the value present in this <c>CloudEventsAdditionalProperties</c> dictionary, effectively overriding the standard property's value during serialization. Exercise caution to avoid unintended overwrites of core CloudEvents attributes.
+        /// </para>
+        /// </remarks> 
+        public IDictionary<string, object>? CloudEventsAdditionalProperties { get; set; }
+        
+        /// <summary>
+        /// OPTIONAL
+        /// Gets or sets the reply to topic. Used when doing Request-Reply instead of Publish-Subscribe to identify
+        /// the queue that the sender is listening on. Usually a sender listens on a private queue, so that they
+        /// do not have to filter replies intended for other listeners.
+        /// </summary>
+        /// <value>The reply to.</value>
+        public string? ReplyTo { get; set; }
+    }
+
+    /// <summary>
+    /// Contains configuration that is generic to producers - similar to Subscription for consumers
+    /// Unlike <see cref="Subscription"/>, as it is passed to a constructor it is by convention over enforced at compile time
+    /// Platform specific configuration goes into a <see cref="IAmGatewayConfiguration"/> derived class
+    /// </summary>
+    public class Publication<T> : Publication
+        where T: class, IRequest
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Publication{T}"/> class. 
+        /// </summary>
+        public Publication()
+        {
+            RequestType = typeof(T);
+        }
     }
 }

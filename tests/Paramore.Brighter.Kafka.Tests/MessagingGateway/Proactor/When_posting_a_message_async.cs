@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -81,9 +82,9 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
             {
                 PartitionKey = _partitionKey,
-                ContentType = "application/json",
+                ContentType = new ContentType(MediaTypeNames.Application.Json),
                 Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
-                ReplyTo = "com.brightercommand.replyto",
+                ReplyTo = new RoutingKey("com.brightercommand.replyto"),
                 CorrelationId = Guid.NewGuid().ToString(),
                 Delayed = TimeSpan.FromMilliseconds(10),
                 HandledCount = 2,
@@ -92,13 +93,13 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             new MessageBody(body));
 
         bool messagePublished = false;
-        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey));
-        await producerAsync.SendAsync(message);
+        var producerAsync = _producerRegistry.LookupAsyncBy(routingKey);
         var producerConfirm = producerAsync as ISupportPublishConfirmation;
         producerConfirm.OnMessagePublished += delegate(bool success, string id)
         {
             if (success) messagePublished = true;
         };
+        await producerAsync.SendAsync(message);
         
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
@@ -106,20 +107,19 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
         //allow the message publication callback to run
         await Task.Delay(10000);
 
-        messagePublished.Should().BeTrue();
+        Assert.True(messagePublished);
 
         var receivedMessage = await GetMessageAsync();
 
         var receivedCommand = JsonSerializer.Deserialize<MyCommand>(receivedMessage.Body.Value, JsonSerialisationOptions.Options);
 
-        receivedMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
-        receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
-        receivedMessage.Body.Value.Should().Be(message.Body.Value);
-        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z")
-            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z"));
-        receivedCommand.Id.Should().Be(command.Id);
-        receivedCommand.Value.Should().Be(command.Value);
+        Assert.Equal(MessageType.MT_COMMAND, receivedMessage.Header.MessageType);
+        Assert.Equal(_partitionKey, receivedMessage.Header.PartitionKey);
+        Assert.Equal(message.Body.Bytes, receivedMessage.Body.Bytes);
+        Assert.Equal(message.Body.Value, receivedMessage.Body.Value);
+        Assert.Equal(message.Header.TimeStamp, receivedMessage.Header.TimeStamp, TimeSpan.FromSeconds(5));
+        Assert.Equal(command.Id, receivedCommand.Id);
+        Assert.Equal(command.Value, receivedCommand.Value);
     }
 
     private async Task<Message> GetMessageAsync()

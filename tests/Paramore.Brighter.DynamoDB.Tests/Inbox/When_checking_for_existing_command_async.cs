@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;
@@ -21,31 +20,31 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
             _dynamoDbInbox = new DynamoDbInbox(Client, new DynamoDbInboxConfiguration());
 
-            _dynamoDbInbox.Add(_command, _contextKey);
+            _dynamoDbInbox.Add(_command, _contextKey, null);
         }
 
         [Fact]
         public async Task When_checking_a_command_exist()
         {
-            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, _contextKey);
+            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, _contextKey, null);
 
-            commandExists.Should().BeTrue("because the command exists.", commandExists);
+            Assert.True(commandExists);
         }
 
         [Fact]
         public async Task When_checking_a_command_exist_for_a_different_context()
         {
-            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, "some other context");
+            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, "some other context", null);
 
-            commandExists.Should().BeFalse("because the command exists for a different context.", commandExists);
+            Assert.False(commandExists);
         }
 
         [Fact]
         public async Task When_checking_a_command_does_not_exist()
         {
-            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(Guid.NewGuid().ToString(), _contextKey);
+            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(Guid.NewGuid().ToString(), _contextKey, null);
 
-            commandExists.Should().BeFalse("because the command doesn't exist.", commandExists);
+            Assert.False(commandExists);
         }
     }
 }

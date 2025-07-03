@@ -1,24 +1,7 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
+...
+*/
 
 #endregion
 
@@ -28,9 +11,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -55,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var timeProvider = new FakeTimeProvider();
 
-            InMemoryProducer producer = new(_bus, timeProvider)
+            InMemoryMessageProducer messageProducer = new(_bus, timeProvider, InstrumentationOptions.All)
             {
                 Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
             };
@@ -85,24 +68,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { _routingKey, producer },
+                { _routingKey, messageProducer },
             });
 
             var policyRegistry = new PolicyRegistry
             {
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
-            }; 
-            
+            };
+
             _outbox = new InMemoryOutbox(timeProvider);
-            
+
             _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 policyRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 new BrighterTracer(timeProvider),
+                new FindPublicationByPublicationTopicOrRequestType(),
                 _outbox
             );
 
@@ -143,19 +127,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             //_should_send_a_message_via_the_messaging_gateway
             var messages = _bus.Stream(_routingKey).ToArray();
-            messages.Any().Should().BeTrue();
+            Assert.True(messages.Any());
 
             var sentMessage = messages.FirstOrDefault(m => m.Id == _message.Id);
-            sentMessage.Should().NotBeNull();
-            sentMessage?.Id.Should().Be(_message.Id);
-            sentMessage?.Header.Topic.Should().Be(_message.Header.Topic);
-            sentMessage?.Body.Value.Should().Be(_message.Body.Value);
+            Assert.NotNull(sentMessage);
+            Assert.Equal(_message.Id, sentMessage.Id);
+            Assert.Equal(_message.Header.Topic, sentMessage.Header.Topic);
+            Assert.Equal(_message.Body.Value, sentMessage.Body.Value);
 
             var sentMessage2 = messages.FirstOrDefault(m => m.Id == _message2.Id);
-            sentMessage2.Should().NotBeNull();
-            sentMessage2?.Id.Should().Be(_message2.Id);
-            sentMessage2?.Header.Topic.Should().Be(_message2.Header.Topic);
-            sentMessage2?.Body.Value.Should().Be(_message2.Body.Value);
+            Assert.NotNull(sentMessage2);
+            Assert.Equal(_message2.Id, sentMessage2.Id);
+            Assert.Equal(_message2.Header.Topic, sentMessage2.Header.Topic);
+            Assert.Equal(_message2.Body.Value, sentMessage2.Body.Value);
         }
 
         public void Dispose()

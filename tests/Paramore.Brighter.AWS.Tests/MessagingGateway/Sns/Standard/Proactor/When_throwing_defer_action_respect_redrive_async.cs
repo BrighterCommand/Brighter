@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -32,20 +33,26 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
     {
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
+            //don't block the redrive policy from owning retry management
             requeueCount: -1,
+            //delay before requeuing
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2)
+            //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
+            )
         );
 
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
@@ -132,7 +139,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         int dlqCount = await GetDLQCountAsync(_dlqChannelName);
-        dlqCount.Should().Be(1);
+        Assert.Equal(1, dlqCount);
     }
 
     public void Dispose()

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Tests.MessagingGateway;
 using Xunit;
@@ -8,6 +7,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RMQBufferedConsumerTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -51,7 +51,7 @@ public class RMQBufferedConsumerTests : IDisposable
         var messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000));
             
         //We should only have three messages
-        messages.Length.Should().Be(3);
+        Assert.Equal(3, messages.Length);
             
         //ack those to remove from the queue
         foreach (var message in messages)
@@ -66,7 +66,7 @@ public class RMQBufferedConsumerTests : IDisposable
         messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(500));
 
         //This time, just the one message
-        messages.Length.Should().Be(1);
+        Assert.Equal(1, messages.Length);
 
     }
 

@@ -25,24 +25,25 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
 
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
 
-    internal class QueueFactory
+    internal sealed class QueueFactory
     {
         private readonly RmqMessagingGatewayConnection _connection;
         private readonly ChannelName _channelName;
         private readonly RoutingKeys _routingKeys;
+        private readonly bool _isDurable;
 
-        public QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys)
+        public QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys, bool isDurable = false)
         {
             _connection = connection;
             _channelName = channelName;
             _routingKeys = routingKeys;
+            _isDurable = isDurable;
         }
 
         public void Create(TimeSpan timeToDelayForCreation)
@@ -53,7 +54,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 using (var channel = connection.CreateModel())
                 {
                     channel.DeclareExchangeForConnection(_connection, OnMissingChannel.Create);
-                    channel.QueueDeclare(_channelName.Value, false, false, false, null);
+                    channel.QueueDeclare(_channelName.Value, _isDurable, false, false, null);
                     if (_routingKeys.Any())
                     {
                         foreach (RoutingKey routingKey in _routingKeys)

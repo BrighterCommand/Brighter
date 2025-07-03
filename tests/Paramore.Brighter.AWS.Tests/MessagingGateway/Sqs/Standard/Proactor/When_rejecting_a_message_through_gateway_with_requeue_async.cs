@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -23,20 +24,22 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var correlationId = Guid.NewGuid().ToString();
         var subscriptionName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
-
+        var channelName = new ChannelName(queueName);
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create,
-            channelType: ChannelType.PointToPoint
-        );
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint, 
+            findQueueBy: QueueFindBy.Name,
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Create
+            );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -50,7 +53,10 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         _messageProducer =
-            new SqsMessageProducer(awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+            new SqsMessageProducer(
+                awsConnection, 
+                new SqsPublication(channelName,  makeChannels: OnMissingChannel.Create)
+                );
     }
 
     [Fact]
@@ -71,7 +77,7 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         // clear the queue
         await _channel.AcknowledgeAsync(message);
 
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
     }
 
     public void Dispose()

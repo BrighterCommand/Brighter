@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Tests.MessagingGateway;
 using Xunit;
@@ -32,6 +31,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
 {
     private readonly RmqMessageProducer _messageProducer;
@@ -57,7 +57,7 @@ public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
         {
             if (success)
             {
-                guid.Should().Be(_message.Id);
+                Assert.Equal(_message.Id, guid);
                 _messageWasPublished = true;
                 _messageWasNotPublished = false;
             }
@@ -80,9 +80,9 @@ public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
         await Task.Delay(500);
 
         //if this is true, then possible test failed because of timeout or RMQ issues
-        _messageWasNotPublished.Should().BeFalse();
+        Assert.False(_messageWasNotPublished);
         //did we see the message - intent to test logic here
-        _messageWasPublished.Should().BeTrue();
+        Assert.True(_messageWasPublished);
     }
 
     public void Dispose()

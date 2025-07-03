@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -24,14 +25,15 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
@@ -69,7 +71,7 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         // clear the queue
         await _channel.AcknowledgeAsync(message);
 
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
     }
 
     public void Dispose()

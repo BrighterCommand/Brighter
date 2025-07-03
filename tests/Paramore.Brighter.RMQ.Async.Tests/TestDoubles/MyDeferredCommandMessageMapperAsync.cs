@@ -3,10 +3,11 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
-internal class MyDeferredCommandMessageMapperAsync : IAmAMessageMapperAsync<MyDeferredCommand>
+internal sealed class MyDeferredCommandMessageMapperAsync : IAmAMessageMapperAsync<MyDeferredCommand>
 {
     public IRequestContext Context { get; set; }
 

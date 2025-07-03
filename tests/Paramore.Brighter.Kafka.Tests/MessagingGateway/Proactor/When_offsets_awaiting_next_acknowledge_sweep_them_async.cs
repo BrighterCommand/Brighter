@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -96,10 +95,10 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
             consumedMessages.Add(await ReadMessageAsync());
         }
 
-        consumedMessages.Count.Should().Be(9);
+        Assert.Equal(9, consumedMessages.Count);
 
         //Let time elapse with no activity
-        await Task.Delay(3000);
+        await Task.Delay(10000);
 
         //This should trigger a sweeper run (can be fragile when non-scheduled in containers etc)
         consumedMessages.Add(await ReadMessageAsync());
@@ -108,9 +107,10 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
         await Task.Delay(10000);
 
         //Sweeper will commit these
-        _consumer.StoredOffsets().Should().Be(0);
+        Assert.Equal(0,_consumer.StoredOffsets());
 
        _consumer.Close();
+       return;
        
         async Task<Message> ReadMessageAsync()
         {
@@ -121,6 +121,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                 try
                 {
                     maxTries++;
+                    await Task.Delay(500); //Let topic propagate in the broker
                     messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)

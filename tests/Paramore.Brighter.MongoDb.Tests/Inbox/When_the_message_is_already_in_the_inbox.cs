@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Xunit;
@@ -51,27 +50,27 @@ public class MongoDbInboxDuplicateMessageTests : IDisposable
     [Fact]
     public void When_The_Message_Is_Already_In_The_Inbox()
     {
-        _inbox.Add(_raisedCommand, _contextKey);
+        _inbox.Add(_raisedCommand, _contextKey, null);
 
-        var exception = Catch.Exception(() => _inbox.Add(_raisedCommand, _contextKey));
+        var exception = Catch.Exception(() => _inbox.Add(_raisedCommand, _contextKey, null));
 
         //_should_succeed_even_if_the_message_is_a_duplicate
-        exception.Should().BeNull();
-        _inbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+        Assert.Null(exception);
+        Assert.True(_inbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey, null));
     }
 
     [Fact]
     public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
     {
-        _inbox.Add(_raisedCommand, _contextKey);
+        _inbox.Add(_raisedCommand, _contextKey, null);
 
         var newcontext = Guid.NewGuid().ToString();
-        _inbox.Add(_raisedCommand, newcontext);
+        _inbox.Add(_raisedCommand, newcontext, null);
 
-        var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, newcontext);
+        var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, newcontext, null);
 
         //_should_read_the_command_from_the__dynamo_db_inbox
-        storedCommand.Should().NotBeNull();
+        Assert.NotNull(storedCommand);
     }
 
     public void Dispose()

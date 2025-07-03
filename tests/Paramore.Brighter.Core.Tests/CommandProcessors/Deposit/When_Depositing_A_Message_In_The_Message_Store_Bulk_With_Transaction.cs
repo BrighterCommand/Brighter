@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -32,15 +32,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer commandProducer = new(_bus, timeProvider);
-            commandProducer.Publication = new Publication 
+            InMemoryMessageProducer commandMessageProducer = new(_bus, timeProvider, InstrumentationOptions.All);
+            commandMessageProducer.Publication = new Publication 
             { 
                 Topic = new RoutingKey(_commandTopic), 
                 RequestType = typeof(MyCommand) 
             };
 
-            InMemoryProducer eventProducer = new(_bus, timeProvider);
-            eventProducer.Publication = new Publication 
+            InMemoryMessageProducer eventMessageProducer = new(_bus, timeProvider, InstrumentationOptions.All);
+            eventMessageProducer.Publication = new Publication 
             { 
                 Topic = new RoutingKey(_eventTopic), 
                 RequestType = typeof(MyEvent) 
@@ -82,8 +82,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { _commandTopic, commandProducer },
-                { _eventTopic, eventProducer}
+                { _commandTopic, commandMessageProducer },
+                { _eventTopic, eventMessageProducer}
             });
 
             var policyRegistry = new PolicyRegistry
@@ -102,6 +102,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 _spyOutbox
             );
 
@@ -128,26 +129,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //assert
 
             //messages should not be in the outbox
-            _spyOutbox.Messages.Any(m => m.Message.Id == _myCommand.Id).Should().BeFalse();
-            _spyOutbox.Messages.Any(m => m.Message.Id == _myCommandTwo.Id).Should().BeFalse();
-            _spyOutbox.Messages.Any(m => m.Message.Id == _myEvent.Id).Should().BeFalse();
+            Assert.False(_spyOutbox.Messages.Any(m => m.Message.Id == _myCommand.Id));
+            Assert.False(_spyOutbox.Messages.Any(m => m.Message.Id == _myCommandTwo.Id));
+            Assert.False(_spyOutbox.Messages.Any(m => m.Message.Id == _myEvent.Id));
 
             //messages should be in the current transaction
             var transaction = _transactionProvider.GetTransaction();
             List<Message?> messages = requests.Select(r => transaction.Get(r.Id)).ToList();
-            messages.Any(m => m is null).Should().BeFalse();
+            Assert.False(messages.Any(m => m is null));
 
             //messages should not be posted
-            _bus.Stream(new RoutingKey(_commandTopic)).Any().Should().BeFalse();
-            _bus.Stream(new RoutingKey(_eventTopic)).Any().Should().BeFalse();
+            Assert.False(_bus.Stream(new RoutingKey(_commandTopic)).Any());
+            Assert.False(_bus.Stream(new RoutingKey(_eventTopic)).Any());
 
             //messages should correspond to the command
             for (var i = 0; i < messages.Count; i++)
             {
-                messages[i]?.Id.Should().Be(_messages[i].Id);
-                messages[i]?.Body.Value.Should().Be(_messages[i].Body.Value);
-                messages[i]?.Header.Topic.Should().Be(_messages[i].Header.Topic);
-                messages[i]?.Header.MessageType.Should().Be(_messages[i].Header.MessageType);
+                Assert.Equal(_messages[i].Id, messages[i]?.Id);
+                Assert.Equal(_messages[i].Body.Value, messages[i]?.Body.Value);
+                Assert.Equal(_messages[i].Header.Topic, messages[i]?.Header.Topic);
+                Assert.Equal(_messages[i].Header.MessageType, messages[i]?.Header.MessageType);
             }
         }
         

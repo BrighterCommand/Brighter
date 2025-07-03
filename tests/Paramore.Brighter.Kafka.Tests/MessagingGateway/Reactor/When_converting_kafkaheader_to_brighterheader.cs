@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Net.Mime;
 using Confluent.Kafka;
-using FluentAssertions;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
@@ -25,7 +26,7 @@ public class KafkaHeaderToBrighterTests
                 timeStamp: DateTimeOffset.UtcNow,
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("test"),
-                contentType: "application/octet",
+                contentType: new ContentType(MediaTypeNames.Application.Octet){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()},
                 partitionKey: "mykey"
             ),
             new MessageBody("test content")
@@ -57,22 +58,22 @@ public class KafkaHeaderToBrighterTests
         var readMessage = new KafkaMessageCreator().CreateMessage(result);
 
         //assert
-        readMessage.Id.Should().Be(message.Id);
-        readMessage.Header.MessageType.Should().Be(message.Header.MessageType);
-        readMessage.Header.MessageId.Should().Be(message.Header.MessageId);
-        readMessage.Header.CorrelationId.Should().Be(message.Header.CorrelationId);
-        readMessage.Header.ContentType.Should().Be(message.Header.ContentType);
-        readMessage.Header.Topic.Should().Be(message.Header.Topic);
-        readMessage.Header.Delayed.Should().Be(message.Header.Delayed);
-        readMessage.Header.HandledCount.Should().Be(message.Header.HandledCount);
-        readMessage.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture).Should().Be(message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture));            
-        
+        Assert.Equal(message.Id, readMessage.Id);
+        Assert.Equal(message.Header.MessageType, readMessage.Header.MessageType);
+        Assert.Equal(message.Header.MessageId, readMessage.Header.MessageId);
+        Assert.Equal(message.Header.CorrelationId, readMessage.Header.CorrelationId);
+        Assert.Equal(message.Header.ContentType, readMessage.Header.ContentType);
+        Assert.Equal(message.Header.Topic, readMessage.Header.Topic);
+        Assert.Equal(message.Header.Delayed, readMessage.Header.Delayed);
+        Assert.Equal(message.Header.HandledCount, readMessage.Header.HandledCount);
+        Assert.Equal(message.Header.TimeStamp, readMessage.Header.TimeStamp, TimeSpan.FromSeconds(5));
+
         //NOTE: Because we can only coerce the byte[] to a string for a unknown bag key, coercing to a specific
         //type has to be done by the user of the bag.
-        readMessage.Header.Bag["myguid"].Should().Be(bag["myguid"].ToString());
-        readMessage.Header.Bag["mystring"].Should().Be(bag["mystring"].ToString());
-        readMessage.Header.Bag["myint"].Should().Be(bag["myint"].ToString());
-        readMessage.Header.Bag["mydouble"].Should().Be(bag["mydouble"].ToString());
-        readMessage.Header.Bag["mydatetime"].Should().Be(((DateTime)bag["mydatetime"]).ToString(CultureInfo.InvariantCulture));
+        Assert.Equal(bag["myguid"].ToString(), readMessage.Header.Bag["myguid"]);
+        Assert.Equal(bag["mystring"].ToString(), readMessage.Header.Bag["mystring"]);
+        Assert.Equal(bag["myint"].ToString(), readMessage.Header.Bag["myint"]);
+        Assert.Equal(bag["mydouble"].ToString(), readMessage.Header.Bag["mydouble"]);
+        Assert.Equal(((DateTime)bag["mydatetime"]).ToString(CultureInfo.InvariantCulture), readMessage.Header.Bag["mydatetime"]);
     }
 }

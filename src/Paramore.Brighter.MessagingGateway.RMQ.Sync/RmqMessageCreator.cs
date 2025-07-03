@@ -1,7 +1,7 @@
 ﻿#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2014 Bob Gregory 
+Copyright © 2014 Bob Gregory
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -26,275 +26,392 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
+namespace Paramore.Brighter.MessagingGateway.RMQ.Sync;
+
+internal sealed partial class RmqMessageCreator
 {
-    internal class RmqMessageCreator
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
+
+    public static Message CreateMessage(BasicDeliverEventArgs fromQueue)
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
+        var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object?>();
+        var topic = HeaderResult<RoutingKey>.Empty();
+        var messageId = HeaderResult<Id>.Empty();
 
-        public Message CreateMessage(BasicDeliverEventArgs fromQueue)
+        Message message;
+        try
         {
-            var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
-            var topic = HeaderResult<RoutingKey>.Empty();
-            var messageId = HeaderResult<string>.Empty();
-            var timeStamp = HeaderResult<DateTime>.Empty();
-            var handledCount = HeaderResult<int>.Empty();
-            var delay = HeaderResult<TimeSpan>.Empty();
-            var redelivered = HeaderResult<bool>.Empty();
-            var deliveryTag = HeaderResult<ulong>.Empty();
-            var messageType = HeaderResult<MessageType>.Empty();
-            var replyTo = HeaderResult<string>.Empty();
-            var deliveryMode = fromQueue.BasicProperties.DeliveryMode;
+            topic = ReadTopic(fromQueue, headers);
+            messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
 
-            Message message;
-            try
+            if (false == (topic.Success && messageId.Success))
+                return Message.FailureMessage(topic.Result, messageId.Result);
+
+            var messageHeader = CreateMessageHeader(fromQueue, headers, topic, messageId);
+
+            message = new Message(messageHeader, new MessageBody(fromQueue.Body, new ContentType(fromQueue.BasicProperties.Type)));
+
+            ProcessHeaderBag(headers, message);
+            SetMessageMetadata(fromQueue, message);
+        }
+        catch (Exception e)
+        {
+            Log.FailedToCreateMessageFromAmqpMessage(s_logger, e);
+            message = Message.FailureMessage(topic.Result, messageId.Result);
+        }
+
+        return message;
+    }
+
+    private static MessageHeader CreateMessageHeader(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers,
+        HeaderResult<RoutingKey?> topic, HeaderResult<Id?> messageId)
+    {
+        var timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
+        var handledCount = ReadHandledCount(headers);
+        var delay = ReadDelay(headers);
+        var messageType = ReadMessageType(headers);
+        var replyTo = ReadReplyTo(fromQueue.BasicProperties);
+        var correlationId = ReadCorrelationId(headers);
+        var source = ReadSource(headers);
+        var type = ReadType(headers);
+        var dataSchema = ReadDataSchema(headers);
+        var traceParent = ReadTraceParent(headers);
+        var traceState = ReadTraceState(headers);
+        var subject = ReadSubject(headers);
+
+        var baggage = new Baggage();
+        var baggageHeader = ReadBaggage(headers);
+        if (baggageHeader.Success)
+            baggage.LoadBaggage(baggageHeader.Result);
+
+        if (false == (messageType.Success && timeStamp.Success && handledCount.Success))
+            throw new InvalidOperationException("Required message header values are missing");
+
+        return new MessageHeader(
+            messageId: messageId.Result ?? string.Empty,
+            topic: topic.Result ?? RoutingKey.Empty,
+            messageType.Result,
+            source: source.Result,
+            type: type.Result,
+            timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+            correlationId: correlationId.Result,
+            replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
+            contentType: new ContentType(fromQueue.BasicProperties.ContentType), 
+            handledCount: handledCount.Result,
+            dataSchema: dataSchema.Result,
+            subject: subject.Result,
+            delayed: delay.Result,
+            traceParent: traceParent.Result,
+            traceState: traceState.Result,
+            baggage: baggage
+        );
+    }
+
+    private static void ProcessHeaderBag(IDictionary<string, object?> headers, Message message)
+    {
+        headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
+    }
+
+    private static void SetMessageMetadata(BasicDeliverEventArgs fromQueue, Message message)
+    {
+        var deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
+        var redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
+
+        message.DeliveryTag = deliveryTag.Result;
+        message.Redelivered = redelivered.Result;
+        message.Persist = fromQueue.BasicProperties.DeliveryMode == 2;
+    }
+
+    private static HeaderResult<string?> ReadHeader(IDictionary<string, object?> dict, string key, bool dieOnMissing = false)
+    {
+        if (false == dict.TryGetValue(key, out object? value))
+        {
+            return new HeaderResult<string?>(string.Empty, !dieOnMissing);
+        }
+
+        if (!(value is byte[] bytes))
+        {
+            Log.HeaderValueCouldNotBeCastToByteArray(s_logger, key);
+            return new HeaderResult<string?>(null, false);
+        }
+
+        try
+        {
+            var val = Encoding.UTF8.GetString(bytes);
+            return new HeaderResult<string?>(val, true);
+        }
+        catch (Exception e)
+        {
+            var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
+            Log.FailedToReadHeaderValueAsUtf8(s_logger, key, firstTwentyBytes, e);
+            return new HeaderResult<string?>(null, false);
+        }
+    }
+
+    private static HeaderResult<Id?> ReadCorrelationId(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out object? correlationHeader))
+        {
+            var correlationId = Encoding.UTF8.GetString((byte[])correlationHeader!);
+            return new HeaderResult<Id?>(new Id(correlationId), true);
+        }
+
+        return new HeaderResult<Id?>(null, false);
+    }
+
+    private static HeaderResult<ulong> ReadDeliveryTag(ulong deliveryTag)
+    {
+        return new HeaderResult<ulong>(deliveryTag, true);
+    }
+
+    private static HeaderResult<DateTimeOffset> ReadTimeStamp(IBasicProperties basicProperties)
+    {
+        if (basicProperties.IsTimestampPresent())
+        {
+            return new HeaderResult<DateTimeOffset>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(basicProperties.Timestamp.UnixTime), true);
+        }
+
+        if (basicProperties.Headers != null
+            && basicProperties.Headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TIME, out var val)
+            && val is byte[] bytes
+            && DateTimeOffset.TryParse(Encoding.UTF8.GetString(bytes), out var dt))
+        {
+            return new HeaderResult<DateTimeOffset>(dt, true);
+        }
+
+        return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
+    }
+
+    private static HeaderResult<MessageType> ReadMessageType(IDictionary<string, object?> headers)
+    {
+        return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
+            .Map(s =>
             {
-                topic = ReadTopic(fromQueue, headers);
-                messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
-                timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
-                handledCount = ReadHandledCount(headers);
-                delay = ReadDelay(headers);
-                redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
-                deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
-                messageType = ReadMessageType(headers);
-                replyTo = ReadReplyTo(fromQueue.BasicProperties);
-
-                if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
+                if (string.IsNullOrEmpty(s))
                 {
-                    message = FailureMessage(topic, messageId);
+                    return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
                 }
+
+                var success = Enum.TryParse(s, true, out MessageType result);
+                return new HeaderResult<MessageType>(result, success);
+            });
+    }
+
+    private static HeaderResult<int> ReadHandledCount(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out object? header) == false)
+        {
+            return new HeaderResult<int>(0, true);
+        }
+
+        switch (header)
+        {
+            case byte[] value:
+            {
+                var val = int.TryParse(Encoding.UTF8.GetString(value), out var handledCount) ? handledCount : 0;
+                return new HeaderResult<int>(val, true);
+            }
+            case int value:
+                return new HeaderResult<int>(value, true);
+            default:
+                return new HeaderResult<int>(0, true);
+        }
+    }
+
+    private static HeaderResult<TimeSpan> ReadDelay(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out var delayedMsHeader) == false)
+        {
+            return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
+        }
+
+        int delayedMilliseconds;
+
+        // on 32 bit systems the x-delay value will be a int and on 64 bit it will be a long, thank you erlang
+        // The number will be negative after a message has been delayed
+        // sticking with an int as you should not be delaying for more than 49 days
+        switch (delayedMsHeader)
+        {
+            case byte[] value:
+            {
+                if (!int.TryParse(Encoding.UTF8.GetString(value), out var handledCount))
+                    delayedMilliseconds = 0;
                 else
                 {
-                    //TODO:CLOUD_EVENTS parse from headers
-                    
-                    var messageHeader = new MessageHeader(
-                        messageId: messageId.Result ?? string.Empty,
-                        topic: topic.Result ?? RoutingKey.Empty,
-                        messageType.Result,
-                        source: null,
-                        type: "",
-                        timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                        correlationId: "",
-                        replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
-                        contentType: "",
-                        handledCount: handledCount.Result,
-                        dataSchema: null,
-                        subject: null,
-                        delayed: delay.Result
-                        );
-                        
-
-                    //this effectively transfers ownership of our buffer 
-                    message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type));
-
-                    headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
+                    if (handledCount < 0)
+                        handledCount = Math.Abs(handledCount);
+                    delayedMilliseconds = handledCount;
                 }
 
-                if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out object? correlationHeader))
-                {
-                    var correlationId = Encoding.UTF8.GetString((byte[])correlationHeader);
-                    message.Header.CorrelationId = correlationId;
-                }
-
-                message.DeliveryTag = deliveryTag.Result;
-                message.Redelivered = redelivered.Result;
-                message.Header.ReplyTo = replyTo.Result;
-                message.Persist = deliveryMode == 2;
+                break;
             }
-            catch (Exception e)
+            case int value:
             {
-                s_logger.LogWarning(e,"Failed to create message from amqp message");
-                message = FailureMessage(topic, messageId);
-            }
+                if (value < 0)
+                    value = Math.Abs(value);
 
-            return message;
+                delayedMilliseconds = value;
+                break;
+            }
+            case long value:
+            {
+                if (value < 0)
+                    value = Math.Abs(value);
+
+                delayedMilliseconds = (int)value;
+                break;
+            }
+            default:
+                return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
         }
 
+        return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayedMilliseconds), true);
+    }
 
-        private HeaderResult<string?> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
+    private static HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers)
+    {
+        return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
         {
-            if (false == dict.TryGetValue(key, out object? value))
-            {
-                return new HeaderResult<string?>(string.Empty, !dieOnMissing);
-            }
+            var val = string.IsNullOrEmpty(s) ? new RoutingKey(fromQueue.RoutingKey) : new RoutingKey(s ?? string.Empty);
+            return new HeaderResult<RoutingKey?>(val, true);
+        });
+    }
 
-            if (!(value is byte[] bytes))
-            {
-                s_logger.LogWarning("The value of header {Key} could not be cast to a byte array", key);
-                return new HeaderResult<string?>(null, false);
-            }
-
-            try
-            {
-                var val = Encoding.UTF8.GetString(bytes);
-                return new HeaderResult<string?>(val, true);
-            }
-            catch (Exception e)
-            {
-                var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                s_logger.LogWarning(e,"Failed to read the value of header {Key} as UTF-8, first 20 byes follow: \n\t{1}", key, firstTwentyBytes);
-                return new HeaderResult<string?>(null, false);
-            }
-        }
-
-        private Message FailureMessage(HeaderResult<RoutingKey?> topic, HeaderResult<string?> messageId)
+    private static HeaderResult<Id?> ReadMessageId(string? messageId)
+    {
+        if (string.IsNullOrEmpty(messageId))
         {
-            var header = new MessageHeader(
-                (messageId.Success ? messageId.Result : string.Empty)!,
-                (topic.Success ? topic.Result : RoutingKey.Empty)!,
-                MessageType.MT_UNACCEPTABLE);
-            var message = new Message(header, new MessageBody(string.Empty));
-            return message;
+            var newMessageId = Id.Create(null);
+            Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
+            return new HeaderResult<Id?>(newMessageId, true);
         }
 
-        private HeaderResult<ulong> ReadDeliveryTag(ulong deliveryTag)
+        return new HeaderResult<Id?>(Id.Create(messageId), true);
+    }
+
+    private static HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
+    {
+        return new HeaderResult<bool>(redelivered, true);
+    }
+
+    private static HeaderResult<RoutingKey?> ReadReplyTo(IBasicProperties basicProperties)
+    {
+        if (basicProperties.IsReplyToPresent())
         {
-            return new HeaderResult<ulong>(deliveryTag, true);
+            return new HeaderResult<RoutingKey?>(new RoutingKey(basicProperties.ReplyTo!), true);
         }
 
-        private HeaderResult<DateTime> ReadTimeStamp(IBasicProperties basicProperties)
+        return new HeaderResult<RoutingKey?>(null, true);
+    }
+
+    private static HeaderResult<Uri> ReadSource(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out var source)
+            && source is byte[] val
+            && Uri.TryCreate(Encoding.UTF8.GetString(val), UriKind.RelativeOrAbsolute, out var uri))
         {
-            if (basicProperties.IsTimestampPresent())
-            {
-                return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(basicProperties.Timestamp.UnixTime), true);
-            }
-
-            return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+            return new HeaderResult<Uri>(uri, true);
         }
 
-        private HeaderResult<MessageType> ReadMessageType(IDictionary<string, object> headers)
+        return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
+    }
+
+    private static HeaderResult<string> ReadType(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out var type)
+            && type is byte[] typeArray)
         {
-            return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
-                .Map(s =>
-                {
-                    if (string.IsNullOrEmpty(s))
-                    {
-                        return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
-                    }
-
-                    var success = Enum.TryParse(s, true, out MessageType result);
-                    return new HeaderResult<MessageType>(result, success);
-                });
+            return new HeaderResult<string>(Encoding.UTF8.GetString(typeArray), true);
         }
 
-        private HeaderResult<int> ReadHandledCount(IDictionary<string, object> headers)
+        return new HeaderResult<string>(MessageHeader.DefaultType, true);
+    }
+
+    private static HeaderResult<string?> ReadSubject(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SUBJECT, out var subject)
+            && subject is byte[] subjectArray)
         {
-            if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out object? header) == false)
-            {
-                return new HeaderResult<int>(0, true);
-            }
-
-            switch (header)
-            {
-                case byte[] value:
-                {
-                    var val = int.TryParse(Encoding.UTF8.GetString(value), out var handledCount) ? handledCount : 0;
-                    return new HeaderResult<int>(val, true);
-                }
-                case int value:
-                    return new HeaderResult<int>(value, true);
-                default:
-                    return new HeaderResult<int>(0, true);
-            }
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(subjectArray), true);
         }
 
-        private HeaderResult<TimeSpan> ReadDelay(IDictionary<string, object> headers)
+        return new HeaderResult<string?>(null, true);
+    }
+
+    private static HeaderResult<Uri?> ReadDataSchema(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out var dataSchema)
+            && dataSchema is byte[] dataSchemaArray
+            && Uri.TryCreate(Encoding.UTF8.GetString(dataSchemaArray), UriKind.RelativeOrAbsolute, out var uri))
         {
-            if (headers.ContainsKey(HeaderNames.DELAYED_MILLISECONDS) == false)
-            {
-                return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
-            }
-
-            int delayedMilliseconds;
-
-            // on 32 bit systems the x-delay value will be a int and on 64 bit it will be a long, thank you erlang
-            // The number will be negative after a message has been delayed
-            // sticking with an int as you should not be delaying for more than 49 days
-            switch (headers[HeaderNames.DELAYED_MILLISECONDS])
-            {
-                case byte[] value:
-                {
-                    if (!int.TryParse(Encoding.UTF8.GetString(value), out var handledCount))
-                        delayedMilliseconds = 0;
-                    else
-                    {
-                        if (handledCount < 0) 
-                            handledCount = Math.Abs(handledCount);
-                        delayedMilliseconds = handledCount;
-                    }
-
-                    break;
-                }
-                case int value:
-                {
-                    if (value < 0)
-                        value = Math.Abs(value);
-                    
-                    delayedMilliseconds = value;
-                    break;
-                }
-                case long value:
-                {
-                    if (value < 0)
-                        value = Math.Abs(value);
-                    
-                    delayedMilliseconds = (int)value;
-                    break;
-                }
-                default:
-                    return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
-            }
-
-            return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds( delayedMilliseconds), true);
+            return new HeaderResult<Uri?>(uri, true);
         }
 
-        private HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
+        return new HeaderResult<Uri?>(null, true);
+    }
+
+    private static HeaderResult<TraceParent?> ReadTraceParent(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, out var traceParent)
+            && traceParent is byte[] traceParentArray)
         {
-            return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
-            {
-                var val = string.IsNullOrEmpty(s) ? new RoutingKey(fromQueue.RoutingKey) : new RoutingKey(s ?? string.Empty);
-                return new HeaderResult<RoutingKey?>(val, true);
-            });
+            return new HeaderResult<TraceParent?>(Encoding.UTF8.GetString(traceParentArray), true);
         }
 
-        private HeaderResult<string?> ReadMessageId(string messageId)
+        return new HeaderResult<TraceParent?>(string.Empty, true);
+    }
+
+    private static HeaderResult<TraceState?> ReadTraceState(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out var traceState)
+            && traceState is byte[] traceParentArray)
         {
-            var newMessageId = Guid.NewGuid().ToString();
-
-            if (string.IsNullOrEmpty(messageId))
-            {
-                s_logger.LogDebug("No message id found in message MessageId, new message id is {Id}", newMessageId);
-                return new HeaderResult<string?>(newMessageId, true);
-            }
-
-            return new HeaderResult<string?>(messageId, true);
+            return new HeaderResult<TraceState?>(Encoding.UTF8.GetString(traceParentArray), true);
         }
 
-        private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
+        return new HeaderResult<TraceState?>(string.Empty, true);
+    }
+
+    private static HeaderResult<string?> ReadBaggage(IDictionary<string, object?> headers)
+    {
+        if (headers.TryGetValue(HeaderNames.W3C_BAGGAGE, out var traceParent)
+            && traceParent is byte[] traceParentArray)
         {
-            return new HeaderResult<bool>(redelivered, true);
+            return new HeaderResult<string?>(Encoding.UTF8.GetString(traceParentArray), true);
         }
 
-        private HeaderResult<string?> ReadReplyTo(IBasicProperties basicProperties)
-        {
-            if (basicProperties.IsReplyToPresent())
-            {
-                return new HeaderResult<string?>(basicProperties.ReplyTo, true);
-            }
+        return new HeaderResult<string?>(string.Empty, true);
+    }
 
-            return new HeaderResult<string?>(null, true);
-        }
+    private static object ParseHeaderValue(object? value)
+    {
+        if (value == null)
+            return string.Empty;
 
-        private static object ParseHeaderValue(object value)
-        {
-            return value is byte[] bytes ? Encoding.UTF8.GetString(bytes) : value;
-        }
+        return value is byte[] bytes ? Encoding.UTF8.GetString(bytes) : value;
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Failed to create message from amqp message")]
+        public static partial void FailedToCreateMessageFromAmqpMessage(ILogger logger, Exception e);
+
+        [LoggerMessage(LogLevel.Warning, "The value of header {Key} could not be cast to a byte array")]
+        public static partial void HeaderValueCouldNotBeCastToByteArray(ILogger logger, string key);
+
+        [LoggerMessage(LogLevel.Warning, "Failed to read the value of header {Key} as UTF-8, first 20 byes follow: \n\t{FirstTwentyBytes}")]
+        public static partial void FailedToReadHeaderValueAsUtf8(ILogger logger, string key, string firstTwentyBytes, Exception e);
+
+        [LoggerMessage(LogLevel.Debug, "No message id found in message MessageId, new message id is {Id}")]
+        public static partial void NoMessageIdFoundInMessage(ILogger logger, string id);
     }
 }

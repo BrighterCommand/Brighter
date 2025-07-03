@@ -9,20 +9,21 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")] 
-public class AWSAssumeQueuesTests  : IDisposable, IAsyncDisposable
+public class AwsAssumeQueuesTests  : IDisposable, IAsyncDisposable
 {
     private readonly ChannelFactory _channelFactory;
     private readonly SqsMessageConsumer _consumer;
 
-    public AWSAssumeQueuesTests()
+    public AwsAssumeQueuesTests()
     {
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
             
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume

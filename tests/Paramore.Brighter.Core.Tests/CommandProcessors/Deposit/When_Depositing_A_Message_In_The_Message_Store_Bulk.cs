@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -34,15 +34,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer commandProducer = new(_bus, timeProvider);
-            commandProducer.Publication = new Publication 
+            InMemoryMessageProducer commandMessageProducer = new(_bus, timeProvider, InstrumentationOptions.All);
+            commandMessageProducer.Publication = new Publication 
             { 
                 Topic = new RoutingKey(_commandTopic), 
                 RequestType = typeof(MyCommand) 
             };
 
-            InMemoryProducer eventProducer = new(_bus, timeProvider);
-            eventProducer.Publication = new Publication 
+            InMemoryMessageProducer eventMessageProducer = new(_bus, timeProvider, InstrumentationOptions.All);
+            eventMessageProducer.Publication = new Publication 
             { 
                 Topic = new RoutingKey(_eventTopic), 
                 RequestType = typeof(MyEvent) 
@@ -86,8 +86,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { _commandTopic, commandProducer },
-                { _eventTopic, eventProducer}
+                { _commandTopic, commandMessageProducer },
+                { _eventTopic, eventMessageProducer}
             });
 
             var policyRegistry = new PolicyRegistry
@@ -106,6 +106,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 _outbox
             );
 
@@ -130,35 +131,34 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //assert
             
             //message should not be posted
-            
-            _bus.Stream(new RoutingKey(_commandTopic)).Any().Should().BeFalse();
-            _bus.Stream(new RoutingKey(_eventTopic)).Any().Should().BeFalse();
-            
+            Assert.False(_bus.Stream(new RoutingKey(_commandTopic)).Any());
+            Assert.False(_bus.Stream(new RoutingKey(_eventTopic)).Any());
+
             //message should correspond to the command
             var depositedPost = _outbox.Get(_message.Id, context);
-            depositedPost.Id.Should().Be(_message.Id);
-            depositedPost.Body.Value.Should().Be(_message.Body.Value);
-            depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
-            depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
-            
+            Assert.Equal(_message.Id, depositedPost.Id);
+            Assert.Equal(_message.Body.Value, depositedPost.Body.Value);
+            Assert.Equal(_message.Header.Topic, depositedPost.Header.Topic);
+            Assert.Equal(_message.Header.MessageType, depositedPost.Header.MessageType);
+
             var depositedPost2 = _outbox.Get(_messageTwo.Id, context);
-            depositedPost2.Id.Should().Be(_messageTwo.Id);
-            depositedPost2.Body.Value.Should().Be(_messageTwo.Body.Value);
-            depositedPost2.Header.Topic.Should().Be(_messageTwo.Header.Topic);
-            depositedPost2.Header.MessageType.Should().Be(_messageTwo.Header.MessageType);
-            
+            Assert.Equal(_messageTwo.Id, depositedPost2.Id);
+            Assert.Equal(_messageTwo.Body.Value, depositedPost2.Body.Value);
+            Assert.Equal(_messageTwo.Header.Topic, depositedPost2.Header.Topic);
+            Assert.Equal(_messageTwo.Header.MessageType, depositedPost2.Header.MessageType);
+
             var depositedPost3 = _outbox
                 .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _messageThree.Id);
             //message should correspond to the command
-            depositedPost3.Id.Should().Be(_messageThree.Id);
-            depositedPost3.Body.Value.Should().Be(_messageThree.Body.Value);
-            depositedPost3.Header.Topic.Should().Be(_messageThree.Header.Topic);
-            depositedPost3.Header.MessageType.Should().Be(_messageThree.Header.MessageType);
-            
+            Assert.Equal(_messageThree.Id, depositedPost3.Id);
+            Assert.Equal(_messageThree.Body.Value, depositedPost3.Body.Value);
+            Assert.Equal(_messageThree.Header.Topic, depositedPost3.Header.Topic);
+            Assert.Equal(_messageThree.Header.MessageType, depositedPost3.Header.MessageType);
+
             //message should be marked as outstanding if not sent
             var outstandingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
-            outstandingMessages.Count().Should().Be(3);
+            Assert.Equal(3, outstandingMessages.Count());
         }
         
         public void Dispose()

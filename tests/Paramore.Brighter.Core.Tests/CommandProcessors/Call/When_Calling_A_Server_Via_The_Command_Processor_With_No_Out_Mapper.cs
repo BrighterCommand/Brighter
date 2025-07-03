@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -17,19 +16,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new MyRequest();
-        
+
         public CommandProcessorMissingOutMapperTests()
         {
              _myRequest.RequestValue = "Hello World";
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
-                if (type == typeof(MyResponseMessageMapper))
                     return new MyResponseMessageMapper();
 
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }), null);
-            
+
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
 
             var subscriberRegistry = new SubscriberRegistry();
@@ -51,32 +49,33 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var policyRegistry = new PolicyRegistry
             {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.RETRYPOLICY, retryPolicy},
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 
             var timeProvider = new FakeTimeProvider();
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { new RoutingKey("MyRequest"), new InMemoryProducer(new InternalBus(), timeProvider) },
+                { new RoutingKey("MyRequest"), new InMemoryMessageProducer(new InternalBus(), timeProvider, InstrumentationOptions.All) },
             });
 
             var tracer = new BrighterTracer(timeProvider);
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 policyRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 new InMemoryOutbox(timeProvider){Tracer = tracer}
             );
-        
+
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
-                new InMemoryRequestContextFactory(), 
+                new InMemoryRequestContextFactory(),
                 policyRegistry,
                 bus,
                 replySubscriptions:replySubs,
@@ -86,14 +85,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             PipelineBuilder<MyResponse>.ClearPipelineCache();
         }
-           
+
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Out_Mapper()
         {
             var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOut: TimeSpan.FromMilliseconds(500)));
-            
-            //should throw an exception as we require a mapper for the outgoing request 
-            exception.Should().BeOfType<ConfigurationException>();
+
+            //should throw an exception as we require a mapper for the outgoing request
+            Assert.IsType<ConfigurationException>(exception);
         }
 
         public void Dispose()

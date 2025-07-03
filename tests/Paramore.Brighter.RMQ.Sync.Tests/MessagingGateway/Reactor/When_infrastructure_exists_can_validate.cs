@@ -1,11 +1,12 @@
 ﻿using System;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Tests.MessagingGateway;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
+[Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqValidateExistingInfrastructureTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -55,7 +56,7 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
             exceptionThrown = true;
         }
 
-        exceptionThrown.Should().BeFalse();
+        Assert.False(exceptionThrown);
     }
 
     public void Dispose()

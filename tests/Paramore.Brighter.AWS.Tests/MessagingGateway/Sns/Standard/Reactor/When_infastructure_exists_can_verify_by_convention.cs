@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureByConventionTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerSync _consumer;
@@ -20,19 +20,20 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByConventionTests()
+    public AwsValidateInfrastructureByConventionTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create
@@ -53,14 +54,9 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            findTopicBy: TopicFindBy.Convention,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate
-        );
+        subscription.FindQueueBy = QueueFindBy.Name;
+        subscription.FindTopicBy = TopicFindBy.Convention;
+        subscription.MakeChannels =  OnMissingChannel.Validate;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -82,7 +78,7 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
 
         //Assert
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         //clear the queue
         _consumer.Acknowledge(message);

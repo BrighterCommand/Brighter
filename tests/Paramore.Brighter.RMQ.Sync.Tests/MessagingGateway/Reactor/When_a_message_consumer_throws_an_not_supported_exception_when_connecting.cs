@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using Xunit;
@@ -31,6 +30,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqMessageConsumerChannelFailureTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _sender;
@@ -69,13 +69,12 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
         catch (ChannelFailureException cfe)
         {
             exceptionHappened = true;
-            cfe.InnerException.Should().BeOfType<NotSupportedException>();
+            Assert.True((cfe.InnerException) is NotSupportedException);
         }
             
-        exceptionHappened.Should().BeTrue();
+        Assert.True(exceptionHappened);
     }
 
-    [Fact]
     public void Dispose()
     {
         _sender.Dispose();

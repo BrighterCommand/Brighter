@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.Runtime.CredentialManagement;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -14,8 +15,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _sender;
-    private Message _requeuedMessage;
-    private Message _receivedMessage;
+    private Message? _requeuedMessage;
+    private Message? _receivedMessage;
     private readonly IAmAChannelAsync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
@@ -25,14 +26,15 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
         MyCommand myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType:  ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
@@ -65,7 +67,7 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
 
         await _channel.AcknowledgeAsync(_requeuedMessage);
 
-        _requeuedMessage.Body.Value.Should().Be(_receivedMessage.Body.Value);
+        Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
     }
 
     public void Dispose()

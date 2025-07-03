@@ -1,5 +1,5 @@
 ﻿using System;
-using FluentAssertions;
+using System.Net.Mime;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MySQL.Tests
                 delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyTo"),
-                contentType: "application/octet-stream",
+                contentType: new ContentType(MediaTypeNames.Application.Octet),
                 partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MySQL.Tests
 
             _messageEarliest = new Message(
                 messageHeader, 
-                new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, "application/octet-stream", CharacterEncoding.Raw )
+                new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw )
                 );
             _mySqlOutbox.Add(_messageEarliest, new RequestContext());
         }
@@ -57,31 +57,30 @@ namespace Paramore.Brighter.MySQL.Tests
             _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id, new RequestContext());
 
             //should read the message from the sql outbox
-            _storedMessage.Body.Bytes.Should().Equal(_messageEarliest.Body.Bytes);
+            Assert.Equal(_messageEarliest.Body.Value, _storedMessage.Body.Value);
             
             //should read the header from the sql outbox
-            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
-                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
-            _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
-            _storedMessage.Header.Delayed.Should().Be(TimeSpan.Zero); // -- should be zero when read from outbox
-            _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
-            _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
-            _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey);
+            Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
+            Assert.Equal(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
+            Assert.Equal(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+            Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
+            Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
+            Assert.Equal(_messageEarliest.Header.CorrelationId, _storedMessage.Header.CorrelationId);
+            Assert.Equal(_messageEarliest.Header.ReplyTo, _storedMessage.Header.ReplyTo);
+            Assert.Equal(_messageEarliest.Header.ContentType, _storedMessage.Header.ContentType);
+            Assert.Equal(_messageEarliest.Header.PartitionKey, _storedMessage.Header.PartitionKey);
 
             //Bag serialization
-            _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
-            _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
-            _storedMessage.Header.Bag[_key2].Should().Be(_value2);
-            _storedMessage.Header.Bag.ContainsKey(_key3).Should().BeTrue();
-            _storedMessage.Header.Bag[_key3].Should().Be(_value3);
-            _storedMessage.Header.Bag.ContainsKey(_key4).Should().BeTrue();
-            _storedMessage.Header.Bag[_key4].Should().Be(_value4);
-            _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
-            _storedMessage.Header.Bag[_key5].Should().Be(_value5);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));
+            Assert.Equal(_value1, _storedMessage.Header.Bag[_key1]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key2));
+            Assert.Equal(_value2, _storedMessage.Header.Bag[_key2]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key3));
+            Assert.Equal(_value3, _storedMessage.Header.Bag[_key3]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key4));
+            Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
+            Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
         }
     }
 }

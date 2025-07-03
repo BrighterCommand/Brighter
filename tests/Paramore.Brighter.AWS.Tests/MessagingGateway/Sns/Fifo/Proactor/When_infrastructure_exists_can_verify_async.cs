@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -20,25 +20,27 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureTestsAsync()
+    public AwsValidateInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
-        var correlationId = Guid.NewGuid().ToString();
+       var replyTo = new RoutingKey("http:\\queueUrl");
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
+        var correlationId = Id.Random;
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
+            topicAttributes: topicAttributes,
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -51,15 +53,8 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            findTopicBy: TopicFindBy.Name,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo
-        );
+        //Now change the subscription to validate, just check what we made
+        subscription.MakeChannels = OnMissingChannel.Validate;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -68,7 +63,7 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
                 FindTopicBy = TopicFindBy.Name,
                 MakeChannels = OnMissingChannel.Validate,
                 Topic = new RoutingKey(topicName),
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                TopicAttributes = topicAttributes
             }
         );
 
@@ -85,7 +80,7 @@ public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         await _consumer.AcknowledgeAsync(message);
     }

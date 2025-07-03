@@ -32,10 +32,12 @@ public class AddGreetingHandlerAsync : RequestHandlerAsync<AddGreeting>
 
     [RequestLoggingAsync(0, HandlerTiming.Before)]
     [UsePolicyAsync(step: 1, policy: Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-    public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting,
-        CancellationToken cancellationToken = default)
+    public override async Task<AddGreeting> HandleAsync(
+        AddGreeting addGreeting,
+        CancellationToken cancellationToken = default
+        )
     {
-        List<string> posts = new List<string>();
+        List<Id> posts = new List<Id>();
 
         //We use the unit of work to grab connection and transaction, because Outbox needs
         //to share them 'behind the scenes'

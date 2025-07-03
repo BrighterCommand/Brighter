@@ -1,5 +1,4 @@
 using System;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
@@ -8,6 +7,8 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
+[Trait("Fragile", "CI")] 
+[Collection("RMQ")]
 public class RmqMessageConsumerConnectionClosedTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _sender;
@@ -51,10 +52,10 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
         catch (ChannelFailureException cfe)
         {
             exceptionHappened = true;
-            cfe.InnerException.Should().BeOfType<AlreadyClosedException>();
+            Assert.True((cfe.InnerException) is AlreadyClosedException);
         }
            
-        exceptionHappened.Should().BeTrue();
+        Assert.True(exceptionHappened);
     }
 
     public void Dispose()

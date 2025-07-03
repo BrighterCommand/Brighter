@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -27,7 +28,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
     public RMQMessageConsumerRetryDLQTests()
     {
         string correlationId = Guid.NewGuid().ToString();
-        string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = new ChannelName($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
         var routingKey = new RoutingKey($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
 
@@ -44,7 +45,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
 
         _subscription = new RmqSubscription<MyCommand>(
-            name: new SubscriptionName("DLQ Test Subscription"),
+            subscriptionName: new SubscriptionName("DLQ Test Subscription"),
             channelName: channelName,
             routingKey: routingKey,
             //after 0 retries fail and move to the DLQ
@@ -144,7 +145,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
 
         //assert this is our message
-        dlqMessage.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
 
         _deadLetterConsumer.Acknowledge(dlqMessage);
 

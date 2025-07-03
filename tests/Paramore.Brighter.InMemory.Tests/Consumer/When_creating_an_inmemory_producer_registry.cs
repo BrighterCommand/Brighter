@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using System.Linq;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
@@ -11,13 +12,13 @@ public class InMemoryProducerRegistryFactoryTests
        // arrange
        var bus = new InternalBus(); 
        var publication = new Publication() { Topic = new RoutingKey("Topic") };
-       var inMemoryProducerRegistryFactory = new InMemoryProducerRegistryFactory(bus, new[] { publication });
+       var inMemoryProducerRegistryFactory = new InMemoryProducerRegistryFactory(bus, new[] { publication }, InstrumentationOptions.All);
 
        //act
        var producerRegistry = inMemoryProducerRegistryFactory.Create();
 
        //assert
        Assert.NotNull(producerRegistry);
-       producerRegistry.Producers.Should().Contain(p => p.Publication.Topic == publication.Topic); 
+       Assert.Contains(producerRegistry.Producers, p => p.Publication.Topic == publication.Topic); 
     }
 }

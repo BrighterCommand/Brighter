@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Transactions;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.InMemory;
 using Paramore.Brighter.Hangfire.Tests.TestDoubles;
@@ -54,7 +53,7 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryProducer(_internalBus, _timeProvider)
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, _timeProvider, InstrumentationOptions.All)
             {
                 Publication = { Topic = _routingKey, RequestType = typeof(MyEvent) }
             }
@@ -76,6 +75,7 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             trace,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 
@@ -118,16 +118,15 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
         var id = await scheduler.ScheduleAsync(message,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(message.Id, new RequestContext())
-            .Should().BeEquivalentTo(message);
+        Assert.Equivalent(message, _outbox.Get(message.Id, new RequestContext()));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
     }
 
     [Fact]
@@ -142,16 +141,15 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(message);
+        Assert.Equivalent(message, _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -166,20 +164,18 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.True((id)?.Any());
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
-        (await scheduler.ReSchedulerAsync(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5))))
-            .Should().BeTrue();
+        Assert.True((await scheduler.ReSchedulerAsync(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)))));
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         await Task.Delay(TimeSpan.FromSeconds(4));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(message);
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
+        Assert.Equivalent(message, _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -194,20 +190,18 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.True((id)?.Any());
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
-        (await scheduler.ReSchedulerAsync(id, TimeSpan.FromSeconds(5)))
-            .Should().BeTrue();
+        Assert.True((await scheduler.ReSchedulerAsync(id, TimeSpan.FromSeconds(5))));
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         await Task.Delay(TimeSpan.FromSeconds(4));
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -222,14 +216,27 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
         await scheduler.CancelAsync(id);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = await _outbox.GetAsync(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
 
@@ -245,14 +252,27 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromHours(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
         await scheduler.CancelAsync(id);
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        var expected = Message.Empty;
+        var actual = await _outbox.GetAsync(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     public void Dispose()

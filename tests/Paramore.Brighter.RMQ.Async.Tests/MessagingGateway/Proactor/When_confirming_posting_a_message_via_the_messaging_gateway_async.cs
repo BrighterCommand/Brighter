@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -56,7 +55,7 @@ public class RmqMessageProducerConfirmationsSendMessageAsyncTests : IDisposable
         {
             if (success)
             {
-                guid.Should().Be(_message.Id);
+                Assert.Equal(_message.Id, guid);
                 _messageWasPublished = true;
                 _messageWasNotPublished = false;
             }
@@ -80,8 +79,8 @@ public class RmqMessageProducerConfirmationsSendMessageAsyncTests : IDisposable
 
         await Task.Delay(500);
 
-        _messageWasNotPublished.Should().BeFalse();
-        _messageWasPublished.Should().BeTrue();
+        Assert.False(_messageWasNotPublished);
+        Assert.True(_messageWasPublished);
     }
 
     public void Dispose()

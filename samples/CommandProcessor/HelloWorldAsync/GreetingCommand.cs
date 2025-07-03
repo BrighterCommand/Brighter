@@ -27,7 +27,7 @@ using Paramore.Brighter;
 
 namespace HelloWorldAsync
 {
-    internal class GreetingCommand(string name) : Command(Guid.NewGuid())
+    internal sealed class GreetingCommand(string name) : Command(Guid.NewGuid())
     {
         public string Name { get; } = name;
     }

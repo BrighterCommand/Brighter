@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         public void When_The_Message_Is_Already_In_The_Outbox()
         {
             _exception = Catch.Exception(() => _mySqlOutbox.Add(_messageEarliest, new RequestContext()));
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
         }
 
         public void Dispose()

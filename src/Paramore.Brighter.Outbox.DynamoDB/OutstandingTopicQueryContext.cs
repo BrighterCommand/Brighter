@@ -25,16 +25,9 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Outbox.DynamoDB;
 
-internal class OutstandingTopicQueryContext
+internal sealed class OutstandingTopicQueryContext(int nextPage, int shardNumber, string? lastEvaluatedKey)
 {
-    public int NextPage { get; private set; }
-    public int ShardNumber { get; private set; }
-    public string LastEvaluatedKey { get; private set; }
-
-    public OutstandingTopicQueryContext(int nextPage, int shardNumber, string lastEvaluatedKey)
-    {
-        NextPage = nextPage;
-        ShardNumber = shardNumber;
-        LastEvaluatedKey = lastEvaluatedKey;
-    }
+    public int NextPage { get; private set; } = nextPage;
+    public int ShardNumber { get; private set; } = shardNumber;
+    public string? LastEvaluatedKey { get; private set; } = lastEvaluatedKey;
 }

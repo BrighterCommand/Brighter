@@ -24,10 +24,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Mime;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -54,6 +56,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         {
             var command = new MyCommand { Value = "Test", WasCancelled = false, TaskCompleted = false };
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+            var characterEncoding = CharacterEncoding.UTF8;
 
             var messageHeader = new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
@@ -64,7 +67,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyAddress"),
-                contentType: "text/plain");
+                contentType: new ContentType(MediaTypeNames.Text.Plain){CharSet = characterEncoding.FromCharacterEncoding()});
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -72,7 +75,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _messageEarliest = new Message(messageHeader,
-                new MessageBody(body, "application/json", CharacterEncoding.UTF8));
+                new MessageBody(body, new ContentType(MediaTypeNames.Application.Json){CharSet = characterEncoding.FromCharacterEncoding()}));
             var fakeTimeProvider = new FakeTimeProvider();
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
                 new DynamoDbConfiguration(OutboxTableName),
@@ -90,33 +93,32 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id, context);
 
             //assert
-            _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
+            Assert.Equal(_messageEarliest.Body.Value, _storedMessage.Body.Value);
             //should read the header from the outbox
-            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
-                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
-            _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
-            _storedMessage.Header.Delayed.Should().Be(TimeSpan.Zero); // -- should be zero when read from outbox
-            _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
-            _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
-            _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
+            Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
+            Assert.Equal(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
+            Assert.Equal(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+            Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
+            Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
+            Assert.Equal(_messageEarliest.Header.CorrelationId, _storedMessage.Header.CorrelationId);
+            Assert.Equal(_messageEarliest.Header.ReplyTo, _storedMessage.Header.ReplyTo);
+            Assert.Equal(_messageEarliest.Header.ContentType, _storedMessage.Header.ContentType);
 
             //Bag serialization
-            _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
-            _storedMessage.Header.Bag[_key1].Should().Be(_value1);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));
+            Assert.Equal(_value1, _storedMessage.Header.Bag[_key1]);
 
-            _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
-            _storedMessage.Header.Bag[_key2].Should().Be(_value2);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key2));
+            Assert.Equal(_value2, _storedMessage.Header.Bag[_key2]);
 
-            _storedMessage.Header.Bag.ContainsKey(_key3).Should().BeTrue();
-            _storedMessage.Header.Bag[_key3].Should().Be(_value3);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key3));
+            Assert.Equal(_value3, _storedMessage.Header.Bag[_key3]);
 
-            _storedMessage.Header.Bag.ContainsKey(_key4).Should().BeTrue();
-            _storedMessage.Header.Bag[_key4].Should().Be(_value4);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key4));
+            Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
 
-            _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
-            _storedMessage.Header.Bag[_key5].Should().Be(_value5);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
+            Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
         }
     }
 }

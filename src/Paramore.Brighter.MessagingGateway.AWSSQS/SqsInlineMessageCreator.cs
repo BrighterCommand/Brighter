@@ -25,15 +25,17 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text.Json;
 using Amazon;
 using Amazon.SQS;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
+internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
 
@@ -42,7 +44,7 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
     {
         var topic = HeaderResult<RoutingKey>.Empty();
-        var messageId = HeaderResult<string?>.Empty();
+        var messageId = HeaderResult<Id?>.Empty();
 
         Message message;
         try
@@ -62,33 +64,38 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
             var receiptHandle = ReadReceiptHandle(sqsMessage);
             var partitionKey = ReadPartitionKey(sqsMessage);
             var deduplicationId = ReadDeduplicationId(sqsMessage);
-
-            //TODO:CLOUD_EVENTS parse from headers
+            var type = ReadType();
+            var source = ReadSource();
+            var dataSchema = ReadDataSchema();
+            var specVersion = ReadSpecVersion();
 
             var messageHeader = new MessageHeader(
-                messageId: messageId.Result ?? string.Empty,
+                messageId: messageId.Result ?? Id.Empty,
                 topic: topic.Result ?? RoutingKey.Empty,
                 messageType: messageType.Result,
-                source: null,
-                type: "",
+                source: source.Result,
+                type: type.Result,
                 timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                 correlationId: correlationId.Success ? correlationId.Result : string.Empty,
                 replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
-                contentType: contentType.Result ?? "plain/text",
+                contentType: contentType.Result ?? new ContentType(MediaTypeNames.Text.Plain),
                 handledCount: handledCount.Result,
-                dataSchema: null,
+                dataSchema: dataSchema.Result,
                 subject: subject.Result,
                 delayed: TimeSpan.Zero,
                 partitionKey: partitionKey.Result ?? string.Empty
-            );
+            )
+            {
+                SpecVersion = specVersion.Result!
+            };
 
             message = new Message(messageHeader, ReadMessageBody(jsonDocument));
 
             //deserialize the bag 
             var bag = ReadMessageBag();
-            foreach (var key in bag.Keys)
+            foreach (var keyValue in bag)
             {
-                message.Header.Bag.Add(key, bag[key]);
+                message.Header.Bag.Add(keyValue.Key, keyValue.Value);
             }
 
             if (deduplicationId.Success)
@@ -103,8 +110,8 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         }
         catch (Exception e)
         {
-            s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
-            message = FailureMessage(topic, messageId);
+            Log.FailedToCreateMessageFromAwsSqsMessage(s_logger, e);
+            message = Message.FailureMessage(topic.Result, messageId.Result);
         }
 
         return message;
@@ -125,20 +132,27 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         }
         catch (Exception ex)
         {
-            s_logger.LogWarning($"Failed while deserializing Sqs Message body, ex: {ex}");
+            Log.FailedWhileDeserializingSqsMessageBody(s_logger, ex);
         }
 
         return messageAttributes ?? new Dictionary<string, JsonElement>();
     }
 
-    private HeaderResult<string?> ReadContentType()
+    private HeaderResult<ContentType?> ReadContentType()
     {
-        if (_messageAttributes.TryGetValue(HeaderNames.ContentType, out var contentType))
+        if (_messageAttributes.TryGetValue(HeaderNames.DataContentType, out var contentType))
         {
-            return new HeaderResult<string?>(contentType.GetValueInString(), true);
+            var result = contentType.GetValueInString();
+            return new HeaderResult<ContentType?>(result is not null ? new ContentType(result) : new ContentType(MediaTypeNames.Text.Plain), true);
+        }
+        
+        if (_messageAttributes.TryGetValue(HeaderNames.ContentType, out contentType))
+        {
+            var result = contentType.GetValueInString() ?? MediaTypeNames.Text.Plain;
+            return new HeaderResult<ContentType?>(new ContentType(result), true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<ContentType?>(null, true);
     }
 
     private Dictionary<string, object> ReadMessageBag()
@@ -167,27 +181,81 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         return new Dictionary<string, object>();
     }
 
-    private HeaderResult<string?> ReadReplyTo()
+    private HeaderResult<RoutingKey?> ReadReplyTo()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.ReplyTo, out var replyTo))
         {
-            return new HeaderResult<string?>(replyTo.GetValueInString(), true);
+            var result = replyTo.GetValueInString();
+            return new HeaderResult<RoutingKey?>(result is not null ? new RoutingKey(result) : RoutingKey.Empty, true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<RoutingKey?>(RoutingKey.Empty, true);
     }
 
-    private HeaderResult<DateTime> ReadTimestamp()
+    private HeaderResult<string?> ReadSpecVersion()
     {
-        if (_messageAttributes.TryGetValue(HeaderNames.Timestamp, out var timeStamp))
+        if (_messageAttributes.TryGetValue(HeaderNames.SpecVersion, out var specVersion))
         {
-            if (DateTime.TryParse(timeStamp.GetValueInString(), out var value))
+            return new HeaderResult<string?>(specVersion.GetValueInString(), true);
+        }
+
+        return new HeaderResult<string?>(MessageHeader.DefaultSpecVersion, true);
+    }
+
+    private HeaderResult<string?> ReadType()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.Type, out var specVersion))
+        {
+            return new HeaderResult<string?>(specVersion.GetValueInString(), true);
+        }
+
+        return new HeaderResult<string?>(MessageHeader.DefaultType, true);
+    }
+    
+    private HeaderResult<Uri> ReadSource()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.Source, out var source))
+        {
+            if (Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
             {
-                return new HeaderResult<DateTime>(value, true);
+                return new HeaderResult<Uri>(uri, true);
             }
         }
 
-        return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+        return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
+    }
+    
+     private HeaderResult<Uri?> ReadDataSchema()
+     {
+         if (_messageAttributes.TryGetValue(HeaderNames.DataSchema, out var source))
+         {
+             if (Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
+             {
+                 return new HeaderResult<Uri?>(uri, true);
+             }
+         }
+    
+         return new HeaderResult<Uri?>(null, true);
+     }
+
+    private HeaderResult<DateTime> ReadTimestamp()
+    {
+         if (_messageAttributes.TryGetValue(HeaderNames.Time, out var timeStamp))
+         {
+             if (DateTime.TryParse(timeStamp.GetValueInString(), out var value))
+             {
+                 return new HeaderResult<DateTime>(value, true);
+             }
+         }
+         if (_messageAttributes.TryGetValue(HeaderNames.Timestamp, out timeStamp))
+         {
+             if (DateTime.TryParse(timeStamp.GetValueInString(), out var value))
+             {
+                 return new HeaderResult<DateTime>(value, true);
+             }
+         }
+
+         return new HeaderResult<DateTime>(DateTime.UtcNow, true);
     }
 
     private HeaderResult<MessageType> ReadMessageType()
@@ -216,24 +284,26 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         return new HeaderResult<int>(0, true);
     }
 
-    private HeaderResult<string?> ReadCorrelationId()
+    private HeaderResult<Id?> ReadCorrelationId()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.CorrelationId, out var correlationId))
         {
-            return new HeaderResult<string?>(correlationId.GetValueInString(), true);
+            var result = correlationId.GetValueInString();
+            return new HeaderResult<Id?>(result is not null ? new Id(result) : Id.Empty, true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<Id?>(Id.Empty, true);
     }
 
-    private HeaderResult<string?> ReadMessageId()
+    private HeaderResult<Id?> ReadMessageId()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.Id, out var messageId))
         {
-            return new HeaderResult<string?>(messageId.GetValueInString(), true);
+            var value = messageId.GetValueInString();
+            return new HeaderResult<Id?>(value is not null ? new Id(value) : Id.Empty, true);
         }
 
-        return new HeaderResult<string?>(string.Empty, true);
+        return new HeaderResult<Id?>(Id.Empty, true);
     }
 
     private HeaderResult<RoutingKey> ReadTopic()
@@ -252,28 +322,33 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
             {
                 return new HeaderResult<RoutingKey>(new RoutingKey(topic.Substring(indexOf + 1)), true);
             }
-            
+
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }
 
         return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
     }
 
-    private static HeaderResult<string?> ReadMessageSubject(JsonDocument jsonDocument)
+    private HeaderResult<string?> ReadMessageSubject(JsonDocument jsonDocument)
     {
-        try
-        {
-            if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
-            {
-                return new HeaderResult<string?>(value.GetString(), true);
-            }
-        }
-        catch (Exception ex)
-        {
-            s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
-        }
+          if (_messageAttributes.TryGetValue(HeaderNames.Subject, out var messageId))
+          {
+              return new HeaderResult<string?>(messageId.GetValueInString(), true);
+          }
+          
+          try
+          {
+              if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
+              {
+                  return new HeaderResult<string?>(value.GetString(), true);
+              }
+          }
+          catch (Exception ex)
+          {
+              Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
+          }
 
-        return new HeaderResult<string?>(null, true);
+          return new HeaderResult<string?>(null, true);
     }
 
     private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
@@ -287,22 +362,21 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         }
         catch (Exception ex)
         {
-            s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
         }
 
         return new MessageBody(string.Empty);
     }
 
-    private static HeaderResult<string> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<PartitionKey> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
     {
         if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
         {
             //we have an arn, and we want the topic
-            var messageGroupId = value;
-            return new HeaderResult<string>(messageGroupId, true);
+            return new HeaderResult<PartitionKey>(value, true);
         }
 
-        return new HeaderResult<string>(string.Empty, false);
+        return new HeaderResult<PartitionKey>(string.Empty, false);
     }
 
     private static HeaderResult<string> ReadDeduplicationId(Amazon.SQS.Model.Message sqsMessage)
@@ -310,10 +384,22 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageDeduplicationId, out var value))
         {
             //we have an arn, and we want the topic
-            var messageGroupId = value;
-            return new HeaderResult<string>(messageGroupId, true);
+            return new HeaderResult<string>(value, true);
         }
 
         return new HeaderResult<string>(string.Empty, false);
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Failed to create message from Aws Sqs message")]
+        public static partial void FailedToCreateMessageFromAwsSqsMessage(ILogger logger, Exception ex);
+
+        [LoggerMessage(LogLevel.Warning, "Failed while deserializing Sqs Message body")]
+        public static partial void FailedWhileDeserializingSqsMessageBody(ILogger logger, Exception ex);
+        
+        [LoggerMessage(LogLevel.Warning, "Failed to parse Sqs Message Body to valid Json Document")]
+        public static partial void FailedToParseSqsMessageBodyToValidJsonDocument(ILogger logger, Exception ex);
+
     }
 }

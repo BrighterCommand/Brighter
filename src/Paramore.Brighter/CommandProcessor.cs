@@ -38,7 +38,6 @@ using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Tasks;
 using Polly;
 using Polly.Registry;
 using Exception = System.Exception;
@@ -50,7 +49,7 @@ namespace Paramore.Brighter
     /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
     /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns 
     /// </summary>
-    public class CommandProcessor : IAmACommandProcessor
+    public partial class CommandProcessor : IAmACommandProcessor
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
@@ -261,8 +260,7 @@ namespace Paramore.Brighter
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
             try
             {
-                s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
-                    command.Id);
+                Log.BuildingSendPipelineForCommand(s_logger, command.GetType(), command.Id);
                 var handlerChain = builder.Build(context);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -339,8 +337,7 @@ namespace Paramore.Brighter
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             try
             {
-                s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
-                    command.GetType(), command.Id);
+                Log.BuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -416,14 +413,12 @@ namespace Paramore.Brighter
                     throw new ArgumentException("A subscriberRegistry must be configured.");
                 
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
-                s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
+                Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(context);
 
                 var handlerCount = handlerChain.Count();
 
-                s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
-                   @event.GetType(), @event.Id);
+                Log.FoundHandlerCountForEvent(s_logger, handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new ConcurrentBag<Exception>();
                 Parallel.ForEach(handlerChain, (handleRequests) =>
@@ -524,15 +519,12 @@ namespace Paramore.Brighter
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
-                s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
+                Log.BuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id);
 
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
                 var handlerCount = handlerChain.Count();
 
-                s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
-                    @event.GetType(), @event.Id
-                );
+                Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new ConcurrentBag<Exception>();
 
@@ -730,14 +722,14 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
+        /// Pass deposited message to <see cref="ClearOutbox(Id[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string DepositPost<TRequest>(
+        public Id DepositPost<TRequest>(
             TRequest request,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null
@@ -751,7 +743,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
+        /// Pass deposited message to <see cref="ClearOutbox(Id[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox. Must match the transaction type configured during startup</param>
@@ -763,7 +755,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
         [DepositCallSite] //NOTE: if you adjust the signature, adjust the invocation site
-        public string DepositPost<TRequest,TTransaction>(
+        public Id DepositPost<TRequest,TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
             RequestContext? requestContext = null,
@@ -771,7 +763,7 @@ namespace Paramore.Brighter
             string? batchId = null) 
             where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
+            Log.SaveRequest(s_logger, request.GetType(), request.Id);
             
             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
@@ -806,14 +798,14 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
+        /// Pass deposited message to <see cref="ClearOutbox(Id[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string[] DepositPost<TRequest>(
+        public Id[] DepositPost<TRequest>(
             IEnumerable<TRequest> requests, 
             RequestContext? requestContext = null, 
             Dictionary<string, object>? args = null
@@ -827,7 +819,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
+        /// Pass deposited message to <see cref="ClearOutbox(Id[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
@@ -837,14 +829,14 @@ namespace Paramore.Brighter
         /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
         [BulkDepositCallSite] //NOTE: if you adjust the signature, adjust the invocation site
-        public string[] DepositPost<TRequest, TTransaction>(
+        public Id[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save bulk requests request: {RequestType}", typeof(TRequest));
+            Log.SaveBulkRequestsRequest(s_logger, typeof(TRequest));
             
             var span = _tracer?.CreateBatchSpan<TRequest>(requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
@@ -854,7 +846,7 @@ namespace Paramore.Brighter
                 if (typeof(TTransaction) != s_transactionType)
                     throw new InvalidOperationException("Supplied transaction provider doesn't match configured transaction type.");
 
-                var successfullySentMessage = new List<string>();
+                var successfullySentMessage = new List<Id>();
 
                 var batchId = CallStartBatchAddToOutbox();
 
@@ -881,7 +873,7 @@ namespace Paramore.Brighter
             }
         }
 
-        private string[] CallBulkDepositPost<TRequest>(
+        private Id[] CallBulkDepositPost<TRequest>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider? transactionProvider,
             RequestContext? requestContext,
@@ -890,12 +882,7 @@ namespace Paramore.Brighter
         ) where TRequest : class, IRequest
         {
             var requestType = typeof(TRequest).Name;
-            MethodInfo bulkDeposit;
-            if (s_boundBulkDepositCalls.ContainsKey(requestType))
-            {
-                bulkDeposit = s_boundBulkDepositCalls[requestType];
-            }
-            else
+            if (!s_boundBulkDepositCalls.TryGetValue(requestType, out MethodInfo? bulkDeposit))
             {
                 var bulkDepositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -911,7 +898,7 @@ namespace Paramore.Brighter
             }
 
             return CallMethodAndPreserveException(() =>
-                (bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args]) as string[])!
+                (bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args]) as Id[])!
             );
         }
 
@@ -921,7 +908,7 @@ namespace Paramore.Brighter
         // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
         // generic methods, like DepositPost, assume they have the derived type. This binds DepositPost to the right
         // type before we call it.
-        private string CallDepositPost<TRequest>(
+        private Id CallDepositPost<TRequest>(
             TRequest actualRequest, 
             IAmABoxTransactionProvider? amABoxTransactionProvider,
             RequestContext? requestContext, 
@@ -930,14 +917,9 @@ namespace Paramore.Brighter
             Type transactionType
         ) where TRequest : class, IRequest
         {
-            MethodInfo deposit;
             var actualRequestType = actualRequest.GetType();
 
-            if (s_boundDepositCalls.ContainsKey(actualRequestType.Name))
-            {
-                deposit = s_boundDepositCalls[actualRequestType.Name];
-            }
-            else
+            if (!s_boundDepositCalls.TryGetValue(actualRequestType.Name, out MethodInfo? deposit))
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -953,7 +935,7 @@ namespace Paramore.Brighter
             }
 
             return CallMethodAndPreserveException(() =>
-                (deposit?.Invoke(this, [actualRequest, amABoxTransactionProvider, requestContext, dictionary, batchId]) as string)!
+                (deposit?.Invoke(this, [actualRequest, amABoxTransactionProvider, requestContext, dictionary, batchId]) as Id)!
             );
         }
 
@@ -973,7 +955,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        public async Task<string> DepositPostAsync<TRequest>(
+        public async Task<Id> DepositPostAsync<TRequest>(
             TRequest request,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
@@ -1002,7 +984,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TTransaction">The type of the transaction used by the Outbox</typeparam>
         /// <returns></returns>
         [DepositCallSiteAsync] //NOTE: if you adjust the signature, adjust the invocation site
-        public async Task<string> DepositPostAsync<TRequest, TTransaction>(
+        public async Task<Id> DepositPostAsync<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
             RequestContext? requestContext = null,
@@ -1011,7 +993,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default,
             string? batchId = null) where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
+            Log.SaveRequest(s_logger, request.GetType(), request.Id);
             
              var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
              var context = InitRequestContext(span, requestContext);
@@ -1056,7 +1038,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        public async Task<string[]> DepositPostAsync<TRequest>(
+        public async Task<Id[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
@@ -1084,7 +1066,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TTransaction">The type of transaction used with the Outbox</typeparam>
         /// <returns></returns>
         [BulkDepositCallSiteAsync] //NOTE: if you adjust the signature, adjust the invocation site
-        public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(
+        public async Task<Id[]> DepositPostAsync<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
             RequestContext? requestContext = null,
@@ -1097,7 +1079,7 @@ namespace Paramore.Brighter
 
             try
             {
-                var successfullySentMessage = new List<string>();
+                var successfullySentMessage = new List<Id>();
 
                 var batchId = CallStartBatchAddToOutbox();
 
@@ -1126,7 +1108,7 @@ namespace Paramore.Brighter
             }
         }
 
-        private Task<string[]> CallBulkDepositPostAsync<TRequest>(
+        private Task<Id[]> CallBulkDepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider? transactionProvider,
             RequestContext? requestContext,
@@ -1137,12 +1119,7 @@ namespace Paramore.Brighter
         ) where TRequest : class, IRequest
         {
             var requestType = typeof(TRequest).Name;
-            MethodInfo bulkDeposit;
-            if (s_boundBulkDepositCallsAsync.ContainsKey(requestType))
-            {
-                bulkDeposit = s_boundBulkDepositCallsAsync[requestType];
-            }
-            else
+            if (!s_boundBulkDepositCallsAsync.TryGetValue(requestType, out MethodInfo? bulkDeposit))
             {
                 var bulkDepositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -1157,7 +1134,7 @@ namespace Paramore.Brighter
                 s_boundBulkDepositCallsAsync[requestType] = bulkDeposit;
             }
             return CallMethodAndPreserveException(() =>
-                (Task<string[]>)bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args, continueOnCapturedContext, cancellationToken])!
+                (Task<Id[]>)bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args, continueOnCapturedContext, cancellationToken])!
             );
         }
 
@@ -1166,7 +1143,7 @@ namespace Paramore.Brighter
         // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
         // generic methods, like DepositPost, assume they have the derived type. This binds DepositPostAsync to the right
         // type before we call it.
-        Task<string> CallDepositPostAsync<TRequest>(
+        Task<Id> CallDepositPostAsync<TRequest>(
             TRequest actualRequest, 
             IAmABoxTransactionProvider? tp,
             RequestContext? rc, 
@@ -1177,14 +1154,9 @@ namespace Paramore.Brighter
             Type transactionType
         ) where TRequest : class, IRequest
         {
-            MethodInfo deposit;
             var actualRequestType = actualRequest.GetType();
 
-            if (s_boundDepositCallsAsync.ContainsKey(actualRequestType.Name))
-            {
-                deposit = s_boundDepositCallsAsync[actualRequestType.Name];
-            }
-            else
+            if (!s_boundDepositCallsAsync.TryGetValue(actualRequestType.Name, out MethodInfo? deposit))
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -1199,7 +1171,7 @@ namespace Paramore.Brighter
             }
 
             return CallMethodAndPreserveException(
-                () => (Task<string>)deposit?.Invoke(this, [actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId])!
+                () => (Task<Id>)deposit?.Invoke(this, [actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId])!
             );
         }
 
@@ -1252,14 +1224,9 @@ namespace Paramore.Brighter
                 () => (Task)method.Invoke(s_mediator, [batchId, transactionProvider, context, cancellationToken])!);
         }
 
-        private MethodInfo GetMediatorMethod(string methodName)
+        private static MethodInfo GetMediatorMethod(string methodName)
         {
-            MethodInfo method;
-            if (s_boundMediatorMethods.ContainsKey(methodName))
-            {
-                method = s_boundMediatorMethods[methodName];
-            }
-            else
+            if (!s_boundMediatorMethods.TryGetValue(methodName, out MethodInfo? method))
             {
                 method = s_mediator!
                     .GetType()
@@ -1297,7 +1264,7 @@ namespace Paramore.Brighter
         /// <param name="ids">The message ids to flush</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearOutbox(string[] ids, RequestContext? requestContext = null, Dictionary<string, object>? args = null)
+        public void ClearOutbox(Id[] ids, RequestContext? requestContext = null, Dictionary<string, object>? args = null)
         {
             var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
@@ -1327,7 +1294,7 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should the callback run on a new thread?</param>
         /// <param name="cancellationToken">The token to cancel a running asynchronous operation</param>
         public async Task ClearOutboxAsync(
-            IEnumerable<string> posts,
+            IEnumerable<Id> posts,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
@@ -1389,7 +1356,7 @@ namespace Paramore.Brighter
             subscription.RoutingKey = new RoutingKey(routingKey);
 
             using var responseChannel = _responseChannelFactory.CreateSyncChannel(subscription);
-            s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
+            Log.CreateReplyQueueForTopic(s_logger, channelName);
             request.ReplyAddress.Topic = subscription.RoutingKey;
             request.ReplyAddress.CorrelationId = channelName.ToString();
 
@@ -1406,18 +1373,18 @@ namespace Paramore.Brighter
                 var outMessage = s_mediator!.CreateMessageFromRequest(request, context);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
-                s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
+                Log.SendingRequestWithRoutingkey(s_logger, channelName);
                 s_mediator.CallViaExternalBus<T, TResponse>(outMessage, requestContext);
 
                 Message? responseMessage = null;
 
             //now we block on the receiver to try and get the message, until timeout.
-            s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
+            Log.AwaitingResponseOn(s_logger, channelName);
             Retry(() => responseMessage = responseChannel.Receive(timeOut));
             
                 if (responseMessage is not null && responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
-                    s_logger.LogDebug("Reply received from {ChannelName}", channelName);
+                    Log.ReplyReceivedFrom(s_logger, channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
                     s_mediator.CreateRequestFromMessage(responseMessage, context, out TResponse response);
                     Send(response);
@@ -1425,7 +1392,7 @@ namespace Paramore.Brighter
                     return response;
                 }
 
-                s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
+                Log.DeletingQueueForRoutingkey(s_logger, channelName);
 
                 return null;
             } 
@@ -1468,8 +1435,7 @@ namespace Paramore.Brighter
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
-            s_logger.LogInformation("Found {HandlerCount} pipelines for command: {Type} {Id}", handlerCount, typeof(T),
-                command.Id);
+            Log.FoundHandlerCountForCommand(s_logger, handlerCount, typeof(T), command.Id);
 
             if (handlerCount > 1)
                 throw new ArgumentException(
@@ -1554,9 +1520,57 @@ namespace Paramore.Brighter
             {
                 if (result.FinalException != null)
                 {
-                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+                    Log.ExceptionWhilstTryingToPublishMessage(s_logger, result.FinalException);
                 }
             }
+        }
+        
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Building send pipeline for command: {CommandType} {Id}")]
+            public static partial void BuildingSendPipelineForCommand(ILogger logger, Type commandType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Building send async pipeline for command: {CommandType} {Id}")]
+            public static partial void BuildingSendAsyncPipelineForCommand(ILogger logger, Type commandType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Building send async pipeline for event: {EventType} {Id}")]
+            public static partial void BuildingSendAsyncPipelineForEvent(ILogger logger, Type eventType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Building send pipeline for event: {EventType} {Id}")]
+            public static partial void BuildingSendPipelineForEvent(ILogger logger, Type eventType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Found {HandlerCount} pipelines for command: {CommandType} {Id}")]
+            public static partial void FoundHandlerCountForCommand(ILogger logger, int handlerCount, Type commandType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Found {HandlerCount} pipelines for event: {EventType} {Id}")]
+            public static partial void FoundHandlerCountForEvent(ILogger logger, int handlerCount, Type eventType, string id);
+
+            [LoggerMessage(LogLevel.Information, "Found {HandlerCount} async pipelines for event: {EventType} {Id}")]
+            public static partial void FoundAsyncHandlerCount(ILogger logger, int handlerCount, Type eventType, string id);
+            
+            [LoggerMessage(LogLevel.Information, "Save request: {RequestType} {Id}")]
+            public static partial void SaveRequest(ILogger logger, Type requestType, string id);
+            
+            [LoggerMessage(LogLevel.Information, "Save bulk requests request: {RequestType}")]
+            public static partial void SaveBulkRequestsRequest(ILogger logger, Type requestType);
+            
+            [LoggerMessage(LogLevel.Information, "Create reply queue for topic {ChannelName}")]
+            public static partial void CreateReplyQueueForTopic(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Debug, "Sending request with routingkey {ChannelName}")]
+            public static partial void SendingRequestWithRoutingkey(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Debug, "Awaiting response on {ChannelName}")]
+            public static partial void AwaitingResponseOn(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Debug, "Reply received from {ChannelName}")]
+            public static partial void ReplyReceivedFrom(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Information, "Deleting queue for routingkey: {ChannelName}")]
+            public static partial void DeletingQueueForRoutingkey(ILogger logger, Guid channelName);
+            
+            [LoggerMessage(LogLevel.Error, "Exception whilst trying to publish message")]
+            public static partial void ExceptionWhilstTryingToPublishMessage(ILogger logger, Exception exception);
         }
     }
 }

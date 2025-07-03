@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -31,23 +32,27 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
     public SnsReDrivePolicySDlqTestsAsync()
     {
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
         var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
 
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             requeueCount: -1,
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2)
-        );
+            queueAttributes: new SqsAttributes(
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)),
+            topicAttributes: topicAttributes
+            );
 
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
         _message = new Message(
@@ -65,7 +70,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
                 Topic = routingKey,
                 RequestType = typeof(MyDeferredCommand),
                 MakeChannels = OnMissingChannel.Create,
-                SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo } 
+                TopicAttributes = topicAttributes 
             }
         );
 
@@ -137,7 +142,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         var dlqCount = await GetDLQCountAsync(_dlqChannelName + ".fifo");
-        dlqCount.Should().Be(1);
+        Assert.Equal(1, dlqCount);
     }
 
     public void Dispose()

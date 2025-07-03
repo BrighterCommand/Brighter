@@ -1,6 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.Net.Mime;
+using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
@@ -139,7 +141,9 @@ public class AzureServiceBusScheduler(
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
         }
 
-        azureServiceBusMessage.ContentType = message.Header.ContentType;
+        var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        
+        azureServiceBusMessage.ContentType = contentType.ToString();
         azureServiceBusMessage.MessageId = message.Header.MessageId;
         if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
             azureServiceBusMessage.SessionId = value.ToString();

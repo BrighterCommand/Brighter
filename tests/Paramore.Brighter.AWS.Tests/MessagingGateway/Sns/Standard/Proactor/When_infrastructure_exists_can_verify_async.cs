@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
 {
     [Trait("Category", "AWS")]
-    [Trait("Fragile", "CI")]
-    public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+    public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     {
         private readonly Message _message;
         private readonly IAmAMessageConsumerAsync _consumer;
@@ -20,19 +20,20 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
-        public AWSValidateInfrastructureTestsAsync()
+        public AwsValidateInfrastructureTestsAsync()
         {
             _myCommand = new MyCommand { Value = "Test" };
             string correlationId = Guid.NewGuid().ToString();
-            string replyTo = "http:\\queueUrl";
-            string contentType = "text\\plain";
+            var replyTo = new RoutingKey("http:\\queueUrl");
+            var contentType = new ContentType(MediaTypeNames.Text.Plain);
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
 
             SqsSubscription<MyCommand> subscription = new(
-                name: new SubscriptionName(channelName),
+                subscriptionName: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
+                channelType: ChannelType.PubSub,
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create
@@ -49,14 +50,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-            subscription = new(
-                name: new SubscriptionName(channelName),
-                channelName: channel.Name,
-                routingKey: routingKey,
-                findTopicBy: TopicFindBy.Name,
-                messagePumpType: MessagePumpType.Proactor,
-                makeChannels: OnMissingChannel.Validate
-            );
+            //Now change the subscription to validate, just check what we made
+            subscription.MakeChannels = OnMissingChannel.Validate; 
 
             _messageProducer = new SnsMessageProducer(
                 awsConnection,
@@ -81,7 +76,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
             var message = messages.First();
-            message.Id.Should().Be(_myCommand.Id);
+            Assert.Equal(_myCommand.Id, message.Id);
 
             await _consumer.AcknowledgeAsync(message);
         }

@@ -28,9 +28,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
@@ -71,7 +71,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryProducer(_internalBus, _timeProvider)
+        var producer = new InMemoryMessageProducer(_internalBus, _timeProvider, InstrumentationOptions.All)
         {
             Publication = { Topic = routingKey, RequestType = typeof(MyCommand) }
         };
@@ -113,6 +113,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 
@@ -132,11 +133,11 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
     {
         _commandProcessor.Send(TimeSpan.FromSeconds(10), _myCommand);
 
-        _receivedMessages.Should().NotContain(nameof(MyCommandHandler), _myCommand.Id);
+        Assert.DoesNotContain(nameof(MyCommandHandler), _receivedMessages);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _receivedMessages.Should().Contain(nameof(MyCommandHandler), _myCommand.Id);
+        Assert.Contains(nameof(MyCommandHandler), _receivedMessages);
     }
 
     [Fact]
@@ -144,11 +145,11 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
     {
         _commandProcessor.Send(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
 
-        _receivedMessages.Should().NotContain(nameof(MyCommandHandler), _myCommand.Id);
+        Assert.DoesNotContain(nameof(MyCommandHandler), _receivedMessages);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _receivedMessages.Should().Contain(nameof(MyCommandHandler), _myCommand.Id);
+        Assert.Contains(nameof(MyCommandHandler), _receivedMessages);
     }
 
     [Fact]
@@ -156,11 +157,11 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
     {
         _commandProcessor.Publish(TimeSpan.FromSeconds(10), _myCommand);
 
-        _receivedMessages.Should().NotContain(nameof(MyCommandHandler), _myCommand.Id);
+        Assert.DoesNotContain(nameof(MyCommandHandler), _receivedMessages);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _receivedMessages.Should().Contain(nameof(MyCommandHandler), _myCommand.Id);
+        Assert.Contains(nameof(MyCommandHandler), _receivedMessages);
     }
 
     [Fact]
@@ -168,47 +169,75 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
     {
         _commandProcessor.Publish(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
 
-        _receivedMessages.Should().NotContain(nameof(MyCommandHandler), _myCommand.Id);
+        Assert.DoesNotContain(nameof(MyCommandHandler), _receivedMessages);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _receivedMessages.Should().Contain(nameof(MyCommandHandler), _myCommand.Id);
+        Assert.Contains(nameof(MyCommandHandler), _receivedMessages);
     }
 
     [Fact]
     public void When_Scheduling_Post_With_At_A_Message_To_The_Command_Processor()
     {
         _commandProcessor.Post(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
+        Assert.False(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+        Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
-        var message = _outbox.Get(_myCommand.Id, new RequestContext());
-        message.Should().NotBeNull();
-        message.Should().BeEquivalentTo(new Message(
+        var actual = _outbox.Get(_myCommand.Id, new RequestContext());
+        
+        Assert.NotNull(actual);
+        var expected = new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-        ));
+        );
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Fact]
     public void When_Scheduling_Post_With_Delay_A_Message_To_The_Command_Processor()
     {
         _commandProcessor.Post(TimeSpan.FromSeconds(10), _myCommand);
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
+        Assert.False(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+        Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
-        var message = _outbox.Get(_myCommand.Id, new RequestContext());
-        message.Should().NotBeNull();
-        message.Should().BeEquivalentTo(new Message(
+        var actual = _outbox.Get(_myCommand.Id, new RequestContext());
+        Assert.NotNull(actual);
+
+        var expected = new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-        ));
+        );
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     public void Dispose()

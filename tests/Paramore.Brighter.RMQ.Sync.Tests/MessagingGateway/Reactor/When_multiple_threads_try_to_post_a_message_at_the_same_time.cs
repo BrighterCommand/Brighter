@@ -1,13 +1,13 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -46,7 +46,7 @@ public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable
         }
 
         //_should_not_throw
-        exceptionHappened.Should().BeFalse();
+        Assert.False(exceptionHappened);
     }
 
     public void Dispose()

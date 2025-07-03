@@ -28,11 +28,15 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.Net.Mime;
+using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Sqlite;
 
 namespace Paramore.Brighter.Outbox.Sqlite
@@ -54,7 +58,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
         public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider)
-            : base(configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
+            : base(DbSystem.Sqlite, configuration.DatabaseName, configuration.OutBoxTableName, 
+                  new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -71,9 +76,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction
+            Action? loggingAction
         )
         {
             var connection = GetOpenConnection(_connectionProvider, transactionProvider);
@@ -87,7 +92,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             catch (SqliteException sqlException)
             {
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
-                loggingAction.Invoke();
+                loggingAction?.Invoke();
             }
             finally
             {
@@ -96,9 +101,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction,
+            Action? loggingAction,
             CancellationToken cancellationToken)
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
@@ -117,7 +122,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             catch (SqliteException sqlException)
             {
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
-                loggingAction.Invoke();
+                loggingAction?.Invoke();
             }
             finally
             {
@@ -226,7 +231,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return parameters;
         }
 
-        protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
+        protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
         {
             return new SqliteParameter(parameterName, value ?? DBNull.Value);
         }
@@ -239,7 +244,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             {
                 new SqliteParameter
                 {
-                    ParameterName = $"@{prefix}MessageId", SqliteType = SqliteType.Text, Value = message.Id
+                    ParameterName = $"@{prefix}MessageId", SqliteType = SqliteType.Text, Value = message.Id.Value
                 },
                 new SqliteParameter
                 {
@@ -257,32 +262,31 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     ParameterName = $"@{prefix}Timestamp",
                     SqliteType = SqliteType.Text,
-                    Value =
-                        message.Header.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)
+                    Value = message.Header.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)
                 },
                 new SqliteParameter
                 {
                     ParameterName = $"@{prefix}CorrelationId",
                     SqliteType = SqliteType.Text,
-                    Value = message.Header.CorrelationId
+                    Value = message.Header.CorrelationId.Value
                 },
                 new SqliteParameter
                 {
                     ParameterName = $"@{prefix}ReplyTo",
                     SqliteType = SqliteType.Text,
-                    Value = message.Header.ReplyTo
+                    Value = message.Header.ReplyTo is not null ? message.Header.ReplyTo.Value : RoutingKey.Empty.Value
                 },
                 new SqliteParameter
                 {
                     ParameterName = $"@{prefix}ContentType",
                     SqliteType = SqliteType.Text,
-                    Value = message.Header.ContentType
+                    Value = message.Header.ContentType != null ? message.Header.ContentType.ToString() : new ContentType(MediaTypeNames.Text.Plain).ToString()
                 },
                 new SqliteParameter
                 {
                     ParameterName = $"@{prefix}PartitionKey",
                     SqliteType = SqliteType.Text,
-                    Value = message.Header.PartitionKey
+                    Value = message.Header.PartitionKey.Value
                 },
                 new SqliteParameter
                 {
@@ -296,7 +300,49 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     : new SqliteParameter
                     {
                         ParameterName = $"@{prefix}Body", SqliteType = SqliteType.Text, Value = message.Body.Value
-                    }
+                    },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}Source",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.Source.AbsoluteUri
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}Type",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.Type
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}DataSchema",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.DataSchema is not null ? message.Header.DataSchema.AbsoluteUri : "http://goparamore.io"
+                },
+               new SqliteParameter
+               {
+                    ParameterName = $"@{prefix}Subject",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.Subject ?? string.Empty
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}TraceParent",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.TraceParent is not null ? message.Header.TraceParent.Value : DBNull.Value
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}TraceState",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.TraceState is not null ? message.Header.TraceState.Value  : DBNull.Value
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}Baggage",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.Baggage.ToString()
+               } 
             };
         }
 
@@ -407,6 +453,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);
                 var partitionKey = GetPartitionKey(dr);
+                var source = GetSource(dr);
+                var type = GetType(dr);
+                var dataSchema = GetDataSchema(dr);
+                var subject = GetSubject(dr);
+                var traceParent = GetTraceParent(dr);
+                var traceState = GetTraceState(dr);
+                var baggage = GetBaggage(dr);
 
                 header = new MessageHeader(
                     messageId: id,
@@ -415,46 +468,63 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     timeStamp: timeStamp,
                     handledCount: 0,
                     delayed: TimeSpan.Zero,
-                    correlationId: correlationId,
-                    replyTo: new RoutingKey(replyTo),
+                    correlationId: correlationId is not null ? new Id(correlationId) : Id.Empty,
+                    replyTo: replyTo is not null ? new RoutingKey(replyTo) : RoutingKey.Empty,
                     contentType: contentType,
-                    partitionKey: partitionKey);
+                    partitionKey: partitionKey is not null ? new PartitionKey(partitionKey) : PartitionKey.Empty,
+                   source: source,
+                    type: type,
+                    dataSchema: dataSchema,
+                    subject: subject,
+                    traceParent: traceParent,
+                    traceState: traceState,
+                    baggage: baggage
+                    );
 
-                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+                Dictionary<string, object>? dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
-                    foreach (var key in dictionaryBag.Keys)
+                    foreach (var keyValue in dictionaryBag)
                     {
-                        header.Bag.Add(key, dictionaryBag[key]);
+                        header.Bag.Add(keyValue.Key, keyValue.Value);
                     }
                 }
             }
 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), "application/octet-stream",
-                    CharacterEncoding.Raw)
+                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
                 : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
 
             return new Message(header, body);
         }
 
+        private static Baggage GetBaggage(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Baggage");
+            if (ordinal < 0 || ordinal >= dr.FieldCount)
+                return Baggage.Empty;
+            
+            return dr.IsDBNull(ordinal)
+                ? Baggage.Empty
+                : Baggage.FromString(dr.GetString(ordinal));
+        }
 
-        private static byte[] GetBodyAsBytes(DbDataReader dr)
+        private static byte[] GetBodyAsBytes(SqliteDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
             var body = dr.GetStream(i);
-            var buffer = new byte[body.Length];
             
-#if NETSTANDARD
-            body.Read(buffer, 0, (int)body.Length);
-#else
-            body.ReadExactly(buffer, 0, (int)body.Length);
-#endif 
-            return buffer;
+            if (body is MemoryStream memoryStream) // No need to dispose a MemoryStream, I do not think they dare to ever change that
+                return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
+
+            MemoryStream ms = new();
+            body.CopyTo(ms);
+            body.Dispose();
+            return ms.ToArray();
         }
 
-        private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        private static Dictionary<string, object>? GetContextBag(IDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
@@ -463,16 +533,16 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return dictionaryBag;
         }
 
-        private string GetContentType(IDataReader dr)
+        private ContentType? GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null;
 
             var contentType = dr.GetString(ordinal);
-            return contentType;
+            return new ContentType(contentType);
         }
 
-        private static string GetCorrelationId(IDataReader dr)
+        private static string? GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
@@ -480,18 +550,44 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
+        
+        private static Uri GetDataSchema(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("DataSchema");
+            if (dr.IsDBNull(ordinal)) return new Uri("http://goparamore.io");
+
+            var uriString = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(uriString))
+                return new Uri("http://goparamore.io");
+            
+            return new Uri(uriString);
+        }
 
         private static MessageType GetMessageType(IDataReader dr)
         {
-            return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+            var ordinal = dr.GetOrdinal("MessageType");
+            if (dr.IsDBNull(ordinal)) return MessageType.MT_NONE;
+
+
+            var value = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(value))
+                return MessageType.MT_NONE;
+            
+            return (MessageType)Enum.Parse(typeof(MessageType), value);
         }
 
-        private static string GetMessageId(IDataReader dr)
+        private static Id GetMessageId(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("MessageId"));
+            var ordinal = dr.GetOrdinal("MessageId");
+            if (dr.IsDBNull(ordinal)) return Id.Empty;
+            
+            var id = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(id))
+                return Id.Empty;
+            return new Id(id);
         }
 
-        private static string GetPartitionKey(IDataReader dr)
+        private static string? GetPartitionKey(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
@@ -501,7 +597,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
 
-        private static string GetReplyTo(IDataReader dr)
+        private static string? GetReplyTo(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
             if (dr.IsDBNull(ordinal)) return null;
@@ -510,9 +606,37 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return replyTo;
         }
 
+        private static Uri GetSource(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Source");
+            if (dr.IsDBNull(ordinal)) return new Uri("http://goparamore.io");
+
+            var uriString = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(uriString))
+                return new Uri("http://goparamore.io");
+            
+            return new Uri(uriString);
+        }
+        
+        private static string GetSubject(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Subject");
+            if (dr.IsDBNull(ordinal)) return string.Empty;
+            
+            return dr.GetString(ordinal);
+        }
+
         private static RoutingKey GetTopic(IDataReader dr)
         {
-            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
+            var ordinal = dr.GetOrdinal("Topic");
+            if (dr.IsDBNull(ordinal)) return RoutingKey.Empty;
+
+
+            var routingKey = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(routingKey))
+                return RoutingKey.Empty;
+            
+            return new RoutingKey(routingKey);
         }
 
 
@@ -524,5 +648,38 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
+        
+        private static TraceParent? GetTraceParent(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("TraceParent");
+            if (dr.IsDBNull(ordinal)) return null;
+            
+            return dr.IsDBNull(ordinal)
+                ? null
+                : new TraceParent(dr.GetString(ordinal));
+        }
+
+        private static TraceState? GetTraceState(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("TraceState");
+            
+            return dr.IsDBNull(ordinal)
+                ? null
+                : new TraceState(dr.GetString(ordinal));
+        }
+        
+        private static string GetType(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Type");
+            if (dr.IsDBNull(ordinal)) return string.Empty;
+
+
+            var type = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(type))
+                return string.Empty;
+            return type;
+        }
+
+
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.MessagingGateway.AWSSQS;
+﻿using System;
+
+namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
 /// <summary>
 /// The SQS Message publication
@@ -6,21 +8,73 @@
 public class SqsPublication : Publication
 {
     /// <summary>
-    /// Indicates how we should treat the routing key
-    /// QueueFindBy.Url -> the routing key is an url 
-    /// TopicFindBy.Name -> Treat the routing key as a name & use GetQueueUrl to find it 
+    /// Creates a new SQS Publication for a point-to-point channel
     /// </summary>
-    public QueueFindBy FindQueueBy { get; set; } = QueueFindBy.Name;
+    /// <param name="channelName">The <see cref="ChannelName"/> of the queue that we want to send messages to.  Use The tUrl for the queue if it was created outside Brighter. If you set this, set findQueueBy to <see cref="QueueFindBy.Url"/> </param>
+    /// <param name="queueAttributes">The <see cref="SqsAttributes"/> for the queue</param>
+    /// <param name="findQueueBy">How should we look for the queue. If you set the "queueUrl" you MUST set this to <see cref="QueueFindBy.Url"/></param>
+    /// <param name="queueUrl"> you must set this</param>
+    /// <param name="makeChannels">A <see cref="OnMissingChannel"/> value: Whether wwe should create the queue, if missing or just validate it</param>
+    public SqsPublication(ChannelName? channelName = null,  SqsAttributes? queueAttributes = null, QueueFindBy findQueueBy = QueueFindBy.Name,   OnMissingChannel makeChannels = OnMissingChannel.Create)
+    {
+        if (ChannelName.IsNullOrEmpty(channelName))
+            throw new ArgumentException("You must supply a channel name", nameof(channelName));
+
+        ChannelName = channelName;
+        ChannelType = ChannelType.PointToPoint;
+        FindQueueBy = findQueueBy;
+        MakeChannels = makeChannels;
+        QueueAttributes = queueAttributes ?? SqsAttributes.Empty;
+    }
+    
+    /// <summary>
+    /// Gets the <see cref="ChannelName"/> we use for this channel. This will be used as the name for the queue
+    /// If <see cref="FindQueueBy"/> is set to <see cref="QueueFindBy.Name"/> then we will use this to look up the queue
+    /// If <see cref="FindQueueBy"/> is set to <see cref="QueueFindBy.Url"/> then we will assume this is a Url of an existing queue
+    /// See <a href="https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-queue-message-identifiers.html"> for the AWS queue Url
+    /// </summary>
+    /// <remarks>Note that an <see cref="SqsPublication"/> is point-to-point so there is no <see cref="RoutingKey"/> here for a topic.
+    /// If you meant to subscribe to an SNS Topic, use <see cref="SnsPublication"/>
+    /// </remarks>
+    /// <value>The name.</value>
+    public ChannelName? ChannelName { get; set; }
 
     /// <summary>
-    /// The attributes of the topic. If TopicARNs is set we will always assume that we do not
-    /// need to create or validate the SNS Topic
+    /// The <see cref="ChannelType"/> of the channel, either point-to-point or publish-subscribe
     /// </summary>
-    public SqsAttributes? SqsAttributes { get; set; } 
-
+    /// <remarks>
+    /// If you don't use SNS, you are point-to-point, if you do, you are publish-subscribe
+    /// </remarks>
+    public ChannelType ChannelType { get; }
+    
+   /// <summary>
+   /// How should we find the Sqs queue?
+   /// <see cref="QueueFindBy.Name"/> (default) use the <see cref="SqsPublication.ChannelName"/> to look up the queue
+   /// <see cref="QueueFindBy.Url"/> use the <see cref="SqsPublication.QueueUrl"/> as the reference for the queue
+   /// </summary>
+    public QueueFindBy FindQueueBy { get; set; }
+    
     /// <summary>
-    /// If we want to use queue Url and not queues you need to supply the Url to use for any message that you send to us,
-    /// as we use the topic from the header to dispatch to an url.
+    /// The <see cref="SqsAttributes"/> that describe the queue.
+    ///</summary>
+    ///<remarks>
+    /// Use this if you do not have a <see cref="QueueUrl"/> and intend
+    /// to create the queue on the fly.
+    /// </remarks>    
+    public SqsAttributes? QueueAttributes { get; }
+}
+
+/// <summary>
+/// The SQS Message publication
+/// </summary>
+public class SqsPublication<T> : SqsPublication 
+    where T: class, IRequest
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqsPublication{T}"/> class.
     /// </summary>
-    public string? QueueUrl { get; set; }
+    public SqsPublication()
+    {
+        RequestType = typeof(T);
+    }
 }

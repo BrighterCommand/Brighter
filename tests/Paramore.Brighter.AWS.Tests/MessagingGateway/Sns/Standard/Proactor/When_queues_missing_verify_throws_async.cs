@@ -9,22 +9,24 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-public class AWSValidateQueuesTestsAsync : IAsyncDisposable
+public class AwsValidateQueuesTestsAsync : IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
-    private ChannelFactory _channelFactory;
+    private ChannelFactory? _channelFactory;
 
-    public AWSValidateQueuesTestsAsync()
+    public AwsValidateQueuesTestsAsync()
     {
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Validate
         );
 
@@ -45,11 +47,13 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
         // We have no queues so we should throw
         // We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);
-        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => await _channelFactory.CreateAsyncChannelAsync(_subscription));
+        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => 
+            await _channelFactory.CreateAsyncChannelAsync(_subscription));
     }
 
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync();
+        if (_channelFactory != null)
+         await _channelFactory.DeleteTopicAsync();
     }
 }

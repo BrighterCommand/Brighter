@@ -25,10 +25,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -36,75 +40,19 @@ public class SnsMessagePublisher
 {
     private readonly string _topicArn;
     private readonly AmazonSimpleNotificationServiceClient _client;
-    private readonly SnsSqsType _snsSqsType;
+    private readonly SqsType _sqsType;
 
-    public SnsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, SnsSqsType snsSqsType)
+    public SnsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, SqsType sqsType)
     {
         _topicArn = topicArn;
         _client = client;
-        _snsSqsType = snsSqsType;
+        _sqsType = sqsType;
     }
 
     public async Task<string?> PublishAsync(Message message)
     {
-        var messageString = message.Body.Value;
-        var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);
-
-        if (string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            message.Header.CorrelationId = Guid.NewGuid().ToString();
-        }
-
-        var messageAttributes = new Dictionary<string, MessageAttributeValue>
-        {
-            [HeaderNames.Id] =
-                new() { StringValue = Convert.ToString(message.Header.MessageId), DataType = "String" },
-            [HeaderNames.Topic] = new() { StringValue = _topicArn, DataType = "String" },
-            [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.HandledCount] =
-                new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
-            [HeaderNames.MessageType] =
-                new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new()
-            {
-                StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
-            }
-        };
-
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            messageAttributes[HeaderNames.CorrelationId] = new MessageAttributeValue
-            {
-                StringValue = Convert.ToString(message.Header.CorrelationId), 
-                DataType = "String"
-            };
-        }
+        var publishRequest = CreatePublishRequest(message);
         
-        
-        if (_snsSqsType == SnsSqsType.Fifo)
-        {
-            publishRequest.MessageGroupId = message.Header.PartitionKey;
-            if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
-            {
-                publishRequest.MessageDeduplicationId = (string)deduplicationId;
-            }
-        }
-
-        if (!string.IsNullOrEmpty(message.Header.ReplyTo))
-        {
-            messageAttributes.Add(HeaderNames.ReplyTo,
-                new MessageAttributeValue
-                {
-                    StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String"
-                });
-        }
-
-
-        //we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
-        var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-        messageAttributes[HeaderNames.Bag] = new() { StringValue = Convert.ToString(bagJson), DataType = "String" };
-        publishRequest.MessageAttributes = messageAttributes;
-
         var response = await _client.PublishAsync(publishRequest);
         if (response.HttpStatusCode is System.Net.HttpStatusCode.OK or System.Net.HttpStatusCode.Created
             or System.Net.HttpStatusCode.Accepted)
@@ -113,5 +61,83 @@ public class SnsMessagePublisher
         }
 
         return null;
+    }
+
+    private PublishRequest CreatePublishRequest(Message message)
+    {
+        var publishRequest = new PublishRequest(_topicArn, message.Body.Value, message.Header.Subject);
+        
+        ConfigureFifoSettings(_sqsType, message, publishRequest);
+
+        var cloudEventHeadersJson = CreateCloudEventHeadersJson(message);
+        publishRequest.MessageAttributes = BuildMessageAttributes(message, cloudEventHeadersJson);
+
+        return publishRequest;
+    }
+
+    private void ConfigureFifoSettings(SqsType sqsType, Message message, PublishRequest request)
+    {
+        if (sqsType != SqsType.Fifo)
+            return;
+        
+        request.MessageGroupId = message.Header.PartitionKey;
+        if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
+        {
+            request.MessageDeduplicationId = (string)deduplicationId;
+        }
+    }
+
+    private Dictionary<string, MessageAttributeValue> BuildMessageAttributes(Message message, string cloudEventHeadersJson)
+    {
+        var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var messageAttributes = new Dictionary<string, MessageAttributeValue>
+        {
+            [HeaderNames.Id] = new (){ StringValue = message.Header.MessageId, DataType = "String" },
+            [HeaderNames.CloudEventHeaders] = new() { StringValue = cloudEventHeadersJson, DataType = "String" },
+            [HeaderNames.Topic] = new() { StringValue = _topicArn, DataType = "String" },
+            [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+            [HeaderNames.ContentType] = new() { StringValue = contentType.ToString(), DataType = "String" },
+            [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRfc3339()), DataType = "String" },
+        };
+
+        if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
+            messageAttributes[HeaderNames.CorrelationId] = new MessageAttributeValue 
+                { StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String" };
+        
+        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
+            messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue { StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String" });
+        
+        message.Header.Bag[HeaderNames.HandledCount] = message.Header.HandledCount.ToString(CultureInfo.InvariantCulture);
+
+        var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
+        messageAttributes[HeaderNames.Bag] = new MessageAttributeValue { StringValue = Convert.ToString(bagJson), DataType = "String" };
+
+        return messageAttributes;
+    }
+
+    private static string CreateCloudEventHeadersJson(Message message)
+    {
+        var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var cloudEventHeaders = new Dictionary<string, string>
+        {
+            [HeaderNames.DataContentType] = contentType.ToString(),
+            [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
+            [HeaderNames.SpecVersion] = message.Header.SpecVersion,
+            [HeaderNames.Type] = message.Header.Type,
+            [HeaderNames.Source] = message.Header.Source.ToString(),
+            [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339()
+        };
+
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+            cloudEventHeaders[HeaderNames.Subject] = message.Header.Subject!;
+
+        if (message.Header.DataSchema != null)
+            cloudEventHeaders[HeaderNames.DataSchema] = message.Header.DataSchema.ToString();
+
+        if (message.Header.DataRef != null)
+            cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
+
+        var cloudEventHeadersJson = JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
+        return cloudEventHeadersJson;
     }
 }

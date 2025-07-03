@@ -26,6 +26,7 @@ using System.Text.Json;
 using HelloWorldInternalBus;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace HelloWorld
 {

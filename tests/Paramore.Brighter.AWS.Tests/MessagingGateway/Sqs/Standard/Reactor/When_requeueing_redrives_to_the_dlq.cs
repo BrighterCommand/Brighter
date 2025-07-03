@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -28,7 +29,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
 
         _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
@@ -36,11 +37,17 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
 
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
+        );
+        
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
             routingKey: routingKey,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
+            queueAttributes: queueAttributes,
+            makeChannels: OnMissingChannel.Create
         );
 
         _message = new Message(
@@ -52,7 +59,10 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(_awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SqsMessageProducer(
+            _awsConnection, 
+            new SqsPublication (channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create )
+            );
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);
@@ -76,7 +86,7 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         Task.Delay(5000);
 
         //inspect the dlq
-        GetDLQCount(_dlqChannelName).Should().Be(1);
+        Assert.Equal(1, GetDLQCount(_dlqChannelName));
     }
 
     private int GetDLQCount(string queueName)

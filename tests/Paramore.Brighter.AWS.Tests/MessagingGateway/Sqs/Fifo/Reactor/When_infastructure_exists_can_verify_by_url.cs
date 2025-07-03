@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
@@ -12,7 +13,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
+public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerSync _consumer;
@@ -20,10 +21,10 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByUrlTests ()
+    public AwsValidateInfrastructureByUrlTests ()
     {
-        const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        var replyTo = new RoutingKey("http:\\queueUrl");
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
 
         _myCommand = new MyCommand { Value = "Test" };
         var correlationId = Guid.NewGuid().ToString();
@@ -32,15 +33,19 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(queueName);
 
-        var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(subscriptionName),
-            channelName: new ChannelName(queueName),
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
+        var channelName = new ChannelName(queueName);
+        var queueAttributes = new SqsAttributes(
+            type: SqsType.Fifo
         );
+        
+        var subscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscriptionName),
+            channelName: channelName,
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey, 
+            messagePumpType: MessagePumpType.Reactor, 
+            queueAttributes: queueAttributes, 
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -59,27 +64,18 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         var queueUrl = FindQueueUrl(awsConnection, routingKey.ToValidSQSQueueName(true));
 
         //Now change the subscription to validate, just check what we made
-        subscription = new(
-            name: new SubscriptionName(subscriptionName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            findTopicBy: TopicFindBy.Arn,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate,
-            sqsType: SnsSqsType.Fifo,
-            channelType: ChannelType.PointToPoint
-        );
+        subscription.MakeChannels = OnMissingChannel.Validate;
+        subscription.FindQueueBy = QueueFindBy.Url;
+        subscription.ChannelName = new ChannelName(queueUrl);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication
-            {
-               Topic = routingKey,
-                QueueUrl = queueUrl,
-                FindQueueBy = QueueFindBy.Url,
-                MakeChannels = OnMissingChannel.Validate,
-                SqsAttributes = new SqsAttributes { Type = SnsSqsType.Fifo }
-            });
+            new SqsPublication (
+                channelName: new ChannelName(queueUrl), 
+                queueAttributes: queueAttributes, 
+                findQueueBy: QueueFindBy.Url, 
+                makeChannels: OnMissingChannel.Validate)
+            );
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
     }
@@ -96,7 +92,7 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 
         //Assert
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         //clear the queue
         _consumer.Acknowledge(message);

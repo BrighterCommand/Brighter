@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -29,7 +29,7 @@ public class AsyncMessageUnwrapRequestTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => new MySimpleTransformAsync()));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
@@ -47,6 +47,6 @@ public class AsyncMessageUnwrapRequestTests
         var request = await _transformPipeline.UnwrapAsync(_message, new RequestContext());
         
         //assert
-        request.Value.Should().Be( MySimpleTransformAsync.TRANSFORM_VALUE);
+        Assert.Equal(MySimpleTransformAsync.TRANSFORM_VALUE, request.Value);
     }
 }

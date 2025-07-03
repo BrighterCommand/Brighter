@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.SecurityToken;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tranformers.AWS;
+using Paramore.Brighter.Transforms.Storage;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers;
@@ -18,22 +16,15 @@ namespace Paramore.Brighter.AWS.Tests.Transformers;
 [Trait("Fragile", "CI")]
 public class S3LuggageStoreExistsTests 
 {
-    private readonly AmazonS3Client _client;
-    private readonly AmazonSecurityTokenServiceClient _stsClient;
     private readonly IHttpClientFactory _httpClientFactory;
 
     public S3LuggageStoreExistsTests()
     {
         //arrange
-        var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
-        _client = factory.CreateS3Client();
-        _stsClient = factory.CreateStsClient(); 
-
-
         var services = new ServiceCollection();
         services.AddHttpClient();
         var provider = services.BuildServiceProvider();
-        _httpClientFactory = provider.GetService<IHttpClientFactory>();
+        _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
     }
     
     [Fact]
@@ -42,40 +33,34 @@ public class S3LuggageStoreExistsTests
         var bucketName = $"brightertestbucket-{Guid.NewGuid()}";
         
         //arrange
-        await S3LuggageStore.CreateAsync(
-            client: _client,
-            bucketName: bucketName,
-            storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-            httpClientFactory: _httpClientFactory,       
-            stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-            bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618
-            tags: new List<Tag> {new Tag{Key = "BrighterTests", Value = "S3LuggageUploadTests"}},
-            acl: S3CannedACL.Private,
-            abortFailedUploadsAfterDays: 1, 
-            deleteGoodUploadsAfterDays: 1);
+        var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
+        {
+            HttpClientFactory = _httpClientFactory,
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            ACLs = S3CannedACL.Private,
+            Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
+        });
+        
+        await luggageStore.EnsureStoreExistsAsync();
 
         //allow bucket endpoint to come into existence
         await Task.Delay(5000);
 
         //act
-        var luggageStore = await S3LuggageStore.CreateAsync(
-            client: _client,
-            bucketName: bucketName,
-            storeCreation: S3LuggageStoreCreation.ValidateExists,
-            httpClientFactory: _httpClientFactory,
-            stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-            bucketRegion: S3Region.EUW1
-#pragma warning restore CS0618
-            );
+        luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
+        {
+            Strategy = StorageStrategy.Validate,
+            HttpClientFactory = _httpClientFactory, 
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
+        });
 
-        luggageStore.Should().NotBeNull();
+        Assert.NotNull(luggageStore);
         
         //teardown
-        await _client.DeleteBucketAsync(bucketName);
-
+        var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
+        var client = factory.CreateS3Client();
+        await client.DeleteBucketAsync(bucketName);
     }
     
     [Fact]
@@ -84,21 +69,20 @@ public class S3LuggageStoreExistsTests
         //act
          var doesNotExist = await Catch.ExceptionAsync(async () =>
              {
-                 var luggageStore = await S3LuggageStore.CreateAsync(
-                     client: _client,
-                     bucketName: $"brightertestbucket-{Guid.NewGuid()}",
-                     storeCreation: S3LuggageStoreCreation.ValidateExists,
-                     httpClientFactory: _httpClientFactory,
-                     stsClient: _stsClient,
-#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
-                     bucketRegion: S3Region.EUW1
-#pragma warning restore CS0618
-                     );
-             }
-         );
+                 var luggageStore = new S3LuggageStore(
+                     new S3LuggageOptions(GatewayFactory.CreateS3Connection(), $"brightertestbucket-{Guid.NewGuid()}")
+                     {
+                         Strategy = StorageStrategy.Validate,
+                         HttpClientFactory = _httpClientFactory,
+                         BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+                         ACLs = S3CannedACL.Private,
+                         Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
+                     });
 
-         doesNotExist.Should().NotBeNull();
-         doesNotExist.Should().BeOfType<InvalidOperationException>();
-
+                 await luggageStore.EnsureStoreExistsAsync();
+             });
+         
+         Assert.NotNull(doesNotExist);
+         Assert.True(doesNotExist is InvalidOperationException);
     }
 }

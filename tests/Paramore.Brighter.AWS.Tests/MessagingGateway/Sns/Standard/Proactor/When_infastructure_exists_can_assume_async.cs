@@ -1,37 +1,40 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
+public class AwsAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
 {     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
     private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTestsAsync()
+    public AwsAssumeInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand{Value = "Test"};
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var correlationId = Id.Random;
+        var replyTo = new RoutingKey("http:\\queueUrl");
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
+        var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
-            
+
+        var channelName = new ChannelName(queueName);
+        
         SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            subscriptionName: new SubscriptionName(queueName),
+            channelName: channelName,
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
@@ -51,16 +54,13 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
             
-        //Now change the subscription to validate, just check what we made
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Assume
-        );
+        //Now change the subscription to assume that it exists 
+        subscription.MakeChannels = OnMissingChannel.Assume;
             
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Assume});
+        _messageProducer = new SnsMessageProducer(
+            awsConnection, 
+            new SnsPublication{Topic = routingKey, MakeChannels = OnMissingChannel.Assume}
+            );
 
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
     }
@@ -75,7 +75,7 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
             
         //Assert
         var message = messages.First();
-        message.Id.Should().Be(_myCommand.Id);
+        Assert.Equal(_myCommand.Id, message.Id);
 
         //clear the queue
         await _consumer.AcknowledgeAsync(message);

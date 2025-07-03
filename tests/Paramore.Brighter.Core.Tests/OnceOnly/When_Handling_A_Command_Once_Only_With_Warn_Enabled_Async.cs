@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
@@ -69,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await _commandProcessor.SendAsync(_command);
             await _commandProcessor.SendAsync(_command);
             
-            MyStoredCommandToWarnHandlerAsync.ReceivedCount.Should().Be(1);
+            Assert.Equal(1, MyStoredCommandToWarnHandlerAsync.ReceivedCount);
         }
 
         public void Dispose()

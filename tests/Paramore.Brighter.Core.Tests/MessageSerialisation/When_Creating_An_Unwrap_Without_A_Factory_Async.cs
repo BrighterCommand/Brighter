@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null, InstrumentationOptions.All);
     }
     
     [Fact]
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
         
         // If no factory we default to just them mapper
-        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapperAsync");
+        Assert.Equal("MyTransformableCommandMessageMapperAsync", TraceFilters().ToString());
 
         //wrap should just do message mapper                                          
         var request = await _transformPipeline.UnwrapAsync(_message, new RequestContext());

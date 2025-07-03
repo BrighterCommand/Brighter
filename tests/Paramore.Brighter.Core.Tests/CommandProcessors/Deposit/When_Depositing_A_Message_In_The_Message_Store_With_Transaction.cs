@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(_internalBus, timeProvider)
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
             {
                 Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
             };
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { _routingKey, producer },
+                    { _routingKey, messageProducer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -75,6 +75,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 _spyOutbox
             );
         
@@ -100,21 +101,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //assert
 
             //message should not be in the outbox
-            _spyOutbox.Messages.Any(m => m.Message.Id == postedMessageId).Should().BeFalse();
+            Assert.False(_spyOutbox.Messages.Any(m => m.Message.Id == postedMessageId));
 
             //message should be in the current transaction
             var transaction = _transactionProvider.GetTransaction();
             var message = transaction.Get(postedMessageId);
-            message.Should().NotBeNull();
+            Assert.NotNull(message);
 
             //message should not be posted
-            _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
+            Assert.False(_internalBus.Stream(new RoutingKey(_routingKey)).Any());
 
             //message should correspond to the command
-            message.Id.Should().Be(_message.Id);
-            message.Body.Value.Should().Be(_message.Body.Value);
-            message.Header.Topic.Should().Be(_message.Header.Topic);
-            message.Header.MessageType.Should().Be(_message.Header.MessageType);
+            Assert.Equal(_message.Id, message.Id);
+            Assert.Equal(_message.Body.Value, message.Body.Value);
+            Assert.Equal(_message.Header.Topic, message.Header.Topic);
+            Assert.Equal(_message.Header.MessageType, message.Header.MessageType);
         }
         
         public void Dispose()

@@ -21,25 +21,16 @@ public class AWSAssumeQueuesTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Assume,
-            sqsType: SnsSqsType.Fifo
-        );
+            queueAttributes: new SqsAttributes(
+                type: SqsType.Fifo
+            ), makeChannels: OnMissingChannel.Assume);
 
         var awsConnection = GatewayFactory.CreateFactory();
-
-        //create the topic, we want the queue to be the issue
-        //We need to create the topic at least, to check the queues
-        var producer = new SnsMessageProducer(awsConnection,
-            new SnsPublication
-            {
-                MakeChannels = OnMissingChannel.Create, SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
-            });
-
-        producer.ConfirmTopicExistsAsync(topicName).Wait();
 
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateSyncChannel(subscription);

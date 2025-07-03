@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Mime;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
@@ -37,7 +36,7 @@ public class MongoDbBinaryOutboxWritingMessageTests : IDisposable
             delayed: TimeSpan.FromMilliseconds(5),
             correlationId: Guid.NewGuid().ToString(),
             replyTo: new RoutingKey("ReplyTo"),
-            contentType: "text/plain",
+            contentType: new ContentType(MediaTypeNames.Text.Plain),
             partitionKey: Guid.NewGuid().ToString());
         messageHeader.Bag.Add(Key1, Value1);
         messageHeader.Bag.Add(Key2, Value2);
@@ -57,30 +56,29 @@ public class MongoDbBinaryOutboxWritingMessageTests : IDisposable
         var storedMessage = _outbox.Get(_messageEarliest.Id, _context);
 
         //should read the message from the sql outbox
-        storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
+        Assert.Equal(_messageEarliest.Body.Value, storedMessage.Body.Value);
         //should read the header from the sql outbox
-        storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-        storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-        storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
-            .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
-        storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
-        storedMessage.Header.Delayed.Should().Be(TimeSpan.Zero); // -- should be zero when read from outbox
-        storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
-        storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
-        storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-        storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey);
+        Assert.Equal(_messageEarliest.Header.Topic, storedMessage.Header.Topic);
+        Assert.Equal(_messageEarliest.Header.MessageType, storedMessage.Header.MessageType);
+        Assert.Equal(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+        Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
+        Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
+        Assert.Equal(_messageEarliest.Header.CorrelationId, storedMessage.Header.CorrelationId);
+        Assert.Equal(_messageEarliest.Header.ReplyTo, storedMessage.Header.ReplyTo);
+        Assert.Equal(_messageEarliest.Header.ContentType, storedMessage.Header.ContentType);
+        Assert.Equal(_messageEarliest.Header.PartitionKey, storedMessage.Header.PartitionKey);
 
         //Bag serialization
-        storedMessage.Header.Bag.ContainsKey(Key1).Should().BeTrue();
-        storedMessage.Header.Bag[Key1].Should().Be(Value1);
-        storedMessage.Header.Bag.ContainsKey(Key2).Should().BeTrue();
-        storedMessage.Header.Bag[Key2].Should().Be(Value2);
-        storedMessage.Header.Bag.ContainsKey(Key3).Should().BeTrue();
-        storedMessage.Header.Bag[Key3].Should().Be(Value3);
-        storedMessage.Header.Bag.ContainsKey(Key4).Should().BeTrue();
-        storedMessage.Header.Bag[Key4].Should().Be(_value4);
-        storedMessage.Header.Bag.ContainsKey(Key5).Should().BeTrue();
-        storedMessage.Header.Bag[Key5].Should().Be(_value5);
+        Assert.True(storedMessage.Header.Bag.ContainsKey(Key1));
+        Assert.Equal(Value1, storedMessage.Header.Bag[Key1]);
+        Assert.True(storedMessage.Header.Bag.ContainsKey(Key2));
+        Assert.Equal(Value2, storedMessage.Header.Bag[Key2]);
+        Assert.True(storedMessage.Header.Bag.ContainsKey(Key3));
+        Assert.Equal(Value3, storedMessage.Header.Bag[Key3]);
+        Assert.True(storedMessage.Header.Bag.ContainsKey(Key4));
+        Assert.Equal(_value4, storedMessage.Header.Bag[Key4]);
+        Assert.True(storedMessage.Header.Bag.ContainsKey(Key5));
+        Assert.Equal(_value5, storedMessage.Header.Bag[Key5]);
     }
 
     public void Dispose()

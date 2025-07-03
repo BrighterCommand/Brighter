@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -40,7 +39,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         public async Task When_a_message_is_sent_keep_order()
         {
             IAmAMessageConsumerAsync consumer = _consumer;
-            //Send a sequence of messages to Kafka
             var msgId = await SendMessageAsync();
             var msgId2 = await SendMessageAsync();
             var msgId3 = await SendMessageAsync();
@@ -50,23 +48,23 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             var firstMessage = await ConsumeMessagesAsync(consumer);
             var message = firstMessage.First();
-            message.Empty.Should().BeFalse("A message should be returned");
-            message.Id.Should().Be(msgId);
+            Assert.False(message.IsEmpty);
+            Assert.Equal(msgId, message.Id);
 
             var secondMessage = await ConsumeMessagesAsync(consumer);
             message = secondMessage.First();
-            message.Empty.Should().BeFalse("A message should be returned");
-            message.Id.Should().Be(msgId2);
+            Assert.False(message.IsEmpty);
+            Assert.Equal(msgId2, message.Id);
 
             var thirdMessages = await ConsumeMessagesAsync(consumer);
             message = thirdMessages.First();
-            message.Empty.Should().BeFalse("A message should be returned");
-            message.Id.Should().Be(msgId3);
+            Assert.False(message.IsEmpty);
+            Assert.Equal(msgId3, message.Id);
 
             var fourthMessage = await ConsumeMessagesAsync(consumer);
             message = fourthMessage.First();
-            message.Empty.Should().BeFalse("A message should be returned");
-            message.Id.Should().Be(msgId4);
+            Assert.False(message.IsEmpty);
+            Assert.Equal(msgId4, message.Id);
         }
 
         private async Task<string> SendMessageAsync()
@@ -97,8 +95,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 }
                 catch (ChannelFailureException)
                 {
-                    //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                    //_output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
             } while (maxTries <= 3);
 

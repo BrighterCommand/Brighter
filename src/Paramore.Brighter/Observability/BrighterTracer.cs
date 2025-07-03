@@ -23,13 +23,14 @@ THE SOFTWARE. */
 
 #endregion
 
-using OpenTelemetry.Trace;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
+using OpenTelemetry;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Observability;
 
@@ -112,15 +113,17 @@ public class BrighterTracer : IAmABrighterTracer
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection
+        var tags = GetNewTagsCollection(options);
+            
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.RequestId, request.Id },
-            { BrighterSemanticConventions.RequestType, request.GetType().Name },
-            { BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request, JsonSerialisationOptions.Options) }
-        };
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.RequestId, request.Id.ToString());
+            tags.Add(BrighterSemanticConventions.RequestType, request.GetType().Name);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+        }
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
 
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -130,10 +133,14 @@ public class BrighterTracer : IAmABrighterTracer
             links: links,
             startTime: now);
         
+        Propogate(parentActivity, activity);
+
         Activity.Current = activity;
 
         return activity;
     }
+
+ 
 
     /// <summary>
     /// Create a span when we consume a message from a queue or stream
@@ -152,31 +159,92 @@ public class BrighterTracer : IAmABrighterTracer
     {
         var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
-        var parentId = message.Header.TraceParent;
+        var parentId = message.Header.TraceParent?.Value;
+        var baggage = message.Header.Baggage.ToString();
+        var traceState = message.Header.TraceState?.Value;
         var now = _timeProvider.GetUtcNow();
+        
+        var tags = GetNewTagsCollection(options);
 
-        var tags = new ActivityTagsCollection()
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageId, message.Id },
-            { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
-            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.CeMessageId, message.Id },
-            { BrighterSemanticConventions.CeSource, message.Header.Source },
-            { BrighterSemanticConventions.CeVersion, "1.0"},
-            { BrighterSemanticConventions.CeSubject, message.Header.Subject },
-            { BrighterSemanticConventions.CeType, message.Header.Type},
-            { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo },
-            { BrighterSemanticConventions.HandledCount, message.Header.HandledCount }
-            
-        };
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+
+            tags.Add(BrighterSemanticConventions.CeType, message.Header.Type);
+            tags.Add(BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value);
+            tags.Add(BrighterSemanticConventions.HandledCount, message.Header.HandledCount);
+
+            //Cloud Events
+            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.CeSource, message.Header.Source);
+            tags.Add(BrighterSemanticConventions.CeVersion, "1.0");
+            tags.Add(BrighterSemanticConventions.CeSubject, message.Header.Subject);
+        }
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+        }
+
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+        {
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        }
+        
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+
+        if (activity == null)
+            return Activity.Current;
+        
+        activity.TraceStateString = traceState;
+        
+        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+            message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
+        OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
+    
+    /// <summary>
+    /// Creates a span for an archive operation. Because a sweeper may not create an external bus, but just use the archiver directly, we
+    /// check for this existing and then recreate directly in the archive provider if it does not exist
+    /// </summary>
+    /// <param name="parentActivity">A parent activity that called this one</param>
+    /// <param name="dispatchedSince">The minimum age of a row to be archived</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns></returns>
+    public Activity? CreateArchiveSpan(
+        Activity? parentActivity,
+        TimeSpan dispatchedSince,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var operation = CommandProcessorSpanOperation.Archive;
+        var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {operation.ToSpanName()}";
+        var kind = ActivityKind.Producer;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName()); 
+            tags.Add(BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds);
+        }
         
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -185,8 +253,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             startTime: now);
         
-        
-        activity?.AddBaggage("correlationId", message.Header.CorrelationId);
+        Propogate(parentActivity, activity);
         
         Activity.Current = activity;
 
@@ -213,13 +280,14 @@ public class BrighterTracer : IAmABrighterTracer
         var kind = ActivityKind.Internal;
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
-
-        var tags = new ActivityTagsCollection
+        
+        var tags = GetNewTagsCollection(options);
+        
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.RequestType, requestType.Name },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.RequestType, requestType.Name);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
         };
 
         var activity = ActivitySource.StartActivity(
@@ -229,6 +297,152 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             links: links,
             startTime: now);
+        
+        Propogate(parentActivity, activity);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
+
+    /// <inheritdoc />
+    public Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info, InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var spanName = $"{info.Operation.ToSpanName()} {info.ProviderName} {info.BucketName}";
+
+        const ActivityKind kind = ActivityKind.Client;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = GetNewTagsCollection(options, BrighterSemanticConventions.ClaimCheckInstrumentationDomain);
+        
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.ClaimCheckOperation, info.Operation.ToSpanName());
+        }
+
+        if (options.HasFlag(InstrumentationOptions.ClamCheck))
+        {
+            tags.Add(BrighterSemanticConventions.ClaimCheckProvider, info.ProviderName);
+            tags.Add(BrighterSemanticConventions.ClaimCheckBucketName, info.BucketName);
+            tags.Add(BrighterSemanticConventions.ClaimCheckId, info.Id);
+            
+            if (info.ContentLenght.HasValue)
+            {
+                tags[BrighterSemanticConventions.ClaimCheckContentLenght] = info.ContentLenght;
+            }
+            
+            if (info.Attributes != null)
+            {
+                foreach (var attribute in  info.Attributes)
+                {
+                    tags.Add(attribute.Key, attribute.Value);
+                }
+            }
+        }
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            tags: tags,
+            startTime: now);
+
+        Activity.Current = activity;
+        return activity;
+    }
+
+    /// <summary>
+    /// Create a span for a batch of messages to be cleared  
+    /// </summary>
+    /// <param name="operation">The <see cref="CommandProcessorSpanOperation"/> being performed as part of the Clear Span</param>
+    /// <param name="parentActivity">What is the parent <see cref="Activity"/></param>
+    /// <param name="messageId">What is the identifier of the message we are trying to clear</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how verbose do we want to be?</param>
+    /// <returns></returns>
+    public Activity? CreateClearSpan(
+        CommandProcessorSpanOperation operation,
+        Activity? parentActivity,
+        string? messageId = null,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var spanName = $"{BrighterSemanticConventions.ClearMessages} {operation.ToSpanName()}";
+        var kind = ActivityKind.Producer;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() );
+            tags.Add(BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName());
+            if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
+        }
+        
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+        
+        Propogate(parentActivity, activity);
+        
+        Activity.Current = activity;
+
+        return activity;
+        
+    }
+
+    /// <summary>
+    /// Create a span for an inbox or outbox operation
+    /// </summary>
+    /// <param name="info">An <see cref="BoxSpanInfo"/> with the attributes of the db operation</param>
+    /// <param name="parentActivity">The parent <see cref="Activity"/>, if any, that we should assign to this span</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> that explain how deep should the instrumentation go?</param>
+    /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
+    public Activity? CreateDbSpan(BoxSpanInfo info, Activity? parentActivity, InstrumentationOptions options)
+    {
+        var spanName = !string.IsNullOrEmpty(info.dbTable) 
+            ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
+        
+        var kind = ActivityKind.Client;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = GetNewTagsCollection(options, BrighterSemanticConventions.DbInstrumentationDomain);
+        
+        if (options.HasFlag(InstrumentationOptions.DatabaseInformation))
+        {
+            tags.Add(BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName());
+            tags.Add(BrighterSemanticConventions.DbName, info.dbName);
+            tags.Add(BrighterSemanticConventions.DbTable, info.dbTable);
+            tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName());
+
+            if (!string.IsNullOrEmpty(info.dbStatement))
+                tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
+            if (!string.IsNullOrEmpty(info.dbInstanceId))
+                tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
+            if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
+            if (!string.IsNullOrEmpty(info.networkPeerAddress))
+                tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
+            if (!string.IsNullOrEmpty(info.serverAddress))
+                tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
+            if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
+            if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
+
+            if (info.dbAttributes != null)
+                foreach (var pair in info.dbAttributes)
+                    tags.Add(pair.Key, pair.Value);
+        }
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+        
+        Propogate(parentActivity, activity);
         
         Activity.Current = activity;
 
@@ -251,26 +465,32 @@ public class BrighterTracer : IAmABrighterTracer
     {
         if (operation != MessagePumpSpanOperation.Begin)
             throw new ArgumentOutOfRangeException(nameof(operation), "Operation must be Begin or End");
-        
+
         var spanName = $"{topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection()
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.MessagingDestination, topic },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
-        };
-        
-        Activity? activity = ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
-        
-        if(activity is not null)
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+        }
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+            tags.Add(BrighterSemanticConventions.MessagingDestination, topic);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+        }
+
+        Activity? activity =
+            ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
+
+        if (activity is not null)
             Activity.Current = activity;
 
-        return activity; 
+        return activity;
     }
 
     /// <summary>
@@ -294,16 +514,21 @@ public class BrighterTracer : IAmABrighterTracer
         var kind = ActivityKind.Consumer;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection()
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.MessagingDestination, topic },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
-        };
-        
-       Activity? activity;
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+        }
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+            tags.Add(BrighterSemanticConventions.MessagingDestination, topic);
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+        }
+
+        Activity? activity;
         if (Activity.Current != null)
             activity = ActivitySource.StartActivity(name: spanName, kind: kind, parentContext: Activity.Current.Context, tags: tags, links: null,  now);
         else
@@ -319,135 +544,6 @@ public class BrighterTracer : IAmABrighterTracer
     }
 
     /// <summary>
-    /// Creates a span for an archive operation. Because a sweeper may not create an externa bus, but just use the archiver directly, we
-    /// check for this existing and then recreate directly in the archive provider if it does not exist
-    /// </summary>
-    /// <param name="parentActivity">A parent activity that called this one</param>
-    /// <param name="dispatchedSince">The minimum age of a row to be archived</param>
-    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    /// <returns></returns>
-    public Activity? CreateArchiveSpan(
-        Activity? parentActivity,
-        TimeSpan dispatchedSince,
-        InstrumentationOptions options = InstrumentationOptions.All)
-    {
-        var operation = CommandProcessorSpanOperation.Archive;
-        var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {operation.ToSpanName()}";
-        var kind = ActivityKind.Producer;
-        var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow();  
-        var tags = new ActivityTagsCollection()
-        
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
-            { BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds }
-        };
-        
-        var activity = ActivitySource.StartActivity(
-            name: spanName,
-            kind: kind,
-            parentId: parentId,
-            tags: tags,
-            startTime: now);
-        
-         Activity.Current = activity;
-
-        return activity;
-    }
-
-    /// <summary>
-    /// Create a span for a batch of messages to be cleared  
-    /// </summary>
-    /// <param name="operation">The <see cref="CommandProcessorSpanOperation"/> being performed as part of the Clear Span</param>
-    /// <param name="parentActivity">What is the parent <see cref="Activity"/></param>
-    /// <param name="messageId">What is the identifier of the message we are trying to clear</param>
-    /// <param name="options">The <see cref="InstrumentationOptions"/> for how verbose do we want to be?</param>
-    /// <returns></returns>
-    public Activity? CreateClearSpan(
-        CommandProcessorSpanOperation operation,
-        Activity? parentActivity,
-        string? messageId = null,
-        InstrumentationOptions options = InstrumentationOptions.All)
-    {
-        var spanName = $"{BrighterSemanticConventions.ClearMessages} {operation.ToSpanName()}";
-        var kind = ActivityKind.Producer;
-        var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow(); 
-        
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
-            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
-            { BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName() }
-        };
-        
-        if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
-        
-        var activity = ActivitySource.StartActivity(
-            name: spanName,
-            kind: kind,
-            parentId: parentId,
-            tags: tags,
-            startTime: now);
-        
-        Activity.Current = activity;
-
-        return activity;
-        
-    } 
-
-    /// <summary>
-    /// Create a span for an outbox operation
-    /// </summary>
-    /// <param name="info">An <see cref="OutboxSpanInfo"/> with the attributes of the db operation</param>
-    /// <param name="parentActivity">The parent <see cref="Activity"/>, if any, that we should assign to this span</param>
-    /// <param name="options">The <see cref="InstrumentationOptions"/> that explain how deep should the instrumentation go?</param>
-    /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
-    public Activity? CreateDbSpan(OutboxSpanInfo info, Activity? parentActivity, InstrumentationOptions options)
-    {
-        var spanName = !string.IsNullOrEmpty(info.dbTable) 
-            ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
-        
-        var kind = ActivityKind.Client;
-        var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow();
-
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.DbInstrumentationDomain },
-            { BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName() },
-            { BrighterSemanticConventions.DbName, info.dbName },
-            { BrighterSemanticConventions.DbTable, info.dbTable },
-            { BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName() }
-        };
-
-        if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
-        if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
-        if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
-        if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
-        if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
-        if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
-        if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
-        
-        if (info.dbAttributes != null)
-           foreach (var pair in info.dbAttributes)
-               tags.Add(pair.Key, pair.Value);
-
-        var activity = ActivitySource.StartActivity(
-            name: spanName,
-            kind: kind,
-            parentId: parentId,
-            tags: tags,
-            startTime: now);
-        
-        Activity.Current = activity;
-
-        return activity;
-    }
-
-    /// <summary>
     /// Create a span that represents Brighter producing a message to a channel
     /// </summary>
     /// <param name="publication">The <see cref="Publication"/> which represents where we are sending the message</param>
@@ -456,46 +552,53 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="instrumentationOptions"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     /// <returns>A new span named channel publish</returns>
     public Activity? CreateProducerSpan(
-        Publication publication, 
-        Message? message, 
+        Publication publication,
+        Message? message,
         Activity? parentActivity,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
     )
     {
         var spanName = $"{publication.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}";
-        
+
         var kind = ActivityKind.Producer;
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
 
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+        var tags = GetNewTagsCollection(instrumentationOptions);
 
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
+        {
             //OTel specification attributes
-            { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
-            
+            tags.Add(BrighterSemanticConventions.MessagingOperationType,
+                CommandProcessorSpanOperation.Publish.ToSpanName());
+
             //cloud events attributes
-            { BrighterSemanticConventions.CeSource, publication.Source },
-            { BrighterSemanticConventions.CeVersion, "1.0" },
-            { BrighterSemanticConventions.CeSubject, publication.Subject },
-            { BrighterSemanticConventions.CeType, publication.Type }
-        };
+            tags.Add(BrighterSemanticConventions.CeSource, publication.Source);
+            tags.Add(BrighterSemanticConventions.CeVersion, "1.0");
+            tags.Add(BrighterSemanticConventions.CeSubject, publication.Subject);
+            tags.Add(BrighterSemanticConventions.CeType, publication.Type);
+        }
 
         if (message is not null)
         {
-            //OTel specification attributes
-            tags.Add(BrighterSemanticConventions.MessageId, message.Id);
-            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
-            tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
-            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey);
-            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
-            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
-            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options ));
-            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId); 
-            
-            //cloud events attributes
-            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id);
+            if(instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
+            {
+                //OTel specification attributes
+                tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+                tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+                tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
+                tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId,
+                    message.Header.PartitionKey.Value);
+                tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+                tags.Add(BrighterSemanticConventions.MessageHeaders,
+                    JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+                tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
+
+                //cloud events attributes
+                tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+            }
+            if(instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
+                tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
         }
 
         var activity = ActivitySource.StartActivity(
@@ -504,174 +607,14 @@ public class BrighterTracer : IAmABrighterTracer
             parentId: parentId,
             tags: tags,
             startTime: now);
-        
+
+        Propogate(parentActivity, activity);
+
         Activity.Current = activity;
 
-        return activity; 
+        return activity;
     }
 
-    /// <summary>
-    /// Create an event to denote that we have passed through an event handler
-    /// Will be called by the base RequestHandler class's Handle method; invoked at the end of the user defined Handle
-    /// method
-    /// NOTE: Events are static, as we only need the instance state to create an activity
-    /// </summary>
-    /// <param name="span">The <see cref="Activity"/> to raise an event for</param>
-    /// <param name="handlerName">The name of the handler</param>
-    /// <param name="isAsync">Is the handler async?</param>
-    /// <param name="isSink">Is this the last handler in the chain?</param>
-    public static void WriteHandlerEvent(Activity? span, string handlerName, bool isAsync, bool isSink = false)
-    {
-        if (span == null) return;
-        
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.HandlerName, handlerName },
-            { BrighterSemanticConventions.HandlerType, isAsync ? "async" : "sync" },
-            { BrighterSemanticConventions.IsSink, isSink }
-        };
-
-        span.AddEvent(new ActivityEvent(handlerName, DateTimeOffset.UtcNow, tags));
-    }
-
-    /// <summary>
-    /// Adds an event to a span for each transform/mapper that we pass through in the pipeline
-    /// Event is raised before we run the transform
-    /// NOTE: Events are static, as we only need the instance state to create an activity
-    /// </summary>
-    /// <param name="message">The <see cref="Message"/> that we want to transform</param>
-    /// <param name="publication">The <see cref="Publication"/> that the message is produced to</param>
-    /// <param name="span">The <see cref="Activity"/> to add the event to</param>
-    /// <param name="mapperName">The name of this mapper</param>
-    /// <param name="isAsync">Is this an async pipeline?</param>
-    /// <param name="isSink">Is this the mapper, true, or a transform, false?</param>
-    public static void WriteMapperEvent(
-        Message message, 
-        Publication publication, 
-        Activity? span, 
-        string mapperName,
-        bool isAsync,
-        bool isSink = false)
-    {
-        if (span == null) return;
-        
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.MapperName, mapperName },
-            { BrighterSemanticConventions.MapperType, isAsync ? "async" : "sync" },
-            { BrighterSemanticConventions.IsSink, isSink },
-            { BrighterSemanticConventions.MessageId, message.Id },
-            { BrighterSemanticConventions.MessagingDestination, publication.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) }
-        };
-
-        span.AddEvent(new ActivityEvent(mapperName, DateTimeOffset.UtcNow, tags));
-    }
-
-    /// <summary>
-    /// Create an event representing the external service bus calling the outbox
-    /// This is generic and not specific details from a particular outbox and is thus mostly message properties
-    /// NOTE: Events are static, as we only need the instance state to create an activity
-    /// </summary>
-    /// <param name="operation">What <see cref="OutboxDbOperation"/> are we performing on the Outbox</param>
-    /// <param name="message">What is the <see cref="Message"/> we want to write to the Outbox or have read from the Outbox</param>
-    /// <param name="span">What is the parent <see cref="Activity"/> for this event</param>
-    /// <param name="isSharedTransaction">Does this from part of a shared transaction with handler code?</param>
-    /// <param name="isAsync">Is the handler writing async?</param>
-    /// <param name="instrumentationOptions"> <see cref="InstrumentationOptions"/> for how verbose should our instrumentation be</param>
-    public static void WriteOutboxEvent(
-        OutboxDbOperation operation, 
-        Message message, 
-        Activity? span,
-        bool isSharedTransaction, 
-        bool isAsync, 
-        InstrumentationOptions instrumentationOptions
-    ) 
-    {
-        if (span == null) return;
-        
-        var outBoxType = isAsync ? "async" : "sync";
-        
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction },
-            { BrighterSemanticConventions.OutboxType, outBoxType },
-            { BrighterSemanticConventions.MessageId, message.Id },
-            { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
-        };
-
-        span.AddEvent(new ActivityEvent(operation.ToSpanName(), DateTimeOffset.UtcNow, tags));
- 
-    }
-    
-    /// <summary>
-    /// Create an event representing the external service bus calling the outbox
-    /// This is generic and not specific details from a particular outbox and is thus mostly message properties
-    /// NOTE: Events are static, as we only need the instance state to create an activity
-    /// </summary>
-    /// <param name="operation">What <see cref="OutboxDbOperation"/> are we performing on the group of messages</param>
-    /// <param name="messages">The set of <see cref="Message"/>s we want to record the event for</param>
-    /// <param name="span">The <see cref="Activity"/> we are adding the <see cref="ActivityEvent"/> to</param>
-    /// <param name="isSharedTransaction">Are we using a shared transaction with the application to write to the Outbox</param>
-    /// <param name="isAsync">Is this an async operation</param>
-    /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
-    public static void WriteOutboxEvent(
-        OutboxDbOperation operation, 
-        IEnumerable<Message> messages, 
-        Activity? span, 
-        bool isSharedTransaction, 
-        bool isAsync, 
-        InstrumentationOptions instrumentationOptions)
-    {
-        if (span == null) return;
-        
-        foreach (var message in messages)
-            WriteOutboxEvent(operation, message, span, isSharedTransaction, isAsync, instrumentationOptions); 
-    }
-
-    /// <summary>
-    /// Writes a producer event to the current span
-    /// This is generic and requires details of the message and the transport (messaging system)
-    /// NOTE: Events are static, as we only need the instance state to create an activity
-    /// </summary>
-    /// <param name="span">The owning <see cref="Activity"/> to which we will write the event; nothing written if null</param>
-    /// <param name="messagingSystem">Which <see cref="MessagingSystem"/> is the producer</param>
-    /// <param name="message">The <see cref="Message"/> being produced</param>
-    public static void WriteProducerEvent(Activity? span, MessagingSystem messagingSystem, Message message)
-    {
-        if (span == null) return;
-        
-        var tags = new ActivityTagsCollection
-        {
-            { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
-            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
-            { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageId, message.Id },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
-            { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
-            
-            { BrighterSemanticConventions.CeMessageId, message.Id },
-            { BrighterSemanticConventions.CeSource, message.Header.Source },
-            { BrighterSemanticConventions.CeVersion, "1.0"},
-            { BrighterSemanticConventions.CeSubject, message.Header.Subject },
-            { BrighterSemanticConventions.CeType, message.Header.Type }
-        };
-
-        span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}", DateTimeOffset.UtcNow, tags));
-    }
- 
     /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it
     /// </summary>
@@ -714,12 +657,234 @@ public class BrighterTracer : IAmABrighterTracer
             {
                 if (hs.Key != handlerName)
                 {
-                    //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released  
-                    //handlerspan.AddLink(new ActivityLink(handlerspan.Value.Context));
+                    hs.Value.AddLink(new ActivityLink(hs.Value.Context));
                 }
             }
         }
     }
 
+    /// <summary>
+    /// Create an event to denote that we have passed through an event handler
+    /// Will be called by the base RequestHandler class's Handle method; invoked at the end of the user defined Handle
+    /// method
+    /// NOTE: Events are static, as we only need the instance state to create an activity
+    /// </summary>
+    /// <param name="span">The <see cref="Activity"/> to raise an event for</param>
+    /// <param name="handlerName">The name of the handler</param>
+    /// <param name="isAsync">Is the handler async?</param>
+    /// <param name="options"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <param name="isSink">Is this the last handler in the chain?</param>
+    public static void WriteHandlerEvent(Activity? span, string handlerName, bool isAsync,
+        InstrumentationOptions options, bool isSink = false)
+    {
+        if (span == null) return;
 
+        var tags = GetNewTagsCollection(options);
+        if (options.HasFlag(InstrumentationOptions.Brighter))
+        {
+            tags.Add(BrighterSemanticConventions.HandlerName, handlerName);
+            tags.Add(BrighterSemanticConventions.HandlerType, isAsync ? "async" : "sync");
+            tags.Add(BrighterSemanticConventions.IsSink, isSink);
+        }
+        span.AddEvent(new ActivityEvent(handlerName, DateTimeOffset.UtcNow, tags));
+    }
+
+    /// <summary>
+    /// Adds an event to a span for each transform/mapper that we pass through in the pipeline
+    /// Event is raised before we run the transform
+    /// NOTE: Events are static, as we only need the instance state to create an activity
+    /// </summary>
+    /// <param name="message">The <see cref="Message"/> that we want to transform</param>
+    /// <param name="publication">The <see cref="Publication"/> that the message is produced to</param>
+    /// <param name="span">The <see cref="Activity"/> to add the event to</param>
+    /// <param name="mapperName">The name of this mapper</param>
+    /// <param name="isAsync">Is this an async pipeline?</param>
+    /// <param name="options"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <param name="isSink">Is this the mapper, true, or a transform, false?</param>
+    public static void WriteMapperEvent(
+        Message message, 
+        Publication publication, 
+        Activity? span, 
+        string mapperName,
+        bool isAsync,
+        InstrumentationOptions options,
+        bool isSink = false)
+    {
+        if (span == null) return;
+        
+        var tags = GetNewTagsCollection(options);
+        
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+        };
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        if (options.HasFlag(InstrumentationOptions.Brighter))
+        {
+            tags.Add(BrighterSemanticConventions.MapperName, mapperName);
+            tags.Add(BrighterSemanticConventions.MapperType, isAsync ? "async" : "sync");
+            tags.Add(BrighterSemanticConventions.IsSink, isSink);
+        }
+
+        span.AddEvent(new ActivityEvent(mapperName, DateTimeOffset.UtcNow, tags));
+    }
+
+    /// <summary>
+    /// Create an event representing the external service bus calling the outbox
+    /// This is generic and not specific details from a particular outbox and is thus mostly message properties
+    /// NOTE: Events are static, as we only need the instance state to create an activity
+    /// </summary>
+    /// <param name="operation">What <see cref="BoxDbOperation"/> are we performing on the Outbox</param>
+    /// <param name="message">What is the <see cref="Message"/> we want to write to the Outbox or have read from the Outbox</param>
+    /// <param name="span">What is the parent <see cref="Activity"/> for this event</param>
+    /// <param name="isSharedTransaction">Does this from part of a shared transaction with handler code?</param>
+    /// <param name="isAsync">Is the handler writing async?</param>
+    /// <param name="instrumentationOptions"> <see cref="InstrumentationOptions"/> for how verbose should our instrumentation be</param>
+    public static void WriteOutboxEvent(
+        BoxDbOperation operation, 
+        Message message, 
+        Activity? span,
+        bool isSharedTransaction, 
+        bool isAsync, 
+        InstrumentationOptions instrumentationOptions
+    ) 
+    {
+        if (span == null) return;
+        
+        var outBoxType = isAsync ? "async" : "sync";
+        
+        var tags = GetNewTagsCollection(instrumentationOptions);
+            
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.Brighter))
+        {   
+            tags.Add(BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction);
+            tags.Add(BrighterSemanticConventions.OutboxType, outBoxType);
+        };
+        if(instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header));
+        }
+
+        span.AddEvent(new ActivityEvent(operation.ToSpanName(), DateTimeOffset.UtcNow, tags));
+ 
+    }
+
+    /// <summary>
+    /// Create an event representing the external service bus calling the outbox
+    /// This is generic and not specific details from a particular outbox and is thus mostly message properties
+    /// NOTE: Events are static, as we only need the instance state to create an activity
+    /// </summary>
+    /// <param name="operation">What <see cref="BoxDbOperation"/> are we performing on the group of messages</param>
+    /// <param name="messages">The set of <see cref="Message"/>s we want to record the event for</param>
+    /// <param name="span">The <see cref="Activity"/> we are adding the <see cref="ActivityEvent"/> to</param>
+    /// <param name="isSharedTransaction">Are we using a shared transaction with the application to write to the Outbox</param>
+    /// <param name="isAsync">Is this an async operation</param>
+    /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
+    public static void WriteOutboxEvent(
+        BoxDbOperation operation, 
+        IEnumerable<Message> messages, 
+        Activity? span, 
+        bool isSharedTransaction, 
+        bool isAsync, 
+        InstrumentationOptions instrumentationOptions)
+    {
+        if (span == null) return;
+        
+        foreach (var message in messages)
+            WriteOutboxEvent(operation, message, span, isSharedTransaction, isAsync, instrumentationOptions); 
+    }
+
+    /// <summary>
+    /// Writes a producer event to the current span
+    /// This is generic and requires details of the message and the transport (messaging system)
+    /// NOTE: Events are static, as we only need the instance state to create an activity
+    /// </summary>
+    /// <param name="span">The owning <see cref="Activity"/> to which we will write the event; nothing written if null</param>
+    /// <param name="messagingSystem">Which <see cref="MessagingSystem"/> is the producer</param>
+    /// <param name="message">The <see cref="Message"/> being produced</param>
+    /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
+    public static void WriteProducerEvent(Activity? span, MessagingSystem messagingSystem, Message message,InstrumentationOptions instrumentationOptions)
+    {
+        if (span == null) return;
+
+        var tags = GetNewTagsCollection(instrumentationOptions);
+
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingOperationType,
+                CommandProcessorSpanOperation.Publish.ToSpanName());
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+            tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.MessageHeaders,
+                JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
+        }
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+            tags.Add(BrighterSemanticConventions.CeSource, message.Header.Source);
+            tags.Add(BrighterSemanticConventions.CeVersion, "1.0");
+            tags.Add(BrighterSemanticConventions.CeSubject, message.Header.Subject);
+            tags.Add(BrighterSemanticConventions.CeType, message.Header.Type);
+        }
+
+        span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}", DateTimeOffset.UtcNow, tags));
+
+        new TextContextPropogator().PropogateContext(span?.Context, message);
+    }
+
+    private static void Propogate(Activity? parentActivity, Activity? activity)
+    {
+        PropogateTraceString(parentActivity, activity);
+        PropogateBaggage(parentActivity, activity);
+    }
+    
+    private static void PropogateTraceString(Activity? parentActivity, Activity? activity)
+    {
+        if (activity == null)
+            return ;
+
+        if (parentActivity != null && !string.IsNullOrEmpty(parentActivity.TraceStateString))
+            activity.TraceStateString = parentActivity.TraceStateString;
+    }
+
+    private static void PropogateBaggage(Activity? parentActivity, Activity? activity)
+    {
+        if (activity == null)
+            return;
+
+        if (parentActivity != null && parentActivity.Baggage.Any())
+        {
+            foreach (var baggageItem in parentActivity!.Baggage)
+                activity.SetBaggage(baggageItem.Key, baggageItem.Value);
+        }
+    }
+
+    private static ActivityTagsCollection GetNewTagsCollection(InstrumentationOptions instrumentationOptions, string domain =BrighterSemanticConventions.MessagingInstrumentationDomain)
+    {
+        var tags = new ActivityTagsCollection();
+        
+        if(instrumentationOptions != InstrumentationOptions.None)
+            tags.Add(BrighterSemanticConventions.InstrumentationDomain, domain);
+        
+        return tags;
+    }
 }

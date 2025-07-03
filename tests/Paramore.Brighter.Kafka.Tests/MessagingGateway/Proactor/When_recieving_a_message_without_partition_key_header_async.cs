@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using FluentAssertions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -101,13 +101,13 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         var receivedMessage = await GetMessageAsync();
 
         //Where we lack a partition key header, assume non-Brighter header and set to message key
-        receivedMessage.Header.PartitionKey.Should().Be(command.Id);
-        receivedMessage.Body.Bytes.Should().Equal(value);
+        Assert.Equal(kafkaMessage.Key, receivedMessage.Header.PartitionKey);
+        Assert.Equal(value, receivedMessage.Body.Bytes);
     }
 
     private async Task<Message> GetMessageAsync()
     {
-        Message[] messages = Array.Empty<Message>();
+        Message[] messages = [];
         int maxTries = 0;
         do
         {

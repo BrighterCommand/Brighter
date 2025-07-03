@@ -6,7 +6,6 @@ using Confluent.Kafka;
 using Confluent.Kafka.SyncOverAsync;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -39,7 +38,8 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
                 Name = "Kafka Producer Send Test", 
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
+            [
+                new KafkaPublication
             {
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
@@ -49,13 +49,14 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
                 MakeChannels = OnMissingChannel.Create
-            }}).Create(); 
+            }
+            ]).Create(); 
             
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
-                    BootStrapServers = new[] { "localhost:9092" }
+                    BootStrapServers = ["localhost:9092"]
                 })
             .Create(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName), 
@@ -112,23 +113,25 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
         
         //ensure that the messages are all sent
         ((KafkaMessageProducer) producer).Flush();
+        
+        await Task.Delay(500); //Let the message propagate in the broker
 
         var received = GetMessage();
 
-        received.Body.Bytes.Length.Should().BeGreaterThan(5);
+        Assert.True(received.Body.Bytes.Length > 5);
             
         var receivedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(received.Body.Bytes.Skip(1).Take(4).ToArray()));
             
         var receivedCommand = _deserializer.Deserialize(received.Body.Bytes, received.Body.Bytes is null, _serializationContext);
             
         //assert
-        received.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        received.Header.PartitionKey.Should().Be(_partitionKey);
-        received.Body.Bytes.Should().Equal(received.Body.Bytes);
-        received.Body.Value.Should().Be(received.Body.Value);
-        receivedSchemaId.Should().Be(schemaId);
-        receivedCommand.Id.Should().Be(myCommand.Id);
-        receivedCommand.Value.Should().Be(myCommand.Value);
+        Assert.Equal(MessageType.MT_COMMAND, received.Header.MessageType);
+        Assert.Equal(_partitionKey, received.Header.PartitionKey);
+        Assert.Equal(received.Body.Bytes, received.Body.Bytes);
+        Assert.Equal(received.Body.Value, received.Body.Value);
+        Assert.Equal(schemaId, receivedSchemaId);
+        Assert.Equal(myCommand.Id, receivedCommand.Id);
+        Assert.Equal(myCommand.Value, receivedCommand.Value);
     }
 
     private Message GetMessage()

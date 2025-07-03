@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Outbox.Hosting
     /// Runs a sweeper that will find outstanding messages in the Outbox and produce them via a broker
     /// Uses a time to run at pre-defined intervals
     /// </summary>
-    public class TimedOutboxSweeper : IHostedService, IDisposable
+    public partial class TimedOutboxSweeper : IHostedService, IDisposable
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IDistributedLock _distributedLock;
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <returns>A completed task to allow other background services to be run</returns>
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Sweeper Service is starting.");
+            Log.OutboxSweeperServiceIsStarting(s_logger);
 
             _timer = new Timer(Sweep, null, TimeSpan.Zero, TimeSpan.FromSeconds(_options.TimerInterval));
 
@@ -86,7 +86,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <returns>A completed task to allow other background services to be stopped</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Sweeper Service is stopping.");
+            Log.OutboxSweeperServiceIsStopping(s_logger);
 
             _timer?.Change(Timeout.Infinite, 0);
 
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None);
             if (lockId != null)
             {
-                s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
+                Log.OutboxSweeperLookingForUnsentMessages(s_logger);
 
                 var scope = _serviceScopeFactory.CreateScope();
                 try
@@ -133,10 +133,29 @@ namespace Paramore.Brighter.Outbox.Hosting
             }
             else
             {
-                s_logger.LogWarning("Outbox Sweeper is still running - abandoning attempt.");
+                Log.OutboxSweeperIsStillRunningAbandoningAttempt(s_logger);
             }
 
-            s_logger.LogInformation("Outbox Sweeper sleeping");
+            Log.OutboxSweeperSleeping(s_logger);
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Outbox Sweeper Service is starting.")]
+            public static partial void OutboxSweeperServiceIsStarting(ILogger logger);
+
+            [LoggerMessage(LogLevel.Information, "Outbox Sweeper Service is stopping.")]
+            public static partial void OutboxSweeperServiceIsStopping(ILogger logger);
+            
+            [LoggerMessage(LogLevel.Information, "Outbox Sweeper looking for unsent messages")]
+            public static partial void OutboxSweeperLookingForUnsentMessages(ILogger logger);
+            
+            [LoggerMessage(LogLevel.Warning, "Outbox Sweeper is still running - abandoning attempt.")]
+            public static partial void OutboxSweeperIsStillRunningAbandoningAttempt(ILogger logger);
+            
+            [LoggerMessage(LogLevel.Information, "Outbox Sweeper sleeping")]
+            public static partial void OutboxSweeperSleeping(ILogger logger);
         }
     }
 }
+

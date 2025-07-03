@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
@@ -64,7 +64,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             delayed: TimeSpan.FromMilliseconds(5),
             correlationId: Guid.NewGuid().ToString(),
             replyTo: new RoutingKey("ReplyAddress"),
-            contentType: "text/plain");
+            contentType: new ContentType(MediaTypeNames.Text.Plain));
         var body = new MessageBody(myItem.Value);
         _message = new Message(myMessageHeader, body);
     }
@@ -81,7 +81,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             var transaction = uow.GetTransaction();
             transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = _entityAttributes, } });
 
-            transaction.TransactItems.Count.Should().Be(2);
+            Assert.Equal(2, transaction.TransactItems.Count);
 
             uow.Commit();
             response = uow.LastResponse;
@@ -92,9 +92,9 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             throw;
         }
 
-        response.Should().NotBeNull();
-        response.HttpStatusCode.Should().Be(HttpStatusCode.OK);
-        response.ContentLength.Should().Be(2); //number of tables in the transaction 
+        Assert.NotNull(response);
+        Assert.Equal(HttpStatusCode.OK, response.HttpStatusCode);
+        Assert.Equal(2, response.ContentLength); //number of tables in the transaction 
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             var transaction = await uow.GetTransactionAsync();
             transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = _entityAttributes, } });
 
-            transaction.TransactItems.Count.Should().Be(2);
+            Assert.Equal(2, transaction.TransactItems.Count);
 
             await uow.CommitAsync();
             response = uow.LastResponse;
@@ -120,8 +120,8 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             throw;
         }
 
-        response.Should().NotBeNull();
-        response.HttpStatusCode.Should().Be(HttpStatusCode.OK);
-        response.ContentLength.Should().Be(2); //number of tables in the transaction 
+        Assert.NotNull(response);
+        Assert.Equal(HttpStatusCode.OK, response.HttpStatusCode);
+        Assert.Equal(2, response.ContentLength); //number of tables in the transaction 
     }
 }

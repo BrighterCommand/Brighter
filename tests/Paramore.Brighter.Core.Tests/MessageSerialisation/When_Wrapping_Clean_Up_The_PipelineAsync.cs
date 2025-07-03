@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -30,7 +30,7 @@ public class AsyncMessageWrapCleanupTests
         
         _publication = new Publication{Topic = new RoutingKey("MyTransformableCommand"), RequestType= typeof(MyTransformableCommand)};
         
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, new MyReleaseTrackingTransformFactoryAsync());
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, new MyReleaseTrackingTransformFactoryAsync(), InstrumentationOptions.All);
     }
     
     [Fact]
@@ -42,11 +42,11 @@ public class AsyncMessageWrapCleanupTests
         _transformPipeline.Dispose();
         
         //assert
-        s_released.Should().Be("|MySimpleTransformAsync");
+        Assert.Equal("|MySimpleTransformAsync", s_released);
 
     }
     
-    private class MyReleaseTrackingTransformFactoryAsync : IAmAMessageTransformerFactoryAsync
+    private sealed class MyReleaseTrackingTransformFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
         public IAmAMessageTransformAsync Create(Type transformerType)
         {

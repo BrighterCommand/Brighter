@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -14,13 +19,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// <summary>
 /// Class responsible for sending a message to a SQS
 /// </summary>
-public class SqsMessageSender
+public partial class SqsMessageSender
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageSender>();
     private static readonly TimeSpan s_maxDelay = TimeSpan.FromSeconds(900);
     
     private readonly string _queueUrl;
-    private readonly SnsSqsType _queueType;
+    private readonly SqsType _queueType;
     private readonly AmazonSQSClient _client;
 
     /// <summary>
@@ -29,7 +34,7 @@ public class SqsMessageSender
     /// <param name="queueUrl">The queue ARN</param>
     /// <param name="queueType">The queue type</param>
     /// <param name="client">The SQS Client</param>
-    public SqsMessageSender(string queueUrl, SnsSqsType queueType, AmazonSQSClient client)
+    public SqsMessageSender(string queueUrl, SqsType queueType, AmazonSQSClient client)
     {
         _queueUrl = queueUrl;
         _queueType = queueType;
@@ -45,72 +50,7 @@ public class SqsMessageSender
     /// <returns>The message id.</returns>
     public async Task<string?> SendAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken)
     {
-        var request = new SendMessageRequest
-        {
-            QueueUrl = _queueUrl, 
-            MessageBody = message.Body.Value
-        };
-
-        delay ??= TimeSpan.Zero;
-        if (delay > TimeSpan.Zero)
-        {
-            // SQS has a hard limit of 15min for Delay in Seconds
-            if (delay.Value > s_maxDelay)
-            {
-                delay = s_maxDelay;
-                s_logger.LogWarning("Set delay from {CurrentDelay} to 15min (SQS support up to 15min)", delay);
-            }
-
-            request.DelaySeconds = (int)delay.Value.TotalSeconds;
-        }
-
-        if (_queueType == SnsSqsType.Fifo)
-        {
-            request.MessageGroupId = message.Header.PartitionKey;
-            if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
-            {
-                request.MessageDeduplicationId = (string)deduplicationId;
-            }
-        }
-
-        var messageAttributes = new Dictionary<string, MessageAttributeValue>
-        {
-            [HeaderNames.Id] =
-                new() { StringValue = message.Header.MessageId, DataType = "String" },
-            [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
-            [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.HandledCount] =
-                new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
-            [HeaderNames.MessageType] =
-                new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new()
-            {
-                StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
-            }
-        };
-
-        if (!string.IsNullOrEmpty(message.Header.ReplyTo))
-        {
-            messageAttributes.Add(HeaderNames.ReplyTo,
-                new MessageAttributeValue { StringValue = message.Header.ReplyTo, DataType = "String" });
-        }
-
-        if (!string.IsNullOrEmpty(message.Header.Subject))
-        {
-            messageAttributes.Add(HeaderNames.Subject,
-                new MessageAttributeValue { StringValue = message.Header.Subject, DataType = "String" });
-        }
-        
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            messageAttributes.Add(HeaderNames.CorrelationId,
-                new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
-        }
-
-        // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
-        var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-        messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };
-        request.MessageAttributes = messageAttributes;
+        var request = CreateSendMessageRequest(message, delay);
 
         var response = await _client.SendMessageAsync(request, cancellationToken);
         if (response.HttpStatusCode is HttpStatusCode.OK or HttpStatusCode.Created
@@ -120,5 +60,109 @@ public class SqsMessageSender
         }
 
         return null;
+    }
+
+    private SendMessageRequest CreateSendMessageRequest(Message message, TimeSpan? delay)
+    {
+        var request = new SendMessageRequest
+        {
+            QueueUrl = _queueUrl,
+            MessageBody = message.Body.Value
+        };
+
+        SetMessageDelay(request, delay);
+        SetFifoQueueProperties(request, message);
+        SetMessageAttributes(request, message);
+
+        return request;
+    }
+
+    private void SetMessageDelay(SendMessageRequest request, TimeSpan? delay)
+    {
+        delay ??= TimeSpan.Zero;
+        if (delay > TimeSpan.Zero)
+        {
+            if (delay.Value > s_maxDelay)
+            {
+                delay = s_maxDelay;
+                Log.DelaySetToMaximum(s_logger, delay);
+            }
+
+            request.DelaySeconds = (int)delay.Value.TotalSeconds;
+        }
+    }
+
+    private void SetFifoQueueProperties(SendMessageRequest request, Message message)
+    {
+        if (_queueType != SqsType.Fifo) return;
+        request.MessageGroupId = message.Header.PartitionKey;
+        if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
+        {
+            request.MessageDeduplicationId = (string)deduplicationId;
+        }
+    }
+
+    private void SetMessageAttributes(SendMessageRequest request, Message message)
+    {
+        string cloudEventHeadersJson = CreateCloudEventHeadersJson(message);
+
+        var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var messageAttributes = new Dictionary<string, MessageAttributeValue>
+        {
+            [HeaderNames.Id] = new() { StringValue = message.Header.MessageId, DataType = "String" },
+            [HeaderNames.CloudEventHeaders] = new() { StringValue = cloudEventHeadersJson, DataType = "String" },
+            [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
+            [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+            [HeaderNames.ContentType] = new() { StringValue = contentType.ToString(), DataType = "String" },
+            [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRfc3339()), DataType = "String" }
+        };
+
+        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
+            messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue { StringValue = message.Header.ReplyTo, DataType = "String" });
+
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+            messageAttributes.Add(HeaderNames.Subject, new MessageAttributeValue { StringValue = message.Header.Subject, DataType = "String" });
+
+        if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
+            messageAttributes.Add(HeaderNames.CorrelationId, new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
+
+        message.Header.Bag[HeaderNames.HandledCount] = message.Header.HandledCount.ToString(CultureInfo.InvariantCulture);
+
+        var bagJson = System.Text.Json.JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
+        messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };
+        request.MessageAttributes = messageAttributes;
+    }
+
+    private static string CreateCloudEventHeadersJson(Message message)
+    {
+        var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var cloudEventHeaders = new Dictionary<string, string>
+        {
+            [HeaderNames.Id] = Convert.ToString(message.Header.MessageId),
+            [HeaderNames.DataContentType] = contentType.ToString(),
+            [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
+            [HeaderNames.SpecVersion] = message.Header.SpecVersion,
+            [HeaderNames.Type] = message.Header.Type,
+            [HeaderNames.Source] = message.Header.Source.ToString(),
+            [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339()
+        };
+
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+            cloudEventHeaders[HeaderNames.Subject] = message.Header.Subject!;
+
+        if (message.Header.DataSchema != null)
+            cloudEventHeaders[HeaderNames.DataSchema] = message.Header.DataSchema.ToString();
+
+        if (message.Header.DataRef != null)
+            cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
+
+        var cloudEventHeadersJson = System.Text.Json.JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
+        return cloudEventHeadersJson;
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Set delay from {CurrentDelay} to 15min (SQS support up to 15min)")]
+        public static partial void DelaySetToMaximum(ILogger logger, TimeSpan? currentDelay);
     }
 }

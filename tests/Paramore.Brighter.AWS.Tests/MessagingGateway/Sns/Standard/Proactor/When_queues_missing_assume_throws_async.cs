@@ -9,24 +9,24 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
+public class AwsAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly ChannelFactory _channelFactory;
     private readonly IAmAMessageConsumerAsync _consumer;
 
-    public AWSAssumeQueuesTestsAsync()
+    public AwsAssumeQueuesTestsAsync()
     {
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
+            subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            makeChannels: OnMissingChannel.Assume,
-            messagePumpType: MessagePumpType.Proactor
-        );
+            messagePumpType: MessagePumpType.Proactor, 
+            makeChannels: OnMissingChannel.Assume);
 
         var awsConnection = GatewayFactory.CreateFactory();
 
@@ -39,10 +39,10 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
             });
 
         producer.ConfirmTopicExistsAsync(topicName).Wait();
-
+        
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
-
+        
         //We need to create the topic at least, to check the queues
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
@@ -51,7 +51,8 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
     public async Task When_queues_missing_assume_throws_async()
     {
         //we will try to get the queue url, and fail because it does not exist
-        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
+        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => 
+            await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
     }
         
     public void Dispose()

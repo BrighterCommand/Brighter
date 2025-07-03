@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
 using ServiceStack.Redis;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
 
 [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
-public class RedisMessageConsumerRedisNotAvailableTestsAsync 
+public class RedisMessageConsumerRedisNotAvailableTestsAsync
 {
     private readonly ChannelName _queueName = new ChannelName("test");
     private readonly RoutingKey _topic = new RoutingKey("test");
@@ -29,8 +28,8 @@ public class RedisMessageConsumerRedisNotAvailableTestsAsync
     {
         _exception = await Catch.ExceptionAsync(() => _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
 
-        _exception.Should().BeOfType<ChannelFailureException>();
-        _exception?.InnerException.Should().BeOfType<RedisException>();
+        Assert.IsType<ChannelFailureException>(_exception);
+        Assert.IsType<RedisException>(_exception?.InnerException);
     }
 
 //Do not dispose of fake client

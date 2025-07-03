@@ -31,7 +31,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 using RabbitMQ.Client.Events;
 
@@ -46,8 +48,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// an Async operation.
     /// </remarks>
     /// </summary>
-    public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
-    { 
+    public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
+    {
+        private readonly InstrumentationOptions _instrumentationOptions;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
         static readonly object s_lock = new();
@@ -79,10 +82,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
         /// </summary>
         /// <param name="connection">The subscription information needed to talk to RMQ</param>
-        ///     Make Channels = Create
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection)
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+        /// Make Channels = Create
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
             : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create })
-        { }
+        {
+            _instrumentationOptions = instrumentationOptions;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -124,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 {
                     EnsureBroker(makeExchange: _publication.MakeChannels);
                     //NOTE: EnsureBroker will create a channel if one does not exist
-                    s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {ExchangeName}", Connection.Exchange!.Name);
+                    Log.PreparingToSend(s_logger, Connection.Exchange!.Name);
 
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection);
 
@@ -134,10 +140,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     Channel.ConfirmSelect();
                     _confirmsSelected = true;
 
+                    BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
-                    s_logger.LogDebug(
-                        "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}",
-                        Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
+                    Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic, message.Persist, message.Id, message.Body.Value);
 
                     _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id);
@@ -157,19 +162,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                          schedulerSync.Schedule(message, delay.Value);
                      }
 
-                    s_logger.LogInformation(
-                        "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}",
-                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
+                    Log.PublishedMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
                         message.Header.Topic, message.Persist, message.Id,
                         JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);
                 }
             }
             catch (IOException io)
             {
-                s_logger.LogError(io,
-                    "RmqMessageProducer: Error talking to the socket on {URL}, resetting subscription",
-                    Connection.AmpqUri!.GetSanitizedUri()
-                );
+                Log.ErrorTalkingToSocket(s_logger, io, Connection.AmpqUri!.GetSanitizedUri());
                 ResetConnectionToBroker();
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
             }
@@ -216,7 +216,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     //As we are disposing, just let that happen
                     Channel.WaitForConfirms(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds), out bool timedOut);
                     if (timedOut)
-                        s_logger.LogWarning("Failed to await publisher confirms when shutting down!");
+                        Log.FailedToAwaitPublisherConfirms(s_logger);
                 }
             }
 
@@ -229,7 +229,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 OnMessagePublished?.Invoke(false, messageId);
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out string? _);
-                s_logger.LogDebug("Failed to publish message: {MessageId}", messageId);
+                Log.FailedToPublishMessage(s_logger, messageId);
             }
         }
 
@@ -239,10 +239,33 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 OnMessagePublished?.Invoke(true, messageId);
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out string? _);
-                s_logger.LogInformation("Published message: {MessageId}", messageId);
+                Log.PublishedMessageInformation(s_logger, messageId);
             }
         }
 
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "RmqMessageProducer: Preparing to send message via exchange {ExchangeName}")]
+            public static partial void PreparingToSend(ILogger logger, string exchangeName);
 
+            [LoggerMessage(LogLevel.Debug, "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}")]
+            public static partial void PublishingMessage(ILogger logger, string exchangeName, string url, double delay, string topic, bool persist, string id, string request);
+            
+            [LoggerMessage(LogLevel.Information, "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}")]
+            public static partial void PublishedMessage(ILogger logger, string exchangeName, string url, TimeSpan? delay, string topic, bool persist, string id, string request, DateTime time);
+
+            [LoggerMessage(LogLevel.Error, "RmqMessageProducer: Error talking to the socket on {URL}, resetting subscription")]
+            public static partial void ErrorTalkingToSocket(ILogger logger, Exception exception, string url);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to await publisher confirms when shutting down!")]
+            public static partial void FailedToAwaitPublisherConfirms(ILogger logger);
+
+            [LoggerMessage(LogLevel.Debug, "Failed to publish message: {MessageId}")]
+            public static partial void FailedToPublishMessage(ILogger logger, string? messageId);
+
+            [LoggerMessage(LogLevel.Information, "Published message: {MessageId}")]
+            public static partial void PublishedMessageInformation(ILogger logger, string? messageId);
+        }
     }
 }
+

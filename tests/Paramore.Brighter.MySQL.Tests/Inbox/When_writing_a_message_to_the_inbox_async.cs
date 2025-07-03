@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.MySQL.Tests.TestDoubles;
 using Xunit;
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         private readonly MySqlInbox _mysqlInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
-        private MyCommand _storedCommand;
+        private MyCommand? _storedCommand;
 
         public MySqlInboxAddMessageAsyncTests()
         {
@@ -53,16 +52,16 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Inbox_Async()
         {
-            await _mysqlInbox.AddAsync(_raisedCommand, _contextKey);
+            await _mysqlInbox.AddAsync(_raisedCommand, _contextKey, null, -1, default);
 
-            _storedCommand = await _mysqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+            _storedCommand = await _mysqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null, -1, default);
 
             //_should_read_the_command_from_the__sql_inbox
-            _storedCommand.Should().NotBeNull();
+            Assert.NotNull(_storedCommand);
             //_should_read_the_command_value
-            _storedCommand.Value.Should().Be(_raisedCommand.Value);
+            Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
             //_should_read_the_command_id
-            _storedCommand.Id.Should().Be(_raisedCommand.Id);
+            Assert.Equal(_raisedCommand.Id, _storedCommand.Id);
         }
 
         public void Dispose()

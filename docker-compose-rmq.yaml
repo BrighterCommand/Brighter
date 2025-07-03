@@ -2,8 +2,8 @@ version: '3'
 
 services:
   rabbitmq:
-    image: brightercommand/rabbitmq:latest
-    platform: linux/arm64 
+    image: brightercommand/rabbitmq:3.13-management-delay
+    platform: linux/amd64
     ports:
       - "5672:5672"
       - "15672:15672"
