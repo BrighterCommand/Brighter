@@ -2,9 +2,6 @@
 
 ## Project Structure
 
-- Organize code by feature and responsibility (e.g., Core, Transforms, Tests).
-- Place tests in the tests directory, mirroring the structure of the main codebase.
-
 Our code is organized as follows:
 
 - We add code for for the Brighter framework under the src directory
@@ -69,7 +66,29 @@ Our code is organized as follows:
       - Paramore.Brighter.Tranformers.AWS support for using AWS with a Claim Check.
       - Paramore.Brighter.Transformers.Azure support for using Azure with a Claim Check.
       - Paramore.Brighter.Transformers.MongoGridFS support for using MongoGridFS with a Claim Check.
-
+- We add code for for tests for the Brighter framework under the tests directory
+  - Within core, we use projects to partition our tests by their dependencies.
+  - Paramore.Brighter.AWS.Tests Messaging Gateway tests that depend on AWS SNS and SQS, and S3 for Claims Checks.
+  - Paramore.Brighter.AWSScheduler.Tests Scheduler tests that depend on AWS Scheduler.
+  - Paramore.Brighter.Azure.Tests Tests that depend on Azure Blob storage for Claims Checks.
+  - Paramore.Brighter.AzureServiceBus.Tests Messaging Gateway tests that depend on Azure Service Bus.
+  - Paramore.Brighter.Core.Tests Tests that exercise the core functionality from Paramore.Brighter and Paramore.ServiceActivator. No I/O dependencies, uses in-memory implementations instead.
+  - Paramore.Brighter.DynamoDB.Tests Tests of Outbox and Inbox implementations that use DynamoDB.
+  - Paramore.Brighter.Extensions.Tests Tests of Brighter's extensions to .NET HostBuilder.
+  - Paramore.Brighter.Hangfire.Tests Tests for the implementation of Brighter's scheduled CommandProcessor requests using Hangfire.
+  - Paramore.Brighter.InMemory.Tests Tests for the Brighter's in-memory messaging gateways (transports), outboxes, inboxes, schedulers etc.
+  - Paramore.Brighter.Kafka.Tests Messaging Gateway tests that depend on Kafka.
+  - Paramore.Brighter.MongoDb.Tests Tests of Outbox and Inbox implementations that use MongoDb.
+  - Paramore.Brighter.MQTT.Tests Messaging Gateway tests that depend on MQTT.
+  - Paramore.Brighter.MSSQL.Tests Tests of Outbox and Inbox implementations that use MSSQL; Messaging Gateway tests that depend on MSSQL. 
+  - Paramore.Brighter.MySQL.Tests Tests of Outbox and Inbox implementations that use MySql
+  - Paramore.Brighter.PostgresSQL.Tests Tests of Outbox and Inbox implementations that use Postres.
+  - Paramore.Brighter.Quartz.Tests Tests for the implementation of Brighter's scheduled CommandProcessor requests using Quartz.
+  - Paramore.Brighter.Redis.Tests Messaging Gateway tests that depend on Redis.
+  - Paramore.Brighter.RMQ.Async.Tests Messaging Gateway tests that depend on RabbitMQ's .NET Client V7+. 
+  - Paramore.Brighter.RMQ.Sync.Tests Messaging Gateway tests that depend on RabbitMQ's .NET Client V6. 
+  - Paramore.Brighter.Sqlite.Tests Tests of Outbox and Inbox implementations that use Sqlite. 
+  - Paramore.Test.Helpers Tools for helping write developer tests.
 
 ## Architecture Decision Records
 
@@ -104,6 +123,7 @@ Our code is organized as follows:
     - You should only write the code necessary for a test to pass; do not write speculative code.
   - It will not push you to focus on design of your classes for behavior.
     - Pay attention to the usability of your class and method; it should be self-describing.
+  - We accept test after when working with I/O implementations, if necessary.
 - Tests should confirm the behavior of the SUT.
   - A test is a specification-first exploration of the behavior of the system.
     - A test provides an executable specification, of a given behavior.
@@ -133,7 +153,12 @@ Our code is organized as follows:
   - See [ADR 0023](docs/adr/0023-reactor-and-nonblocking-io.md) for advice on how to replace I/O.
 - Do NOT use fakes or mocks for isolating a class.
   - We use developer tests: isolation is to the most recent edit, not a class.
-  - Do not inject dependencies into a constructor or property for test isolation, unless it is for I/O, or use of the strategy pattern to satisfy the open-closed principle.
+  - Do not inject dependencies into a constructor or property for test isolation 
+- You MAY use fakes or mocks (test doubles) for I/O or the strategy pattern. Prefer in-memory alternatives to fakes to mocks. 
+  - You may use a test double to replace I/O as it is slow and has shared fixture making tests brittle.
+  - You should look at using an in-memory substitute if testing core functionality that can use a range of alternative I/O. For example you can use an in-memory substitute such as InMemoryMessageProducer or InMemoryOutbox.
+  - If you are testing the implementation of a messaging gateway (transport), outbox, inbox or other I/O adapter, you should create a suite of tests that use those directly to prove the implementation works. We separate these into test assemblies that require the dependency on a broker or database to run. This allows the core tests, that substitute I/O to run without additional dependencies, and indicates what dependencies you need to run a particular test suite.
+  or use of the strategy pattern to satisfy the open-closed principle.
 - Only add code needed to satisfy a behavioral requirement expressed in a test.
   - Do not add speculative code, the need for which is not indicated by test.
 
