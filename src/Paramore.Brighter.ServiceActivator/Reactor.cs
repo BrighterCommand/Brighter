@@ -65,7 +65,7 @@ namespace Paramore.Brighter.ServiceActivator
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
             : base(commandProcessor, requestContextFactory, tracer,  instrumentationOptions)
         {
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory, instrumentationOptions);
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
             Channel = channel;
         }

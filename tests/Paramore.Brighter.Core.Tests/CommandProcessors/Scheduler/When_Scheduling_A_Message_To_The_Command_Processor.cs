@@ -71,7 +71,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryMessageProducer(_internalBus, _timeProvider)
+        var producer = new InMemoryMessageProducer(_internalBus, _timeProvider, InstrumentationOptions.All)
         {
             Publication = { Topic = routingKey, RequestType = typeof(MyCommand) }
         };
@@ -113,6 +113,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 

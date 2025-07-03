@@ -69,7 +69,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 partitionAssignmentStrategy: kafkaSubscription.PartitionAssignmentStrategy,
                 replicationFactor: kafkaSubscription.ReplicationFactor,
                 topicFindTimeout: kafkaSubscription.TopicFindTimeout,
-                makeChannels: kafkaSubscription.MakeChannels
+                makeChannels: kafkaSubscription.MakeChannels,
+                configHook: kafkaSubscription.ConfigHook
                 );
         }
 

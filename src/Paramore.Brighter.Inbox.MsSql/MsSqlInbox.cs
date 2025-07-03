@@ -150,7 +150,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateSqlParameter("CommandID", command.Id),
+                CreateSqlParameter("CommandID", command.Id.Value),
                 CreateSqlParameter("CommandType", typeof (T).Name),
                 CreateSqlParameter("CommandBody", commandJson),
                 CreateSqlParameter("Timestamp", DateTime.UtcNow),

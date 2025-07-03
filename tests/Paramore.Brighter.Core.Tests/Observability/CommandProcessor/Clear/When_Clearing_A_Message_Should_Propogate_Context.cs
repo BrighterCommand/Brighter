@@ -60,7 +60,7 @@ public class MessageDispatchPropogateContextTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
         {
             Publication =
             {
@@ -83,6 +83,7 @@ public class MessageDispatchPropogateContextTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             outbox,
             maxOutStandingMessages: -1
         );

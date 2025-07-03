@@ -47,7 +47,7 @@ public class MongoDbOutboxEmptyStoreTests : IDisposable
     }
 
     [Fact]
-    public void When_There_Is_No_Message_In_The_Sql_Outbox()
+    public void When_There_Is_No_Message_In_The_MongoDb_Outbox()
     {
         var storedMessage = _outbox.Get(_messageEarliest.Id, new RequestContext());
 

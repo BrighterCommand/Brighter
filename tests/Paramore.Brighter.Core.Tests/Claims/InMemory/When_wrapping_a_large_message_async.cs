@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
@@ -32,7 +33,7 @@ public class AsyncLargeMessagePayloadWrapTests
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand") };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

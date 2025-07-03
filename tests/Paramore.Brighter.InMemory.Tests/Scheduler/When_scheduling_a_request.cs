@@ -52,7 +52,7 @@ public class InMemorySchedulerRequestTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, _timeProvider)
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, _timeProvider, InstrumentationOptions.All)
             {
                 Publication = { Topic = _routingKey, RequestType = typeof(MyEvent) }
             }
@@ -74,6 +74,7 @@ public class InMemorySchedulerRequestTests
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             trace,
+            new FindPublicationByPublicationTopicOrRequestType(),
             _outbox
         );
 

@@ -1,5 +1,6 @@
 using System;
 using FakeItEasy;
+using Paramore.Brighter.Observability;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
@@ -25,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
                 .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(bus, new []
                 {
                     new Publication{Topic = new RoutingKey("MyTopic"), RequestType = typeof(ConfigurationCommand)}
-                }))
+                }, InstrumentationOptions.All))
                 .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System)) as ControlBusReceiverBuilder)!;
         }
 

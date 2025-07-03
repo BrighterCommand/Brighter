@@ -63,7 +63,7 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             {
-               routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider())
+               routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), InstrumentationOptions.All)
                {
                     Publication = { Topic = routingKey, RequestType = typeof(MyEvent)}
                }
@@ -77,6 +77,7 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             outbox,
             maxOutStandingMessages: -1
         );

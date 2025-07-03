@@ -259,7 +259,7 @@ namespace Paramore.Brighter
         /// The default will be in-memory
         /// </remarks>
         public IAmAMessageSchedulerFactory? MessageSchedulerFactory { get; set; }
-        
+
         /// <summary>
         /// The Request Scheduler Factory.
         /// </summary>

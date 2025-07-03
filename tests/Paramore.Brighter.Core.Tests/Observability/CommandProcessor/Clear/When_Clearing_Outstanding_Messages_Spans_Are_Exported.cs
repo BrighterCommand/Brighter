@@ -64,7 +64,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
 
         var routingKey = new RoutingKey(_topic);
         
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
         {
             Publication =
             {
@@ -87,6 +87,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             outbox,
             maxOutStandingMessages: -1
         );

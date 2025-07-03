@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Net.Mime;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly string _key5 = "name5";
         private readonly Message _messageEarliest;
         private readonly PostgreSqlOutbox _sqlOutbox;
-        private Message _storedMessage;
+        private Message? _storedMessage;
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
         private readonly int _value3 = 123;
@@ -56,22 +57,29 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
             var messageHeader = new MessageHeader(
-                messageId:Id.Random, 
-                topic: new RoutingKey("test_topic"), 
-                messageType: MessageType.MT_DOCUMENT, 
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5, 
-                delayed:TimeSpan.FromMilliseconds(5),
-                correlationId: Id.Random,
-                replyTo: new RoutingKey("ReplyTo"),
-                contentType: new ContentType(MediaTypeNames.Text.Plain),
-                partitionKey: Guid.NewGuid().ToString());
+                messageId:    Id.Random,
+                topic:        new RoutingKey("test_topic"),
+                messageType:  MessageType.MT_DOCUMENT,
+                source:       new Uri("https://source.test"),
+                type:         new RoutingKey("test_event_type"),
+                timeStamp:    DateTime.UtcNow.AddDays(-1),
+                correlationId:Id.Random,
+                replyTo:      new RoutingKey("ReplyTo"),
+                contentType:  new ContentType(MediaTypeNames.Text.Plain),
+                partitionKey: Guid.NewGuid().ToString(),
+                dataSchema:   new Uri("https://schema.test"),
+                subject:      "testSubject",
+                handledCount: 5,
+                delayed:      TimeSpan.FromMilliseconds(5),
+                traceParent:  "00-abcdef0123456789-abcdef0123456789-01",
+                traceState:   "state123",
+                baggage:      new Baggage()
+            );
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
             messageHeader.Bag.Add(_key4, _value4);
             messageHeader.Bag.Add(_key5, _value5);
-            
             _context = new RequestContext();
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
@@ -107,6 +115,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
             Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
+
+            // new fields assertions
+            Assert.Equal(_messageEarliest.Header.Source,       _storedMessage.Header.Source);
+            Assert.Equal(_messageEarliest.Header.Type,         _storedMessage.Header.Type);
+            Assert.Equal(_messageEarliest.Header.DataSchema,   _storedMessage.Header.DataSchema);
+            Assert.Equal(_messageEarliest.Header.Subject,      _storedMessage.Header.Subject);
+            Assert.Equal(_messageEarliest.Header.TraceParent,  _storedMessage.Header.TraceParent);
+            Assert.Equal(_messageEarliest.Header.TraceState,   _storedMessage.Header.TraceState);
         }
 
         public void Dispose()
