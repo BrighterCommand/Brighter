@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,20 +36,22 @@ namespace Paramore.Brighter.Transformers.MassTransit;
 /// </para>
 /// </remarks>
 public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IAmAMessageMapperAsync<TMessage>
-    where TMessage : class, IRequest 
+    where TMessage : class, IRequest
 {
-    private static readonly HostInfo?  s_hostInfo = HostInfo.Create();
-    
+    private static readonly HostInfo? s_hostInfo = HostInfo.Create();
+    private static readonly ConcurrentDictionary<Type, MassTransitMessageAttribute?> s_cachedTypes = new();
+
     /// <summary>
     /// The Masstransit content-type.
     /// </summary>
-    public static ContentType MassTransitContentType { get; }= new("application/vnd.masstransit+json");
-    
+    public static ContentType MassTransitContentType { get; } = new("application/vnd.masstransit+json");
+
     /// <inheritdoc cref="IAmAMessageMapper{TRequest}.Context" />
     public IRequestContext? Context { get; set; }
-    
+
     /// <inheritdoc />
-    public Task<Message> MapToMessageAsync(TMessage request, Publication publication, CancellationToken cancellationToken = default)
+    public Task<Message> MapToMessageAsync(TMessage request, Publication publication,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(MapToMessage(request, publication));
     }
@@ -63,7 +67,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     {
         var timestamp = DateTimeOffset.UtcNow;
         var bag = new Dictionary<string, object?>();
-        if (Context != null && Context.Bag.Count == 0)
+        if (Context is { Bag.Count: 0 })
         {
             foreach (var pair in Context.Bag)
             {
@@ -73,24 +77,24 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
                 }
             }
         }
-        
+
         var envelop = new MassTransitMessageEnvelop<TMessage>
         {
             ConversationId = GetConversationId(),
             CorrelationId = GetCorrelationId(),
-            DestinationAddress = GetDestinationAddress(), 
-            ExpirationTime = GetExpirationTime(), 
-            FaultAddress = GetFaultAddress(), 
+            DestinationAddress = GetDestinationAddress(),
+            ExpirationTime = GetExpirationTime(),
+            FaultAddress = GetFaultAddress(),
             Headers = null,
             Host = s_hostInfo,
-            InitiatorId = GetInitiatorId(), 
+            InitiatorId = GetInitiatorId(),
             Message = request,
             MessageId = request.Id,
             MessageType = GetMessageType(),
             RequestId = GetRequestId(),
             ResponseAddress = GetResponseAddress(publication),
             SourceAddress = GetSourceAddress(publication),
-            SentTime = timestamp.DateTime 
+            SentTime = timestamp.DateTime
         };
 
         return new Message(
@@ -106,18 +110,28 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
                 },
                 timeStamp: timestamp,
                 topic: publication.Topic!),
-            new MessageBody(JsonSerializer.SerializeToUtf8Bytes(envelop, JsonSerialisationOptions.Options), MassTransitContentType)
+            new MessageBody(JsonSerializer.SerializeToUtf8Bytes(envelop, JsonSerialisationOptions.Options),
+                MassTransitContentType)
         );
     }
-    
+
     private string GetCorrelationId()
     {
         return GetFromContext(nameof(MessageHeader.CorrelationId), Guid.NewGuid().ToString())!;
     }
-    
+
     private string? GetConversationId() => GetFromContext(MassTransitHeaderNames.ConversationId);
-    
-    private string? GetDestinationAddress() => GetFromContext(MassTransitHeaderNames.DestinationAddress);
+
+    private string? GetDestinationAddress()
+    {
+        var response = GetFromContext(MassTransitHeaderNames.DestinationAddress);
+        if (!string.IsNullOrEmpty(response))
+        {
+            return response;
+        }
+
+        return GetMassTransitAttribute()?.DestinationAddress;
+    }
 
     private DateTime? GetExpirationTime()
     {
@@ -133,27 +147,36 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
                 return dateTime;
             }
         }
-        
+
         return null;
     }
-    
-    private string? GetFaultAddress() => GetFromContext(MassTransitHeaderNames.FaultAddress);
-    
-    private string? GetInitiatorId() => GetFromContext(MassTransitHeaderNames.InitiatorId);
-    
-    private string? GetRequestId() => GetFromContext(MassTransitHeaderNames.RequestId);
-    
-    private string? GetResponseAddress(Publication publication)
+
+    private string? GetFaultAddress()
     {
-        var response =  GetFromContext(MassTransitHeaderNames.ResponseAddress);
+        var response = GetFromContext(MassTransitHeaderNames.FaultAddress);
         if (!string.IsNullOrEmpty(response))
         {
             return response;
         }
 
-        return null;
+        return GetMassTransitAttribute()?.FaultAddress;
     }
-    
+
+    private string? GetInitiatorId() => GetFromContext(MassTransitHeaderNames.InitiatorId);
+
+    private string? GetRequestId() => GetFromContext(MassTransitHeaderNames.RequestId);
+
+    private string? GetResponseAddress(Publication publication)
+    {
+        var response = GetFromContext(MassTransitHeaderNames.ResponseAddress);
+        if (!string.IsNullOrEmpty(response))
+        {
+            return response;
+        }
+
+        return GetMassTransitAttribute()?.ResponseAddress;
+    }
+
     private string? GetSourceAddress(Publication publication)
     {
         var source = GetFromContext(MassTransitHeaderNames.SourceAddress);
@@ -161,10 +184,11 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
         {
             return source;
         }
-        
-        return publication.Source.ToString();
+
+        return GetMassTransitAttribute()?.SourceAddress;
     }
-    
+
+
     private string[]? GetMessageType()
     {
         if (Context != null && Context.Bag.TryGetValue(MassTransitHeaderNames.MessageType, out var obj))
@@ -179,8 +203,8 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
                 return types.ToArray();
             }
         }
-        
-        return null;
+
+        return GetMassTransitAttribute()?.MessageType;
     }
 
     private string? GetFromContext(string headerName, string? defaultValue = null)
@@ -191,12 +215,14 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
         }
 
         return defaultValue;
-    } 
+    }
 
     /// <inheritdoc />
     public virtual TMessage MapToRequest(Message message)
     {
-        var envelop = JsonSerializer.Deserialize<MassTransitMessageEnvelop<TMessage>>(message.Body.Bytes, JsonSerialisationOptions.Options);
+        var envelop =
+            JsonSerializer.Deserialize<MassTransitMessageEnvelop<TMessage>>(message.Body.Bytes,
+                JsonSerialisationOptions.Options);
         if (envelop == null)
         {
             throw new InvalidOperationException("It's not a MassTransit envelop message");
@@ -206,7 +232,17 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
         {
             throw new InvalidOperationException("Message inside MassTransit envelop doesn't match the current type");
         }
-        
+
         return envelop.Message;
     }
+
+    private static MassTransitMessageAttribute? GetMassTransitAttribute()
+    {
+        return s_cachedTypes.GetOrAdd(typeof(TMessage), type =>
+        {
+            var attribute = type.GetCustomAttribute<MassTransitMessageAttribute>();
+            return attribute;
+        });
+    }
+
 }

@@ -13,7 +13,9 @@ public static class Program
     public static async Task Main(string[] args)
     {
         var host = new HostBuilder()
-            .ConfigureLogging(builder => builder.AddConsole())
+            .ConfigureLogging(builder => builder
+                .SetMinimumLevel(LogLevel.Debug)
+                .AddConsole())
             .ConfigureServices(services =>
             {
                 services
@@ -40,7 +42,16 @@ public static class Program
 
                             cfg.Message<Greeting>(m =>
                             {
-                                m.SetEntityName("greeting");
+                                m.SetEntityName("masstransit-topic");
+                            });
+                            
+                            cfg.ReceiveEndpoint("masstransit-queue", e =>
+                            {
+                                e.Subscribe("brighter-topic", x =>
+                                {
+                                });
+                                
+                                e.ConfigureConsumer<GreetingConsumer>(context);
                             });
                             
                             cfg.Publish((IAmazonSqsMessagePublishTopologyConfigurator<Greeting> p)=>
@@ -79,6 +90,7 @@ public static class Program
 }
 
 
+[MessageUrn("greeting")]
 public record Greeting
 {
     public string Name { get; init; }

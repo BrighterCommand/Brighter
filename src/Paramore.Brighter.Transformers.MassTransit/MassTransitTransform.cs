@@ -118,7 +118,7 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
             RequestId = GetRequestId(),
             ResponseAddress = GetResponseAddress(message),
             SourceAddress = GetSourceAddress(),
-            SentTime = message.Header.TimeStamp.DateTime
+            SentTime = GetSentTime(message)
         };
 
         message.Header.ContentType = s_massTransitContentType;
@@ -193,7 +193,6 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
         return Get(MassTransitHeaderNames.SourceAddress);
     }
     
-    
     private string[]? GetMessageType()
     {
         if (_messageType is { Length: > 0 })
@@ -216,6 +215,16 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
         }
         
         return null;
+    }
+
+    private DateTime GetSentTime(Message message)
+    {
+        if (message.Header.TimeStamp == DateTimeOffset.MinValue)
+        {
+            return DateTime.UtcNow;
+        }
+
+        return message.Header.TimeStamp.DateTime;
     }
 
     private string? Get(string headerName)
@@ -253,7 +262,7 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
             }
 
             var bag = message.Header.Bag;
-            if (envelop.Headers != null && envelop.Headers.Count > 0)
+            if (envelop.Headers is { Count: > 0 })
             {
                 bag = new Dictionary<string, object>(bag);
                 foreach (KeyValuePair<string, object?> obj in  envelop.Headers)

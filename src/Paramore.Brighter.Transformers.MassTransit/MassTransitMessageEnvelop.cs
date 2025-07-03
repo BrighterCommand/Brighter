@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Paramore.Brighter.Transformers.MassTransit;
 
@@ -53,6 +54,8 @@ public sealed class HostInfo
             ProcessName = process.ProcessName,
             ProcessId = process.Id,
             OperatingSystemVersion = Environment.OSVersion.VersionString,
+            FrameworkVersion = RuntimeInformation.FrameworkDescription,
+            MassTransitVersion = "8.4.1",
             Assembly = assembly?.GetName().Name,
             AssemblyVersion = assembly?.GetName().Version?.ToString()
         };    

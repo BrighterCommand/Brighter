@@ -3,7 +3,7 @@
 namespace Paramore.Brighter.Transformers.MassTransit;
 
 /// <summary>
-/// Attribute to apply MassTransit message transformation in Brighter pipelines.
+/// Attribute that convert Brighter message into MassTransit envelop message.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Transformers.MassTransit;
 /// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)] 
-public class MassTransitAttribute(int step) : WrapWithAttribute(step)
+public class MassTransitWrapAttribute(int step) : WrapWithAttribute(step)
 {
     /// <summary>
     /// Gets or sets the destination address for MassTransit message routing.
