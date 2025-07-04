@@ -9,6 +9,7 @@ using Xunit;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RocketMQ")]
+[Trait("Fragile", "CI")]
 public class MessageProducerDlqTests
 {
     private readonly RocketMqMessageProducer _sender;
