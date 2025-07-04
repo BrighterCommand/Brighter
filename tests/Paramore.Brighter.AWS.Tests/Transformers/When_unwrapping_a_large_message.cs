@@ -8,6 +8,7 @@ using Amazon.S3.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tranformers.AWS;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
@@ -55,7 +56,7 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

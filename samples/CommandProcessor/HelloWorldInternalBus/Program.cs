@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
@@ -36,7 +37,7 @@ var host = Host.CreateDefaultBuilder()
         })
         .UseExternalBus((config) =>
         {
-            config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications).Create(); 
+            config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications, InstrumentationOptions.All).Create(); 
             config.Outbox = new InMemoryOutbox(TimeProvider.System);
         })
         .AutoFromAssemblies();

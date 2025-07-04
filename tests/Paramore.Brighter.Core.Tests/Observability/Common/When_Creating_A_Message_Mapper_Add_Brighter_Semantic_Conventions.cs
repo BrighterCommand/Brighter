@@ -49,7 +49,7 @@ public class BrighterSemanticConventionsMessageMapperTests
         var publication = new Publication() { Topic = routingKey };
         
         //act
-        BrighterTracer.WriteMapperEvent(message, publication, _parentActivity, "MyMessageMapper", false, true);
+        BrighterTracer.WriteMapperEvent(message, publication, _parentActivity, "MyMessageMapper", false, InstrumentationOptions.All, true);
         
         _parentActivity.Stop();
         var flushed = _traceProvider.ForceFlush();

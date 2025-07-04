@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -39,7 +40,7 @@ namespace Tests
                 new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
                     { 
-                        routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider())
+                        routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), InstrumentationOptions.All)
                         {
                             Publication = { Topic = routingKey}
                         } 

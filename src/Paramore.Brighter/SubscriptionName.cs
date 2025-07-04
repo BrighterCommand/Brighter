@@ -30,6 +30,10 @@ namespace Paramore.Brighter
     /// Class SubscriptionName.
     /// Value type that stores the name of a subscription. Immutable.
     /// </summary>
+    /// <remarks>
+    /// Subscription names are used to identify and manage individual message subscriptions
+    /// within the dispatcher and service activator infrastructure.
+    /// </remarks>
     public class SubscriptionName : IEquatable<SubscriptionName>
     {
         private readonly string _name;
@@ -37,7 +41,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="SubscriptionName"/> class.
         /// </summary>
-        /// <param name="name">The name.</param>
+        /// <param name="name">The <see cref="string"/> name of the subscription.</param>
         public SubscriptionName(string name)
         {
             _name = name;
@@ -46,46 +50,46 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the subscription name as a string.
         /// </summary>
-        /// <value>The value.</value>
+        /// <value>The <see cref="string"/> value of the subscription name.</value>
         public string Value
         {
             get { return _name; }
         }
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
+        /// <returns>A <see cref="string" /> containing the subscription name.</returns>
         public override string ToString()
         {
             return _name;
         }
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="SubscriptionName"/> to <see cref="System.String"/>.
+        /// Performs an implicit conversion from <see cref="SubscriptionName"/> to <see cref="string"/>.
         /// </summary>
-        /// <param name="rhs">The RHS.</param>
-        /// <returns>The result of the conversion.</returns>
+        /// <param name="rhs">The <see cref="SubscriptionName"/> to convert.</param>
+        /// <returns>The <see cref="string"/> result of the conversion.</returns>
         public static implicit operator string (SubscriptionName rhs)
         {
             return rhs.ToString();
         }
         
         /// <summary>
-        /// Performs an implicit conversion from <see cref="System.String"/> to <see cref="SubscriptionName"/>.
+        /// Performs an implicit conversion from <see cref="string"/> to <see cref="SubscriptionName"/>.
         /// </summary>
-        /// <param name="rhs">The <see cref="SubscriptionName"/> we are converting to a <see cref="SubscriptionName"/></param>
-        /// <returns></returns>
+        /// <param name="rhs">The <see cref="string"/> to convert to a <see cref="SubscriptionName"/>.</param>
+        /// <returns>A new <see cref="SubscriptionName"/> instance.</returns>
         public static implicit operator SubscriptionName(string rhs)
         {
             return new SubscriptionName(rhs);
         }
 
         /// <summary>
-        /// Does the subscription name match?
+        /// Determines whether the subscription names match.
         /// </summary>
-        /// <param name="other">An object to compare with this object.</param>
-        /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
+        /// <param name="other">An <see cref="object"/> to compare with this object.</param>
+        /// <returns><c>true</c> if the current object is equal to the <paramref name="other" /> parameter; otherwise, <c>false</c>.</returns>
         public bool Equals(SubscriptionName? other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -94,10 +98,10 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Does the subscription name match?
+        /// Determines whether the subscription names match.
         /// </summary>
-        /// <param name="obj">The object to compare with the current object.</param>
-        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <param name="obj">The <see cref="object"/> to compare with the current object.</param>
+        /// <returns><c>true</c> if the specified <see cref="object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -116,22 +120,22 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Implements the ==. Does the subscription name match?
+        /// Implements the == operator. Determines whether the subscription names match.
         /// </summary>
-        /// <param name="left">The left.</param>
-        /// <param name="right">The right.</param>
-        /// <returns>The result of the operator.</returns>
+        /// <param name="left">The left <see cref="SubscriptionName"/>.</param>
+        /// <param name="right">The right <see cref="SubscriptionName"/>.</param>
+        /// <returns><c>true</c> if the subscription names are equal; otherwise, <c>false</c>.</returns>
         public static bool operator ==(SubscriptionName? left, SubscriptionName? right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// Implements the !=. Does the subscription name not match?
+        /// Implements the != operator. Determines whether the subscription names do not match.
         /// </summary>
-        /// <param name="left">The left.</param>
-        /// <param name="right">The right.</param>
-        /// <returns>The result of the operator.</returns>
+        /// <param name="left">The left <see cref="SubscriptionName"/>.</param>
+        /// <param name="right">The right <see cref="SubscriptionName"/>.</param>
+        /// <returns><c>true</c> if the subscription names are not equal; otherwise, <c>false</c>.</returns>
         public static bool operator !=(SubscriptionName? left, SubscriptionName? right)
         {
             return !Equals(left, right);

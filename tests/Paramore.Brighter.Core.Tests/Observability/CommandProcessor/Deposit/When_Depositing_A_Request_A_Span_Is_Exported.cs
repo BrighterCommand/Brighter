@@ -64,7 +64,7 @@ public class CommandProcessorDepositObservabilityTests
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             {
-                routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider())
+                routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), InstrumentationOptions.All)
                 {
                     Publication = { Topic = routingKey, RequestType = typeof(MyEvent)}
                 }
