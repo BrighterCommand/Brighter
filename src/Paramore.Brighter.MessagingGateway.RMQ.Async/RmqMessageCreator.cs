@@ -53,9 +53,6 @@ internal sealed partial class RmqMessageCreator
             topic = ReadTopic(fromQueue, headers);
             messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
 
-            if (false == (topic.Success && messageId.Success))
-                return Message.FailureMessage(topic.Result, messageId.Result);
-
             var messageHeader = CreateMessageHeader(fromQueue, headers, topic, messageId);
             var bodyType = new ContentType(fromQueue.BasicProperties.Type ?? MediaTypeNames.Text.Plain); 
             message = new Message(messageHeader, new MessageBody(fromQueue.Body, bodyType));
@@ -281,11 +278,18 @@ internal sealed partial class RmqMessageCreator
 
     private static HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers)
     {
-        return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
+        var res = ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
         {
             var val = string.IsNullOrEmpty(s) ? new RoutingKey(fromQueue.RoutingKey) : new RoutingKey(s ?? string.Empty);
             return new HeaderResult<RoutingKey?>(val, true);
         });
+
+        if (res.Success)
+        {
+            return res;
+        }
+        
+        return new HeaderResult<RoutingKey?>(new RoutingKey(fromQueue.RoutingKey), true);
     }
 
     private static HeaderResult<Id?> ReadMessageId(string? messageId)

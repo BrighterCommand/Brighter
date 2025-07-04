@@ -297,7 +297,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(messageId))
                     {
-                        return new HeaderResult<Id?>(Id.Empty, false);
+                        return new HeaderResult<Id?>(Id.Empty, true);
                     }
 
                     return new HeaderResult<Id?>(new Id(messageId!), true);
