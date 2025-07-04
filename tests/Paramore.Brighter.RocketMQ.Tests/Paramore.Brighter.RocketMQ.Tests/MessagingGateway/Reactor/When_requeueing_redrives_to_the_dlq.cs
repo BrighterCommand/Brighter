@@ -55,7 +55,7 @@ public class MessageProducerDlqTests
         _channel.Purge();
         _sender.Send(_message);
         Message receivedMessage;
-        for (var i = 0; i < 16; i++)
+        for (var i = 0; i < 32; i++)
         {
             receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             _channel.Requeue(receivedMessage);

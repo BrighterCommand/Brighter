@@ -318,7 +318,8 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
            return false;
        }
         
-       consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
+       // Waiting for next RocketMQ C# version, due an issue on ChangeInvisibleDuration  
+       // consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
        return true;
     }
 
