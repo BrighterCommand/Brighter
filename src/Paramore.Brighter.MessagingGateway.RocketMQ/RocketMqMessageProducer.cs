@@ -9,14 +9,18 @@ using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
-public class RocketMessageProducer(
+/// <summary>
+/// RocketMQ message producer implementation for Brighter.
+/// Integrates RocketMQ's producer group pattern and transactional message support.
+/// </summary>
+public class RocketMqMessageProducer(
     RocketMessagingGatewayConnection connection,
     Producer producer,
-    RocketPublication publication)
+    RocketMqPublication mqPublication)
     : IAmAMessageProducerSync, IAmAMessageProducerAsync
 {
     /// <inheritdoc />
-    public Publication Publication => publication;
+    public Publication Publication => mqPublication;
 
     /// <inheritdoc />
     public Activity? Span { get; set; }
@@ -42,7 +46,7 @@ public class RocketMessageProducer(
     {
         var builder = new Org.Apache.Rocketmq.Message.Builder()
             .SetBody(message.Body.Bytes)
-            .SetTopic(publication.Topic!.Value);
+            .SetTopic(mqPublication.Topic!.Value);
 
         builder.AddProperty(HeaderNames.MessageId, message.Id)
             .AddProperty(HeaderNames.Topic, message.Header.Topic.Value)
@@ -88,6 +92,22 @@ public class RocketMessageProducer(
         {
             builder.AddProperty(HeaderNames.ReplyTo, message.Header.ReplyTo);
         }
+
+        if (!string.IsNullOrEmpty(message.Header.DataRef))
+        {
+            builder.AddProperty(HeaderNames.DataRef, message.Header.DataRef);
+        }
+        
+        if (delay.HasValue && delay.Value != TimeSpan.Zero)
+        {
+            builder
+                .SetDeliveryTimestamp(connection.TimerProvider.GetUtcNow().Add(delay.Value).UtcDateTime);
+        }
+        
+        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        {
+            builder.SetMessageGroup(message.Header.PartitionKey);
+        }
         
         foreach (var (key, val) in message.Header.Bag
                      .Where(x => x.Key != HeaderNames.Keys && x.Key != HeaderNames.Tag))
@@ -110,26 +130,14 @@ public class RocketMessageProducer(
         {
             builder.SetKeys(message.Id);
         }
-
-
+        
         if (message.Header.Bag.TryGetValue(HeaderNames.Tag, out var tag) && tag is string tagString)
         {
             builder.SetTag(tagString);
         }
-        else if (!string.IsNullOrEmpty(publication.Tag))
+        else if (!string.IsNullOrEmpty(mqPublication.Tag))
         {
-            builder.SetTag(publication.Tag);
-        }
-        
-        if (delay.HasValue && delay.Value != TimeSpan.Zero)
-        {
-            builder
-                .SetDeliveryTimestamp(connection.TimerProvider.GetUtcNow().Add(delay.Value).UtcDateTime);
-        }
-        
-        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
-        {
-            builder.SetMessageGroup(message.Header.PartitionKey);
+            builder.SetTag(mqPublication.Tag);
         }
         
         await producer.Send(builder.Build());

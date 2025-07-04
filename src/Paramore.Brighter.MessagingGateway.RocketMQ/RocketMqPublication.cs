@@ -4,7 +4,7 @@
 /// Represents a RocketMQ message publication configuration for Brighter integration.
 /// This class provides basic message attributes like tag for topic categorization.
 /// </summary>
-public class RocketPublication : Publication
+public class RocketMqPublication : Publication
 {
     /// <summary>
     /// Gets or sets the message tag for filtering in RocketMQ topics.
@@ -18,14 +18,14 @@ public class RocketPublication : Publication
 /// Implements RocketMQ's low-latency messaging pattern with type safety.
 /// </summary>
 /// <typeparam name="T">The request type, must implement Brighter's IRequest interface</typeparam>
-public class RocketPublication<T> : RocketPublication
+public class RocketMqPublication<T> : RocketMqPublication
     where T : class, IRequest
 {
     /// <summary>
     /// Initializes a new instance of the RocketPublication class.
     /// Sets the request type for message routing and handler resolution.
     /// </summary>
-    public RocketPublication()
+    public RocketMqPublication()
     {
         RequestType = typeof(T);
     }

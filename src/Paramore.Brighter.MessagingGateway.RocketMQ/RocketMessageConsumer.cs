@@ -88,6 +88,7 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
         var type = ReadType(message);
         var dateSchema = ReadDataSchema(message);
         var subject = ReadSubject(message);
+        var dataRef = ReadDataRef(message);
         
         var header = new MessageHeader(
             messageId: messageId,
@@ -106,7 +107,8 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
             delayed: delay
         )
         {
-            SpecVersion = specVersion
+            DataRef = dataRef,
+            SpecVersion = specVersion,
         };
 
         foreach (var property in message.Properties)
@@ -121,7 +123,13 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
         return new Message(header, body);
 
         static RoutingKey ReadTopic(MessageView message) => new(message.Topic);
-        static string ReadMessageId(MessageView message) => message.Properties.TryGetValue(HeaderNames.MessageId, out var messageId) ? messageId : message.MessageId;
+        static Id ReadMessageId(MessageView message)
+        {
+            return message.Properties.TryGetValue(HeaderNames.MessageId, out var messageId)
+                ? Id.Create(messageId)
+                : Id.Create(message.MessageId);
+        }
+
         static DateTimeOffset ReadTimeStamp(MessageView message)
         {
             if (message.Properties.TryGetValue(HeaderNames.TimeStamp, out var timestamp) 
@@ -137,11 +145,12 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
 
             return DateTimeOffset.UtcNow;
         }
+        
         static MessageType ReadMessageType(MessageView message)
         {
-            if (message.Properties.TryGetValue(HeaderNames.MessageType, out var type))
+            if (message.Properties.TryGetValue(HeaderNames.MessageType, out var type) && Enum.TryParse<MessageType>(type, true, out var messageType))
             {
-                return Enum.TryParse<MessageType>(type, true, out var messageType) ? messageType : MessageType.MT_UNACCEPTABLE;
+                return messageType;
             }
 
             return MessageType.MT_EVENT;
@@ -265,6 +274,17 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
         static string? ReadSubject(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.Subject);
+            if (!string.IsNullOrEmpty(val))
+            {
+                return val;
+            }
+
+            return null;
+        }
+        
+        static string? ReadDataRef(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.DataRef);
             if (!string.IsNullOrEmpty(val))
             {
                 return val;

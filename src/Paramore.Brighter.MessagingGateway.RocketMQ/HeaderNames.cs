@@ -17,7 +17,7 @@ public static class HeaderNames
     /// The message tag 
     /// </summary>
     /// <remarks>
-    /// If not set, Brighter will set the tag in the <see cref="RocketPublication.Tag"/>
+    /// If not set, Brighter will set the tag in the <see cref="RocketMqPublication.Tag"/>
     /// </remarks>
     public const string Tag = "Brighter-RocketMQ-Tag";
     
@@ -90,4 +90,9 @@ public static class HeaderNames
     /// The data schema
     /// </summary>
     public const string DataSchema = "CE_dataschema";
+
+    /// <summary>
+    /// The data ref
+    /// </summary>
+    public const string DataRef = "CE_dataref";
 }

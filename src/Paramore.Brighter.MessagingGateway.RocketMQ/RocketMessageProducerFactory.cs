@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// Factory class for creating RocketMQ message producers in Brighter.
 /// Implements RocketMQ's producer group pattern and transactional message support.
 /// </summary>
-public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketPublication> publications) : IAmAMessageProducerFactory
+public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketMqPublication> publications) : IAmAMessageProducerFactory
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageProducerFactory>();
     
@@ -37,7 +37,7 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
                 Log.CreateTopicIsNotSupported(s_logger, publication.Topic);
             }
             
-            producers[publication.Topic] = new RocketMessageProducer(connection, rocketProducer, publication);
+            producers[publication.Topic] = new RocketMqMessageProducer(connection, rocketProducer, publication);
         }
         return producers;
     }

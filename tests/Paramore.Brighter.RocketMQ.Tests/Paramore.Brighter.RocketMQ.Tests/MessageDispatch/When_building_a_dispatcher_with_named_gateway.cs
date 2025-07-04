@@ -4,6 +4,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
+using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
@@ -38,12 +39,7 @@ public class DispatchBuilderWithNamedGateway : IDisposable
             }
         };
 
-        var connection = new RocketMessagingGatewayConnection(new ClientConfig.Builder()
-            .SetEndpoints("localhost:8081")
-            .EnableSsl(false)
-            .SetRequestTimeout(TimeSpan.FromSeconds(10))
-            .Build());
-
+        var connection = GatewayFactory.CreateConnection(); 
         var consumerFactory = new RocketMessageConsumerFactory(connection);
 
         var container = new ServiceCollection();
@@ -65,21 +61,20 @@ public class DispatchBuilderWithNamedGateway : IDisposable
             )
             .MessageMappers(messageMapperRegistry, null, new EmptyMessageTransformerFactory(), null)
             .ChannelFactory(new RocketMqChannelFactory(consumerFactory))
-            .Subscriptions(new []
-            {
-                new RocketSubscription<MyEvent>(
+            .Subscriptions([
+                new RocketMqSubscription<MyEvent>(
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
                     new RoutingKey("bt_named_gateway_dispatch"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200)),
-                new RocketSubscription<MyEvent>(
+                new RocketMqSubscription<MyEvent>(
                     new SubscriptionName("bar"),
                     new ChannelName("alice"),
                     new RoutingKey("bt_named_gateway_dispatch"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
-            })
+            ])
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
 

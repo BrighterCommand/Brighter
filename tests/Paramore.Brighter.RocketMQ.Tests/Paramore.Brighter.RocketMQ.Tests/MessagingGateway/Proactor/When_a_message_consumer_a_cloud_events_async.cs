@@ -1,5 +1,6 @@
 ﻿using Org.Apache.Rocketmq;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
+using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
@@ -14,42 +15,19 @@ public class BufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
 
     public BufferedConsumerCloudEventsTestsAsync()
     {
-        var connection = new RocketMessagingGatewayConnection(new ClientConfig.Builder()
-            .SetEndpoints("localhost:8081")
-            .EnableSsl(false)
-            .SetRequestTimeout(TimeSpan.FromSeconds(10))
-            .Build());
-        
-        var publication = new RocketPublication { Topic = "bt_mc_cloudevents_async" };
-        
-        var consumer = new SimpleConsumer.Builder()
-            .SetClientConfig(connection.ClientConfig)
-            .SetConsumerGroup(Guid.NewGuid().ToString())
-            .SetAwaitDuration(TimeSpan.FromMinutes(1))
-            .SetSubscriptionExpression(new Dictionary<string, FilterExpression>
-            {
-                ["bt_mc_cloudevents_async"] = new("*")
-            })
-            .Build()
-            .GetAwaiter().GetResult();
-
-        var producer = new Producer.Builder()
-            .SetClientConfig(connection.ClientConfig)
-            .SetMaxAttempts(connection.MaxAttempts)
-            .SetTopics("bt_mc_cloudevents_async")
-            .Build()
-            .GetAwaiter().GetResult();
-
+        var connection = GatewayFactory.CreateConnection(); 
+        var publication = new RocketMqPublication { Topic = "bt_mc_cloudevents_async" };
+        var consumer = GatewayFactory.CreateSimpleConsumer(connection, publication).GetAwaiter().GetResult();
+        var producer = GatewayFactory.CreateProducer(connection,  publication).GetAwaiter().GetResult();
 
         _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30));
-        _producer = new RocketMessageProducer(connection, producer, publication);
-         
+        _producer = new RocketMqMessageProducer(connection, producer, publication);
     }
 
     [Fact]
     public async Task When_uses_cloud_events_async()
     {
-        
+        await _consumer.PurgeAsync();
         //Post one more than batch size messages
         var messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND)
