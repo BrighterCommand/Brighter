@@ -16,25 +16,26 @@ Paramore.Brighter implements the **Command Dispatcher** and **Command Processor*
 At its heart, Brighter treats everything as a request that flows through a pipeline:
 - **Commands** - Point-to-point imperative instructions (`Send`)
 - **Events** - Pub-sub notifications (`Publish`) 
-- **Queries** - Request-reply synchronous calls (`Call`)
-- **Messages** - Asynchronous task queue operations (`Post`)
+- **RPC** - Request-reply synchronous calls (`Call`)
+- **Messages** - Asynchronous task queue operations (`Post` and `Clear`)
 
 ### 2. Pipeline-Driven Architecture
 Every request flows through a pipeline of handlers:
 - Target handler contains business logic
 - Middleware handlers provide cross-cutting concerns
-- Handlers are chained together using Chain of Responsibility pattern
-- Pipeline is built dynamically based on handler attributes
+- Handlers are chained together using the Chain of Responsibility pattern
+- The pipeline is built dynamically based on attributes placed on a handler
 
-### 3. Separation of In-Memory vs External Bus
-- **In-memory bus** - Direct handler invocation for local processing
-- **External bus** - Message-based communication via transports (RabbitMQ, AWS SQS, etc.)
+### 3. Separation of Direct vs. Bus
+- **Direct** - Direct handler invocation for local processing
+- **Bus** - Message-based communication via transports (RabbitMQ, AWS SQS, etc.)
 - **Outbox pattern** - Ensures transactional consistency for external messaging
+- **Inbox pattern** - Deduplicates mesages for external messaging
 
 ## Core Components
 
 ### CommandProcessor
-The `CommandProcessor` class is the central orchestrator that implements both Command Dispatcher and Command Processor patterns.
+The `CommandProcessor` class serves as the central orchestrator, implementing both the Command Dispatcher and Command Processor patterns.
 
 **Key responsibilities:**
 - Route requests to appropriate handlers
@@ -95,9 +96,9 @@ IHandleRequests <|-- "IHandleRequests<T>"
 ### Pipeline Builder
 The `PipelineBuilder<T>` constructs handler chains dynamically:
 
-1. **Target Handler Discovery** - Uses `IAmASubscriberRegistry` to find handler type for request
-2. **Attribute Analysis** - Reflects on handler method to find `RequestHandlerAttribute` decorations
-3. **Pipeline Assembly** - Creates chain based on attribute ordering and timing
+1. **Target Handler Discovery** - Uses `IAmASubscriberRegistry` to find the handler type for the request
+2. **Attribute Analysis** - Reflects on the handler method to find `RequestHandlerAttribute` decorations
+3. **Pipeline Assembly** - Creates a chain based on attribute ordering and timing
 4. **Handler Instantiation** - Uses `IAmAHandlerFactory` to create handler instances
 
 ### Pipeline Flow Diagram
@@ -130,7 +131,7 @@ CP -> Client: Complete
 Handlers use attributes to declaratively add middleware to their pipeline:
 
 ```csharp
-public class MyCommandHandler : RequestHandler<MyCommand>
+public class MyCommandHandler: RequestHandler<MyCommand>
 {
     [RequestLogging(1, HandlerTiming.Before)]
     [Retry(2, HandlerTiming.Before)] 
@@ -286,9 +287,9 @@ public void Publish<T>(T @event, RequestContext? requestContext = null)
 - Multiple handlers (pub-sub pattern)
 - Parallel execution using `Parallel.ForEach`
 - Exception aggregation - failures don't stop other handlers
-- Each handler gets own pipeline with middleware
+- Each handler gets its own pipeline with middleware
 - In-memory processing only
-- Telemetry spans linked across all handlers
+- Telemetry spans are linked across all handlers
 
 ### Post - Asynchronous Messaging
 ```plantuml
@@ -320,7 +321,7 @@ note right: Post = DepositPost + ClearOutbox\nin single operation\nfor fire-and-
 **Implementation Details:**
 ```csharp
 public void Post<TRequest>(TRequest request, RequestContext? requestContext = null, 
-    Dictionary<string, object>? args = null) where TRequest : class, IRequest
+    Dictionary<string, object>? args = null) where TRequest: class, IRequest
 {
     // Post is implemented as immediate DepositPost + ClearOutbox
     var messageId = CallDepositPost(request, null, requestContext, args, null, s_transactionType);
@@ -348,10 +349,10 @@ private Id CallDepositPost<TRequest>(TRequest request, ...)
 - Message transformation via `IAmAMessageMapper<T>`
 - Outbox pattern for reliability and transactional consistency
 - Supports external transports (RabbitMQ, SQS, etc.)
-- Transform pipeline for compression, encryption, etc.
+- Transform pipeline for compression, encryption, and other operations.
 - Immediate dispatch (combines DepositPost + ClearOutbox)
 
-### Call - Request-Reply Pattern  
+### Call - RPC Pattern  
 ```plantuml
 @startuml
 participant Client
@@ -376,15 +377,14 @@ else External bus configured
 end
 CP -> Client: Return Response
 
-note right: Can work both in-memory\nand across service boundaries\nvia external messaging
 @enduml
 ```
 
 **Implementation Details:**
-The Call operation supports both in-memory and external bus scenarios:
+The Call operation supports a blocking RPC-style interaction:
 
 ```csharp
-// In-memory call - similar to Send but returns response
+// Similar to Post but returns a response
 TResponse? result = commandProcessor.Call<MyQuery, MyResponse>(query);
 
 // External call setup requires reply channels
@@ -432,8 +432,8 @@ CP -> Client: Return messageId
 
 **Implementation Flow:**
 1. **Message Mapping** - Convert domain object to transport message via `IAmAMessageMapper<T>`
-2. **Transform Pipeline** - Apply any configured transforms (compression, encryption, etc.)
-3. **Transactional Storage** - Store message in outbox within same transaction as domain changes
+2. **Transform Pipeline** - Apply any configured transforms (e.g., compression, encryption, etc.)
+3. **Transactional Storage** - Store message in outbox within the same transaction as domain changes
 4. **Return Message ID** - Client gets ID for later use with `ClearOutbox`
 
 **Key Implementation Details:**
@@ -459,9 +459,9 @@ public Id DepositPost<TRequest>(TRequest request,
 
 **Bulk Operations:**
 Brighter supports bulk `DepositPost` for efficiency:
-- Batches multiple requests into single outbox transaction
+- Batches multiple requests into a single outbox transaction
 - Reduces database round trips
-- Maintains transactional consistency across entire batch
+- Maintains transactional consistency across the entire batch
 
 ### ClearOutbox Operation
 The `ClearOutbox` method implements the second phase - actual message dispatch:
@@ -495,9 +495,9 @@ CP -> Client: Complete
 public void ClearOutbox(Id[] ids, RequestContext? requestContext = null,
     Dictionary<string, object>? args = null)
 {
-    // Delegate to outbox mediator which handles:
-    // 1. Retrieve messages from outbox by ID
-    // 2. Route each message to appropriate producer
+    // Delegate to the outbox mediator, which handles:
+    // 1. Retrieve messages fromthe  outbox by ID
+    // 2. Route each message to the appropriate producer
     // 3. Send via external transport
     // 4. Mark as dispatched on success
     s_mediator!.ClearOutbox(ids, context, args);
@@ -505,32 +505,32 @@ public void ClearOutbox(Id[] ids, RequestContext? requestContext = null,
 ```
 
 **Key aspects:**
-- **Message Retrieval** - Gets specific messages by ID from Outbox
-- **Producer Selection** - Routes to appropriate producer based on message topic/type
+- **Message Retrieval** - Gets specific messages by ID from the Outbox
+- **Producer Selection** - Routes to the appropriate producer based on message topic/type
 - **Transport Dispatch** - Sends via configured external transport (RabbitMQ, SQS, etc.)
 - **State Management** - Marks messages as dispatched to prevent re-sending
-- **Error Handling** - Failed messages remain in outbox for retry
+- **Error Handling** - Failed messages remain in the outbox for retry
 
 ### Transactional Integration
 
 **Database Transaction Example:**
 ```csharp
 // Within your application service/command handler:
-using var transaction = dbContext.Database.BeginTransaction();
+using var transaction = transactionProvider.BeginTransaction();
 try
 {
     // 1. Modify your domain entities
     customer.UpdateEmail(newEmail);
     dbContext.SaveChanges();
     
-    // 2. Store outbound events in same transaction
+    // 2. Store outbound events in the same transaction
     var @event = new CustomerEmailChanged(customer.Id, newEmail);
     var messageId = commandProcessor.DepositPost(@event, transactionProvider);
     
     // 3. Commit both changes atomically
     transaction.Commit();
     
-    // 4. Dispatch events after successful commit
+    // 4. Dispatch events after a successful commit
     commandProcessor.ClearOutbox([messageId]);
 }
 catch
