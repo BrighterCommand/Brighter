@@ -41,13 +41,13 @@ public class RmqMessageProducerSendMessageQuorumTestsAsync : IDisposable, IAsync
 
     public RmqMessageProducerSendMessageQuorumTestsAsync()
     {
-        var messageId = Guid.NewGuid().ToString();
+        var messageId = Id.Random;
         var topic = new RoutingKey(Guid.NewGuid().ToString());
         var messageType = MessageType.MT_COMMAND;
         var source = new Uri("http://testing.example");
         var type = "test-type";
         var timestamp = DateTimeOffset.UtcNow;
-        var correlationId = Guid.NewGuid().ToString();
+        var correlationId = Id.Random;
         var replyTo = new RoutingKey("reply-queue");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var handledCount = 5;
@@ -94,16 +94,15 @@ public class RmqMessageProducerSendMessageQuorumTestsAsync : IDisposable, IAsync
             isDurable: true, // Required for quorum queues
             highAvailability: false, // Not supported for quorum queues
             queueType: QueueType.Quorum);
-
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic), isDurable: true, queueType: QueueType.Quorum)
-            .CreateAsync()
-            .GetAwaiter()
-            .GetResult();
     }
 
     [Fact]
     public async Task When_posting_a_message_via_the_messaging_gateway_with_quorum_queue()
     {
+        //we need to do this to create the queue 
+        await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100)); 
+        
+        // Send the message
         await _messageProducer.SendAsync(_message);
 
         // Give quorum queue a moment to become consistent across replicas

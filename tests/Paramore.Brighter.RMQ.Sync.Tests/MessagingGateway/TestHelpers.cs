@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway
 {
 
     internal sealed class QueueFactory
