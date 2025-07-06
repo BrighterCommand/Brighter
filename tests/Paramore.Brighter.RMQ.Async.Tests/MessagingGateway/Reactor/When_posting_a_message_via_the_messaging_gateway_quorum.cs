@@ -26,6 +26,7 @@ using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.Observability;
 using Xunit;
@@ -49,7 +50,7 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
         var timestamp = DateTimeOffset.UtcNow;
         var correlationId = Guid.NewGuid().ToString();
         var replyTo = new RoutingKey("reply-queue");
-        var contentType = new ContentType(MediaTypeNames.Text.Plain);
+        var contentType = new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         var handledCount = 5;
         var dataSchema = new Uri("http://schema.example");
         var subject = "test-subject";
@@ -77,7 +78,7 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
                 traceParent: traceParent,
                 traceState: traceState,
                 baggage: baggage),
-            new MessageBody("test content"));
+            new MessageBody("{\"test\": \"json content\"}"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -95,15 +96,15 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
             highAvailability: false, // Not supported for quorum queues
             queueType: QueueType.Quorum);
 
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic), isDurable: true, queueType: QueueType.Quorum)
-            .CreateAsync()
-            .GetAwaiter()
-            .GetResult();
     }
 
     [Fact]
     public void When_posting_a_message_via_the_messaging_gateway_with_quorum_queue()
     {
+        //we need to do this to create the queue 
+         _messageConsumer.Receive(TimeSpan.FromMilliseconds(100)); 
+        
+        // Send the message
         _messageProducer.Send(_message);
 
         // Give quorum queue a moment to become consistent across replicas
