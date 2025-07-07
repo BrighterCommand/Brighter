@@ -70,12 +70,14 @@ public class DispatchBuilderTestsAsync : IDisposable
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
                     new RoutingKey("bt_building_dispatch_async"),
+                    consumerGroup: Guid.NewGuid().ToString(),
                     messagePumpType: MessagePumpType.Proactor,
                     timeOut: TimeSpan.FromMilliseconds(200)),
                 new RocketMqSubscription<MyEvent>(
                     new SubscriptionName("bar"),
                     new ChannelName("alice"),
                     new RoutingKey("bt_building_dispatch_async"),
+                    consumerGroup: Guid.NewGuid().ToString(),
                     messagePumpType: MessagePumpType.Proactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             ])

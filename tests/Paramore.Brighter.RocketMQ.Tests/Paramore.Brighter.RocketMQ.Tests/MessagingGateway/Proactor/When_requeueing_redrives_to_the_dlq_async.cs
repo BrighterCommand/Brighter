@@ -30,6 +30,7 @@ public class MessageProducerDlqTestsAsync
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             routingKey: routingKey,
+            consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create,
             receiveMessageTimeout: TimeSpan.FromSeconds(1)

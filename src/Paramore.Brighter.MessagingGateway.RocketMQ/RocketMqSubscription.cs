@@ -77,7 +77,7 @@ public class RocketSubscription : Subscription
         noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
         makeChannels, emptyChannelDelay, channelFailureDelay)
     {
-        ConsumerGroup = consumerGroup ?? channelName?.Value ?? string.Empty;
+        ConsumerGroup = consumerGroup ?? string.Empty;
         ReceiveMessageTimeout = receiveMessageTimeout ?? TimeSpan.FromMinutes(1);
         InvisibilityTimeout = invisibilityTimeout ?? TimeSpan.FromSeconds(30);
         Filter = filter ?? new FilterExpression("*");

@@ -66,12 +66,14 @@ public class DispatchBuilderWithNamedGateway : IDisposable
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
                     new RoutingKey("bt_named_gateway_dispatch"),
+                    consumerGroup: Guid.NewGuid().ToString(),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200)),
                 new RocketMqSubscription<MyEvent>(
                     new SubscriptionName("bar"),
                     new ChannelName("alice"),
                     new RoutingKey("bt_named_gateway_dispatch"),
+                    consumerGroup: Guid.NewGuid().ToString(),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             ])

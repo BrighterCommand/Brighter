@@ -32,6 +32,7 @@ public class MessageProducerSendAsyncTests  : IAsyncDisposable
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: publication.Topic!,
+            consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Proactor
         );
 
