@@ -37,14 +37,9 @@ public interface ISpecification<TData>
     ISpecification<TData> OrNot(ISpecification<TData> other);
 }
 
-public class Specification<T> : ISpecification<T> 
+public class Specification<T>(Func<T, bool> expression) : ISpecification<T>
 {
-    private readonly Func<T, bool> _expression;
-
-    public Specification(Func<T, bool> expression)
-    {
-        _expression = expression ?? throw new ArgumentNullException(nameof(expression));
-    }
+    private readonly Func<T, bool> _expression = expression ?? throw new ArgumentNullException(nameof(expression));
 
     public bool IsSatisfiedBy(T entity)
     {
