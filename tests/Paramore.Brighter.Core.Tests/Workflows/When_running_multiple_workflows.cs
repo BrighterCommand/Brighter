@@ -25,15 +25,14 @@ public class MediatorMultipleWorkflowFlowTests
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
-        CommandProcessor commandProcessor = null;
+        CommandProcessor? commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
         commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
-        var firstWorkflowData= new WorkflowTestData();
-        firstWorkflowData.Bag["MyValue"] = "Test";
-        
+        var firstWorkflowData= new WorkflowTestData { Bag = { ["MyValue"] = "Test" } };
+
         _firstJob = new Job<WorkflowTestData>(firstWorkflowData) ;
         
         var firstStep = new Sequential<WorkflowTestData>(
@@ -57,6 +56,8 @@ public class MediatorMultipleWorkflowFlowTests
             () => { _jobTwoCompleted = true; },
             null
         );
+        
+        _secondJob.InitSteps(secondStep);
         
         InMemoryStateStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
