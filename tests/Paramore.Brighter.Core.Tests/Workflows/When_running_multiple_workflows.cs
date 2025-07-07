@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -30,7 +28,7 @@ public class MediatorMultipleWorkflowFlowTests
         CommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var firstWorkflowData= new WorkflowTestData();
@@ -90,11 +88,11 @@ public class MediatorMultipleWorkflowFlowTests
             _testOutputHelper.WriteLine(e.ToString());
         }
         
-        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
-        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();
-        _firstJob.State.Should().Be(JobState.Done);
-        _secondJob.State.Should().Be(JobState.Done);
-        _jobOneCompleted.Should().BeTrue();
-        _jobTwoCompleted.Should().BeTrue();
+        Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "Test");
+        Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "TestTwo");
+        Assert.Equal(JobState.Done, _firstJob.State);
+        Assert.Equal(JobState.Done, _secondJob.State);
+        Assert.True(_jobOneCompleted);
+        Assert.True(_jobTwoCompleted);
     }
 }

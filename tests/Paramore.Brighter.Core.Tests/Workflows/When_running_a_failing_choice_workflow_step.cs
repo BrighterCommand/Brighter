@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -38,7 +37,7 @@ public class MediatorFailingChoiceFlowTests
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
@@ -100,10 +99,11 @@ public class MediatorFailingChoiceFlowTests
             _testOutputHelper.WriteLine(e.ToString());
         }
 
-        _stepCompletedOne.Should().BeTrue();
-        _stepCompletedTwo.Should().BeFalse();
-        _stepCompletedThree.Should().BeTrue();
-        MyOtherCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Fail").Should().BeTrue();
-        MyCommandHandlerAsync.ReceivedCommands.Any().Should().BeFalse();
+        // Assert
+        Assert.True(_stepCompletedOne);
+        Assert.False(_stepCompletedTwo);
+        Assert.True(_stepCompletedThree);
+        Assert.Contains(MyOtherCommandHandlerAsync.ReceivedCommands, c => c.Value == "Fail");
+        Assert.False(MyCommandHandlerAsync.ReceivedCommands.Any());
     }
 }

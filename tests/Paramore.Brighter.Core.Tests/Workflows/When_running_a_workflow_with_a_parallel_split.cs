@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -20,7 +17,6 @@ public class MediatorParallelSplitFlowTests
     private readonly Job<WorkflowTestData> _job;
     private bool _firstBranchFinished;
     private bool _secondBranchFinished;
-    private readonly InMemoryJobChannel<WorkflowTestData> _channel;
 
     public MediatorParallelSplitFlowTests(ITestOutputHelper testOutputHelper)
     {
@@ -31,7 +27,7 @@ public class MediatorParallelSplitFlowTests
         CommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();
@@ -68,14 +64,14 @@ public class MediatorParallelSplitFlowTests
         _job.InitSteps(parallelSplit);
         
         InMemoryStateStoreAsync store = new();
-        _channel = new InMemoryJobChannel<WorkflowTestData>();
+        InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(
-            _channel,
+            channel,
             store
         );
         
-        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
+        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
     }
     
     [Fact]
@@ -97,10 +93,10 @@ public class MediatorParallelSplitFlowTests
             _testOutputHelper.WriteLine(e.ToString());
         }
         
-        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
-        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();
-        _firstBranchFinished.Should().BeTrue();
-        _secondBranchFinished.Should().BeTrue();
-        _job.State.Should().Be(JobState.Done); 
+        Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "Test");
+        Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "TestTwo");
+        Assert.True(_firstBranchFinished);
+        Assert.True(_secondBranchFinished);
+        Assert.Equal(JobState.Done, _job.State);
     }
 }

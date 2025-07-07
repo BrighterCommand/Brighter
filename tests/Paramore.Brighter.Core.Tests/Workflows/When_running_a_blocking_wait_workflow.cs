@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
@@ -28,8 +29,8 @@ public class MediatorWaitStepFlowTests
 
         CommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
-
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();

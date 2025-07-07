@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -29,7 +26,7 @@ public class MediatorTwoStepFlowTests
         CommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();
@@ -84,9 +81,9 @@ public class MediatorTwoStepFlowTests
             _testOutputHelper.WriteLine(e.ToString());
         }
         
-        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
-        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();
-        _job.State.Should().Be(JobState.Done);
-        _stepsCompleted.Should().BeTrue();
+        Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "Test");
+        Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "TestTwo");
+        Assert.Equal(JobState.Done, _job.State);
+        Assert.True(_stepsCompleted);
     }
 }

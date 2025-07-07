@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal.Transform;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -39,7 +36,7 @@ public class MediatorRobustReplyFaultStepFlowTests
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
@@ -93,13 +90,13 @@ public class MediatorRobustReplyFaultStepFlowTests
             _testOutputHelper.WriteLine(e.ToString());
         }
         
-        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
-        MyFaultHandlerAsync.ReceivedFaults.Any(e => e.Value == "Test").Should().BeTrue();
-        MyEventHandlerAsync.ReceivedEvents.Should().BeEmpty();
-        _job.Data.Bag["MyValue"].Should().Be("Test");    
-        _job.Data.Bag["MyFault"].Should().Be("Test");
-        _job.State.Should().Be(JobState.Done);
-        _stepCompleted.Should().BeTrue();
-        _stepFaulted.Should().BeFalse();
+        Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "Test");
+        Assert.Contains(MyFaultHandlerAsync.ReceivedFaults, e => e.Value == "Test");
+        Assert.Empty(MyEventHandlerAsync.ReceivedEvents);
+        Assert.Equal("Test", _job.Data.Bag["MyValue"]);
+        Assert.Equal("Test", _job.Data.Bag["MyFault"]);
+        Assert.Equal(JobState.Done, _job.State);
+        Assert.True(_stepCompleted);
+        Assert.False(_stepFaulted);
     }
 }

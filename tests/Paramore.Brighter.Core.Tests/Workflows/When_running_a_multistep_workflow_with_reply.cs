@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -36,7 +35,7 @@ public class MediatorReplyMultiStepFlowTests
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
@@ -92,11 +91,11 @@ public class MediatorReplyMultiStepFlowTests
             _testOutputHelper.WriteLine(e.ToString());
         }
         
-        _stepCompletedOne.Should().BeTrue();
-        _stepCompletedTwo.Should().BeTrue();
-        
-        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
-        MyEventHandlerAsync.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
-        _job.State.Should().Be(JobState.Done);
+        Assert.True(_stepCompletedOne);
+        Assert.True(_stepCompletedTwo);
+
+        Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "Test");
+        Assert.Contains(MyEventHandlerAsync.ReceivedEvents, e => e.Value == "Test");
+        Assert.Equal(JobState.Done, _job.State);
     }
 }
