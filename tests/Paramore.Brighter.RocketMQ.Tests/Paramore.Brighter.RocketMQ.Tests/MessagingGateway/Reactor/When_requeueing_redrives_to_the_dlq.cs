@@ -30,6 +30,7 @@ public class MessageProducerDlqTests
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             routingKey: routingKey,
+            consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
         );

@@ -30,6 +30,7 @@ public class MessageProducerRequeueTests
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
+            consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
         );
