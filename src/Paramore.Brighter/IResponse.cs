@@ -36,10 +36,5 @@ namespace Paramore.Brighter
     /// </remarks>
     public interface IResponse : IRequest
     {
-        /// <summary>
-        /// Gets the correlation identifier that allows us to correlate request and response.
-        /// </summary>
-        /// <value>A <see cref="Guid"/> that matches the original request identifier.</value>
-        Guid CorrelationId { get; }
-  }
+    }
 }

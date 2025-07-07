@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Monitoring.Events
         DateTime eventTime,
         int timeElapsedMs,
         Exception? exception = null)
-        : Event(Guid.NewGuid())
+        : Event(Guid.NewGuid().ToString())
     {
         /// <summary>
         /// Any exception that was thrown when processing the handler pipeline

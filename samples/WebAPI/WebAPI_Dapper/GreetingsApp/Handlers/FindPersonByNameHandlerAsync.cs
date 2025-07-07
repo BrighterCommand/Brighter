@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -33,7 +34,10 @@ public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, 
             await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
         IEnumerable<Person> people =
             await connection.QueryAsync<Person>("select * from Person where name = @name", new { name = query.Name });
-        Person person = people.SingleOrDefault();
+        Person? person = people.SingleOrDefault();
+
+        if (person == null)
+            throw new InvalidOperationException($"Could not find person named {query.Name}");
 
         return new FindPersonResult(person);
     }
