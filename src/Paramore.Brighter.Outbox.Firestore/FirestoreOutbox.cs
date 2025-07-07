@@ -12,6 +12,7 @@ using Google.Cloud.Firestore.V1;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Firestore;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
@@ -22,7 +23,18 @@ using Value = Google.Cloud.Firestore.V1.Value;
 
 namespace Paramore.Brighter.Outbox.Firestore;
 
-public class FirestoreOutbox(FirestoreConfiguration configuration, InstrumentationOptions instrumentations = InstrumentationOptions.All) : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>
+/// <summary>
+/// Provides an implementation of the Brighter outbox pattern using Google Cloud Firestore.
+/// This class allows for reliable message sending by persisting messages to Firestore
+/// within a transaction before they are dispatched. It supports both synchronous
+/// and asynchronous operations.
+/// </summary>
+/// <remarks>
+/// This outbox ensures that messages are durably stored in Firestore as part of a
+/// transaction, preventing data loss in case of application failures before
+/// message dispatch.
+/// </remarks>
+public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>
 {
     private const string Dispatched = "Dispatched";
     
@@ -33,19 +45,28 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
     public void Add(Message message, RequestContext? requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<FirestoreTransaction>? transactionProvider = null)
     {
-        var dbAttributes = new Dictionary<string, string>()
+        var dbAttributes = new Dictionary<string, string>
         {
-            {"db.operation.parameter.message.id", message.Id}
+            ["db.operation.parameter.message.id"] = message.Id
         };
         
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Add, configuration.Collection, dbAttributes: dbAttributes),
+            new BoxSpanInfo(DbSystem.Firestore, 
+                configuration.Database,
+                BoxDbOperation.Add, 
+                configuration.Collection,
+                dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: instrumentations);
+            options: configuration.Instrumentation);
 
         try
         {
-            var write = new Write { Update = ToDocument(message), };
+            var write = new Write
+            {
+                Update = ToDocument(message),
+                CurrentDocument = new Precondition { Exists = false }
+            };
+            
             if (transactionProvider != null)
             {
                 var transaction = transactionProvider.GetTransaction();
@@ -73,20 +94,26 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
             message => message.Id.Value,
             message =>
             {
-                var dbAttributes = new Dictionary<string, string> { { "db.operation.parameter.message.id", message.Id } };
+                var dbAttributes = new Dictionary<string, string>
+                {
+                    ["db.operation.parameter.message.id"] = message.Id
+                };
 
                 return Tracer?.CreateDbSpan(
                     new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Add,
                         configuration.Collection,
                         dbAttributes: dbAttributes),
                         requestContext?.Span,
-                        options: instrumentations);
+                        options: configuration.Instrumentation);
             });
 
         try
         {
-
-            var writes = messages.Select(x => new Write { Update = ToDocument(x) });
+            var writes = messages.Select(message => new Write
+            {
+                Update = ToDocument(message), 
+                CurrentDocument = new Precondition { Exists = false }
+            });
 
             if (transactionProvider != null)
             {
@@ -114,21 +141,24 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
             id => id.Value,
             id =>
             {
-                var dbAttributes = new Dictionary<string, string> { { "db.operation.parameter.message.id", id.Value } };
+                var dbAttributes = new Dictionary<string, string>
+                {
+                    ["db.operation.parameter.message.id"] = id.Value
+                };
 
                 return Tracer?.CreateDbSpan(
                     new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Delete,
                         configuration.Collection,
                         dbAttributes: dbAttributes),
                     requestContext?.Span,
-                    options: instrumentations);
+                    options: configuration.Instrumentation);
             });
 
         try
         {
-            var writes = messageIds.Select(x => new Write
+            var writes = messageIds.Select(value => new Write
             {
-                Delete = GetDocumentName(x)
+                Delete = configuration.GetDocumentName(value)
             });   
         
             var request = new CommitRequest { Database = configuration.DatabasePath };
@@ -150,7 +180,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.DispatchedMessages, configuration.Collection),
             requestContext?.Span,
-            options: instrumentations);
+            options: configuration.Instrumentation);
 
         try
         {
@@ -216,12 +246,12 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Get, configuration.Collection, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: instrumentations);
+            options: configuration.Instrumentation);
 
         try
         {
             var client = configuration.CreateFirestoreClient();
-            var document = client.GetDocument(new GetDocumentRequest { Name = GetDocumentName(messageId) },
+            var document = client.GetDocument(new GetDocumentRequest { Name = configuration.GetDocumentName(messageId) },
                 CallSettings.FromExpiration(ToExpiration(outBoxTimeout)));
 
             return ToMessage(document);
@@ -235,23 +265,22 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
     /// <inheritdoc />
     public void MarkDispatched(Id id, RequestContext? requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
     {
-        var dbAttributes = new Dictionary<string, string>()
+        var dbAttributes = new Dictionary<string, string>
         {
-            {"db.operation.parameter.message.id", id.Value }
+            ["db.operation.parameter.message.id"] = id.Value
         };
         
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.MarkDispatched, configuration.Collection, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: instrumentations);
+            options: configuration.Instrumentation);
 
         try
         {
-
             var client = configuration.CreateFirestoreClient();
             var document = new Document
             {
-                Name = GetDocumentName(id),
+                Name = configuration.GetDocumentName(id),
                 Fields =
                 {
                     [Dispatched] = new Value
@@ -268,7 +297,9 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
                 {
                     new Write
                     {
-                        Update = document, UpdateMask = new DocumentMask { FieldPaths = { Dispatched } }
+                        Update = document, 
+                        UpdateMask = new DocumentMask { FieldPaths = { Dispatched } },
+                        CurrentDocument = new Precondition { Exists = true }
                     }
                 }
             });
@@ -336,32 +367,43 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
     public async Task AddAsync(Message message, RequestContext? requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<FirestoreTransaction>? transactionProvider = null, CancellationToken cancellationToken = default)
     {
-        var dbAttributes = new Dictionary<string, string>()
+        var dbAttributes = new Dictionary<string, string>
         {
-            {"db.operation.parameter.message.id", message.Id}
+            ["db.operation.parameter.message.id"] = message.Id
         };
         
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Add, configuration.Collection, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: instrumentations);
+            options: configuration.Instrumentation);
 
         try
         {
 
-            var write = new Write { Update = ToDocument(message), };
+            var write = new Write
+            {
+                Update = ToDocument(message),
+                CurrentDocument = new Precondition { Exists = false }
+            };
+            
             if (transactionProvider != null)
             {
-                var transaction = await transactionProvider.GetTransactionAsync(cancellationToken)
+                var transaction = await transactionProvider
+                    .GetTransactionAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
+                
                 transaction.Add(write);
             }
 
             var commit = new CommitRequest { Database = configuration.Database, Writes = { write } };
 
-            var client = configuration.CreateFirestoreClient();
+            var client = await configuration
+                .CreateFirestoreClientAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            
             await client
-                .CommitAsync(commit, CallSettings.FromCancellationToken(cancellationToken));
+                .CommitAsync(commit, CallSettings.FromCancellationToken(cancellationToken))
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
         finally
         {
@@ -379,23 +421,31 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
             message => message.Id.Value,
             message =>
             {
-                var dbAttributes = new Dictionary<string, string>() { { "db.operation.parameter.message.id", message.Id } };
+                var dbAttributes = new Dictionary<string, string>
+                {
+                    ["db.operation.parameter.message.id"] = message.Id
+                };
 
                 return Tracer?.CreateDbSpan(
                     new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Add,
                         configuration.Collection,
                         dbAttributes: dbAttributes),
                     requestContext?.Span,
-                    options: instrumentations);
+                    options: configuration.Instrumentation);
             });
         
         try
         {
-            var writes = messages.Select(x => new Write { Update = ToDocument(x) });
+            var writes = messages.Select(message => new Write
+            {
+                Update = ToDocument(message),
+                CurrentDocument = new Precondition { Exists = false }
+            });
 
             if (transactionProvider != null)
             {
-                var transaction = await transactionProvider.GetTransactionAsync(cancellationToken)
+                var transaction = await transactionProvider
+                    .GetTransactionAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
                 transaction.AddRange(writes);
             }
@@ -404,7 +454,10 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
                 var request = new CommitRequest { Database = configuration.DatabasePath };
                 request.Writes.AddRange(writes);
 
-                var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
+                var client = await configuration
+                    .CreateFirestoreClientAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                
                 await client
                     .CommitAsync(request, CallSettings.FromCancellationToken(cancellationToken))
                     .ConfigureAwait(ContinueOnCapturedContext);
@@ -424,24 +477,33 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
             id => id.Value,
             id =>
             {
-                var dbAttributes = new Dictionary<string, string> { { "db.operation.parameter.message.id", id.Value } };
+                var dbAttributes = new Dictionary<string, string>
+                {
+                    ["db.operation.parameter.message.id"] = id.Value
+                };
 
                 return Tracer?.CreateDbSpan(
                     new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Delete,
                         configuration.Collection,
                         dbAttributes: dbAttributes),
                     requestContext?.Span,
-                    options: instrumentations);
+                    options: configuration.Instrumentation);
             });
 
         try
         {
-            var writes = messageIds.Select(x => new Write { Delete = GetDocumentName(x) });
+            var writes = messageIds.Select(message => new Write
+            {
+                Delete = configuration.GetDocumentName(message),
+            });
 
             var request = new CommitRequest { Database = configuration.DatabasePath };
             request.Writes.AddRange(writes);
 
-            var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
+            var client = await configuration
+                .CreateFirestoreClientAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            
             await client
                 .CommitAsync(request)
                 .ConfigureAwait(ContinueOnCapturedContext);
@@ -459,7 +521,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.DispatchedMessages, configuration.Collection),
             requestContext?.Span,
-            options: instrumentations);
+            options: configuration.Instrumentation);
 
         try
         {
@@ -494,7 +556,10 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
                 Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
+            var client = await configuration
+                .CreateFirestoreClientAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            
             var messages = new List<Message>(pageSize);
 
             using var response = client.RunQuery(request);
@@ -515,22 +580,26 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
     public async Task<Message> GetAsync(Id messageId, RequestContext? requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
-        var dbAttributes = new Dictionary<string, string>()
+        var dbAttributes = new Dictionary<string, string>
         {
-            {"db.operation.parameter.message.id", messageId.Value }
+            ["db.operation.parameter.message.id"] = messageId.Value
         };
         
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Get, configuration.Collection, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: instrumentations);
+            options: configuration.Instrumentation);
 
         try
         {
 
-            var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
-            var document = await client.GetDocumentAsync(new GetDocumentRequest { Name = GetDocumentName(messageId) },
-                CallSettings.FromCancellationToken(cancellationToken));
+            var client = await configuration
+                .CreateFirestoreClientAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            
+            var document = await client
+                .GetDocumentAsync(new GetDocumentRequest { Name = configuration.GetDocumentName(messageId) }, CallSettings.FromCancellationToken(cancellationToken))
+                .ConfigureAwait(ContinueOnCapturedContext);
 
             return ToMessage(document);
         }
@@ -541,24 +610,24 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
     }
 
     /// <inheritdoc />
-    public async Task MarkDispatchedAsync(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
+    public async Task MarkDispatchedAsync(Id id, RequestContext? requestContext, DateTimeOffset? dispatchedAt = null,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
-        var dbAttributes = new Dictionary<string, string>()
+        var dbAttributes = new Dictionary<string, string>
         {
-            {"db.operation.parameter.message.id", id.Value }
+            ["db.operation.parameter.message.id"] = id.Value
         };
         
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.MarkDispatched, configuration.Collection, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: instrumentations);
+            options: configuration.Instrumentation);
 
         try
         {
             var document = new Document
             {
-                Name = GetDocumentName(id),
+                Name = configuration.GetDocumentName(id),
                 Fields =
                 {
                     [Dispatched] = new Value
@@ -569,7 +638,10 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
                 }
             };
 
-            var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
+            var client = await configuration
+                .CreateFirestoreClientAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            
             await client
                 .CommitAsync(new CommitRequest
                 {
@@ -578,7 +650,9 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
                     {
                         new Write
                         {
-                            Update = document, UpdateMask = new DocumentMask { FieldPaths = { Dispatched } }
+                            Update = document, 
+                            UpdateMask = new DocumentMask { FieldPaths = { Dispatched } },
+                            CurrentDocument = new Precondition { Exists = true}
                         }
                     }
                 })
@@ -591,7 +665,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
     }
 
     /// <inheritdoc />
-    public async Task MarkDispatchedAsync(IEnumerable<Id> ids, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
+    public async Task MarkDispatchedAsync(IEnumerable<Id> ids, RequestContext? requestContext, DateTimeOffset? dispatchedAt = null,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         ids = ids.ToList();
@@ -599,24 +673,26 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
             id => id.Value,
             id =>
             {
-                var dbAttributes = new Dictionary<string, string> { { "db.operation.parameter.message.id", id.Value } };
+                var dbAttributes = new Dictionary<string, string>
+                {
+                    ["db.operation.parameter.message.id"] = id.Value
+                };
 
                 return Tracer?.CreateDbSpan(
                     new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.MarkDispatched,
                         configuration.Collection,
                         dbAttributes: dbAttributes),
                     requestContext?.Span,
-                    options: instrumentations);
+                    options: configuration.Instrumentation);
             });
 
         try
         {
-            var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
             var writes = ids.Select(id => new Write
             {
                 Update = new Document
                 {
-                    Name = GetDocumentName(id),
+                    Name = configuration.GetDocumentName(id),
                     Fields =
                     {
                         [Dispatched] = new Value
@@ -631,6 +707,11 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
             
             var request = new CommitRequest { Database = configuration.DatabasePath };
             request.Writes.AddRange(writes);
+            
+            var client = await configuration
+                .CreateFirestoreClientAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            
             await client
                 .CommitAsync(request)
                 .ConfigureAwait(ContinueOnCapturedContext);
@@ -640,7 +721,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
             Tracer?.EndSpans(new ConcurrentDictionary<string, Activity>(spans.Where(x => x.Value != null)!));
         }
     }
-
+    
+    /// <inheritdoc />
     public async Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince, RequestContext requestContext, int pageSize = 100,
         int pageNumber = 1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
@@ -675,7 +757,10 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
             StructuredQuery = query
         };
         
-        var client = configuration.CreateFirestoreClient();
+        var client = await configuration
+            .CreateFirestoreClientAsync(cancellationToken)
+            .ConfigureAwait(ContinueOnCapturedContext);
+        
         var messages = new List<Message>(pageSize);
 
         using var response = client.RunQuery(request);
@@ -689,9 +774,6 @@ public class FirestoreOutbox(FirestoreConfiguration configuration, Instrumentati
 
     private static Expiration? ToExpiration(int outboxTimeout)
         => outboxTimeout == -1 ? null : Expiration.FromTimeout(TimeSpan.FromMilliseconds(outboxTimeout));
-
-    private string GetDocumentName(Id value)
-        => $"{configuration.CollectionPath}/{value.Value}";
 
     private Document ToDocument(Message message)
     {

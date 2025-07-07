@@ -1,17 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-      <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
-      <Nullable>enable</Nullable>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Paramore.Brighter.Firestore\Paramore.Brighter.Firestore.csproj" />
       <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="Google.Cloud.Firestore.V1" />
     </ItemGroup>
 
 </Project>

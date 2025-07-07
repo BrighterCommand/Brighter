@@ -10,8 +10,4 @@
       <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Google.Cloud.Firestore.V1" />
-    </ItemGroup>
-
 </Project>
