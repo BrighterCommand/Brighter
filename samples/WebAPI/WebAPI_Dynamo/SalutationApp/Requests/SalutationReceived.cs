@@ -7,7 +7,7 @@ namespace SalutationApp.Requests
     {
         public DateTimeOffset ReceivedAt { get; }
 
-        public SalutationReceived(DateTimeOffset receivedAt) : base(Guid.NewGuid())
+        public SalutationReceived(DateTimeOffset receivedAt) : base(Guid.NewGuid().ToString())
         {
             ReceivedAt = receivedAt;
         }

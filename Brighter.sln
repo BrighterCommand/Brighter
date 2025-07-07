@@ -315,6 +315,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutation_Sweeper", "sampl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.MsSql", "src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj", "{758EE237-C722-4A0A-908C-2D08C1E59025}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Mediator", "src\Paramore.Brighter.Mediator\Paramore.Brighter.Mediator.csproj", "{F00B137A-C187-4C33-A37B-22AD40B71600}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessagingGateway.RMQ.Sync", "src\Paramore.Brighter.MessagingGateway.RMQ.Sync\Paramore.Brighter.MessagingGateway.RMQ.Sync.csproj", "{A040750D-3EFB-4580-BF29-1C46FE1B3E5B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.RMQ.Sync.Tests", "tests\Paramore.Brighter.RMQ.Sync.Tests\Paramore.Brighter.RMQ.Sync.Tests.csproj", "{283D7ACD-50D9-4B36-93E0-E6AF3732456C}"
