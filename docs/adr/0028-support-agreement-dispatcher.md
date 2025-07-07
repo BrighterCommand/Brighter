@@ -18,7 +18,7 @@ If we want to support rules, one option is the [Specification Pattern](https://m
 
 ## Decision
 
-We will change CommandProcessor to support different routing strategies. We will define a new type, IAmARoutingStrategy to accept variation. We will lift out the existing strategy as TypebasedRoutingStrategy, and make that the default, so as to provide backwards compatibility. A user will be able to plug in new routing strategies. Initially, we will provide DynamicRoutingStrategy as an alternative, which will allow us to route messages based on the content of the request or some external state in the context. It will use the Specification Pattern to define the rules for routing.
+We will change CommandProcessor to support different routing strategies. We will define a new type, `IAmARoutingStrategy` to accept variation. We will lift out the existing strategy as `TypeRoutingStrategy`, and make that the default, so as to provide backwards compatibility. A user will be able to plug in new routing strategies. Initially, we will provide `DynamicRoutingStrategy` as an alternative, which will allow us to route messages based on the content of the request or some external state in the context. It will use the Specification Pattern to define the rules for routing.
 
 ## Consequences
 

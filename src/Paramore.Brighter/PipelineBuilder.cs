@@ -39,8 +39,9 @@ namespace Paramore.Brighter
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
 
         private readonly IAmASubscriberRegistry _subscriberRegistry;
-        private readonly IAmAHandlerFactorySync? _handlerFactorySync;
+        private readonly IAmAHandlerFactorySync? _syncHandlerFactory;
         private readonly InboxConfiguration? _inboxConfiguration;
+        private readonly IAmAnInterpreter _interpreter;
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
         private readonly List<IAmALifetime> _instanceScopes = new List<IAmALifetime>();
         //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
@@ -51,20 +52,34 @@ namespace Paramore.Brighter
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
         /// target handler which represent other filter steps in the pipeline
         /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry</param>
-        /// <param name="handlerFactorySync">Callback to the user code to create instances of handlers</param>
+        /// <param name="router">An <see cref="IAmARoutingStrategy"/> that tells us how we route requests to handlers</param>
+        /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry</param>
+        /// <param name="syncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
+            IAmARoutingStrategy router,
             IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactorySync handlerFactorySync,
+            IAmAHandlerFactorySync syncHandlerFactory,
             InboxConfiguration? inboxConfiguration = null) 
         {
             _subscriberRegistry = subscriberRegistry;
-            _handlerFactorySync = handlerFactorySync;
+            _syncHandlerFactory = syncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
+            
+            //we only have one router, so we can just cast to it, for now
+            _interpreter = router.CreateInterpreter(subscriberRegistry);
         }
 
+        /// <summary>
+        /// Used to build a pipeline of handlers from the target handler and the attributes on that
+        /// target handler which represent other filter steps in the pipeline
+        /// </summary>
+        /// <param name="router">An <see cref="IAmARoutingStrategy"/> that tells us how we route requests to handlers</param>
+        /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry</param>
+        /// <param name="asyncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
+        /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
+            IAmARoutingStrategy router,
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             InboxConfiguration? inboxConfiguration = null)
@@ -72,16 +87,28 @@ namespace Paramore.Brighter
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
+            
+            //we only have one router, so we can just cast to it, for now
+            _interpreter = router.CreateInterpreter(subscriberRegistry);
         }
         
+        /// <summary>
+        /// Builds a pipeline of synchronous handlers for the given <paramref name="requestContext"/>.
+        /// </summary>
+        /// <param name="requestContext">The <see cref="IRequestContext"/> for the pipeline. If multiple handlers are registered, a copy is made for each pipeline.</param>
+        /// <returns>
+        /// A <see cref="Pipelines{TRequest}"/> containing the constructed handler pipelines for the request type.
+        /// </returns>
+        /// <exception cref="NullReferenceException">Thrown if the synchronous handler factory is null.</exception>
+        /// <exception cref="ConfigurationException">Thrown if there is an error building the pipeline.</exception>
         public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
-            if(_handlerFactorySync is null)
+            if(_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
             
             try
             {
-                var observers = _subscriberRegistry.Get<TRequest>();
+                var observers = _interpreter.GetHandlers<TRequest>();
                 
                 var pipelines = new Pipelines<TRequest>();
                 
@@ -89,7 +116,7 @@ namespace Paramore.Brighter
                 {
                     var context = observers.Count() == 1 ? requestContext : requestContext.CreateCopy();
                     var instanceScope = GetSyncInstanceScope();
-                    var handler = (RequestHandler<TRequest>)_handlerFactorySync.Create(observer, instanceScope);
+                    var handler = (RequestHandler<TRequest>)_syncHandlerFactory.Create(observer, instanceScope);
                     var pipeline = BuildPipeline(handler, context, instanceScope);
                     pipeline.AddToLifetime(instanceScope);
                     
@@ -103,19 +130,63 @@ namespace Paramore.Brighter
                 throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
             }
         }
+        
+        /// <summary>
+        /// Builds a pipeline of asynchronous handlers for the given <paramref name="requestContext"/>.
+        /// </summary>
+        /// <param name="requestContext">The <see cref="IRequestContext"/> for the pipeline. If multiple handlers are registered, a copy is made for each pipeline.</param>
+        /// <param name="continueOnCapturedContext">Indicates whether to continue on the captured synchronization context for async handlers.</param>
+        /// <returns>
+        /// An <see cref="AsyncPipelines{TRequest}"/> containing the constructed async handler pipelines for the request type.
+        /// </returns>
+        /// <exception cref="NullReferenceException">Thrown if the async handler factory is null.</exception>
+        /// <exception cref="ConfigurationException">Thrown if there is an error building the pipeline.</exception>
+        public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
+        {
+            if(_asyncHandlerFactory is null)
+                throw new NullReferenceException("AsyncHandlerFactory is null");
+            
+            try
+            {
+                var observers = _interpreter.GetHandlers<TRequest>();
+
+                var pipelines = new AsyncPipelines<TRequest>();
+                
+                observers.Each(observer =>
+                {
+                    var context = observers.Count() == 1 ? requestContext : requestContext.CreateCopy();
+                    var instanceScope = GetAsyncInstanceScope();
+                    var handler = (RequestHandlerAsync<TRequest>)_asyncHandlerFactory.Create(observer, instanceScope);
+                    var pipeline = BuildAsyncPipeline(handler, context, instanceScope,
+                        continueOnCapturedContext);
+                    pipeline.AddToLifetime(instanceScope);
+                    
+                    pipelines.Add(pipeline);
+                });
+
+                return pipelines;
+            }
+            catch (Exception e) when(!(e is ConfigurationException))
+            {
+                throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
+            }
+        }
 
         /// <summary>
-        /// Clears any cached pipeline definitions. Mainly intended as a helper for testing where the
-        /// use of a static creates a shared fixture across tests (although in a production environment, shared
-        /// is what we are after). If your pipeline tests don't respond as expected to manipulation, this may be your
-        /// ally.
+        /// Clears any cached pipeline definitions.
         /// </summary>
+        /// <remarks>
+        /// Intended primarily for testing scenarios where static caches may cause shared state between tests.
+        /// </remarks>
         public static void ClearPipelineCache()
         {
             s_preAttributesMemento.Clear();
             s_postAttributesMemento.Clear();
         }
 
+        /// <summary>
+        /// Disposes all instance scopes created by this builder.
+        /// </summary>
         public void Dispose()
             => _instanceScopes.Each(s => s.Dispose());
 
@@ -160,39 +231,6 @@ namespace Paramore.Brighter
             AppendToPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
             Log.NewHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
-        }
-
-
-        public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
-        {
-            if(_asyncHandlerFactory is null)
-                throw new NullReferenceException("AsyncHandlerFactory is null");
-            
-            try
-            {
-                
-                var observers = _subscriberRegistry.Get<TRequest>();
-
-                var pipelines = new AsyncPipelines<TRequest>();
-                
-                observers.Each(observer =>
-                {
-                    var context = observers.Count() == 1 ? requestContext : requestContext.CreateCopy();
-                    var instanceScope = GetAsyncInstanceScope();
-                    var handler = (RequestHandlerAsync<TRequest>)_asyncHandlerFactory.Create(observer, instanceScope);
-                    var pipeline = BuildAsyncPipeline(handler, context, instanceScope,
-                        continueOnCapturedContext);
-                    pipeline.AddToLifetime(instanceScope);
-                    
-                    pipelines.Add(pipeline);
-                });
-
-                return pipelines;
-            }
-            catch (Exception e) when(!(e is ConfigurationException))
-            {
-                throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
-            }
         }
 
         private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(RequestHandlerAsync<TRequest> implicitHandler, IRequestContext requestContext, IAmALifetime instanceScope, bool continueOnCapturedContext)
@@ -294,7 +332,7 @@ namespace Paramore.Brighter
                 if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
-                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync!, requestContext).CreateRequestHandler(instanceScope);
+                        new HandlerFactory<TRequest>(attribute, _syncHandlerFactory!, requestContext).CreateRequestHandler(instanceScope);
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
                 }
@@ -356,7 +394,7 @@ namespace Paramore.Brighter
                 if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
-                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync!, requestContext)
+                        new HandlerFactory<TRequest>(attribute, _syncHandlerFactory!, requestContext)
                             .CreateRequestHandler(instanceScope);
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
@@ -417,10 +455,10 @@ namespace Paramore.Brighter
 
         private IAmALifetime GetSyncInstanceScope()
         {
-            if(_handlerFactorySync is null)
+            if(_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
 
-            var scope = new HandlerLifetimeScope(_handlerFactorySync);
+            var scope = new HandlerLifetimeScope(_syncHandlerFactory);
             _instanceScopes.Add(scope);
             
             return scope;
@@ -447,4 +485,3 @@ namespace Paramore.Brighter
         }
     }
 }
-
