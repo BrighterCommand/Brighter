@@ -42,20 +42,22 @@ public static class BrighterSpanExtensions
        CommandProcessorSpanOperation.Send => "send",
        CommandProcessorSpanOperation.Clear => "clear",
        CommandProcessorSpanOperation.Archive => "archive",
+       CommandProcessorSpanOperation.Scheduler => "scheduler",
        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
    };
 
    ///<summary>
-   /// Provide a string representation of the outbox operation
+   /// Provide a string representation of the inbox/outbox operation
    /// </summary>   
-   public static string ToSpanName(this OutboxDbOperation span) => span switch
+   public static string ToSpanName(this BoxDbOperation span) => span switch
    {
-       OutboxDbOperation.Add => "add.message",
-       OutboxDbOperation.Delete => "delete.message",
-       OutboxDbOperation.DispatchedMessages => "retrieve.dispatched_messages",
-       OutboxDbOperation.Get => "retrieve.message",
-       OutboxDbOperation.MarkDispatched => "mark_as_dispatched.outstanding_messages",
-       OutboxDbOperation.OutStandingMessages => "retrieve.outstanding_messages",
+       BoxDbOperation.Add => "add.message",
+       BoxDbOperation.Delete => "delete.message",
+       BoxDbOperation.DispatchedMessages => "retrieve.dispatched_messages",
+       BoxDbOperation.Get => "retrieve.message",
+       BoxDbOperation.MarkDispatched => "mark_as_dispatched.outstanding_messages",
+       BoxDbOperation.OutStandingMessages => "retrieve.outstanding_messages",
+       BoxDbOperation.Exists => "message.exists",
        _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
    };
    
@@ -64,6 +66,16 @@ public static class BrighterSpanExtensions
        MessagePumpSpanOperation.Receive => "receive",
        MessagePumpSpanOperation.Process => "process",
        MessagePumpSpanOperation.Begin => "begin",
+       _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
+   };
+
+
+   public static string ToSpanName(this ClaimCheckOperation operation) => operation switch
+   {
+       ClaimCheckOperation.Delete => "delete.message",
+       ClaimCheckOperation.Store => "store.message",
+       ClaimCheckOperation.Retrieve => "retrieve.message",
+       ClaimCheckOperation.HasClaim => "has_claim.message",
        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
    };
 }

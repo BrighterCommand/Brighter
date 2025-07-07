@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
@@ -59,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             
             _command = new MyCommand {Value = "My Test String"};
             
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         }
 
         [Fact]
@@ -68,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command);            
             _commandProcessor.Send(_command);
 
-            MyStoredCommandToWarnHandler.ReceivedCount.Should().Be(1);
+            Assert.Equal(1, MyStoredCommandToWarnHandler.ReceivedCount);
         }
 
         public void Dispose()

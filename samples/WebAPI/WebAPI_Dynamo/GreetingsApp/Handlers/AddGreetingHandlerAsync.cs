@@ -33,7 +33,7 @@ namespace GreetingsApp.Handlers
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default)
         {
-            var posts = new List<string>();
+            var posts = new List<Id>();
             
             //We use the unit of work to grab connection and transaction, because Outbox needs
             //to share them 'behind the scenes'

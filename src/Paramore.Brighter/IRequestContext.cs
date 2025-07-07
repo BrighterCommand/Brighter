@@ -43,6 +43,11 @@ namespace Paramore.Brighter
         Activity? Span { get; set; }
         
         /// <summary>
+        /// The destiny topic
+        /// </summary>
+        RoutingKey? Topic { get; set; }
+        
+        /// <summary>
         /// Gets the bag.
         /// </summary>
         /// <value>The bag.</value>
@@ -58,5 +63,11 @@ namespace Paramore.Brighter
         /// Gets the Feature Switches
         /// </summary>
         IAmAFeatureSwitchRegistry? FeatureSwitches { get; }
+
+        /// <summary>
+        /// Create a new copy of the Request Context
+        /// </summary>
+        /// <returns>a new copy of the request context</returns>
+        IRequestContext CreateCopy();
     }
 }

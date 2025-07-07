@@ -28,16 +28,20 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class ReplyAddress.
-    /// The address to reply to when doing request-reply and not publish-subscribe
+    /// The address to reply to when doing request-reply and not publish-subscribe messaging.
     /// </summary>
+    /// <remarks>
+    /// Used in request-reply patterns to specify where a response should be sent.
+    /// Contains both the routing information (topic) and correlation data to match responses to requests.
+    /// </remarks>
     public class ReplyAddress
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplyAddress"/> class.
         /// </summary>
-        /// <param name="topic">The topic.</param>
-        /// <param name="correlationId">The correlation identifier.</param>
-        public ReplyAddress(string topic, string correlationId)
+        /// <param name="topic">The <see cref="string"/> topic name where replies should be sent.</param>
+        /// <param name="correlationId">The <see cref="string"/> correlation identifier to match requests and responses.</param>
+        public ReplyAddress(string topic, Id correlationId)
         {
             Topic = new RoutingKey(topic);
             CorrelationId = correlationId;
@@ -46,24 +50,24 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplyAddress"/> class.
         /// </summary>
-        /// <param name="topic">The <see cref="Topic"/></param>
-        /// <param name="correlationId">The correlation identifier.</param>
-        public ReplyAddress(RoutingKey topic, string correlationId)
+        /// <param name="topic">The <see cref="RoutingKey"/> specifying where replies should be sent.</param>
+        /// <param name="correlationId">The <see cref="string"/> correlation identifier to match requests and responses.</param>
+        public ReplyAddress(RoutingKey topic, Id correlationId)
         {
             Topic = topic;
             CorrelationId = correlationId;
         }
         
         /// <summary>
-        /// Gets the topic.
+        /// Gets or sets the topic.
         /// </summary>
-        /// <value>The topic.</value>
+        /// <value>The <see cref="RoutingKey"/> specifying the topic where replies should be sent.</value>
         public RoutingKey Topic { get; set; }
 
         /// <summary>
-        /// Gets the correlation identifier.
+        /// Gets or sets the correlation identifier.
         /// </summary>
-        /// <value>The correlation identifier.</value>
-        public string CorrelationId { get; set; }
+        /// <value>The <see cref="Id"/> correlation identifier used to match requests and responses.</value>
+        public Id CorrelationId { get; set; }
     }
 }

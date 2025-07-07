@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(_internalBus, timeProvider)
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
             {
                 Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
             };
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { _routingKey, producer },
+                    { _routingKey, messageProducer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -66,22 +66,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 
             var tracer = new BrighterTracer();
             _fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 policyRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 _fakeOutbox
             );
-        
+
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(), 
+                new InMemoryRequestContextFactory(),
                 policyRegistry,
-                bus
+                bus,
+                requestSchedulerFactory: new InMemorySchedulerFactory()
             );
         }
 
@@ -92,25 +94,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //act
             var postedMessageId = _commandProcessor.DepositPost(_myCommand);
             var context = new RequestContext();
-            
+
             //assert
-            
+
             //message should not be posted
-            _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
-            
+            Assert.False(_internalBus.Stream(new RoutingKey(_routingKey)).Any());
+
             //message should correspond to the command
             var depositedPost = _fakeOutbox.Get(postedMessageId, context);
-            depositedPost.Id.Should().Be(_message.Id);
-            depositedPost.Body.Value.Should().Be(_message.Body.Value);
-            depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
-            depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
-            
+            Assert.Equal(_message.Id, depositedPost.Id);
+            Assert.Equal(_message.Body.Value, depositedPost.Body.Value);
+            Assert.Equal(_message.Header.Topic, depositedPost.Header.Topic);
+            Assert.Equal(_message.Header.MessageType, depositedPost.Header.MessageType);
+
             //message should be marked as outstanding if not sent
             var outstandingMessages = _fakeOutbox.OutstandingMessages(TimeSpan.Zero, context);
             var outstandingMessage = outstandingMessages.Single();
-            outstandingMessage.Id.Should().Be(_message.Id);
+            Assert.Equal(_message.Id, outstandingMessage.Id);
         }
-        
+
         public void Dispose()
         {
             CommandProcessor.ClearServiceBus();

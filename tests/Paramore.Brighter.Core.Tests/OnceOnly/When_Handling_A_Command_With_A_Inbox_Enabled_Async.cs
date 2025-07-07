@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             _command = new MyCommand {Value = "My Test String"};
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
         }
 
         [Fact]
@@ -51,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await _commandProcessor.SendAsync(_command);
 
            // should_store_the_command_to_the_inbox
-            (await _inbox.GetAsync<MyCommand>(_command.Id, _contextKey)).Value.Should().Be(_command.Value);
+            Assert.Equal(_command.Value, (await _inbox.GetAsync<MyCommand>(_command.Id, _contextKey, null)).Value);
         }
 
         [Fact]
@@ -60,8 +59,8 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             string id = Guid.NewGuid().ToString();
             await Catch.ExceptionAsync(async () =>await _commandProcessor.SendAsync(new MyCommandToFail { Id = id }));
 
-            var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
-            exists.Should().BeFalse();
+            var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName, null);
+            Assert.False(exists);
         }
 
         public void Dispose()

@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -57,10 +57,9 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
-
-            var provider = new CommandProcessorProvider(commandProcessor);
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
@@ -76,7 +75,7 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
@@ -84,18 +83,16 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
             
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
             
-            var header = new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT)
-            {
-                TraceParent = externalActivity?.Id, TraceState = externalActivity?.TraceStateString
-            };
-            
-            externalActivity?.Stop();
-
             _message = new Message(
-                header, 
+                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT), 
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
             
+            var contextPropogator = new TextContextPropogator();
+            contextPropogator.PropogateContext(externalActivity?.Context, _message);
+            
+            externalActivity?.Stop();
+
             channel.Enqueue(_message);
             
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
@@ -109,15 +106,15 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        _exportedActivities.Count.Should().Be(7);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue(); 
+        Assert.Equal(7, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
         
         var errorMessageActivity = _exportedActivities.FirstOrDefault(a => 
             a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
             && a.Status == ActivityStatusCode.Error
         );
         
-        errorMessageActivity.Should().NotBeNull();
-        errorMessageActivity?.Status.Should().Be(ActivityStatusCode.Error);
+        Assert.NotNull(errorMessageActivity);
+        Assert.Equal(ActivityStatusCode.Error, errorMessageActivity?.Status);
     }
 }

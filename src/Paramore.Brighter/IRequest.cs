@@ -35,15 +35,15 @@ namespace Paramore.Brighter
     public interface IRequest
     {
         /// <summary>
-        /// If we are participating in a conversation, the correlation id  allows us to correlate a request with other messages in the conversation
+        /// Correlates this command with a previous command or event.
         /// </summary>
-        string? CorrelationId { get; set; }
+        /// <value>The <see cref="Id"/> that correlates this command with a previous command or event.</value>
+        Id? CorrelationId { get; set; }
         
         /// <summary>
         /// Gets or sets the identifier.
         /// </summary>
-        /// <value>The identifier.</value>
-        string Id { get; set; }
-        
+        /// <value>The <see cref="Id"/> that identifies this request</value>
+        Id Id { get; set; }
     }
 }

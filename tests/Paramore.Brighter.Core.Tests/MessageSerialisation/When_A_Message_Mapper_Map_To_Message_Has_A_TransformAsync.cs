@@ -1,5 +1,5 @@
-﻿using FluentAssertions;
-using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+﻿using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => new MySimpleTransformAsync()));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
         
     }
     
@@ -33,7 +33,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
         
         //assert
-        TraceFilters().ToString().Should().Be("MySimpleTransformAsync|MyTransformableCommandMessageMapperAsync");
+        Assert.Equal("MySimpleTransformAsync|MyTransformableCommandMessageMapperAsync", TraceFilters().ToString());
+        
     }
     
     private TransformPipelineTracer TraceFilters()

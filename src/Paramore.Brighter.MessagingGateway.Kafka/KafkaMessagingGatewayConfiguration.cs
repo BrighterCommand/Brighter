@@ -52,17 +52,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Initial list of brokers as a list of broker host or host:port. "
         /// </summary>
-        public string[] BootStrapServers { get; set; }
+        public required string[] BootStrapServers { get; set; }
 
         /// <summary>
         /// A comma-separated list of debug contexts to enable.  Producer: broker, topic, msg. Consumer: consumer, cgrp, topic, fetch
         /// </summary>
-        public string Debug { get; set; } = null; 
+        public string? Debug { get; set; } = null; 
 
          /// <summary>
          /// Client identifier.
          /// </summary>
-         public string Name { get; set; }
+         public string? Name { get; set; }
 
          /// <summary>
          /// The Sasl mechanism by which the client connects to the broker
@@ -72,17 +72,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
          /// <summary>
          /// This client's Kerberos principal name.
          /// </summary>
-         public string SaslKerberosPrincipal { get; set; } = null;
+         public string? SaslKerberosPrincipal { get; set; } = null;
          
          /// <summary>
          /// SASL username for use with PLAIN and SASL-SCRAM
          /// </summary>
-         public string SaslUsername { get; set; }
+         public string? SaslUsername { get; set; }
          
          /// <summary>
          /// SASL password for use with PLAIN and SASL-SCRAM 
          /// </summary>
-         public string SaslPassword { get; set; }
+         public string? SaslPassword { get; set; }
 
          /// <summary>
          /// What is the security protocol used by the broker
@@ -92,17 +92,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
          /// <summary>
          /// Where is the CA certificate located
          /// </summary>
-         public string SslCaLocation { get; set; } = null;
+         public string? SslCaLocation { get; set; } = null;
 
          /// <summary>
          /// Path to client's keystore
          /// </summary>
-         public string SslKeystoreLocation { get; set; } = null;
+         public string? SslKeystoreLocation { get; set; } = null;
          
          /// <summary>
          /// Password to keystore
          /// </summary>
-         public string SslKeystorePassword { get; set; } = null;
+         public string? SslKeystorePassword { get; set; } = null;
 
     }
 }

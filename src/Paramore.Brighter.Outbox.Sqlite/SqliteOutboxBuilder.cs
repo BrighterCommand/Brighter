@@ -33,8 +33,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
         const string TextOutboxDdl = @"CREATE TABLE {0} 
                                     (
                                         [MessageId] TEXT NOT NULL COLLATE NOCASE,
-                                        [Topic] TEXT NULL,
                                         [MessageType] TEXT NULL,
+                                        [Topic] TEXT NULL,
                                         [Timestamp] TEXT NULL,
                                         [CorrelationId] TEXT NULL,
                                         [ReplyTo] TEXT NULL,
@@ -43,14 +43,20 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [Dispatched] TEXT NULL,
                                         [HeaderBag] TEXT NULL,
                                         [Body] TEXT NULL,
-                                        CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
+                                        [Source] TEXT NULL,
+                                        [Type] TEXT NULL,
+                                        [DataSchema] TEXT NULL,
+                                        [Subject] TEXT NULL,
+                                        [TraceParent] TEXT NULL,
+                                        [TraceState] TEXT NULL,
+                                        [Baggage] TEXT NULL
                                     );";
         
         const string BinaryOutboxDdl = @"CREATE TABLE {0} 
                                     (
                                         [MessageId] TEXT NOT NULL COLLATE NOCASE,
-                                        [Topic] TEXT NULL,
                                         [MessageType] TEXT NULL,
+                                        [Topic] TEXT NULL,
                                         [Timestamp] TEXT NULL,
                                         [CorrelationId] TEXT NULL,
                                         [ReplyTo] TEXT NULL,
@@ -59,7 +65,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [Dispatched] TEXT NULL,
                                         [HeaderBag] TEXT NULL,
                                         [Body] BLOB NULL,
-                                        CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
+                                        [Source] TEXT NULL,
+                                        [Type] TEXT NULL,
+                                        [DataSchema] TEXT NULL,
+                                        [Subject] TEXT NULL,
+                                        [TraceParent] TEXT NULL,
+                                        [TraceState] TEXT NULL,
+                                        [Baggage] TEXT NULL
                                     );";
          
 

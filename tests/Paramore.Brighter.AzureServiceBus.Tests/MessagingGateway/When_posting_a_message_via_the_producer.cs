@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
@@ -18,7 +19,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly ASBTestCommand _command;
         private readonly string _correlationId;
-        private readonly string _contentType;
+        private readonly ContentType _contentType;
         private readonly string _topicName;
         private readonly string _queueName;
         private readonly IAdministrationClientWrapper _administrationClient;
@@ -37,17 +38,17 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             var routingKey = new RoutingKey(_topicName);
 
             AzureServiceBusSubscription<ASBTestCommand> subscription = new(
-                name: new SubscriptionName(channelName),
+                subscriptionName: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
             );
-            
+
             var queueChannelName = $"Producer-queue-Send-Tests-{Guid.NewGuid()}".Truncate(50);
             _queueName = $"Producer-queue-Send-Tests-{Guid.NewGuid()}";
             var queueRoutingKey = new RoutingKey(_queueName);
-            
+
             AzureServiceBusSubscription<ASBTestCommand> queueSubscription = new(
-                name: new SubscriptionName(queueChannelName),
+                subscriptionName: new SubscriptionName(queueChannelName),
                 channelName: new ChannelName(queueChannelName),
                 routingKey: queueRoutingKey,
                 subscriptionConfiguration : new AzureServiceBusSubscriptionConfiguration()
@@ -55,9 +56,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                     UseServiceBusQueue = true
                 }
             );
-            
 
-            _contentType = "application/json";
+            _contentType = new ContentType(MediaTypeNames.Application.Json);
 
             var clientProvider = ASBCreds.ASBClientProvider;
             _administrationClient = new AdministrationClientWrapper(clientProvider);
@@ -72,11 +72,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 clientProvider,
-                new AzureServiceBusPublication[]
-                    {
-                        new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) },
+                [
+                    new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) },
                         new AzureServiceBusPublication { Topic = new RoutingKey(_queueName), UseServiceBusQueue = true}
-                    }
+                ]
                 )
                 .Create();
         }
@@ -91,38 +90,38 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             string testHeaderValue = "Blah!!!";
             var commandMessage = GenerateMessage(testQueues ? _queueName : _topicName);
             commandMessage.Header.Bag.Add(testHeader, testHeaderValue);
-            
-            var producer = _producerRegistry.LookupBy(testQueues 
+
+            var producer = _producerRegistry.LookupBy(testQueues
                 ? new RoutingKey(_queueName) : new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
-           
+
             await producer.SendAsync(commandMessage);
 
             var channel = testQueues ? _queueChannel : _topicChannel;
-            
+
             var message = channel.Receive(TimeSpan.FromMilliseconds(5000));
 
             //clear the queue
             channel.Acknowledge(message);
 
-            message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-
-            message.Id.Should().Be(_command.Id);
-            message.Redelivered.Should().BeFalse();
-            message.Header.MessageId.Should().Be(_command.Id);
-            message.Header.Topic.Value.Should().Contain(testQueues ? _queueName : _topicName);
-            message.Header.CorrelationId.Should().Be(_correlationId);
-            message.Header.ContentType.Should().Be(_contentType);
-            message.Header.HandledCount.Should().Be(0);
+            Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+            Assert.Equal(_command.Id, message.Id);
+            Assert.False(message.Redelivered);
+            Assert.Equal(_command.Id, message.Header.MessageId);
+            Assert.Contains(testQueues ? _queueName : _topicName, message.Header.Topic.Value);
+            Assert.Equal(_correlationId, message.Header.CorrelationId);
+            Assert.Equal(_contentType, message.Header.ContentType);
+            Assert.Equal(0, message.Header.HandledCount);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-            message.Header.TimeStamp.Should().BeAfter(RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-            message.Header.Delayed.Should().Be(TimeSpan.Zero);
+            Assert.True(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
+            Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-            message.Body.Value.Should().Be(commandMessage.Body.Value);
-            message.Header.Bag.Should().Contain(testHeader, testHeaderValue);
+            Assert.Equal(commandMessage.Body.Value, message.Body.Value);
+            Assert.Contains(testHeader, message.Header.Bag.Keys);
+            Assert.Equal(testHeaderValue, message.Header.Bag[testHeader]);
         }
-        
+
         private Message GenerateMessage(string topicName) => new Message(
-            new MessageHeader(_command.Id, new RoutingKey( topicName), MessageType.MT_COMMAND, correlationId:_correlationId, 
+            new MessageHeader(_command.Id, new RoutingKey( topicName), MessageType.MT_COMMAND, correlationId:_correlationId,
                 contentType: _contentType
             ),
             new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))

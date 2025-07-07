@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Polly.Registry;
@@ -45,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             var registry = new SubscriberRegistry();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyEventHandler(_receivedMessages));
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
             //_should_not_throw_an_exception
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
         }
 
         public void Dispose()

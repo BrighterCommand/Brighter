@@ -1,32 +1,7 @@
-#region Licence
-
-/* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
 using System;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -56,15 +31,15 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid().ToString(),
-                topic: new RoutingKey("test_topic"), 
-                messageType:MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5,
-                delayed:TimeSpan.FromMilliseconds(5),
-                correlationId: Guid.NewGuid().ToString(),
+                messageId: Id.Random, 
+                topic: new RoutingKey("test_topic"),
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
+                correlationId: Id.Random,
                 replyTo: new RoutingKey("ReplyTo"),
-                contentType: "application/octet-stream",
+                contentType: new ContentType(MediaTypeNames.Application.Octet),
                 partitionKey: "123456789");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
@@ -75,7 +50,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             //get the string as raw bytes
             var bytes = System.Text.Encoding.UTF8.GetBytes("message body"); 
             
-            _messageEarliest = new Message(messageHeader, new MessageBody(bytes, contentType:"application/octet-stream", CharacterEncoding.Raw));
+            _messageEarliest = new Message(messageHeader, new MessageBody(bytes, contentType:new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw));
             _sqlOutbox.Add(_messageEarliest, new RequestContext());
         }
         
@@ -84,33 +59,32 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _storedMessage = _sqlOutbox.Get(_messageEarliest.Id, new RequestContext());
             //should read the message from the sql outbox
-            _storedMessage.Body.Bytes.Should().Equal(_messageEarliest.Body.Bytes);
+            Assert.Equal(_messageEarliest.Body.Bytes, _storedMessage.Body.Bytes);
             var bodyAsString =  Encoding.UTF8.GetString(_storedMessage.Body.Bytes);
-            bodyAsString.Should().Be("message body");
+            Assert.Equal("message body", bodyAsString);
             //should read the header from the sql outbox
-            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss")
-                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
-            _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
-            _storedMessage.Header.Delayed.Should().Be(TimeSpan.Zero); // -- should be zero when read from outbox
-            _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
-            _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
-            _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey);
+            Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
+            Assert.Equal(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
+            Assert.Equal(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
+            Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
+            Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
+            Assert.Equal(_messageEarliest.Header.CorrelationId, _storedMessage.Header.CorrelationId);
+            Assert.Equal(_messageEarliest.Header.ReplyTo, _storedMessage.Header.ReplyTo);
+            Assert.Equal(_messageEarliest.Header.ContentType, _storedMessage.Header.ContentType);
+            Assert.Equal(_messageEarliest.Header.PartitionKey, _storedMessage.Header.PartitionKey);
              
             
             //Bag serialization
-            _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
-            _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
-            _storedMessage.Header.Bag[_key2].Should().Be(_value2);
-            _storedMessage.Header.Bag.ContainsKey(_key3).Should().BeTrue();
-            _storedMessage.Header.Bag[_key3].Should().Be(_value3);
-            _storedMessage.Header.Bag.ContainsKey(_key4).Should().BeTrue();
-            _storedMessage.Header.Bag[_key4].Should().Be(_value4);
-            _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
-            _storedMessage.Header.Bag[_key5].Should().Be(_value5);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));
+            Assert.Equal(_value1, _storedMessage.Header.Bag[_key1]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key2));
+            Assert.Equal(_value2, _storedMessage.Header.Bag[_key2]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key3));
+            Assert.Equal(_value3, _storedMessage.Header.Bag[_key3]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key4));
+            Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
+            Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
         }
 
         public async ValueTask DisposeAsync()

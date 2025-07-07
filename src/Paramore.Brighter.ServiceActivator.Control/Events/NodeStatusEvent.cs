@@ -1,9 +1,32 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Text.Json.Serialization;
+using NJsonSchema;
+using NJsonSchema.Annotations;
+using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.NJsonConverters;
 
 namespace Paramore.Brighter.ServiceActivator.Control.Events;
 
-public class NodeStatusEvent() : Event(Guid.NewGuid().ToString())
+public record NodeStatusEvent : IEvent
 {
+    /// <summary>
+    /// Correlates this command with a previous command or event.
+    /// </summary>
+    /// <value>The <see cref="Id"/> that correlates this command with a previous command or event.</value>
+    [JsonConverter(typeof(IdConverter))]
+    [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+    [JsonSchema(JsonObjectType.String)] 
+    public Id? CorrelationId { get; set; }
+
+    /// <summary>
+    /// The event Id
+    /// </summary>
+    [JsonConverter(typeof(IdConverter))]
+    [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+    [JsonSchema(JsonObjectType.String)] 
+    public Id Id { get; set; } = null!;
+
     /// <summary>
     /// The Diagnostics Span
     /// </summary>
@@ -27,7 +50,7 @@ public class NodeStatusEvent() : Event(Guid.NewGuid().ToString())
     /// <summary>
     /// Is this node Healthy
     /// </summary>
-    public bool IsHealthy { get; init; }
+    public bool IsHealthy { get; init; } = false;
 
     /// <summary>
     /// The Number of Performers currently running on the Node

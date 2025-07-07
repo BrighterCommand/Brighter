@@ -1,30 +1,24 @@
-using System;
 using System.Collections.Generic;
 using Amazon.DynamoDBv2.DocumentModel;
 
 namespace Paramore.Brighter.Inbox.DynamoDB
 {
-    internal class KeyIdContextExpression
+    internal sealed class KeyIdContextExpression
     {
-        private Expression _expression;
-
-        public KeyIdContextExpression()
+        private readonly Expression _expression = new()
         {
-            _expression = new Expression();
-            _expression.ExpressionStatement = "CommandId = :v_CommandId and ContextKey = :v_ContextKey";
-        }
+            ExpressionStatement = "CommandId = :v_CommandId and ContextKey = :v_ContextKey"
+        };
 
         public Expression Generate(string id, string contextKey)
         {
-            var values = new Dictionary<string, DynamoDBEntry>();
-            values.Add(":v_CommandId", id);
-            values.Add(":v_ContextKey", contextKey);
-
-            _expression.ExpressionAttributeValues = values;
+            _expression.ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>(capacity: 2)
+            {
+                { ":v_CommandId", id },
+                { ":v_ContextKey", contextKey }
+            };
 
             return _expression;
-  
         }
-
     }
 }

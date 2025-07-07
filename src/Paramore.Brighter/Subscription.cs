@@ -48,9 +48,11 @@ namespace Paramore.Brighter
         public IAmAChannelFactory? ChannelFactory { get; set; }
 
         /// <summary>
-        /// Gets the name we use for this channel. In platforms where queues have names, will be used as the name of the queue
-        /// Note that this is not the logical endpoint that the channel consumes from, that is the RoutingKey
+        /// Gets the <see cref="ChannelName"/> we use for this channel. In platforms where queues have names, will be used as the name of the queue
         /// </summary>
+        /// <remarks>
+        /// Note that this is not the logical endpoint, the topic, that the channel consumes from for pub-sub, that is the <see cref="RoutingKey"/>
+        /// </remarks>
         /// <value>The name.</value>
         public ChannelName ChannelName { get; set; }
 
@@ -73,7 +75,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
         /// </summary>
-        public OnMissingChannel MakeChannels { get; }
+        public OnMissingChannel MakeChannels { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the subscription, for identification.
@@ -94,57 +96,72 @@ namespace Paramore.Brighter
         public int RequeueCount { get; }
 
         /// <summary>
-        /// Gets or sets the delay delivery of re-queued messages.
+        /// Gets or sets the delay for delivery of re-queued messages.
         /// </summary>
+        /// <value>A <see cref="TimeSpan"/> specifying how long to delay requeued messages.</value>
         public TimeSpan RequeueDelay { get; }
 
         /// <summary>
         /// Gets or sets the routing key or topic that this channel subscribes to on the broker.
         /// </summary>
-        /// <value>The name.</value>
+        /// <value>The <see cref="RoutingKey"/> that specifies the topic or routing pattern for this subscription.</value>
+        /// <remarks>
+        ///  In many platforms, a queue subscribes to the topic. In that case the <see cref="ChannelName"/> gives the queue name
+        /// whilst this is the topic to which that queue subscribes.
+        /// </remarks>
         public RoutingKey RoutingKey { get; set; }
 
         /// <summary>
-        /// Gets a value indicating whether this subscription should use an asynchronous pipeline
-        /// If it does it will process new messages from the queue whilst awaiting in prior messages' pipelines
+        /// Gets a value indicating whether this subscription should use an asynchronous pipeline.
+        /// If it does it will process new messages from the queue whilst awaiting in prior messages' pipelines.
         /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
         /// </summary>
-        /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
+        /// <value>A <see cref="MessagePumpType"/> indicating the type of message pump to use for this subscription.</value>
         public MessagePumpType MessagePumpType { get; }
 
         /// <summary>
-        /// Gets the timeout that we use to infer that nothing could be read from the channel i.e. is empty
-        /// or busy
+        /// Gets the timeout that we use to infer that nothing could be read from the channel i.e. is empty or busy.
         /// </summary>
-        /// <value>The timeout</value>
+        /// <value>The <see cref="TimeSpan"/> timeout value.</value>
         public TimeSpan TimeOut { get; }
 
         /// <summary>
-        /// Gets the number of messages before we will terminate the channel due to high error rates
+        /// Gets the number of messages before we will terminate the channel due to high error rates.
         /// </summary>
+        /// <value>The <see cref="int"/> maximum number of unacceptable messages before stopping the channel.</value>
         public int UnacceptableMessageLimit { get; }
+
+        /// <summary>
+        /// Gets the factory type for this subscription. Internal use only.
+        /// </summary>
+        /// <value>The <see cref="Type"/> of the channel factory, defaults to <see cref="InMemoryChannelFactory"/>.</value>
+        /// <remarks>
+        /// It'll be used by the <see cref="CombinedChannelFactory"/>.
+        /// </remarks>
+        public virtual Type ChannelFactoryType => typeof(InMemoryChannelFactory); 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="dataType">Type of the data.</param>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
-        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
-        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
-        /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
-        /// <param name="noOfPerformers">The no of threads reading this channel.</param>
-        /// <param name="timeOut">The timeout for the subscription to consider the queue empty and pause</param>
-        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelay">The delay the delivery of a requeue message for.</param>
-        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="messagePumpType">Is this channel read asynchronously</param>
-        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
-        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
-        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="dataType">The <see cref="Type"/> of the data that this subscription handles.</param>
+        /// <param name="subscriptionName">The <see cref="SubscriptionName"/> for identification. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The <see cref="ChannelName"/> for the channel. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The <see cref="RoutingKey"/> for message routing. Defaults to the data type's full name.</param>
+        /// <param name="bufferSize">The <see cref="int"/> number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10.</param>
+        /// <param name="noOfPerformers">The <see cref="int"/> number of threads reading this channel.</param>
+        /// <param name="timeOut">The <see cref="TimeSpan"/> timeout for the subscription to consider the queue empty and pause.</param>
+        /// <param name="requeueCount">The <see cref="int"/> number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelay">The <see cref="TimeSpan"/> to delay the delivery of a requeue message for.</param>
+        /// <param name="unacceptableMessageLimit">The <see cref="int"/> number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="messagePumpType">The <see cref="MessagePumpType"/> indicating whether this channel is read asynchronously.</param>
+        /// <param name="channelFactory">The <see cref="IAmAChannelFactory"/> to create channels for Consumer.</param>
+        /// <param name="makeChannels">The <see cref="OnMissingChannel"/> policy - should we make channels if they don't exist, defaults to creating.</param>
+        /// <param name="emptyChannelDelay">The <see cref="TimeSpan"/> to pause when a channel is empty in milliseconds.</param>
+        /// <param name="channelFailureDelay">The <see cref="TimeSpan"/> to pause when there is a channel failure in milliseconds.</param>
+        /// <exception cref="ConfigurationException">Thrown when <paramref name="messagePumpType"/> is <see cref="MessagePumpType.Unknown"/>.</exception>
         public Subscription(
             Type dataType,
-            SubscriptionName? name = null,
+            SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
             int bufferSize = 1,
@@ -153,14 +170,17 @@ namespace Paramore.Brighter
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            MessagePumpType messagePumpType = MessagePumpType.Proactor,
+            MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null)
         {
+            if (messagePumpType == MessagePumpType.Unknown)
+                throw new ConfigurationException("You must set a message pump type: use Reactor for sync pipelines; use Proactor for async pipelines");
+            
             DataType = dataType;
-            Name = name ?? new SubscriptionName(dataType.FullName!);
+            Name = subscriptionName ?? new SubscriptionName(dataType.FullName!);
             ChannelName = channelName ?? new ChannelName(dataType.FullName!);
             RoutingKey = routingKey ?? new RoutingKey(dataType.FullName!);
             BufferSize = bufferSize;
@@ -178,19 +198,30 @@ namespace Paramore.Brighter
             ChannelFailureDelay = channelFailureDelay ?? TimeSpan.FromMilliseconds(1000);
         }
 
+        /// <summary>
+        /// Sets the number of performers (worker threads) for this subscription.
+        /// </summary>
+        /// <param name="numberOfPerformers">The <see cref="int"/> number of performers to set. Negative values will be set to 0.</param>
         public void SetNumberOfPerformers(int numberOfPerformers)
         {
             NoOfPerformers = numberOfPerformers < 0 ? 0 : numberOfPerformers;
         }
     }
 
+    /// <summary>
+    /// A generic version of <see cref="Subscription"/> that is strongly typed to a specific <see cref="IRequest"/> type.
+    /// </summary>
+    /// <typeparam name="T">The type of <see cref="IRequest"/> that this subscription handles.</typeparam>
+    /// <remarks>
+    /// This generic version provides compile-time type safety and is recommended when the request type is known at compile time.
+    /// </remarks>
     public class Subscription<T> : Subscription
         where T : IRequest
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class with data type T.
         /// </summary>
-        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="noOfPerformers">The no of performers.</param>
@@ -205,7 +236,7 @@ namespace Paramore.Brighter
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
-            SubscriptionName? name = null,
+            SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
             int noOfPerformers = 1,
@@ -221,7 +252,7 @@ namespace Paramore.Brighter
             TimeSpan? channelFailureDelay = null)
             : base(
                 typeof(T),
-                name,
+                subscriptionName,
                 channelName,
                 routingKey,
                 bufferSize,

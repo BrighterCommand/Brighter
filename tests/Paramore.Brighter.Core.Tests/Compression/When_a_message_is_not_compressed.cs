@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Threading.Tasks;
-using FluentAssertions;
+using System.Net.Mime;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -18,13 +17,13 @@ public class UncompressedPayloadTests
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.GZip);
         
         var smallContent = "small message";
-        string mimeType = MessageBody.APPLICATION_JSON;
-
-        var body = new MessageBody(smallContent, mimeType);
+        var contentType = new ContentType(MediaTypeNames.Application.Json);
+        
+        var body = new MessageBody(smallContent, contentType);
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, 
-                timeStamp: DateTime.UtcNow, contentType: mimeType
+                timeStamp: DateTime.UtcNow, contentType: contentType 
             ),
             body
         );
@@ -33,7 +32,7 @@ public class UncompressedPayloadTests
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(smallContent);
+        Assert.Equal(smallContent, msg.Body.Value);
     }
     
     [Fact]
@@ -45,13 +44,13 @@ public class UncompressedPayloadTests
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Zlib);
         
         var smallContent = "small message";
-        string mimeType = MessageBody.APPLICATION_JSON;
-
-        var body = new MessageBody(smallContent, mimeType);
+        var contentType = new ContentType(MediaTypeNames.Application.Json);
+        
+        var body = new MessageBody(smallContent, contentType);
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, 
-                timeStamp: DateTime.UtcNow, contentType: mimeType
+                timeStamp: DateTime.UtcNow, contentType: contentType 
             ),
             body
         );
@@ -60,7 +59,7 @@ public class UncompressedPayloadTests
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(smallContent);
+        Assert.Equal(smallContent, msg.Body.Value);
     }
     
     [Fact]
@@ -72,13 +71,13 @@ public class UncompressedPayloadTests
         transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Brotli);
         
         var smallContent = "small message";
-        string mimeType = MessageBody.APPLICATION_JSON;
-
-        var body = new MessageBody(smallContent, mimeType);
+        var contentType = new ContentType(MediaTypeNames.Application.Json);
+        
+        var body = new MessageBody(smallContent, contentType);
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, 
-                timeStamp: DateTime.UtcNow, contentType: mimeType
+                timeStamp: DateTime.UtcNow, contentType: contentType
             ),
             body
         );
@@ -87,6 +86,6 @@ public class UncompressedPayloadTests
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(smallContent);
+        Assert.Equal(smallContent, msg.Body.Value);
     }
 }

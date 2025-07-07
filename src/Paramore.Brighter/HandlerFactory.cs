@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter
 {
-    internal class HandlerFactory<TRequest> where TRequest : class, IRequest
+    internal sealed class HandlerFactory<TRequest> where TRequest : class, IRequest
     {
         private readonly RequestHandlerAttribute _attribute;
         private readonly IAmAHandlerFactorySync _factorySync;
@@ -41,10 +41,10 @@ namespace Paramore.Brighter
             _messageType = typeof(TRequest);
         }
 
-        public IHandleRequests<TRequest> CreateRequestHandler()
+        public IHandleRequests<TRequest> CreateRequestHandler(IAmALifetime lifetime)
         {
             var handlerType = _attribute.GetHandlerType().MakeGenericType(_messageType);
-            var handler = (IHandleRequests<TRequest>)_factorySync.Create(handlerType);
+            var handler = (IHandleRequests<TRequest>)_factorySync.Create(handlerType, lifetime);
 
             if (handler is null)
                 throw new ConfigurationException($"Could not create handler {handlerType} from {_factorySync}");

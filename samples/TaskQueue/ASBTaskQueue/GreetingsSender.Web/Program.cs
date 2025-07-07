@@ -37,7 +37,8 @@ string asbEndpoint = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageShar
 
 var asbConnection = new ServiceBusConnectionStringClientProvider(asbEndpoint);
 
-var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, 
+    databaseName: "BrighterTests", outBoxTableName: "BrighterOutbox");
 
 var producerRegistry = new AzureServiceBusProducerRegistryFactory(
         asbConnection,

@@ -23,14 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Actions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
-using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -48,11 +43,11 @@ namespace Paramore.Brighter.ServiceActivator
     /// Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     /// Timeout on the handler should be provided by timeout policy using an attribute on the handler 
     /// </summary>
-    public abstract class MessagePump<TRequest> where TRequest : class, IRequest
+    public abstract partial class MessagePump<TRequest> where TRequest : class, IRequest
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
 
-        protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
+        protected readonly IAmACommandProcessor CommandProcessor;
         protected readonly IAmARequestContextFactory RequestContextFactory;
         protected readonly IAmABrighterTracer? Tracer;
         protected readonly InstrumentationOptions InstrumentationOptions;
@@ -101,18 +96,18 @@ namespace Paramore.Brighter.ServiceActivator
         ///  - Dispatches the message to waiting handlers
         ///  The message pump is a classic event loop and is intended to be run on a single-thread 
         /// </summary>
-        /// <param name="commandProcessorProvider">Provides a correctly scoped command processor </param>
+        /// <param name="commandProcessor">Provides a correctly scoped command processor </param>
         /// <param name="requestContextFactory">Provides a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="channel"></param>
-        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="Brighter.CommandProcessor"/> operations how noisy should the attributes be</param>
         protected MessagePump(
-            IAmACommandProcessorProvider commandProcessorProvider, 
+            IAmACommandProcessor commandProcessor, 
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
-            CommandProcessorProvider = commandProcessorProvider;
+            CommandProcessor = commandProcessor;
             RequestContextFactory = requestContextFactory;
             Tracer = tracer;
             InstrumentationOptions = instrumentationOptions;
@@ -132,15 +127,23 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {
-                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id,
-                    MessageType.MT_COMMAND));
+                Log.MessageMismatchCommand(s_logger, request.Id, MessageType.MT_COMMAND);
             }
 
             if (messageType == MessageType.MT_EVENT && request is ICommand)
             {
-                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id,
-                    MessageType.MT_EVENT));
+                Log.MessageMismatchEvent(s_logger, request.Id, MessageType.MT_EVENT);
             }
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Error, "Message {MessageId} mismatch. Message type is '{MessageType}' yet mapper produced message of type IEvent")]
+            public static partial void MessageMismatchCommand(ILogger logger, string messageId, MessageType messageType);
+
+            [LoggerMessage(LogLevel.Error, "Message {MessageId} mismatch. Message type is '{MessageType}' yet mapper produced message of type ICommand")]
+            public static partial void MessageMismatchEvent(ILogger logger, string messageId, MessageType messageType);
         }
    }
 }
+

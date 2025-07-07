@@ -23,32 +23,44 @@ THE SOFTWARE. */
 
 #endregion
 
-
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// How is the message body being encoded
+    /// Defines how the message body content is encoded for transmission and storage.
     /// </summary>
+    /// <remarks>
+    /// Used by <see cref="MessageBody"/> to determine how to interpret byte arrays
+    /// when converting to and from string representations.
+    /// </remarks>
     public enum CharacterEncoding
     {
         /// <summary>
-        /// Ascii text
+        /// ASCII text encoding (7-bit character set).
         /// </summary>
         ASCII,
 
         /// <summary>
-        /// Bse64 or asciiArmor
+        /// Base64 encoding for binary data or ASCII armor for text.
         /// </summary>
         Base64,
 
         /// <summary>
-        /// UTF-8 Text
+        /// UTF-8 Unicode text encoding (variable-width character encoding).
         /// </summary>
         UTF8,
 
+       /// <summary>
+       /// UTF-16 Unicode text encoding (16-bit character encoding).
+       /// </summary>
+        UTF16,
+        
         /// <summary>
-        /// Raw bytes, conversion to string may be lossy
+        /// Raw binary data - conversion to string may result in data loss.
         /// </summary>
-        Raw
+        /// <remarks>
+        /// Use when the message body contains binary data that should not be 
+        /// converted to text representation.
+        /// </remarks>
+        Raw,
     }
 }

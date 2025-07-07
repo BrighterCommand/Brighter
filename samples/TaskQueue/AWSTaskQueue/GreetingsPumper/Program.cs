@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
@@ -14,7 +13,7 @@ using Serilog;
 
 namespace GreetingsPumper
 {
-    class Program
+    static class Program
     {
         private static async Task Main(string[] args)
         {
@@ -27,32 +26,47 @@ namespace GreetingsPumper
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
 
-                {
-                    if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                     {
-                        var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
-
-                        var producerRegistry = new SnsProducerRegistryFactory(
-                            awsConnection,
-                            new SnsPublication[]
-                            {
-                                new SnsPublication
+                        if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+                        {
+                            var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.USEast1,
+                                cfg =>
                                 {
-                                    Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName())
-                                }
-                            }
-                        ).Create();
-                        
-                        services.AddBrighter()
-                            .UseExternalBus((configure) =>
-                            {
-                                configure.ProducerRegistry = producerRegistry;
-                            })
-                            .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
-                    }
+                                    var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                                    if (!string.IsNullOrWhiteSpace(serviceURL))
+                                    {
+                                        cfg.ServiceURL = serviceURL;
+                                    }
+                                });
 
-                    services.AddHostedService<RunCommandProcessor>();
-                }
+                            var producerRegistry = new SnsProducerRegistryFactory(
+                                awsConnection,
+                                new SnsPublication[]
+                                {
+                                    new SnsPublication
+                                    {
+                                        Topic = new RoutingKey(typeof(GreetingEvent).FullName
+                                            .ToValidSNSTopicName())
+                                    },
+                                    new SnsPublication
+                                    {
+                                        Topic = new RoutingKey(
+                                            typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                                        TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                                    }
+                                }
+                            ).Create();
+
+                            services.AddBrighter()
+                                .UseExternalBus((configure) =>
+                                {
+                                    configure.ProducerRegistry = producerRegistry;
+                                })
+                                .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                        }
+
+                        services.AddHostedService<RunCommandProcessor>();
+                    }
                 )
                 .UseConsoleLifetime()
                 .UseSerilog()
@@ -61,7 +75,7 @@ namespace GreetingsPumper
             await host.RunAsync();
         }
 
-        internal class RunCommandProcessor : IHostedService
+        internal sealed class RunCommandProcessor : IHostedService
         {
             private readonly IAmACommandProcessor _commandProcessor;
 

@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -31,68 +32,63 @@ using Amazon.SQS;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-internal class AWSClientFactory
+/// <summary>
+/// The Aws Client factory
+/// </summary>
+/// <param name="credentials"></param>
+/// <param name="region"></param>
+/// <param name="clientConfigAction"></param>
+public class AWSClientFactory(
+    AWSCredentials credentials,
+    RegionEndpoint region,
+    Action<ClientConfig>? clientConfigAction)
 {
-    private readonly AWSCredentials _credentials;
-    private readonly RegionEndpoint _region;
-    private readonly Action<ClientConfig>? _clientConfigAction;
+    public AWSCredentials Credentials => credentials;
+
+    public RegionEndpoint RegionEndpoint => region;
+    public Action<ClientConfig>? ClientConfigAction => clientConfigAction;
 
     public AWSClientFactory(AWSMessagingGatewayConnection connection)
+        : this(connection.Credentials, connection.Region, connection.ClientConfigAction)
     {
-        _credentials = connection.Credentials;
-        _region = connection.Region;
-        _clientConfigAction = connection.ClientConfigAction;
     }
 
-    public AWSClientFactory(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction)
-    {
-        _credentials = credentials;
-        _region = region;
-        _clientConfigAction = clientConfigAction;
-    }
-
+    /// <summary>
+    /// Create SNS Client
+    /// </summary>
+    /// <returns>New instance <see cref="AmazonSimpleNotificationServiceClient"/>.</returns>
     public AmazonSimpleNotificationServiceClient CreateSnsClient()
     {
-        var config = new AmazonSimpleNotificationServiceConfig
-        {
-            RegionEndpoint = _region
-        };
+        var config = new AmazonSimpleNotificationServiceConfig { RegionEndpoint = RegionEndpoint };
 
-        if (_clientConfigAction != null)
-        {
-            _clientConfigAction(config);
-        }
+        ClientConfigAction?.Invoke(config);
 
-        return new AmazonSimpleNotificationServiceClient(_credentials, config);
+        return new AmazonSimpleNotificationServiceClient(Credentials, config);
     }
 
+    /// <summary>
+    /// Create SQS Client
+    /// </summary>
+    /// <returns>New instance <see cref="AmazonSQSClient"/>.</returns>
     public AmazonSQSClient CreateSqsClient()
     {
-        var config = new AmazonSQSConfig
-        {
-            RegionEndpoint = _region
-        };
+        var config = new AmazonSQSConfig { RegionEndpoint = RegionEndpoint };
 
-        if (_clientConfigAction != null)
-        {
-            _clientConfigAction(config);
-        }
+        ClientConfigAction?.Invoke(config);
 
-        return new AmazonSQSClient(_credentials, config);
+        return new AmazonSQSClient(Credentials, config);
     }
 
+    /// <summary>
+    /// Create STS Client
+    /// </summary>
+    /// <returns>New instance <see cref="AmazonSecurityTokenServiceClient"/>.</returns>
     public AmazonSecurityTokenServiceClient CreateStsClient()
     {
-        var config = new AmazonSecurityTokenServiceConfig
-        {
-            RegionEndpoint = _region
-        };
+        var config = new AmazonSecurityTokenServiceConfig { RegionEndpoint = RegionEndpoint };
 
-        if (_clientConfigAction != null)
-        {
-            _clientConfigAction(config);
-        }
+        ClientConfigAction?.Invoke(config);
 
-        return new AmazonSecurityTokenServiceClient(_credentials, config);
+        return new AmazonSecurityTokenServiceClient(Credentials, config);
     }
 }

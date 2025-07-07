@@ -30,26 +30,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
     internal class SqsMessageCreatorBase
     {
-        protected HeaderResult<string> ReadReceiptHandle(Amazon.SQS.Model.Message sqsMessage)
+        protected static HeaderResult<string> ReadReceiptHandle(Amazon.SQS.Model.Message sqsMessage)
         {
             if (sqsMessage.ReceiptHandle != null)
             {
                 return new HeaderResult<string>(sqsMessage.ReceiptHandle, true);
             }
             return new HeaderResult<string>(string.Empty, true);
-        }
-
-        protected Message FailureMessage(HeaderResult<RoutingKey> topic, HeaderResult<string?> messageId)
-        {
-            var id = messageId.Success ? messageId.Result : string.Empty;
-            var routingKey = topic.Success ? topic.Result : RoutingKey.Empty;
-            
-            var header = new MessageHeader(
-                id!,
-                routingKey!,
-                MessageType.MT_UNACCEPTABLE);
-            var message = new Message(header, new MessageBody(string.Empty));
-            return message;
         }
     }
 }

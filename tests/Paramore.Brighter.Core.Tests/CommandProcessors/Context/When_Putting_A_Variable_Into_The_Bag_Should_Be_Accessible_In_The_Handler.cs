@@ -1,5 +1,4 @@
 ﻿using System;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
 using Xunit;
@@ -21,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Context
             _myCommand = new MyCommand();
             MyContextAwareCommandHandler.TestString = null;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
@@ -30,11 +29,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Context
         {
             var requestContext = new RequestContext();
             requestContext.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
-            
+
             _commandProcessor.Send(_myCommand, requestContext);
 
-            MyContextAwareCommandHandler.TestString.Should().Be(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
-            requestContext.Bag["MyContextAwareCommandHandler"].Should().Be("I was called and set the context");
+            Assert.Equal(I_AM_A_TEST_OF_THE_CONTEXT_BAG, MyContextAwareCommandHandler.TestString);
+            Assert.Equal("I was called and set the context", requestContext.Bag["MyContextAwareCommandHandler"]);
         }
 
         public void Dispose()

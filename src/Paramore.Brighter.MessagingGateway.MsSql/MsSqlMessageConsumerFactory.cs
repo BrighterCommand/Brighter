@@ -5,7 +5,7 @@ using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class MsSqlMessageConsumerFactory(RelationalDatabaseConfiguration msSqlConfiguration) : IAmAMessageConsumerFactory
+    public partial class MsSqlMessageConsumerFactory(RelationalDatabaseConfiguration msSqlConfiguration) : IAmAMessageConsumerFactory
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumerFactory>();
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration = msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
             
-            s_logger.LogDebug("MsSqlMessageConsumerFactory: create consumer for topic {ChannelName}", subscription.ChannelName);
+            Log.MsSqlMessageConsumerFactoryCreate(s_logger, subscription.ChannelName);
             return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!);
         }
 
@@ -27,8 +27,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
             
-            s_logger.LogDebug("MsSqlMessageConsumerFactory: create consumer for topic {ChannelName}", subscription.ChannelName);
+            Log.MsSqlMessageConsumerFactoryCreateAsync(s_logger, subscription.ChannelName);
             return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!);
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessageConsumerFactory: create consumer for topic {ChannelName}")]
+            public static partial void MsSqlMessageConsumerFactoryCreate(ILogger logger, string? channelName);
+
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessageConsumerFactory: create consumer for topic {ChannelName}")]
+            public static partial void MsSqlMessageConsumerFactoryCreateAsync(ILogger logger, string? channelName);
         }
     }
 }
+

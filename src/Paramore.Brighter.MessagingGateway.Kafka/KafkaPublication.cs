@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     //These enums map to Confluent's ProducerConfig values, we just don't want a dependency on that in our interface
@@ -58,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Maximum number of messages batched in one MessageSet. 
         /// </summary>
-        public int BatchNumberMessages { get; set; } = 10;
+        public int BatchNumberMessages { get; set; } = 10000;
 
         /// <summary>
         /// Messages are produced once only
@@ -104,7 +106,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Maximum number of messages allowed on the producer queue.
         /// </summary>
-        public int QueueBufferingMaxMessages { get; set; } = 10;
+        public int QueueBufferingMaxMessages { get; set; } = 100000;
 
         /// <summary>
         /// Maximum total message size sum allowed on the producer queue.
@@ -136,12 +138,31 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The unique identifier for this producer, used with transactions
         /// </summary>
         /// <returns></returns>
-        public string TransactionalId { get; set; }
+        public string? TransactionalId { get; set; }
 
         /// <summary>
         /// The Kafka message header builder that builds the message header before sending to Kafka topic.
         /// Populate this property to override the default implementation of header builder.
         /// </summary>
         public IKafkaMessageHeaderBuilder MessageHeaderBuilder { get; set; } = KafkaDefaultMessageHeaderBuilder.Instance;
+    }
+
+    /// <summary>
+    /// Represents a publication for Apache Kafka, associating a specific message type with the publication.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The type of the request (message) that this publication handles.
+    /// This type must be a class and implement the <see cref="IRequest"/> interface.
+    /// </typeparam>
+    public class KafkaPublication<T> : KafkaPublication
+        where T: class, IRequest
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="KafkaPublication{T}"/> class.
+        /// </summary>
+        public KafkaPublication()
+        {
+            RequestType = typeof(T);
+        }
     }
 }

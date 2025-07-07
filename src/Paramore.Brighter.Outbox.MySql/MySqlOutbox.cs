@@ -28,34 +28,39 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.MySql
 {
     /// <summary>
     /// Implements an outbox using Sqlite as a backing store  
     /// </summary>
-    public class MySqlOutbox : RelationDatabaseOutbox
+    public partial class MySqlOutbox : RelationDatabaseOutbox
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutbox>();
 
         private const int MySqlDuplicateKeyError = 1062;
         private readonly IAmARelationalDatabaseConfiguration _configuration;
-        private readonly IAmARelationalDbConnectionProvider  _connectionProvider;
+        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MySqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
-            : base(configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
+        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration,
+            IAmARelationalDbConnectionProvider connectionProvider)
+            : base(DbSystem.MySql, configuration.DatabaseName, configuration.OutBoxTableName,
+                new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;
@@ -66,7 +71,7 @@ namespace Paramore.Brighter.Outbox.MySql
         /// Initializes a new instance of the <see cref="MySqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
-        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration) 
+        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration)
             : this(configuration, new MySqlConnectionProvider(configuration))
         {
         }
@@ -75,7 +80,7 @@ namespace Paramore.Brighter.Outbox.MySql
             IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction
-            )
+        )
         {
             var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
@@ -88,9 +93,7 @@ namespace Paramore.Brighter.Outbox.MySql
             catch (MySqlException sqlException)
             {
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
-                s_logger.LogWarning(
-                    "MsSqlOutbox: A duplicate was detected in the batch");
-
+                Log.DuplicateDetectedInBatch(s_logger);
             }
             finally
             {
@@ -101,9 +104,9 @@ namespace Paramore.Brighter.Outbox.MySql
         protected override async Task WriteToStoreAsync(
             IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction, 
+            Action loggingAction,
             CancellationToken cancellationToken
-            )
+        )
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
             using var command = commandFunc.Invoke(connection);
@@ -117,8 +120,7 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                 {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate was detected in the batch");
+                    Log.DuplicateDetectedInBatch(s_logger);
                     return;
                 }
 
@@ -133,7 +135,7 @@ namespace Paramore.Brighter.Outbox.MySql
         protected override T ReadFromStore<T>(
             Func<DbConnection, DbCommand> commandFunc,
             Func<DbDataReader, T> resultFunc
-            )
+        )
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -152,27 +154,35 @@ namespace Paramore.Brighter.Outbox.MySql
 
         protected override async Task<T> ReadFromStoreAsync<T>(
             Func<DbConnection, DbCommand> commandFunc,
-            Func<DbDataReader, Task<T>> resultFunc, 
+            Func<DbDataReader, Task<T>> resultFunc,
             CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
+#if NETSTANDARD2_0
             using var command = commandFunc.Invoke(connection);
+#else
+            await using var command = commandFunc.Invoke(connection);
+#endif
             try
             {
                 return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
             }
             finally
             {
+#if NETSTANDARD2_0
                 connection.Close();
+#else
+                await connection.CloseAsync();
+#endif
             }
         }
 
         protected override DbCommand CreateCommand(
-            DbConnection connection, 
-            string sqlText, 
+            DbConnection connection,
+            string sqlText,
             int outBoxTimeout,
             params IDbDataParameter[] parameters)
         {
@@ -185,6 +195,26 @@ namespace Paramore.Brighter.Outbox.MySql
             return command;
         }
 
+        protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize,
+            int pageNumber)
+        {
+            var parameters = new IDbDataParameter[3];
+            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(dispatchedSince));
+
+            return parameters;
+        }
+
+        protected override IDbDataParameter[] CreatePagedReadParameters(int pageSize, int pageNumber)
+        {
+            var parameters = new IDbDataParameter[2];
+            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+
+            return parameters;
+        }
+
         protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
         {
             return new MySqlParameter { ParameterName = parameterName, Value = value };
@@ -195,74 +225,40 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
+
             return new[]
             {
+                new MySqlParameter { ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id.Value },
+                new MySqlParameter { ParameterName = $"@{prefix}MessageType", DbType = DbType.String, Value = message.Header.MessageType.ToString() },
+                new MySqlParameter { ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic.Value, },
                 new MySqlParameter
                 {
-                    ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id
-                },
-                new MySqlParameter
-                {
-                    ParameterName = $"@{prefix}MessageType",
-                    DbType = DbType.String,
-                    Value = message.Header.MessageType.ToString()
-                },
-                new MySqlParameter
-                {
-                    ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic.Value,
-                },
-                new MySqlParameter
-                {
-                    ParameterName = $"@{prefix}Timestamp",
-                    DbType = DbType.DateTimeOffset,
-                    Value = message.Header.TimeStamp.ToUniversalTime()
+                    ParameterName = $"@{prefix}Timestamp", DbType = DbType.DateTimeOffset, Value = message.Header.TimeStamp.ToUniversalTime()
                 }, //always store in UTC, as this is how we query messages
-                new MySqlParameter
-                {
-                    ParameterName = $"@{prefix}CorrelationId",
-                    DbType = DbType.String,
-                    Value = message.Header.CorrelationId
-                },
-                new MySqlParameter
-                {
-                    ParameterName = $"@{prefix}ReplyTo", DbType = DbType.String, Value = message.Header.ReplyTo
-                },
-                new MySqlParameter
-                {
-                    ParameterName = $"@{prefix}ContentType",
-                    DbType = DbType.String,
-                    Value = message.Header.ContentType
-                },
-                new MySqlParameter
-                {
-                    ParameterName = $"@{prefix}PartitionKey",
-                    DbType = DbType.String,
-                    Value = message.Header.PartitionKey
-                },
-                new MySqlParameter { ParameterName = $"@{prefix}HeaderBag", DbType = DbType.String, Value = bagJson },
-                _configuration.BinaryMessagePayload
-                    ? new MySqlParameter
-                    {
-                        ParameterName = $"@{prefix}Body", DbType = DbType.Binary, Value = message.Body.Bytes
-                    }
-                    : new MySqlParameter
-                    {
-                        ParameterName = $"@{prefix}Body", DbType = DbType.String, Value = message.Body.Value
-                    }
+                new MySqlParameter { ParameterName = $"@{prefix}CorrelationId", DbType = DbType.String, Value = message.Header.CorrelationId.Value },
+                new MySqlParameter { ParameterName = $"@{prefix}ReplyTo", DbType = DbType.String, Value = message.Header.ReplyTo?.Value },
+                new MySqlParameter { ParameterName = $"@{prefix}ContentType", DbType = DbType.String, Value = message.Header.ContentType?.ToString() },
+                new MySqlParameter { ParameterName = $"@{prefix}PartitionKey", DbType = DbType.String, Value = message.Header.PartitionKey.Value },
+                new MySqlParameter { ParameterName = $"@{prefix}HeaderBag", DbType = DbType.String, Value = bagJson }, _configuration.BinaryMessagePayload
+                    ? new MySqlParameter { ParameterName = $"@{prefix}Body", DbType = DbType.Binary, Value = message.Body.Bytes }
+                    : new MySqlParameter { ParameterName = $"@{prefix}Body", DbType = DbType.String, Value = message.Body.Value },
+                new MySqlParameter { ParameterName = $"@{prefix}Source", DbType = DbType.String, Value = message.Header.Source.AbsoluteUri },
+                new MySqlParameter { ParameterName = $"@{prefix}Type", DbType = DbType.String, Value = message.Header.Type },
+                new MySqlParameter { ParameterName = $"@{prefix}DataSchema", DbType = DbType.String, Value = message.Header.DataSchema?.AbsoluteUri },
+                new MySqlParameter { ParameterName = $"@{prefix}Subject", DbType = DbType.String, Value = message.Header.Subject },
+                new MySqlParameter { ParameterName = $"@{prefix}TraceParent", DbType = DbType.String, Value = message.Header.TraceParent?.Value },
+                new MySqlParameter { ParameterName = $"@{prefix}TraceState", DbType = DbType.String, Value = message.Header.TraceState?.Value },
+                new MySqlParameter { ParameterName = $"@{prefix}Baggage", DbType = DbType.String, Value = message.Header.Baggage.ToString() }
             };
         }
 
-        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
-            double milliSecondsSinceAdded,
-            int pageSize, 
-            int pageNumber
-            )
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
+            int pageNumber)
         {
-            var offset = (pageNumber - 1) * pageSize;
             var parameters = new IDbDataParameter[3];
-            parameters[0] = CreateSqlParameter("OffsetValue", offset);
-            parameters[1] = CreateSqlParameter("PageSize", pageSize);
-            parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
+            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[2] = CreateSqlParameter("TimestampSince", DateTimeOffset.UtcNow.Subtract(since));
 
             return parameters;
         }
@@ -309,20 +305,42 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 messages.Add(MapAMessage(dr));
             }
-
+#if NETSTANDARD2_0
             dr.Close();
+#else
+            await dr.CloseAsync();
+#endif
 
             return messages;
         }
 
 
-        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken)
+        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr,
+            CancellationToken cancellationToken)
         {
             int outstandingMessages = -1;
             if (await dr.ReadAsync(cancellationToken))
             {
                 outstandingMessages = dr.GetInt32(0);
             }
+
+#if NETSTANDARD2_0
+            dr.Close();
+#else
+            await dr.CloseAsync();
+#endif
+
+            return outstandingMessages;
+        }
+
+        protected override int MapOutstandingCount(DbDataReader dr)
+        {
+            int outstandingMessages = -1;
+            if (dr.Read())
+            {
+                outstandingMessages = dr.GetInt32(0);
+            }
+
             dr.Close();
             return outstandingMessages;
         }
@@ -332,7 +350,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return sqlException.Number == MySqlDuplicateKeyError;
         }
 
-        private Message MapAMessage(IDataReader dr)
+        private Message MapAMessage(DbDataReader dr)
         {
             var id = GetMessageId(dr);
             var messageType = GetMessageType(dr);
@@ -342,58 +360,70 @@ namespace Paramore.Brighter.Outbox.MySql
 
             if (dr.FieldCount > 4)
             {
-                DateTimeOffset timeStamp = GetTimeStamp(dr);
+                var timeStamp = GetTimeStamp(dr);
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
-                var contentType = GetContentType(dr);
+                var contentType = GetContentType(dr) ?? new ContentType(MediaTypeNames.Text.Plain);
                 var partitionKey = GetPartitionKey(dr);
-
+                var source = GetSource(dr);
+                var eventType = GetEventType(dr);
+                var dataSchema = GetDataSchema(dr);
+                var subject = GetSubject(dr);
+                var traceParent = GetTraceParent(dr);
+                var traceState = GetTraceState(dr);
+                var baggage = GetBaggage(dr);
+                
                 header = new MessageHeader(
                     messageId: id,
                     topic: topic,
                     messageType: messageType,
+                    source: source,
+                    type: eventType,
                     timeStamp: timeStamp,
+                    correlationId: correlationId,
+                    replyTo: replyTo,
+                    contentType: contentType,
+                    partitionKey: partitionKey,
+                    dataSchema: dataSchema,
+                    subject: subject,
                     handledCount: 0,
                     delayed: TimeSpan.Zero,
-                    correlationId: correlationId,
-                    replyTo: new RoutingKey(replyTo),
-                    contentType: contentType,
-                    partitionKey: partitionKey);
+                    traceParent: traceParent,
+                    traceState: traceState,
+                    baggage: baggage
+                );
 
-                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+                // existing bag items
+                var dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
-                {
-                    foreach (var key in dictionaryBag.Keys)
-                    {
-                        header.Bag.Add(key, dictionaryBag[key]);
-                    }
-                }
+                    foreach (var kv in dictionaryBag)
+                        header.Bag.Add(kv.Key, kv.Value);
             }
 
+#if NETSTANDARD2_0
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
-                : new MessageBody(GetBodyAsString(dr), "application/json", CharacterEncoding.UTF8);
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsString(dr), new ContentType("application/json"), CharacterEncoding.UTF8);
+
+#else
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsString(dr), new ContentType(MediaTypeNames.Application.Json), CharacterEncoding.UTF8);
+
+#endif
 
             return new Message(header, body);
         }
 
-       private byte[] GetBodyAsBytes(MySqlDataReader dr)
+        private static byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
-            var i = dr.GetOrdinal("Body");
-            using var ms = new MemoryStream();
-            var buffer = new byte[1024];
-            int offset = 0;
-            var bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-            while (bytesRead > 0)
-            {
-                ms.Write(buffer, offset, (int)bytesRead);
-                offset += (int)bytesRead;
-                bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-            }
+            // No need to dispose a MemoryStream, I do not think they dare to ever change that
+            var stream = dr.GetStream("Body");
+            if (stream is not MemoryStream memoryStream) // the current implementation returns a MemoryStream
+                // If the type of returned Stream is ever changed, please check if it requires disposal, also other places in the code base that uses GetStream
+                throw new NotImplementedException(nameof(MySqlDataReader.GetStream) + " no longer returns " + nameof(MemoryStream));
 
-            ms.Flush();
-            var body = ms.ToArray();
-            return body;
+            return memoryStream.ToArray(); // Then we can just return its value, instead of copying manually
         }
 
         private static string GetBodyAsString(IDataReader dr)
@@ -401,7 +431,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return dr.GetString(dr.GetOrdinal("Body"));
         }
 
-         private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        private static Dictionary<string, object> GetContextBag(IDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
@@ -410,22 +440,24 @@ namespace Paramore.Brighter.Outbox.MySql
             return dictionaryBag;
         }
 
-        private string GetContentType(IDataReader dr)
+        private static ContentType GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null;
 
             var contentType = dr.GetString(ordinal);
-            return contentType;
+            if (string.IsNullOrEmpty(contentType))
+                return null;
+            return new ContentType(contentType);
         }
 
-        private string GetCorrelationId(IDataReader dr)
+        private static Id GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
 
             var correlationId = dr.GetString(ordinal);
-            return correlationId;
+            return new Id(correlationId);
         }
 
         private static MessageType GetMessageType(IDataReader dr)
@@ -433,12 +465,13 @@ namespace Paramore.Brighter.Outbox.MySql
             return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static string GetMessageId(IDataReader dr)
+        private static Id GetMessageId(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("MessageId"));
+            var id = dr.GetString(dr.GetOrdinal("MessageId"));
+            return new Id(id);
         }
 
-        private string GetPartitionKey(IDataReader dr)
+        private static string GetPartitionKey(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
@@ -447,13 +480,15 @@ namespace Paramore.Brighter.Outbox.MySql
             return partitionKey;
         }
 
-        private string GetReplyTo(IDataReader dr)
+        private static RoutingKey GetReplyTo(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
             if (dr.IsDBNull(ordinal)) return null;
 
             var replyTo = dr.GetString(ordinal);
-            return replyTo;
+            if (string.IsNullOrEmpty(replyTo))
+                return null;
+            return new RoutingKey(replyTo);
         }
 
         private static RoutingKey GetTopic(IDataReader dr)
@@ -468,6 +503,62 @@ namespace Paramore.Brighter.Outbox.MySql
                 ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
+        }
+
+        private static Uri GetSource(IDataReader dr)
+        {
+            var ord = dr.GetOrdinal("Source");
+            return dr.IsDBNull(ord) ? null : new Uri(dr.GetString(ord));
+        }
+
+        private static string GetEventType(IDataReader dr)
+        {
+            var ord = dr.GetOrdinal("Type");
+            return dr.IsDBNull(ord) ? null : dr.GetString(ord);
+        }
+
+        private static Uri GetDataSchema(IDataReader dr)
+        {
+            var ord = dr.GetOrdinal("DataSchema");
+            return dr.IsDBNull(ord) ? null : new Uri(dr.GetString(ord));
+        }
+
+        private static string GetSubject(IDataReader dr)
+        {
+            var ord = dr.GetOrdinal("Subject");
+            return dr.IsDBNull(ord) ? null : dr.GetString(ord);
+        }
+
+        private static TraceParent GetTraceParent(IDataReader dr)
+        {
+            var ord = dr.GetOrdinal("TraceParent");
+            return dr.IsDBNull(ord) ? null : new TraceParent(dr.GetString(ord));
+        }
+
+        private static TraceState GetTraceState(IDataReader dr)
+        {
+            var ord = dr.GetOrdinal("TraceState");
+            return dr.IsDBNull(ord) ? null : new TraceState(dr.GetString(ord));
+        }
+
+        private static Baggage GetBaggage(IDataReader dr)
+        {
+            var baggage = new Baggage();
+            
+            var ord = dr.GetOrdinal("Baggage");
+            
+            var baggageAsString = dr.IsDBNull(ord) ? "" : dr.GetString(ord);
+            if (string.IsNullOrEmpty(baggageAsString))
+                return baggage;
+            
+            baggage.LoadBaggage(baggageAsString);
+            return baggage;
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "MsSqlOutbox: A duplicate was detected in the batch")]
+            public static partial void DuplicateDetectedInBatch(ILogger logger);
         }
     }
 }

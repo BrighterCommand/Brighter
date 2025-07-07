@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
 using Xunit;
@@ -45,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
             var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(_receivedMessages));
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
@@ -56,8 +55,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
         {
             await _commandProcessor.SendAsync(_myCommand);
 
-           // _should_send_the_command_to_the_command_handler
-            _receivedMessages.Should().Contain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+            // _should_send_the_command_to_the_command_handler
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyCommandHandlerAsync), _myCommand.Id), _receivedMessages);
         }
 
         public void Dispose()

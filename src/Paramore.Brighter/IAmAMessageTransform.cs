@@ -22,8 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -49,7 +47,7 @@ namespace Paramore.Brighter
         /// the attribute itself can only use primitives.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        void InitializeWrapFromAttributeParams(params object[] initializerList);
+        void InitializeWrapFromAttributeParams(params object?[] initializerList);
         
         /// <summary>
         /// Initializes from the <see cref="TransformAttribute"/> unwrap attribute parameters. Use when you need to provide parameter information from the
@@ -57,7 +55,7 @@ namespace Paramore.Brighter
         /// the attribute itself can only use primitives.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        void InitializeUnwrapFromAttributeParams(params object[] initializerList);
+        void InitializeUnwrapFromAttributeParams(params object?[] initializerList);
 
         /// <summary>
         /// A Wrap modifies an outgoing message by altering its header or body

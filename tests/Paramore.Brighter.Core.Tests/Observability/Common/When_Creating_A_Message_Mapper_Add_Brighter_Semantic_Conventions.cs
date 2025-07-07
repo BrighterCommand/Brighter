@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using FluentAssertions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Xunit;
 
@@ -49,7 +49,7 @@ public class BrighterSemanticConventionsMessageMapperTests
         var publication = new Publication() { Topic = routingKey };
         
         //act
-        BrighterTracer.WriteMapperEvent(message, publication, _parentActivity, "MyMessageMapper", false, true);
+        BrighterTracer.WriteMapperEvent(message, publication, _parentActivity, "MyMessageMapper", false, InstrumentationOptions.All, true);
         
         _parentActivity.Stop();
         var flushed = _traceProvider.ForceFlush();
@@ -57,18 +57,18 @@ public class BrighterSemanticConventionsMessageMapperTests
         //assert
         //check the created activity
         var childActivity = _exportedActivities.First(a => a.DisplayName == "BrighterSemanticConventionsMessageMapperTests");
-        childActivity.Should().NotBeNull();
+        Assert.NotNull(childActivity);
         var childEvent = childActivity.Events.First(e => e.Name == "MyMessageMapper");
         
         //assert
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperName && (string)t.Value == "MyMessageMapper").Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperType && (string)t.Value == "sync").Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value == true).Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value?.ToString() == "MyTopic".ToString()).Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id).Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == paritionKey).Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBody && (string)t.Value == message.Body.Value).Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBodySize && (int)t.Value == message.Body.Value.Length).Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && (string)t.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperName && (string)t.Value == "MyMessageMapper"));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperType && (string)t.Value == "sync"));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value == true));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value?.ToString() == "MyTopic".ToString()));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id.Value));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == paritionKey));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBody && (string)t.Value == message.Body.Value));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBodySize && (int)t.Value == message.Body.Value.Length));
+        Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && (string)t.Value == JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options)));
     }
 }

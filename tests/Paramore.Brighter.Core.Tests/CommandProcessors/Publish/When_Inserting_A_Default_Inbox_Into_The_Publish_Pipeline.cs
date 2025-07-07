@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -56,6 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}, {Brighter.CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new InMemorySchedulerFactory(),
                 inboxConfiguration: inboxConfiguration
             );
             PipelineBuilder<MyEvent>.ClearPipelineCache();
@@ -70,8 +70,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             _commandProcessor.Publish(@event);
 
             //assert we are in, and auto-context added us under our name
-            var boxed = _inbox.Exists<MyEvent>(@event.Id, typeof(MyGlobalInboxEventHandler).FullName, 100);
-            boxed.Should().BeTrue();
+            var boxed = _inbox.Exists<MyEvent>(@event.Id, typeof(MyGlobalInboxEventHandler).FullName, null, 100);
+            Assert.True(boxed);
         }
 
         public void Dispose()

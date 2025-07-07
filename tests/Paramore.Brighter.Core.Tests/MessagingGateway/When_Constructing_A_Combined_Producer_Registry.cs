@@ -1,5 +1,5 @@
 ﻿using System.Linq;
-using FluentAssertions;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway;
@@ -26,16 +26,16 @@ public class CombinedProducerRegistryTests
             }
         };
 
-        var firstProducerFactory = new InMemoryMessageProducerFactory(bus, firstProducers);
-        var secondProducerFactory = new InMemoryMessageProducerFactory(bus, secondProducers);
+        var firstProducerFactory = new InMemoryMessageProducerFactory(bus, firstProducers, InstrumentationOptions.All);
+        var secondProducerFactory = new InMemoryMessageProducerFactory(bus, secondProducers, InstrumentationOptions.All);
 
         var combinedRegistryFactory = new CombinedProducerRegistryFactory(firstProducerFactory, secondProducerFactory);
         var producerRegistry = combinedRegistryFactory.Create();
 
         // Producer registry should contain producers for both topics
         var producers = producerRegistry.Producers.ToList();
-        producers.Count.Should().Be(2);
-        producers.Count(x => x.Publication.Topic == "FirstTopic").Should().Be(1);
-        producers.Count(x => x.Publication.Topic == "SecondTopic").Should().Be(1);
+        Assert.Equal(2, producers.Count);
+        Assert.Equal(1, producers.Count(x => x.Publication.Topic == "FirstTopic"));
+        Assert.Equal(1, producers.Count(x => x.Publication.Topic == "SecondTopic"));
     }
 }

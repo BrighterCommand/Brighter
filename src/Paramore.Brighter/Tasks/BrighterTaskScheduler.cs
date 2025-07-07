@@ -6,8 +6,6 @@
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false.
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
-// Originally based on:
-
 //Also based on:
 // https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
 // https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
@@ -26,17 +24,17 @@ namespace Paramore.Brighter.Tasks;
 /// This class provides a task scheduler that causes all tasks to be executed synchronously on the current thread.
 /// The synchronizationHelper and scheduler are used to run continuations on the same thread as the async operation.
 /// </summary>
-internal class BrighterTaskScheduler : TaskScheduler
+internal sealed class BrighterTaskScheduler : TaskScheduler
 {
-    private readonly BrighterSynchronizationHelper _synchronizationHelper;
+    private readonly BrighterAsyncContext _asyncContext;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BrighterTaskScheduler"/> class.
     /// </summary>
-    /// <param name="synchronizationHelper">The synchronizationHelper in which tasks should be executed.</param>
-    public BrighterTaskScheduler(BrighterSynchronizationHelper synchronizationHelper)
+    /// <param name="asyncContext">The synchronizationHelper in which tasks should be executed.</param>
+    public BrighterTaskScheduler(BrighterAsyncContext asyncContext)
     {
-        _synchronizationHelper = synchronizationHelper;
+        _asyncContext = asyncContext;
     }
 
     /// <summary>
@@ -45,7 +43,7 @@ internal class BrighterTaskScheduler : TaskScheduler
     /// <returns>An enumerable of the scheduled tasks.</returns>
     protected override IEnumerable<Task> GetScheduledTasks()
     {
-        return _synchronizationHelper.GetScheduledTasks();
+        return _asyncContext.GetScheduledTasks();
     }
 
     /// <summary>
@@ -58,15 +56,11 @@ internal class BrighterTaskScheduler : TaskScheduler
         Debug.WriteLine($"BrighterTaskScheduler: QueueTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
         
-       var queued = _synchronizationHelper.Enqueue((Task)task, false);
-       if (!queued)
-   {
-           Debug.IndentLevel = 1;
-           Debug.WriteLine($"BrighterTaskScheduler: QueueTask Failed to queue task {task.ToString()} on {System.Threading.Thread.CurrentThread.ManagedThreadId}");
-           Debug.IndentLevel = 0;
-       }
+       _asyncContext.Enqueue((Task)task, false);
+       
+       // If we fail to add to the queue, just drop the Task.
     }
-
+    
     /// <summary>
     /// Attempts to execute the specified task on the current thread.
     /// </summary>
@@ -78,9 +72,8 @@ internal class BrighterTaskScheduler : TaskScheduler
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterTaskScheduler: TryExecuteTaskInline on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
-        
-        return (BrighterSynchronizationHelper.Current == _synchronizationHelper) && TryExecuteTask(task);
-        
+
+        return BrighterAsyncContext.Current == _asyncContext && TryExecuteTask(task);
     }
 
     /// <summary>
@@ -99,6 +92,30 @@ internal class BrighterTaskScheduler : TaskScheduler
     {
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterTaskScheduler: DoTryExecuteTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.IndentLevel = 0;
+        
+        TryExecuteTask(task);
+    }
+    
+    /// <summary>
+    /// In a new thread, attempts to execute the specified task.
+    /// </summary>
+    /// <remarks>
+    /// This is a little "Hail Mary" to try and execute a task that has failed to queue because we have already completed the synchronization context.
+    /// Seems to be caused by an Exection Context that has our scheduler as the default, as it fools ConfigureAwait
+    /// </remarks>
+    /// <param name="obj"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    private void TryExecuteNewThread(object? obj)
+    {
+        var task = obj as Task;
+        if (task  == null)
+        {
+            throw new ArgumentNullException(nameof(obj));
+        }
+        
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterTaskScheduler: Use TryExecuteNewThread for {task} on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
         
         TryExecuteTask(task);

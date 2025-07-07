@@ -114,7 +114,7 @@ namespace Paramore.Brighter.DynamoDb
 
             return tableCheck.Any(kv => kv.Value) ? 
                 (true, tableCheck.Where(tbl => tbl.Value).Select(tbl => tbl.Key)) : 
-                (false, Enumerable.Empty<string>());
+                (false, []);
 
         }
         
@@ -197,12 +197,10 @@ namespace Paramore.Brighter.DynamoDb
             return false;
         }
 
-        private class DynamoDbTableStatus
+        private sealed class DynamoDbTableStatus
         { 
-            public string TableName { get; set; }
+            public string TableName { get; init; }
             public bool IsReady { get; set; }
         }
-
    }
 }
-

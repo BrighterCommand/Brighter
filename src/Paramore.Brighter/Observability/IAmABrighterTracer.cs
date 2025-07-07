@@ -84,6 +84,14 @@ public interface IAmABrighterTracer : IDisposable
         );
     
     /// <summary>
+    /// Create a span for an inbox or outbox operation
+    /// </summary>
+    /// <param name="info">The attributes of the claim check operation</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
+    Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info, InstrumentationOptions options = InstrumentationOptions.All);
+    
+    /// <summary>
     /// Create a span for a request in CommandProcessor
     /// </summary>
     /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
@@ -140,18 +148,17 @@ public interface IAmABrighterTracer : IDisposable
     );
 
     /// <summary>
-    /// Create a span for an outbox operation
+    /// Create a span for an inbox or outbox operation
     /// </summary>
     /// <param name="info">The attributes of the db operation</param>
     /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
     /// <param name="options">How deep should the instrumentation go?</param>
     /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
     Activity? CreateDbSpan(
-        OutboxSpanInfo info, 
+        BoxSpanInfo info, 
         Activity? parentActivity, 
         InstrumentationOptions options = InstrumentationOptions.All
     );
-    
     
     /// <summary>
     /// Create a span that represents Brighter producing a message to a channel

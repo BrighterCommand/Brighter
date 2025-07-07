@@ -27,16 +27,9 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Outbox.DynamoDB;
 
-internal class DispatchedAllTopicsQueryContext
+internal sealed class DispatchedAllTopicsQueryContext(int nextPage, string? lastEvaluatedKey, List<string> remainingTopics)
 {
-    public int NextPage { get; private set; }
-    public string LastEvaluatedKey { get; private set; }
-    public List<string> RemainingTopics { get; private set; }
-
-    public DispatchedAllTopicsQueryContext(int nextPage, string lastEvaluatedKey, List<string> remainingTopics)
-    {
-        NextPage = nextPage;
-        LastEvaluatedKey = lastEvaluatedKey;
-        RemainingTopics = remainingTopics;
-    }   
+    public int NextPage { get; private set; } = nextPage;
+    public string? LastEvaluatedKey { get; private set; } = lastEvaluatedKey;
+    public List<string> RemainingTopics { get; private set; } = remainingTopics;
 }

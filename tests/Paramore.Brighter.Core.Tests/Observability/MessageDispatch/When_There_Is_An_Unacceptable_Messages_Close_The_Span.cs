@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -56,10 +55,9 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
-
-            var provider = new CommandProcessorProvider(commandProcessor);
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
@@ -70,7 +68,7 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), _channel, tracer, instrumentationOptions)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
@@ -96,8 +94,8 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        _exportedActivities.Count.Should().Be(3);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue(); 
+        Assert.Equal(3, _exportedActivities.Count);
+        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter"); 
         
         var emptyMessageActivity = _exportedActivities.FirstOrDefault(a => 
             a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}" 
@@ -107,9 +105,8 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
                 )
             );
         
-        emptyMessageActivity.Should().NotBeNull();
-        emptyMessageActivity!.Status.Should().Be(ActivityStatusCode.Error);
-        emptyMessageActivity.StatusDescription.Should().Contain(
-            $"MessagePump: Failed to parse a message from the incoming message with id {_message.Id} from {_channel.Name}");
+        Assert.NotNull(emptyMessageActivity);
+        Assert.Equal(ActivityStatusCode.Error, emptyMessageActivity!.Status);
+        Assert.Contains($"MessagePump: Failed to parse a message from the incoming message with id {_message.Id} from {_channel.Name}", emptyMessageActivity.StatusDescription);
     }
 }

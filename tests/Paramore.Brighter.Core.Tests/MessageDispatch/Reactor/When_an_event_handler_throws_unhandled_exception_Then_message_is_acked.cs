@@ -1,30 +1,5 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
+﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
@@ -49,7 +24,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public MessagePumpEventProcessingExceptionTests()
         {
             SpyExceptionCommandProcessor commandProcessor = new();
-            var provider = new CommandProcessorProvider(commandProcessor);
 
             _bus = new InternalBus();
             
@@ -63,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var requestContextFactory = new InMemoryRequestContextFactory();
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, null, requestContextFactory, _channel)
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, requestContextFactory, _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
@@ -94,11 +68,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
                 Assert.Empty(_bus.Stream(_routingKey));
 
-                TestCorrelator.GetLogEventsFromCurrentContext()
-                    .Should().Contain(x => x.Level == LogEventLevel.Error)
-                    .Which.MessageTemplate.Text
-                    .Should().Be(
-                        "MessagePump: Failed to dispatch message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}");
+                var logEvents = TestCorrelator.GetLogEventsFromCurrentContext();
+                Assert.Contains(logEvents, x => x.Level == LogEventLevel.Error && x.MessageTemplate.Text == 
+                    "MessagePump: Failed to dispatch message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}");
             }
         }
     }

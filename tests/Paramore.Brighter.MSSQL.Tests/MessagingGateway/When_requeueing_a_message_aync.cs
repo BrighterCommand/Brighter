@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -22,7 +23,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             var myCommand = new MyCommand { Value = "Test" };
             string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
-            string contentType = "text\\plain";
+            var contentType = new ContentType(MediaTypeNames.Text.Plain);
             var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";
             _topic = new RoutingKey($"Consumer-Requeue-Tests-{Guid.NewGuid()}");
 
@@ -57,7 +58,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             //clear the queue
             await channel.AcknowledgeAsync(requeuedMessage);
 
-            requeuedMessage.Body.Value.Should().Be(message.Body.Value);
+            Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
         }
         
         public void Dispose()

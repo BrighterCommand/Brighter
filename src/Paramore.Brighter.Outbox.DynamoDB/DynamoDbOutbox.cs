@@ -27,6 +27,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -48,13 +49,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly Random _random = new Random();
         private readonly TimeProvider _timeProvider;
 
-        private readonly ConcurrentDictionary<string, OutstandingTopicQueryContext> _outstandingTopicQueryContexts;
+        private readonly ConcurrentDictionary<string, OutstandingTopicQueryContext?> _outstandingTopicQueryContexts;
         private readonly ConcurrentDictionary<string, DispatchedTopicQueryContext> _dispatchedTopicQueryContexts;
 
         private readonly ConcurrentDictionary<string, byte> _topicNames;
 
-        private OutstandingAllTopicsQueryContext _outstandingAllTopicsQueryContext;
-        private DispatchedAllTopicsQueryContext _dispatchedAllTopicsQueryContext;
+        private OutstandingAllTopicsQueryContext? _outstandingAllTopicsQueryContext;
+        private DispatchedAllTopicsQueryContext? _dispatchedAllTopicsQueryContext;
+
+        private readonly InstrumentationOptions _instrumentationOptions;
+        private const string DYNAMO_DB_NAME = "outbox";
 
         public bool ContinueOnCapturedContext { get; set; }
         
@@ -63,19 +67,24 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// We inject this so that we can use the same tracer as the calling application
         /// You do not need to set this property as we will set it when setting up the External Service Bus
         /// </summary>
-        public IAmABrighterTracer Tracer { private get; set; } 
+        public IAmABrighterTracer? Tracer { private get; set; }
 
         /// <summary>
         ///  Initialises a new instance of the <see cref="DynamoDbOutbox"/> class.
         /// </summary>
         /// <param name="client">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration, 
-            TimeProvider timeProvider)
+        /// <param name="timeProvider">Provides a timer that can be overwritten in teests; on null uses system timer</param>
+        /// <param name="instrumentationOptions"></param>
+        public DynamoDbOutbox(
+            IAmazonDynamoDB client,
+            DynamoDbConfiguration configuration,
+            TimeProvider? timeProvider = null,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _configuration = configuration;
             _context = new DynamoDBContext(client);
-            _timeProvider = timeProvider;
+            _timeProvider = timeProvider ?? TimeProvider.System;
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
             {
                 OverrideTableName = _configuration.TableName,
@@ -87,9 +96,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
             }
 
-            _outstandingTopicQueryContexts = new ConcurrentDictionary<string, OutstandingTopicQueryContext>();
+            _outstandingTopicQueryContexts = new ConcurrentDictionary<string, OutstandingTopicQueryContext?>();
             _dispatchedTopicQueryContexts = new ConcurrentDictionary<string, DispatchedTopicQueryContext>();
             _topicNames = new ConcurrentDictionary<string, byte>();
+
+            _instrumentationOptions = instrumentationOptions;
         }
 
         /// <summary>
@@ -109,7 +120,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
             }
 
-            _outstandingTopicQueryContexts = new ConcurrentDictionary<string, OutstandingTopicQueryContext>();
+            _outstandingTopicQueryContexts = new ConcurrentDictionary<string, OutstandingTopicQueryContext?>();
             _dispatchedTopicQueryContexts = new ConcurrentDictionary<string, DispatchedTopicQueryContext>();
             _topicNames = new ConcurrentDictionary<string, byte>();
         }
@@ -125,12 +136,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="transactionProvider">Should we participate in a transaction</param>
         public void Add(
             Message message, 
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1, 
-            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null
+            IAmABoxTransactionProvider<TransactWriteItemsRequest>? transactionProvider = null
             )
         {
-            AddAsync(message, requestContext, outBoxTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
+            AddAsync(message, requestContext, outBoxTimeout, transactionProvider).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -142,9 +153,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="transactionProvider">Should we participate in a transaction</param>
         public void Add(
             IEnumerable<Message> messages, 
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1, 
-            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null
+            IAmABoxTransactionProvider<TransactWriteItemsRequest>? transactionProvider = null
             )
         {
             foreach (var message in messages)
@@ -163,26 +174,42 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task AddAsync(
             Message message,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null,
+            IAmABoxTransactionProvider<TransactWriteItemsRequest>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
-            var shard = GetShardNumber();
-            var expiresAt = GetExpirationTime();
-            var messageToStore = new MessageItem(message, shard, expiresAt);
-
-            // Store the name of the topic as a key in a concurrent dictionary to ensure uniqueness & thread safety
-            _topicNames.TryAdd(message.Header.Topic, 0);
-
-            if (transactionProvider != null)
+            var dbAttributes = new Dictionary<string, string>()
             {
-                await AddToTransactionWrite(messageToStore, (DynamoDbUnitOfWork)transactionProvider);
-            }
-            else
+                {"db.operation.parameter.message.id", message.Id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Add, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
             {
-                await WriteMessageToOutbox(cancellationToken, messageToStore);
+                var shard = GetShardNumber();
+                var expiresAt = GetExpirationTime();
+                var messageToStore = new MessageItem(message, shard, expiresAt);
+
+                // Store the name of the topic as a key in a concurrent dictionary to ensure uniqueness & thread safety
+                _topicNames.TryAdd(message.Header.Topic, 0);
+
+                if (transactionProvider != null)
+                {
+                    await AddToTransactionWrite(messageToStore, (DynamoDbUnitOfWork)transactionProvider);
+                }
+                else
+                {
+                    await WriteMessageToOutbox(cancellationToken, messageToStore);
+                }
             }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }            
         }
 
         /// <summary>
@@ -195,9 +222,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task AddAsync(
             IEnumerable<Message> messages,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null,
+            IAmABoxTransactionProvider<TransactWriteItemsRequest>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
             foreach (var message in messages)
@@ -213,7 +240,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="messageIds">The messages to delete</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="args">Additional parameters required to search if needed</param>
-        public void Delete(string[] messageIds, RequestContext requestContext, Dictionary<string, object> args = null)
+        public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
             DeleteAsync(messageIds, requestContext).GetAwaiter().GetResult();
         }
@@ -226,14 +253,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="args">Additional parameters required to search if needed</param>
         /// <param name="cancellationToken">Should the operation be cancelled</param>
         public async Task DeleteAsync(
-            string[] messageIds, 
-            RequestContext requestContext,
-            Dictionary<string, object> args = null,
+            Id[] messageIds, 
+            RequestContext? requestContext,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
             foreach (var messageId in messageIds)
             {
-                await _context.DeleteAsync<MessageItem>(messageId, _dynamoOverwriteTableConfig, cancellationToken);
+                await DeleteAsync(messageId, requestContext, args, cancellationToken);
             }
         }
 
@@ -254,7 +281,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             int pageSize = 100, 
             int pageNumber = 1, 
             int outboxTimeout = -1,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object>? args = null)
         {
             return DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, outboxTimeout, args, CancellationToken.None)
                 .GetAwaiter().GetResult();
@@ -278,16 +305,33 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             int pageSize = 100,
             int pageNumber = 1,
             int outboxTimeout = -1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            if (args == null || !args.ContainsKey("Topic"))
-            {
-                return await DispatchedMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
-            }
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.DispatchedMessages, _configuration.TableName),
+                requestContext?.Span,
+                options: _instrumentationOptions);
 
-            var topic = (string)args["Topic"];
-            return await DispatchedMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
+            try
+            {
+                IEnumerable<Message> result;
+                if (args == null || !args.TryGetValue("Topic", out var topicArg))
+                {
+                    result = await DispatchedMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
+                }
+                else
+                {
+                    result = await DispatchedMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, (string)topicArg, cancellationToken);
+                }
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
         
         /// <summary>
@@ -317,12 +361,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="args"></param>
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
-        public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object> args = null)
+        public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
         {
-            return GetMessage(messageId)
-                .ConfigureAwait(ContinueOnCapturedContext)
-                .GetAwaiter()
-                .GetResult();
+            return GetAsync(messageId, requestContext, outBoxTimeout, args).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -335,14 +376,31 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken"></param>
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
         public async Task<Message> GetAsync(
-            string messageId,
+            Id messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            return await GetMessage(messageId, cancellationToken)
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", messageId}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Get, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var messageItem = await _context.LoadAsync<MessageItem>(messageId.Value, _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
+                return messageItem?.ConvertToMessage() ?? new Message();
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -354,20 +412,36 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="args"></param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(
-            string id,
+            Id id,
             RequestContext requestContext,
             DateTimeOffset? dispatchedAt = null,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            var message = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-            MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", id}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.MarkDispatched, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
 
-            await _context.SaveAsync(
-                message, 
-                _dynamoOverwriteTableConfig,
-                cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            try
+            {
+                var message = await _context.LoadAsync<MessageItem>(id.Value, _dynamoOverwriteTableConfig, cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
+
+                await _context.SaveAsync(
+                    message,
+                    _dynamoOverwriteTableConfig,
+                    cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -379,10 +453,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="args">What is the topic of the message</param>
         /// <param name="cancellationToken">Cancel an ongoing operation</param>
         public async Task MarkDispatchedAsync(
-            IEnumerable<string> ids,
+            IEnumerable<Id> ids,
             RequestContext requestContext,
             DateTimeOffset? dispatchedAt = null,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
             foreach(var messageId in ids)
@@ -398,15 +472,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args"></param>
-        public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object> args = null)
+        public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
         {
-            var message = _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig).Result;
-            MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
-
-            _context.SaveAsync(
-                message, 
-                _dynamoOverwriteTableConfig)
-                .Wait(_configuration.Timeout);
+            MarkDispatchedAsync(id, requestContext, dispatchedAt, args)
+                .ConfigureAwait(ContinueOnCapturedContext)
+                .GetAwaiter()
+                .GetResult();
         }
 
         private static void MarkMessageDispatched(DateTimeOffset dispatchedAt, MessageItem message)
@@ -431,10 +502,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public IEnumerable<Message> OutstandingMessages(
             TimeSpan dispatchedSince, 
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int pageSize = 100, 
             int pageNumber = 1, 
-            Dictionary<string, object> args = null)
+            Dictionary<string, object>? args = null)
         {
             return OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, args)
                 .GetAwaiter()
@@ -453,23 +524,64 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
             TimeSpan dispatchedSince,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            if (args == null || !args.ContainsKey("Topic"))
-            {
-                return await OutstandingMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
-            }
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.OutStandingMessages, _configuration.TableName),
+                requestContext?.Span,
+                options: _instrumentationOptions);
 
-            var topic = args["Topic"].ToString();
-            return await OutstandingMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
+            try
+            {
+                IEnumerable<Message> result;
+                if (args == null || !args.TryGetValue("Topic", out var topicArg))
+                {
+                    result = await OutstandingMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
+                }
+                else
+                {
+                    result = await OutstandingMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, (string)topicArg, cancellationToken);
+                }
+
+                span?.AddTag("db.response.returned_rows", result.Count());
+                return result;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
-        private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber, 
+        private async Task DeleteAsync(
+            Id messageId,
+            RequestContext? requestContext,
+            Dictionary<string, object>? args,
             CancellationToken cancellationToken)
+        {
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", messageId}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Delete, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                await _context.DeleteAsync<MessageItem>(messageId.Value, _dynamoOverwriteTableConfig, cancellationToken);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber, CancellationToken cancellationToken)
         {
             var olderThan = _timeProvider.GetUtcNow() - dispatchedSince;
 
@@ -485,7 +597,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             // the current paging token if there is one & this isn't the first page,
             // and the current shard to be paged over for the current topic
             List<string> topics;
-            string paginationToken;
+            string? paginationToken;
             int currentShard;
             if (pageNumber == 1)
             {
@@ -495,7 +607,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
             else
             {
-                topics = _outstandingAllTopicsQueryContext.RemainingTopics;
+                topics = _outstandingAllTopicsQueryContext!.RemainingTopics;
                 paginationToken = _outstandingAllTopicsQueryContext.LastEvaluatedKey;
                 currentShard = _outstandingAllTopicsQueryContext.ShardNumber;
             }
@@ -533,7 +645,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             if (currentTopicIndex < topics.Count)
             {
                 var remainingTopics = topics.GetRange(currentTopicIndex, topics.Count - currentTopicIndex);
-                _outstandingAllTopicsQueryContext = new OutstandingAllTopicsQueryContext(pageNumber + 1, paginationToken, currentShard, remainingTopics);
+                _outstandingAllTopicsQueryContext = new OutstandingAllTopicsQueryContext(pageNumber + 1, paginationToken!, currentShard, remainingTopics);
             }
             else
             {
@@ -551,13 +663,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1)
             {
-                if (!_outstandingTopicQueryContexts.ContainsKey(topicName))
+                if (!_outstandingTopicQueryContexts.TryGetValue(topicName, out OutstandingTopicQueryContext? context))
                 {
                     var errorMessage = $"Unable to query page {pageNumber} of outstanding messages for topic {topicName} - next available page is page 1";
                     throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
                 }
 
-                if (_outstandingTopicQueryContexts[topicName]?.NextPage != pageNumber)
+                if (context?.NextPage != pageNumber)
                 {
                     var nextPageNumber = _dispatchedTopicQueryContexts[topicName]?.NextPage ?? 1;
                     var errorMessage = $"Unable to query page {pageNumber} of outstanding messages for topic {topicName} - next available page is page {nextPageNumber}";
@@ -566,12 +678,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
 
             // Query as much as possible up to the max page (batch) size
-            string paginationToken = null;
+            string? paginationToken = null;
             int initialShardNumber = 0;
             if (pageNumber != 1)
             {
-                paginationToken = _outstandingTopicQueryContexts[topicName].LastEvaluatedKey;
-                initialShardNumber = _outstandingTopicQueryContexts[topicName].ShardNumber;
+                paginationToken = _outstandingTopicQueryContexts[topicName]!.LastEvaluatedKey;
+                initialShardNumber = _outstandingTopicQueryContexts[topicName]!.ShardNumber;
             }
 
             var queryResult = await PageOutstandingMessagesToBatchSizeAsync(topicName, olderThan, pageSize, initialShardNumber, paginationToken, cancellationToken);
@@ -601,12 +713,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             tcs.SetResult(transaction);
             return tcs.Task;
         }
-       
-        private async Task<Message> GetMessage(string id, CancellationToken cancellationToken = default)
-        {
-            var messageItem = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken);
-            return messageItem?.ConvertToMessage() ?? new Message();
-        }
 
         private async Task<IEnumerable<Message>> DispatchedMessagesForTopicAsync(
             TimeSpan dispatchedSince,
@@ -620,13 +726,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1)
             {
-                if (!_dispatchedTopicQueryContexts.ContainsKey(topicName))
+                if (!_dispatchedTopicQueryContexts.TryGetValue(topicName, out var context))
                 {
                     var errorMessage = $"Unable to query page {pageNumber} of dispatched messages for topic {topicName} - next available page is page 1";
                     throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
                 }
 
-                if (_dispatchedTopicQueryContexts[topicName]?.NextPage != pageNumber)
+                if (context?.NextPage != pageNumber)
                 {
                     var nextPageNumber = _dispatchedTopicQueryContexts[topicName]?.NextPage ?? 1;
                     var errorMessage = $"Unable to query page {pageNumber} of dispatched messages for topic {topicName} - next available page is page {nextPageNumber}";
@@ -671,7 +777,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             // Get the list of topic names we need to query over, and the current paging token if there is one & this isn't the first page
             List<string> topics;
-            string paginationToken;
+            string? paginationToken;
             if (pageNumber == 1)
             {
                 topics = _topicNames.Keys.ToList();
@@ -679,7 +785,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
             else
             {
-                topics = _dispatchedAllTopicsQueryContext.RemainingTopics;
+                topics = _dispatchedAllTopicsQueryContext!.RemainingTopics;
                 paginationToken = _dispatchedAllTopicsQueryContext.LastEvaluatedKey;
             }
 
@@ -728,7 +834,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             DateTimeOffset olderThan, 
             int batchSize,
             int initialShardNumber, 
-            string initialPaginationToken,
+            string? initialPaginationToken,
             CancellationToken cancellationToken)
         {
             var numShards = _configuration.NumberOfShards <= 1 ? 1 : _configuration.NumberOfShards;
@@ -788,7 +894,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             string topicName,
             DateTimeOffset sinceTime,
             int batchSize,
-            string initialPaginationToken,
+            string? initialPaginationToken,
             CancellationToken cancellationToken)
         {
             var results = new List<MessageItem>();

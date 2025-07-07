@@ -12,12 +12,16 @@ namespace Paramore.Brighter.MySQL.Tests
         private readonly bool _binaryMessagePayload;
         private string _tableName;
         private MySqlSettings _mysqlSettings;
-        
+
+        private IAmARelationalDbConnectionProvider _connectionProvider;
+        public IAmARelationalDbConnectionProvider ConnectionProvider => _connectionProvider;
+
         public RelationalDatabaseConfiguration InboxConfiguration =>
             new(_mysqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
 
-        public RelationalDatabaseConfiguration OutboxConfiguration => 
-            new(_mysqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
+        public RelationalDatabaseConfiguration OutboxConfiguration =>
+            new(_mysqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName,
+                binaryMessagePayload: _binaryMessagePayload);
 
         public MySqlTestHelper(bool binaryMessagePayload = false)
         {
@@ -29,6 +33,10 @@ namespace Paramore.Brighter.MySQL.Tests
             configuration.GetSection("MySql").Bind(_mysqlSettings);
 
             _tableName = $"test_{Guid.NewGuid()}";
+
+            _connectionProvider =
+                new MySqlConnectionProvider(
+                    new RelationalDatabaseConfiguration(_mysqlSettings.TestsBrighterConnectionString));
         }
 
         public void CreateDatabase()
@@ -52,14 +60,14 @@ namespace Paramore.Brighter.MySQL.Tests
             CreateInboxTable();
         }
 
-       public void CleanUpDb()
-       {
-           using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
-           connection.Open();
-           using var command = connection.CreateCommand();
-           command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
-           command.ExecuteNonQuery();
-       }
+        public void CleanUpDb()
+        {
+            using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
+            command.ExecuteNonQuery();
+        }
 
         public void CreateOutboxTable()
         {
@@ -87,7 +95,7 @@ namespace Paramore.Brighter.MySQL.Tests
         }
     }
 
-    internal class MySqlSettings
+    internal sealed class MySqlSettings
     {
         public string TestsBrighterConnectionString { get; set; } =
             "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";

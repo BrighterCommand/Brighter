@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using FluentAssertions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -34,8 +33,11 @@ public class BrighterSemanticConventionsDbSpanTests
         _parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterSemanticConventionsDbSpanTests"); 
     }
     
-    [Fact]
-    public void When_Creating_A_Db_Span_Add_Brighter_Semantic_Conventions()
+    [Theory]
+    [InlineData(InstrumentationOptions.All)]
+    [InlineData(InstrumentationOptions.DatabaseInformation)]
+    [InlineData(InstrumentationOptions.None)]
+    public void When_Creating_A_Db_Span_Add_Brighter_Semantic_Conventions(InstrumentationOptions options)
     {
         //arrange
         var message = new Message(
@@ -46,10 +48,10 @@ public class BrighterSemanticConventionsDbSpanTests
         //act
         var dbInstanceId = Guid.NewGuid().ToString();
         var childActivity = _tracer.CreateDbSpan(
-            new OutboxSpanInfo(
+            new BoxSpanInfo(
                 dbSystem: DbSystem.MySql, 
-                dbName: InMemoryAttributes.DbName, 
-                dbOperation: OutboxDbOperation.Add, 
+                dbName: InMemoryAttributes.OutboxDbName, 
+                dbOperation: BoxDbOperation.Add, 
                 dbTable: InMemoryAttributes.DbTable, 
                 serverPort:3306,
                 dbInstanceId: dbInstanceId,
@@ -60,7 +62,7 @@ public class BrighterSemanticConventionsDbSpanTests
                 serverAddress: "http://localhost:3306"
                 ),
             _parentActivity,
-            options: InstrumentationOptions.All
+            options: options
         );
         
         childActivity.Stop();
@@ -68,39 +70,78 @@ public class BrighterSemanticConventionsDbSpanTests
         
         var flushed = _traceProvider.ForceFlush();
 
+ 
         //assert
-        flushed.Should().BeTrue();
+        Assert.True(flushed);
 
         //check the created activity
-        childActivity.ParentId.Should().Be(_parentActivity.Id);
-        childActivity.DisplayName.Should().Be($"{OutboxDbOperation.Add.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbInstanceId && t.Value == dbInstanceId);
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName);
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.Add.ToSpanName());
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.MySql.ToDbName());
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbUser && t.Value == "sa");
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerAddress && t.Value == "10.1.2.80");
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerAddress && t.Value == "http://localhost:3306");
-        childActivity.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerPort && (int)t.Value == 3306);
-        childActivity.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerPort && (int)t.Value == 3306);
-        
+        Assert.Equal(_parentActivity.Id, childActivity.ParentId);
+        Assert.Equal($"{BoxDbOperation.Add.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}", childActivity.DisplayName);
+        if(options == InstrumentationOptions.None)
+            Assert.Empty(childActivity.Tags);
+        if (options.HasFlag(InstrumentationOptions.DatabaseInformation))
+        {
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbInstanceId && t.Value == dbInstanceId);
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName);
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.Add.ToSpanName());
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.MySql.ToDbName());
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbUser && t.Value == "sa");
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.NetworkPeerAddress && t.Value == "10.1.2.80");
+            Assert.Contains(childActivity.Tags, t => t.Key == BrighterSemanticConventions.ServerAddress && t.Value == "http://localhost:3306");
+            Assert.Contains(childActivity.TagObjects, t => t.Key == BrighterSemanticConventions.NetworkPeerPort && (int)t.Value == 3306);
+            Assert.Contains(childActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ServerPort && (int)t.Value == 3306);
+
+        }
+        else
+        {
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbInstanceId);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbName);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbOperation);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbTable);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbSystem);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbStatement);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.DbUser);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.NetworkPeerAddress);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.ServerAddress);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.NetworkPeerPort);
+            Assert.DoesNotContain(childActivity.Tags, t => t.Key == BrighterSemanticConventions.ServerPort);
+        }
+
         //check via the exporter as well
-        _exportedActivities.Count.Should().Be(2);
-        _exportedActivities.Any(a => a.Source.Name == BrighterSemanticConventions.SourceName).Should().BeTrue();
-        var childSpan = _exportedActivities.First(a => a.DisplayName == $"{OutboxDbOperation.Add.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
-        childSpan.Should().NotBeNull();
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbInstanceId && t.Value == dbInstanceId);
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.Add.ToSpanName());
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.MySql.ToDbName());
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbUser && t.Value == "sa");
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerAddress && t.Value == "10.1.2.80");
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerAddress && t.Value == "http://localhost:3306");
-        childSpan.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerPort && (int)t.Value == 3306);
-        childSpan.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerPort && (int)t.Value == 3306);
+        Assert.Equal(2, _exportedActivities.Count);
+        Assert.Contains(_exportedActivities, a => a.Source.Name == BrighterSemanticConventions.SourceName);
+        var childSpan = _exportedActivities.First(a => a.DisplayName == $"{BoxDbOperation.Add.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
+        Assert.NotNull(childSpan);
+
+        if (options.HasFlag(InstrumentationOptions.DatabaseInformation))
+        {
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbInstanceId && t.Value == dbInstanceId);
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.Add.ToSpanName());
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.MySql.ToDbName());
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbUser && t.Value == "sa");
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.NetworkPeerAddress && t.Value == "10.1.2.80");
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.ServerAddress && t.Value == "http://localhost:3306");
+            Assert.Contains(childSpan.TagObjects, t => t.Key == BrighterSemanticConventions.ServerPort && (int)t.Value == 3306);
+            Assert.Contains(childSpan.TagObjects, t => t.Key == BrighterSemanticConventions.NetworkPeerPort && (int)t.Value == 3306);
+        }
+        else
+        {
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbInstanceId);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbOperation);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbTable);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbSystem);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbStatement);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbUser);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.NetworkPeerAddress);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.ServerAddress);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.ServerPort);
+            Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.NetworkPeerPort);
+        }
+        
         
     }
 }

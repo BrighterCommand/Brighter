@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //should return a empty message
-            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+            Assert.Equal(MessageType.MT_NONE, _storedMessage.Header.MessageType);
         }
 
         public void Dispose()

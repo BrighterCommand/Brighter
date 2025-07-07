@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly IEnumerable<KafkaPublication> _publications;
-        private Action<ProducerConfig> _configHook;
+        private Action<ProducerConfig>? _configHook;
 
         /// <summary>
         /// This constructs a <see cref="KafkaMessageProducerFactory"/> which can be used to create a dictionary of <see cref="KafkaMessageProducer"/>
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var publicationsByTopic = new Dictionary<RoutingKey, IAmAMessageProducer>();
             foreach (var publication in _publications)
             {
-
+                if (publication.Topic is null) continue;
                 var producer = new KafkaMessageProducer(_globalConfiguration, publication);
                 if (_configHook != null)
                     producer.ConfigHook(_configHook);
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// might drop the Confluent client, and this hook
         /// </summary>
         /// <param name="hook"></param>
-        public void SetConfigHook(Action<ProducerConfig> hook)
+        public void SetConfigHook(Action<ProducerConfig>? hook)
         {
             _configHook = hook;
         }

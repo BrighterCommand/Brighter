@@ -3,7 +3,7 @@ using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.ServiceActivator.Ports
 {
-    internal class ControlBusHandlerFactorySync : IAmAHandlerFactorySync
+    internal sealed class ControlBusHandlerFactorySync : IAmAHandlerFactorySync
     {
         private readonly Func<IAmACommandProcessor?> _commandProcessorFactory;
         private readonly IDispatcher _worker;
@@ -18,8 +18,9 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         /// Creates the specified handler type.
         /// </summary>
         /// <param name="handlerType">Type of the handler.</param>
+        /// <param name="lifetime">The Brighter Handler Lifetime</param>
         /// <returns>IHandleRequests.</returns>
-        public IHandleRequests Create(Type handlerType)
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
         {
             if (handlerType == typeof(ConfigurationCommandHandler))
                 return new ConfigurationCommandHandler(_worker);
@@ -34,7 +35,8 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         /// Releases the specified handler.
         /// </summary>
         /// <param name="handler">The handler.</param>
-        public void Release(IHandleRequests handler)
+        /// <param name="lifetime">The Brighter Handler Lifetime</param>
+        public void Release(IHandleRequests handler, IAmALifetime lifetime)
         {
         }
     }

@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  localstack:
+    image: localstack/localstack
+    environment:
+      # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
+      - "SERVICES=s3,sqs,sns,sts,dynamodb,iam,scheduler"
+      - "DEFAULT_REGION=eu-west-1"
+      - "DEBUG=1"
+      - "PROVIDER_OVERRIDE_EVENTS=v2"
+    ports:
+      - "4566:4566" # LocalStack Gateway
+      - "4510-4559:4510-4559" # External services port range
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"

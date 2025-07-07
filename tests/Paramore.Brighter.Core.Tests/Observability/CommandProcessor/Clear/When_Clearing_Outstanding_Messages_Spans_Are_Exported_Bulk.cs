@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -27,6 +26,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
     private readonly Brighter.CommandProcessor _commandProcessor;
     private readonly string _topic;
     private readonly InternalBus _internalBus = new();
+    private readonly IAmAnOutboxProducerMediator _mediator;
 
     public AsyncCommandProcessorBulkClearOutstandingObservabilityTests()
     {
@@ -63,7 +63,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var routingKey = new RoutingKey(_topic);
-        InMemoryProducer producer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
         {
             Publication =
             {
@@ -76,16 +76,17 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {routingKey, producer}
+            {routingKey, messageProducer}
         });
         
-        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+        _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
             policyRegistry, 
             messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
+            new FindPublicationByPublicationTopicOrRequestType(),
             outbox,
             maxOutStandingMessages: -1
         );
@@ -95,7 +96,8 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
-            bus,
+            _mediator,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );
@@ -120,7 +122,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutstandingFromOutbox(3, TimeSpan.Zero, useBulk: true, requestContext: context);
+        await _mediator.ClearOutstandingFromOutboxAsync(3, TimeSpan.Zero, useBulk: true, requestContext: context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         
@@ -130,11 +132,11 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         
         //assert 
         //_exportedActivities.Count.Should().Be(18);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
         
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        createActivity.Should().NotBeNull();
+        Assert.NotNull(createActivity);
         
         //there should be a clear span for the batch of messages
         var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
@@ -143,37 +145,37 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         var events = clearActivity.Events.ToList();
         var messages = _internalBus.Stream(new RoutingKey(_topic)).ToArray();
         
-        var depositEvents = events.Where(e => e.Name == OutboxDbOperation.OutStandingMessages.ToSpanName()).ToArray();
-        depositEvents.Length.Should().Be(messages.Length);
+        var depositEvents = events.Where(e => e.Name == BoxDbOperation.OutStandingMessages.ToSpanName()).ToArray();
+        Assert.Equal(messages.Length, depositEvents.Length);
         
         foreach (var message in messages)
         {
             var depositEvent = depositEvents.Single(e => e.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id));
-            depositEvent.Tags.Any(a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false).Should().BeTrue();
-            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "async" ).Should().BeTrue();
-            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id ).Should().BeTrue();
-            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic).Should().BeTrue();
-            depositEvent.Tags.Any(a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length).Should().BeTrue();
-            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value).Should().BeTrue();
-            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString()).Should().BeTrue();
-            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)a.Value == message.Header.PartitionKey).Should().BeTrue();
-            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageHeaders && (string)a.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();
+            Assert.Contains(depositEvent.Tags, a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false);
+            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "async");
+            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id);
+            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic);
+            Assert.Contains(depositEvent.Tags, a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length);
+            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value);
+            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString());
+            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)a.Value == message.Header.PartitionKey);
+            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageHeaders && (string)a.Value == JsonSerializer.Serialize(message.Header));
         }
         //there should be a span in the Db for retrieving the message
         var outBoxActivity = _exportedActivities
             .Single(a =>
-                a.DisplayName == $"{OutboxDbOperation.OutStandingMessages.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}"
+                a.DisplayName == $"{BoxDbOperation.OutStandingMessages.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}"
             );
-        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.OutStandingMessages.ToSpanName()).Should().BeTrue();
-        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable).Should().BeTrue();
-        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()).Should().BeTrue();
-        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName).Should().BeTrue();
+        Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.OutStandingMessages.ToSpanName());
+        Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
+        Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName());
+        Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName);
 
         //there should be a span for publishing the message via the producer
         var producerActivity = _exportedActivities
             .Single(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
         
         var producerEvents = producerActivity.Events.ToArray();
-        producerEvents.Length.Should().Be(3);     
+        Assert.Equal(3, producerEvents.Length);     
     }
 }

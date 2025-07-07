@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
@@ -23,22 +22,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var handlerFactory = new CheapHandlerFactorySync();
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
-            
             _pipelineBuilder.Build(new RequestContext()).Any();
         }
-    
+
         [Fact]
         public void When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers()
         {
             _pipelineBuilder.Dispose();
 
             //_should_have_called_dispose_on_instances_from_ioc
-            MyPreAndPostDecoratedHandler.DisposeWasCalled.Should().BeTrue();
+            Assert.True(MyPreAndPostDecoratedHandler.DisposeWasCalled);
             //_should_have_called_dispose_on_instances_from_pipeline_builder
-            MyLoggingHandler<MyCommand>.DisposeWasCalled.Should().BeTrue();
+            Assert.True(MyLoggingHandler<MyCommand>.DisposeWasCalled);
             //_should_have_called_release_on_all_handlers
-            s_released.Should().Be("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
+            Assert.Equal("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1", s_released);
         }
 
         public void Dispose()
@@ -46,9 +43,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             CommandProcessor.ClearServiceBus();
         }
         
-        internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
+        internal sealed class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
-            public IHandleRequests Create(Type handlerType)
+            public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
             {
                 if (handlerType == typeof(MyPreAndPostDecoratedHandler))
                 {
@@ -65,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 return null;
             }
 
-            public void Release(IHandleRequests handler)
+            public void Release(IHandleRequests handler, IAmALifetime lifetime)
             {
                 var disposable = handler as IDisposable;
                 disposable?.Dispose();
@@ -73,7 +70,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 s_released += "|" + handler.Name;
             }
         }
-
-
     }
 }

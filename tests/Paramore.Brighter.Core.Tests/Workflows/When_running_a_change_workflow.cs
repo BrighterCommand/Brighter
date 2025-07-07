@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -78,8 +77,8 @@ public class MediatorChangeStepFlowTests
             _testOutputHelper.WriteLine(ex.ToString());
         }
         
-        _job.State.Should().Be(JobState.Done);
-        _stepCompleted.Should().BeTrue();
-        _job.Data.Bag["MyValue"].Should().Be("Altered");
+        Assert.Equal(JobState.Done, _job.State);
+        Assert.True(_stepCompleted);
+        Assert.Equal("Altered", _job.Data.Bag["MyValue"]);
     }
 }

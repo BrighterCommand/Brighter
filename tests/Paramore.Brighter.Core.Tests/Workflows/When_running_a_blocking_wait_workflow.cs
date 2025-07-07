@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
@@ -87,7 +86,7 @@ public class MediatorWaitStepFlowTests
             _testOutputHelper.WriteLine(e.ToString());
         }
 
-        _stepCompleted.Should().BeTrue();
-        _job.State.Should().Be(JobState.Done);
+        Assert.True(_stepCompleted);
+        Assert.Equal(JobState.Done, _job.State);
     }
 }

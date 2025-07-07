@@ -34,11 +34,10 @@ using Polly;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Polly.Retry;
 using System.Threading.Tasks;
-using Azure.Messaging.ServiceBus;
+using Azure.Messaging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
-
 
 /// <summary>
 /// A Sync and Async Message Producer for Azure Service Bus.
@@ -64,6 +63,9 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// The OTel Span we are writing Producer events too
     /// </summary>
     public Activity? Span { get; set; }
+
+    /// <inheritdoc />
+    public IAmAMessageScheduler? Scheduler { get; set; }
 
     /// <summary>
     /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
@@ -122,12 +124,12 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// <param name="cancellationToken">The Cancellation Token.</param>
     /// <returns>List of Messages successfully sent.</returns>
     /// <exception cref="NotImplementedException"></exception>
-    public async IAsyncEnumerable<string[]> SendAsync(
+    public async IAsyncEnumerable<Id[]> SendAsync(
         IEnumerable<Message> messages,
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
     {
-        var topics = messages.Select(m => m.Header.Topic).Distinct();
+        var topics = messages.Select(m => m.Header.Topic).Distinct().ToArray();
         if (topics.Count() != 1)
         {
             Logger.LogError("Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested", topics.Count());
@@ -148,7 +150,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         {
             foreach (var batch in batches)
             {
-                var asbMessages = batch.Select(ConvertToServiceBusMessage).ToArray();
+                var asbMessages = batch.Select(message => AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message, _publication)).ToArray();
 
                 Logger.LogDebug("Publishing {NumberOfMessages} messages to topic {Topic}.",
                     asbMessages.Length, topic);
@@ -169,7 +171,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="delay">Delay to delivery of the message.</param>
-    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(async () => await SendWithDelayAsync(message, delay));
+    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
        
     /// <summary>
     /// Send the specified message with specified delay
@@ -193,7 +195,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
                 "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}",
                 message.Header.Topic, delay, message.Body.Value, message.Id);
 
-            var azureServiceBusMessage = ConvertToServiceBusMessage(message);
+            var azureServiceBusMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message, _publication);
             if (delay == TimeSpan.Zero)
             {
                 await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage, cancellationToken);
@@ -242,28 +244,6 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
             Logger.LogError(e, "Failed to connect to topic {Topic}, aborting.", topic);
             throw;
         }
-    }
-
-    private ServiceBusMessage ConvertToServiceBusMessage(Message message)
-    {
-        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
-
-        foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
-        {
-            azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
-        }
-            
-        if(message.Header.CorrelationId is not null)
-            azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
-        azureServiceBusMessage.ContentType = message.Header.ContentType;
-        azureServiceBusMessage.MessageId = message.Header.MessageId;
-        if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
-            azureServiceBusMessage.SessionId = value.ToString();
-
-        return azureServiceBusMessage;
     }
 
     protected abstract Task EnsureChannelExistsAsync(string channelName);

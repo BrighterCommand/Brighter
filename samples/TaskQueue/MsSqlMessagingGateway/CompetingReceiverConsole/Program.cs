@@ -6,16 +6,14 @@ using Events.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Paramore.Brighter.MsSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
 
 namespace CompetingReceiverConsole
 {
-    internal class Program
+    internal static class Program
     {
         private static async Task Main()
         {
@@ -36,7 +34,10 @@ namespace CompetingReceiverConsole
                         timeOut: TimeSpan.FromMilliseconds(200))
                     };
 
-                    var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
+                    var messagingConfiguration = new RelationalDatabaseConfiguration(
+                        @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", 
+                        databaseName: "BrighterSqlQueue", 
+                        queueStoreTable: "QueueData");
                     var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 
                     services.AddServiceActivator(options =>
@@ -60,7 +61,7 @@ namespace CompetingReceiverConsole
         }
     }
 
-    internal class RunStuff : IHostedService
+    internal sealed class RunStuff : IHostedService
     {
         private readonly IAmACommandCounter _commandCounter;
 

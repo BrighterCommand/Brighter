@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Mime;
 using System.Text;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -26,29 +26,30 @@ public class UncompressLargePayloadTests
 
         Stream compressionStream = new GZipStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformerAsync.GZIP;
+        string mimeType = CompressPayloadTransformer.GZIP;
         input.CopyToAsync(compressionStream);
         compressionStream.FlushAsync();
 
-        var body = new MessageBody(output.ToArray(), mimeType);
+        var body = new MessageBody(output.ToArray(), new ContentType(mimeType));
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, 
-                timeStamp: DateTime.UtcNow, contentType: mimeType
+                timeStamp: DateTime.UtcNow, contentType: new ContentType(mimeType)
                 ),
             body
         );
-        
-        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
+
+        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
         //act
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(largeContent);
-        msg.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-        msg.Header.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-
+        Assert.Equal(largeContent, msg.Body.Value);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
+            msg.Body.ContentType);
+        Assert.Equal(new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+            msg.Header.ContentType);
     }
     
     [Fact]
@@ -65,29 +66,32 @@ public class UncompressLargePayloadTests
 
         Stream compressionStream = new ZLibStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformerAsync.DEFLATE;
+        string mimeType = CompressPayloadTransformer.DEFLATE;
         input.CopyToAsync(compressionStream);
         compressionStream.FlushAsync();
 
-        var body = new MessageBody(output.ToArray(), mimeType);
+        var body = new MessageBody(output.ToArray(), new ContentType(mimeType));
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, 
-                timeStamp:DateTime.UtcNow, contentType: mimeType
+                timeStamp:DateTime.UtcNow, contentType: new ContentType(mimeType)
             ),
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
+        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
          //act
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(largeContent);
-        msg.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-        msg.Header.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-
+        Assert.Equal(largeContent, msg.Body.Value);
+        Assert.Equal(
+            new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+            msg.Body.ContentType);
+        Assert.Equal(
+            new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+            msg.Header.ContentType);
     }
     
     [Fact]
@@ -108,24 +112,28 @@ public class UncompressLargePayloadTests
         input.CopyToAsync(compressionStream);
         compressionStream.FlushAsync();
 
-        var body = new MessageBody(output.ToArray(), mimeType);
+        var body = new MessageBody(output.ToArray(), new ContentType(mimeType));
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, 
-                timeStamp: DateTime.UtcNow, contentType: mimeType
+                timeStamp: DateTime.UtcNow, contentType: new ContentType(mimeType)
             ),
             body
         );
         
-        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
+        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MediaTypeNames.Application.Json;
         
         //act
          var msg = transformer.Unwrap(message);
-        
-        //assert
-        msg.Body.Value.Should().Be(largeContent);
-        msg.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-        msg.Header.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
+
+         //assert
+         Assert.Equal(largeContent, msg.Body.Value);
+         Assert.Equal(
+             new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
+             msg.Body.ContentType);
+         Assert.Equal(
+             new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+             msg.Header.ContentType);
 
     }
 }

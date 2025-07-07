@@ -55,7 +55,7 @@ namespace Paramore.Brighter.DynamoDb
         /// Commit a transaction, performing all associated write actions
         /// Will block thread and use second thread for callback
         /// </summary>
-        public void Commit() => BrighterSynchronizationHelper.Run(() => DynamoDb.TransactWriteItemsAsync(_tx));
+        public void Commit() => BrighterAsyncContext.Run(async () => await CommitAsync());
         
         /// <summary>
         /// Commit a transaction, performing all associated write actions

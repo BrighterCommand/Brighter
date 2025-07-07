@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2017 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,7 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Transactions;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
@@ -36,9 +37,9 @@ using Serilog.Extensions.Logging;
 
 namespace GreetingsSender
 {
-    class Program
+    static class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -48,25 +49,40 @@ namespace GreetingsSender
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
-            
+
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                var region = string.IsNullOrWhiteSpace(serviceURL) ? RegionEndpoint.EUWest1 : RegionEndpoint.USEast1;
+                var awsConnection = new AWSMessagingGatewayConnection(credentials, region, cfg =>
+                {
+                    if (!string.IsNullOrWhiteSpace(serviceURL))
+                    {
+                        cfg.ServiceURL = serviceURL;
+                    }
+                });
 
                 var producerRegistry = new SnsProducerRegistryFactory(
                     awsConnection,
-                    new SnsPublication[]
-                    {
-                        new()
+                    [
+                        new SnsPublication<GreetingEvent>
                         {
-                            Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            RequestType = typeof(GreetingEvent)
+                            Topic = new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
+                        },
+                        new SnsPublication<FarewellEvent>
+                        {
+                            Topic = new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                            TopicAttributes = new SnsAttributes
+                            {
+                                Type = SqsType.Fifo
+                            }
                         }
-                    }
+                    ]
                 ).Create();
-                
-                serviceCollection.AddBrighter()
-                    .UseExternalBus((configure) =>
+
+                serviceCollection
+                    .AddBrighter()
+                    .UseExternalBus(configure =>
                     {
                         configure.ProducerRegistry = producerRegistry;
                     })
@@ -74,9 +90,10 @@ namespace GreetingsSender
 
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
-                var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+                var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
 
-                commandProcessor.Post(new GreetingEvent("Ian"));
+                commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
+                commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
             }
         }
     }

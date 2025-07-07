@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -54,10 +53,9 @@ public class MessagePumpQuitOberservabilityTests
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
-
-            var provider = new CommandProcessorProvider(commandProcessor);
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
@@ -71,7 +69,7 @@ public class MessagePumpQuitOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut= TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
@@ -88,8 +86,8 @@ public class MessagePumpQuitOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        _exportedActivities.Count.Should().Be(2);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue(); 
+        Assert.Equal(2, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
         
         var emptyMessageActivity = _exportedActivities.FirstOrDefault(a => 
             a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Receive.ToSpanName()}" 
@@ -99,8 +97,8 @@ public class MessagePumpQuitOberservabilityTests
                 )
             );
         
-        emptyMessageActivity.Should().NotBeNull();
-        emptyMessageActivity!.Status.Should().Be(ActivityStatusCode.Ok);
+        Assert.NotNull(emptyMessageActivity);
+        Assert.Equal(ActivityStatusCode.Ok, emptyMessageActivity!.Status);
         
     }
 }

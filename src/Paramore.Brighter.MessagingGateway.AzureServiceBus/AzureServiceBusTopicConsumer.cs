@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// <summary>
 /// Implementation of <see cref="IAmAMessageConsumerSync"/> using Azure Service Bus for Transport.
 /// </summary>
-public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
+public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
 {
     protected override ILogger Logger => s_logger;
 
@@ -64,19 +64,13 @@ public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         _subscriptionName = subscription.ChannelName.Value;
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
-        
-    /// <summary>
-    /// Purges the specified queue name.
-    /// </summary>
-    public override void Purge() => BrighterSynchronizationHelper.Run(async () => await PurgeAsync());
-        
+    
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
     public override async Task PurgeAsync(CancellationToken ct = default)
     {
-        Logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}",
-            SubscriptionName, Topic);
+        Log.PurgingMessagesFromSubscriptionOnTopic(s_logger, SubscriptionName, Topic);
 
         await AdministrationClientWrapper.DeleteTopicAsync(Topic);
         await EnsureChannelAsync();
@@ -108,9 +102,7 @@ public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         {
             if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
             {
-                s_logger.LogWarning(
-                    "Message entity already exists with topic {Topic} and subscription {ChannelName}", Topic,
-                    _subscriptionName);
+                Log.MessageEntityAlreadyExists(s_logger, Topic, _subscriptionName);
                 _subscriptionCreated = true;
             }
             else
@@ -120,7 +112,7 @@ public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         }
         catch (Exception e)
         {
-            s_logger.LogError(e, "Failing to check or create subscription");
+            Log.FailingToCheckOrCreateSubscription(s_logger, e);
 
             //The connection to Azure Service bus may have failed so we re-establish the connection.
             AdministrationClientWrapper.Reset();
@@ -131,9 +123,7 @@ public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         
     protected override async Task GetMessageReceiverProviderAsync()
     {
-        s_logger.LogInformation(
-            "Getting message receiver provider for topic {Topic} and subscription {ChannelName}...",
-            Topic, _subscriptionName);
+        Log.GettingMessageReceiverProviderForTopicAndSubscription(s_logger, Topic, _subscriptionName);
         try
         {
             ServiceBusReceiver = await _serviceBusReceiverProvider.GetAsync(Topic, _subscriptionName,
@@ -141,9 +131,26 @@ public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         }
         catch (Exception e)
         {
-            s_logger.LogError(e,
-                "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}",
-                Topic, _subscriptionName);
+            Log.FailedToGetMessageReceiverProviderForTopicAndSubscription(s_logger, e, Topic, _subscriptionName);
         }
     }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Information, "Purging messages from {Subscription} Subscription on Topic {Topic}")]
+        public static partial void PurgingMessagesFromSubscriptionOnTopic(ILogger logger, string subscription, string topic);
+
+        [LoggerMessage(LogLevel.Warning, "Message entity already exists with topic {Topic} and subscription {ChannelName}")]
+        public static partial void MessageEntityAlreadyExists(ILogger logger, string topic, string channelName);
+
+        [LoggerMessage(LogLevel.Error, "Failing to check or create subscription")]
+        public static partial void FailingToCheckOrCreateSubscription(ILogger logger, Exception e);
+        
+        [LoggerMessage(LogLevel.Information, "Getting message receiver provider for topic {Topic} and subscription {ChannelName}...")]
+        public static partial void GettingMessageReceiverProviderForTopicAndSubscription(ILogger logger, string topic, string channelName);
+
+        [LoggerMessage(LogLevel.Error, "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}")]
+        public static partial void FailedToGetMessageReceiverProviderForTopicAndSubscription(ILogger logger, Exception e, string topic, string channelName);
+    }
 }
+

@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _exception = Catch.Exception(() => _sqlOutbox.Add(_messageEarliest, new RequestContext()));
 
             //should ignore the duplicate key and still succeed
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
         }
 
         public void Dispose()

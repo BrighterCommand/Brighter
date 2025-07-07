@@ -32,6 +32,7 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -44,12 +45,13 @@ namespace Paramore.Brighter
     /// We run a <see cref="UnwrapWithAttribute"/> before the message mapper converts to a <see cref="IRequest"/>.
     /// You handle translation between <see cref="IRequest"/> and <see cref="Message"/> in your <see cref="IAmAMessageMapper{TRequest}"/>
     /// </summary>
-    public class TransformPipelineBuilderAsync
+    public partial class TransformPipelineBuilderAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TransformPipelineBuilder>();
         private readonly IAmAMessageMapperRegistryAsync _mapperRegistryAsync;
 
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private readonly InstrumentationOptions _instrumentationOptions;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
@@ -67,14 +69,19 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="mapperRegistryAsync">The async message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactoryAsync">The async transform factory, can be null</param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
         public TransformPipelineBuilderAsync(
-            IAmAMessageMapperRegistryAsync mapperRegistryAsync, 
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync
-            )
+            IAmAMessageMapperRegistryAsync mapperRegistryAsync,
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
+            InstrumentationOptions instrumentationOptions
+        )
         {
-            _mapperRegistryAsync = mapperRegistryAsync ?? throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
+            _mapperRegistryAsync = mapperRegistryAsync ??
+                                   throw new ConfigurationException(
+                                       "TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _instrumentationOptions = instrumentationOptions;
         }
 
         /// <summary>
@@ -91,17 +98,14 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms);
+                var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms, _instrumentationOptions);
 
-                s_logger.LogDebug("New wrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name, TraceWrapPipeline(pipeline));
+                Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
                 var unwraps = FindUnwrapTransforms(messageMapper);
                 if (unwraps.Any())
                 {
-                    s_logger.LogDebug(
-                        "Unwrap attributes on MapToMessage method for mapper of: {message} in {pipeline}, will be ignored", typeof(TRequest).Name,
-                        TraceWrapPipeline(pipeline)
-                    );
+                    Log.UnwrapAttributesOnMapToMessageMethodIgnored(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
                 }
 
                 return pipeline;
@@ -128,18 +132,12 @@ namespace Paramore.Brighter
 
                 var pipeline = new UnwrapPipelineAsync<TRequest>(transforms, _messageTransformerFactoryAsync, messageMapper);
 
-                s_logger.LogDebug(
-                    "New unwrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name,
-                    TraceUnwrapPipeline(pipeline)
-                );
-                
+                Log.NewUnwrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
+
                 var wraps = FindWrapTransforms(messageMapper);
                 if (wraps.Any())
                 {
-                    s_logger.LogDebug(
-                        "Wrap attributes on MapToRequest method for mapper of: {message} in {pipeline}, will be ignored", typeof(TRequest).Name,
-                        TraceUnwrapPipeline(pipeline)
-                    );
+                    Log.WrapAttributesOnMapToRequestMethodIgnored(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
                 }
 
                 return pipeline;
@@ -165,8 +163,7 @@ namespace Paramore.Brighter
             {
                 int i = transformAttributes.Count();
                 if (i > 0)
-                    s_logger.LogWarning(
-                        "No message transformer factory configured, so no transforms will be created but {transformCount} configured", i);
+                    Log.NoMessageTransformerFactoryConfigured(s_logger, i);
 
                 return transforms;
             }
@@ -195,7 +192,7 @@ namespace Paramore.Brighter
         private IAmAMessageMapperAsync<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest
         {
             var messageMapper = _mapperRegistryAsync.GetAsync<TRequest>();
-            if (messageMapper == null) throw new InvalidOperationException($"Could not find mapper for {typeof(TRequest).Name}. Hint: did you set runAsync on the subscription to match the mapper type?");
+            if (messageMapper == null) throw new InvalidOperationException($"Could not find mapper for {typeof(TRequest).Name}. Hint: did you set MessagePumpType.Proactor on the subscription to match the mapper type?");
             return messageMapper;
         }
 
@@ -249,5 +246,24 @@ namespace Paramore.Brighter
             pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "New wrap pipeline created for: {Message} of {Pipeline}")]
+            public static partial void NewWrapPipelineCreated(ILogger logger, string message, TransformPipelineTracer pipeline);
+
+            [LoggerMessage(LogLevel.Debug, "Unwrap attributes on MapToMessage method for mapper of: {Message} in {Pipeline}, will be ignored")]
+            public static partial void UnwrapAttributesOnMapToMessageMethodIgnored(ILogger logger, string message, TransformPipelineTracer pipeline);
+
+            [LoggerMessage(LogLevel.Debug, "New unwrap pipeline created for: {Message} of {Pipeline}")]
+            public static partial void NewUnwrapPipelineCreated(ILogger logger, string message, TransformPipelineTracer pipeline);
+
+            [LoggerMessage(LogLevel.Debug, "Wrap attributes on MapToRequest method for mapper of: {Message} in {Pipeline}, will be ignored")]
+            public static partial void WrapAttributesOnMapToRequestMethodIgnored(ILogger logger, string message, TransformPipelineTracer pipeline);
+
+            [LoggerMessage(LogLevel.Warning, "No message transformer factory configured, so no transforms will be created but {TransformCount} configured")]
+            public static partial void NoMessageTransformerFactoryConfigured(ILogger logger, int transformCount);
+        }
     }
 }
+

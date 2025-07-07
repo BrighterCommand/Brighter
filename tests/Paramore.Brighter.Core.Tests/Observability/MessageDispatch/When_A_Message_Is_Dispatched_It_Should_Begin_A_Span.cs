@@ -27,16 +27,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Xunit;
+using Baggage = OpenTelemetry.Baggage;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 {
@@ -80,10 +81,9 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
-
-            var provider = new CommandProcessorProvider(commandProcessor);
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
@@ -98,26 +98,26 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
             };
             
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
-
-            var header = new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT)
-            {
-                TraceParent = externalActivity?.Id, TraceState = externalActivity?.TraceStateString
-            };
-            
-            externalActivity?.Stop();
+            Baggage.SetBaggage( "mykey", "myvalue" );
 
             _message = new Message(
-                header, 
+                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT, replyTo: new RoutingKey("io.paramorebrighter.myevent")), 
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
             
+            var contextPropogator = new TextContextPropogator();
+            contextPropogator.PropogateContext(externalActivity?.Context, _message);
+            
+            externalActivity?.Stop();
+
+           
             channel.Enqueue(_message);
             var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
             channel.Enqueue(quitMessage);
@@ -130,34 +130,34 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 
             _traceProvider.ForceFlush();
             
-            _exportedActivities.Count.Should().Be(6);
-            _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+            Assert.Equal(6, _exportedActivities.Count);
+            Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
             
             //there should be a span for each message received by a pump
             var createActivity = _exportedActivities.FirstOrDefault(a => 
                 a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
                 && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT)
                 );
-            createActivity.Should().NotBeNull();
-            createActivity!.ParentId.Should().Be(_message.Header.TraceParent);
-            createActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" }).Should().BeTrue();
-            createActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == _message.Id).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageType && t.Value == _message.Header.MessageType.ToString()).Should().BeTrue();
-            createActivity.TagObjects.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.MessageBodySize && Convert.ToInt32(t.Value) == _message.Body.Bytes.Length).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBody && t.Value == _message.Body.Value).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && t.Value == JsonSerializer.Serialize(_message.Header)).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.ConversationId && t.Value == _message.Header.CorrelationId).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingSystem && t.Value == MessagingSystem.InternalBus.ToMessagingSystemName()).Should().BeTrue();
-            createActivity.TagObjects.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.CeSource && ((Uri)(t.Value)) == _message.Header.Source).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.CeSubject && t.Value == _message.Header.Subject).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.CeVersion && t.Value == "1.0").Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.CeType && t.Value == _message.Header.Type).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.CeMessageId && t.Value == _message.Id).Should().BeTrue();
-            createActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.HandledCount && Convert.ToInt32(t.Value) == _message.Header.HandledCount).Should().BeTrue(); 
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.ReplyTo && t.Value == _message.Header.ReplyTo).Should().BeTrue();
-
+            Assert.NotNull(createActivity);
+            Assert.Equal(_message.Header.TraceParent?.Value, createActivity!.ParentId);
+            Assert.Contains(Baggage.Current.GetBaggage(), b => b.Key == "mykey" && b.Value == "myvalue");
+            Assert.Contains(createActivity.Tags, t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" });
+            Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey.Value);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value == _message.Id.Value);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageType && t.Value == _message.Header.MessageType.ToString());
+            Assert.Contains(createActivity.TagObjects, t => t.Value != null && t.Key == BrighterSemanticConventions.MessageBodySize && Convert.ToInt32(t.Value) == _message.Body.Bytes.Length);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageBody && t.Value == _message.Body.Value);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageHeaders && t.Value == JsonSerializer.Serialize(_message.Header, JsonSerialisationOptions.Options));
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.ConversationId && t.Value == _message.Header.CorrelationId.Value);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessagingSystem && t.Value == MessagingSystem.InternalBus.ToMessagingSystemName());
+            Assert.Contains(createActivity.TagObjects, t => t.Value != null && t.Key == BrighterSemanticConventions.CeSource && ((Uri)(t.Value)) == _message.Header.Source);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.CeSubject && t.Value == _message.Header.Subject);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.CeVersion && t.Value == "1.0");
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.CeType && t.Value == _message.Header.Type);
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.CeMessageId && t.Value == _message.Id.Value);
+            Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.HandledCount && Convert.ToInt32(t.Value) == _message.Header.HandledCount); 
+            Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.ReplyTo && t.Value == _message.Header.ReplyTo?.Value);
         }
     }
 }

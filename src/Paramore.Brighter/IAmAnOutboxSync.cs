@@ -61,7 +61,7 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The id of the message to delete</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="args">Additional parameters required for search, if any</param>
-        void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null);
+        void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Retrieves messages that have been sent within the window
@@ -70,7 +70,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
-        /// <param name="outboxTimeout">Timeout of sql call.</param>
+        /// <param name="outBoxTimeout">Timeout of sql call.</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>List of messages that need to be dispatched.</returns>
         IEnumerable<Message> DispatchedMessages(
@@ -78,7 +78,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             int pageSize = 100, 
             int pageNumber = 1, 
-            int outboxTimeout = -1,
+            int outBoxTimeout = -1,
             Dictionary<string, object>? args = null);
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null);
+        Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Update a message to show it is dispatched
@@ -98,7 +98,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
-        void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null);
+        void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp

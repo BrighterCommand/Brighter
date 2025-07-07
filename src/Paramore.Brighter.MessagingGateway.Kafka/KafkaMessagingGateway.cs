@@ -39,12 +39,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// This base class mainly handles how we confirm required infrastructure - topics - and depending on the MakeChannels field, will either
     /// create missing infrastructure, validate infrastructure exists, or just assume that infrastructure exists.
     /// </summary>
-    public class KafkaMessagingGateway
+    public partial class KafkaMessagingGateway
     {
         protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageProducer>();
-        protected ClientConfig _clientConfig;
+        protected ClientConfig? ClientConfig;
         protected OnMissingChannel MakeChannels;
-        protected RoutingKey Topic;
+        protected RoutingKey? Topic;
         protected int NumPartitions;
         protected short ReplicationFactor;
         protected TimeSpan TopicFindTimeout;
@@ -64,21 +64,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var exists = FindTopic();
 
                 if (!exists && MakeChannels == OnMissingChannel.Validate)
-                    throw new ChannelFailureException($"Topic: {Topic.Value} does not exist");
+                {
+                    var topic = Topic is not null ? new RoutingKey(Topic.Value) : RoutingKey.Empty;
+                    throw new ChannelFailureException($"Topic: {topic} does not exist");
+                }
 
                 if (!exists && MakeChannels == OnMissingChannel.Create)
-                    BrighterSynchronizationHelper.Run(async () => await MakeTopic());
+                    BrighterAsyncContext.Run(async () => await MakeTopic());
             }
         }
 
         private async Task MakeTopic()
         {
-            using var adminClient = new AdminClientBuilder(_clientConfig).Build();
+            if (RoutingKey.IsNullOrEmpty(Topic)) throw new InvalidOperationException("Topic cannot be null");
+            
+            using var adminClient = new AdminClientBuilder(ClientConfig).Build();
             try
             {
                 await adminClient.CreateTopicsAsync(new List<TopicSpecification>
                 {
-                    new TopicSpecification
+                    new()
                     {
                         Name = Topic.Value,
                         NumPartitions = NumPartitions,
@@ -94,13 +99,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         $"An error occured creating topic {Topic.Value}: {e.Results[0].Error.Reason}");
                 }
 
-                s_logger.LogDebug("Topic {Topic} already exists", Topic.Value);
+                Log.TopicAlreadyExists(s_logger, Topic.Value);
             }
         }
 
         private bool FindTopic()
         {
-            using var adminClient = new AdminClientBuilder(_clientConfig).Build();
+            if (RoutingKey.IsNullOrEmpty(Topic)) throw new InvalidOperationException("Topic cannot be null");
+            
+            using var adminClient = new AdminClientBuilder(ClientConfig).Build();
             try
             {
                 bool found = false;
@@ -131,7 +138,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             //if topic is in error
                             if (inError)
                             {
-                                error += $" topic is in error => {matchingTopic.Error.Reason};";
+                                error += $" topic is in error => {matchingTopic.Error!.Reason};";
                             }
 
                             if (!matchingPartitions)
@@ -146,13 +153,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                                     $"topic is misconfigured => ReplicationFactor should be {ReplicationFactor} but is {matchingTopic.Partitions[0].Replicas.Length};";
                             }
 
-                            s_logger.LogWarning(error);
+                            Log.TopicMisconfiguredWarning(s_logger, error);
                         }
                     }
                 }
 
                 if (found)
-                    s_logger.LogInformation($"Topic {Topic.Value} exists");
+                    Log.TopicExists(s_logger, Topic.Value);
                     
                 return found;
             }
@@ -161,5 +168,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ChannelFailureException($"Error finding topic {Topic.Value}", e);
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "Topic {Topic} already exists")]
+            public static partial void TopicAlreadyExists(ILogger logger, string topic);
+
+            [LoggerMessage(LogLevel.Warning, "{TopicMisconfiguredError}")]
+            public static partial void TopicMisconfiguredWarning(ILogger logger, string topicMisconfiguredError);
+            
+            [LoggerMessage(LogLevel.Information, "Topic {Topic} exists")]
+            public static partial void TopicExists(ILogger logger, string topic);
+        }
     }
 }
+

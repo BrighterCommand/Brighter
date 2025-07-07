@@ -24,10 +24,11 @@ THE SOFTWARE. */
 
 using System.Text.Json;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommandMessageMapper : IAmAMessageMapper<MyCommand>
+    internal sealed class MyCommandMessageMapper : IAmAMessageMapper<MyCommand>
     {
         public IRequestContext Context { get; set; }
 

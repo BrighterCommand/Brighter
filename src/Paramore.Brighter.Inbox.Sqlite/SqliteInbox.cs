@@ -30,273 +30,222 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
+using Paramore.Brighter.Sqlite;
 
 namespace Paramore.Brighter.Inbox.Sqlite
 {
     /// <summary>
     ///     Class SqliteInbox.
     /// </summary>
-    public class SqliteInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public class SqliteInbox : RelationalDatabaseInbox
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteInbox>();
-
+        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="SqliteInbox" /> class.
         /// </summary>
-        /// <param name="configuration">The configuration.</param>
-        public SqliteInbox(IAmARelationalDatabaseConfiguration configuration)
+        /// <param name="connectionProvider">The connection provider for the database.</param>
+        /// <param name="configuration">The configuration for the database.</param>
+        public SqliteInbox(IAmARelationalDbConnectionProvider connectionProvider, IAmARelationalDatabaseConfiguration configuration)
+            : base(DbSystem.Sqlite, configuration.DatabaseName, configuration.InBoxTableName, 
+                  new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteInbox>())
         {
-            Configuration = configuration;
+            _connectionProvider = connectionProvider;
             ContinueOnCapturedContext = false;
         }
 
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="SqliteInbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration for the database.</param>
+        public SqliteInbox(IAmARelationalDatabaseConfiguration configuration) 
+            : this(new SqliteConnectionProvider(configuration), configuration)
         {
-            var parameters = InitAddDbParameters(command, contextKey);
+        }
 
-            using var connection = GetConnection();
-            connection.Open();
-            var sqlAdd = GetAddSql();
-            using var sqlcmd = connection.CreateCommand();
-            FormatAddCommand(parameters, sqlcmd, sqlAdd, timeoutInMilliseconds);
+        protected override void WriteToStore(Func<DbConnection, DbCommand> commandFunc, Action loggingAction)
+        {
+            using var connection = GetOpenConnection(_connectionProvider);
+            using var command = commandFunc.Invoke(connection);
             try
             {
-                sqlcmd.ExecuteNonQuery();
+                command.ExecuteNonQuery();
             }
-            catch (SqliteException sqliteException)
+            catch (SqliteException ex)
             {
-                if (IsExceptionUnqiueOrDuplicateIssue(sqliteException))
+                if (ex.SqliteErrorCode == SqliteDuplicateKeyError ||
+                   ex.SqliteErrorCode == SqliteUniqueKeyError)
                 {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                        command.Id);
+                    loggingAction.Invoke();
+                    return;
                 }
+
+                throw;
             }
         }
 
-        private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)
+        protected override async Task WriteToStoreAsync(Func<DbConnection, DbCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
         {
-            return sqlException.SqliteErrorCode == SqliteDuplicateKeyError ||
-                   sqlException.SqliteErrorCode == SqliteUniqueKeyError;
-        }
-
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {
-            var sql = $"select * from {this.OutboxTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
-        }
-
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {
-            var sql = $"SELECT CommandId FROM {OutboxTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds,
-                parameters);
-        }
-
-        /// <summary>
-        /// Checks whether a command with the specified identifier exists in the Inbox
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey"></param>
-        /// <param name="timeoutInMilliseconds"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var sql = $"SELECT CommandId FROM {OutboxTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return await ExecuteCommandAsync<bool>(
-                    async command =>
-                    {
-                        var reader = await command.ExecuteReaderAsync(cancellationToken);
-                        return reader.HasRows;
-                    },
-                    sql,
-                    timeoutInMilliseconds,
-                    parameters,
-                    cancellationToken)
+            using var connection = await GetOpenConnectionAsync(_connectionProvider, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
-        }
-
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var parameters = InitAddDbParameters(command, contextKey);
-
-            using var connection = GetConnection();
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            var sqlAdd = GetAddSql();
-            using var sqlcmd = connection.CreateCommand();
-            FormatAddCommand(parameters, sqlcmd, sqlAdd, timeoutInMilliseconds);
+            using var command = commandFunc.Invoke(connection);
             try
             {
-                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
-            catch (SqliteException sqliteException)
+            catch (SqliteException ex)
             {
-                if (!IsExceptionUnqiueOrDuplicateIssue(sqliteException)) throw;
-                s_logger.LogWarning(
-                    "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                    command.Id);
-            }
-        }
-
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var sql = $"select * from {OutboxTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
-            var parameters = new[]
-            {
-                CreateSqlParameter("@CommandId", id),
-                CreateSqlParameter("ContextKey", contextKey)
-            };
-
-            return await ExecuteCommandAsync(
-                async command =>
+                if (ex.SqliteErrorCode == SqliteDuplicateKeyError ||
+                   ex.SqliteErrorCode == SqliteUniqueKeyError)
                 {
-                    return ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken)
-                        .ConfigureAwait(ContinueOnCapturedContext), id);
-                },
-                sql,
-                timeoutInMilliseconds,
-                parameters,
-                cancellationToken)
+                    loggingAction.Invoke();
+                    return;
+                }
+
+                throw;
+            }
+        }
+
+        protected override T ReadFromStore<T>(Func<DbConnection, DbCommand> commandFunc, Func<DbDataReader, string, T> resultFunc, string commandId)
+        {
+            using var connection = _connectionProvider.GetConnection();
+            using var command = commandFunc.Invoke(connection);
+
+            var result = command.ExecuteReader();
+            return resultFunc.Invoke(result, commandId); 
+        }
+
+        protected override async Task<T> ReadFromStoreAsync<T>(Func<DbConnection, DbCommand> commandFunc, 
+            Func<DbDataReader, string, CancellationToken, Task<T>> resultFunc, 
+            string commandId, 
+            CancellationToken cancellationToken)
+        {
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
+            using var command = commandFunc.Invoke(connection);
+
+            var result = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await resultFunc.Invoke(result, commandId, cancellationToken);
         }
 
-        /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
-        /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
-
-        public IAmARelationalDatabaseConfiguration Configuration { get; }
-
-        public string OutboxTableName => Configuration.InBoxTableName;
-
-        public DbParameter CreateSqlParameter(string parameterName, object value)
+        protected override DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout, params IDbDataParameter[] parameters)
         {
-            return new SqliteParameter(parameterName, value);
+            var command = connection.CreateCommand();
+
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
+            command.CommandText = sqlText;
+            command.Parameters.AddRange(parameters);
+
+            return command;
         }
 
-        public DbConnection GetConnection()
-        {
-            return new SqliteConnection(Configuration.ConnectionString);
-        }
-        
-        public T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, 
-            int timeoutInMilliseconds, params DbParameter[] parameters)
-        {
-            using var connection = GetConnection();
-            using var command = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-            command.CommandText = sql;
-            AddParamtersParamArrayToCollection(parameters, command);
-
-            connection.Open();
-            var item = execute(command);
-            return item;
-        }
-
-        public async Task<T> ExecuteCommandAsync<T>(Func<DbCommand, Task<T>> execute, 
-            string sql, int timeoutInMilliseconds, DbParameter[] parameters, CancellationToken cancellationToken = default)
-        {
-            using var connection = GetConnection();
-            using var command = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-            command.CommandText = sql;
-            AddParamtersParamArrayToCollection(parameters, command);
-
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-        }
-
-        private void FormatAddCommand(DbParameter[] parameters, DbCommand sqlcmd, string sqlAdd, int timeoutInMilliseconds)
-        {
-            if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
-
-            sqlcmd.CommandText = sqlAdd;
-            AddParamtersParamArrayToCollection(parameters, sqlcmd);
-        }
-
-        private string GetAddSql()
-        {
-            var sqlAdd = $"insert into {OutboxTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
-            return sqlAdd;
-        }
-
-        private DbParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
+        protected override IDbDataParameter[] CreateAddParameters<T>(T command, string contextKey)
         {
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateSqlParameter("CommandID", command.Id), //was CommandId
-                CreateSqlParameter("CommandType", typeof (T).Name), 
-                CreateSqlParameter("CommandBody", commandJson), 
+                CreateSqlParameter("CommandId", command.Id.Value), //was CommandId
+                CreateSqlParameter("CommandType", typeof (T).Name),
+                CreateSqlParameter("CommandBody", commandJson),
                 CreateSqlParameter("Timestamp", DateTime.UtcNow),
                 CreateSqlParameter("ContextKey", contextKey)
             };
             return parameters;
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr, string id) where TResult : class, IRequest
+        protected override IDbDataParameter[] CreateExistsParameters(string commandId, string contextKey)
         {
-            using (dr)
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandId", commandId),
+                CreateSqlParameter("ContextKey", contextKey)
+            };
+            return parameters;
+        }
+
+        protected override IDbDataParameter[] CreateGetParameters(string commandId, string contextKey)
+        {
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandId", commandId),
+                CreateSqlParameter("ContextKey", contextKey)
+            };
+            return parameters;
+        }
+
+        private DbParameter CreateSqlParameter(string parameterName, object value)
+        {
+            return new SqliteParameter(parameterName, value);
+        }
+
+        protected override T MapFunction<T>(DbDataReader dr, string commandId)
+        {
+            try
             {
                 if (dr.Read())
                 {
                     var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-
-                    dr.Close();
-                    return JsonSerializer.Deserialize<TResult>(body, JsonSerialisationOptions.Options);
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
                 }
+            }
+            finally
+            {
+                dr.Close();
+            }
 
-                throw new RequestNotFoundException<TResult>(id);
+            throw new RequestNotFoundException<T>(commandId);
+        }
+
+        protected override async Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (await dr.ReadAsync().ConfigureAwait(ContinueOnCapturedContext))
+                {
+                    var body = dr.GetString(dr.GetOrdinal("CommandBody"));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                }
+            }
+            finally
+            {
+#if NETSTANDARD2_0
+                dr.Close();
+#else
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+#endif
+            }
+
+            throw new RequestNotFoundException<T>(commandId);
+        }
+
+        protected override bool MapBoolFunction(DbDataReader dr, string commandId)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                dr.Close();
             }
         }
 
-        private void AddParamtersParamArrayToCollection(DbParameter[] parameters, DbCommand command)
+        protected override Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId, CancellationToken cancellationToken)
         {
-            //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
-            for (var index = 0; index < parameters.Length; index++)
+            try
             {
-                command.Parameters.Add(parameters[index]);
+                return Task.FromResult(dr.HasRows);
+            }
+            finally
+            {
+                dr.Close();
             }
         }
     }

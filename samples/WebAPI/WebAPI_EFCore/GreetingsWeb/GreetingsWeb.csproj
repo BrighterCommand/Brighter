@@ -14,7 +14,7 @@
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MySql.EntityFrameworkCore\Paramore.Brighter.MySql.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
-      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj" />
+      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.Hosting\Paramore.Brighter.Outbox.Hosting.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
       <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />

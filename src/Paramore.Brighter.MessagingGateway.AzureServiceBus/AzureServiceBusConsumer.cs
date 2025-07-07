@@ -48,7 +48,8 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     private readonly int _batchSize;
     protected IServiceBusReceiverWrapper? ServiceBusReceiver;
     protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
-        
+    private readonly AzureServiceBusMesssageCreator _azureServiceBusMesssageCreator;
+
     /// <summary>
     /// Constructor for the Azure Service Bus Consumer
     /// </summary>
@@ -69,6 +70,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
         _messageProducer = messageProducer;
         AdministrationClientWrapper = administrationClientWrapper;
+        _azureServiceBusMesssageCreator = new AzureServiceBusMesssageCreator(subscription);
     }
         
     /// <summary>
@@ -90,7 +92,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// Acknowledges the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(async() => await AcknowledgeAsync(message));
+    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async() => await AcknowledgeAsync(message));
 
     /// <summary>
     /// Acknowledges the specified message.
@@ -141,7 +143,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public abstract void Purge();
+    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
         
     /// <summary>
     /// Purges the specified queue name.
@@ -157,7 +159,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// </summary>
     /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(() => ReceiveAsync(timeOut));
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
         
     /// <summary>
     /// Receives the specified queue name.
@@ -218,7 +220,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
 
         foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
         {
-            Message message = MapToBrighterMessage(azureServiceBusMessage);
+            Message message = _azureServiceBusMesssageCreator.MapToBrighterMessage(azureServiceBusMessage);
             messagesToReturn.Add(message);
         }
 
@@ -230,14 +232,16 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message) => BrighterSynchronizationHelper.Run(() => RejectAsync(message));
+    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
     /// <summary>
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="cancellationToken">Cancel the rejection</param>
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
     {
         try
         {
@@ -260,6 +264,8 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
             Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
             throw;
         }
+
+        return true;
     }
 
     /// <summary>
@@ -268,7 +274,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(() => RequeueAsync(message, delay));
+    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
 
     /// <summary>
     /// Requeues the specified message.
@@ -306,93 +312,6 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     }
 
     protected abstract Task GetMessageReceiverProviderAsync();
-
-    private Message MapToBrighterMessage(IBrokeredMessageWrapper azureServiceBusMessage)
-    {
-        if (azureServiceBusMessage.MessageBodyValue == null)
-        {
-            Logger.LogWarning(
-                "Null message body received from topic {Topic} via subscription {ChannelName}",
-                Topic, SubscriptionName);
-        }
-
-        var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
-            
-        Logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}",
-            Topic, SubscriptionName, messageBody);
-            
-        MessageType messageType = GetMessageType(azureServiceBusMessage);
-        var replyAddress = GetReplyAddress(azureServiceBusMessage);
-        var handledCount = GetHandledCount(azureServiceBusMessage);
-            
-        //TODO:CLOUD_EVENTS parse from headers
-            
-        var headers = new MessageHeader(
-            messageId: azureServiceBusMessage.Id, 
-            topic: new RoutingKey(Topic), 
-            messageType: messageType, 
-            source: null,
-            type: "",
-            timeStamp: DateTime.UtcNow,
-            correlationId: azureServiceBusMessage.CorrelationId,
-            replyTo: new RoutingKey(replyAddress),
-            contentType: azureServiceBusMessage.ContentType,
-            handledCount:handledCount, 
-            dataSchema: null,
-            subject: null,
-            delayed: TimeSpan.Zero
-        );
-
-        headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
-            
-        foreach (var property in azureServiceBusMessage.ApplicationProperties)
-        {
-            headers.Bag.Add(property.Key, property.Value);
-        }
-            
-        var message = new Message(headers, new MessageBody(messageBody));
-        return message;
-    }
-
-    private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
-    {
-        if (azureServiceBusMessage.ApplicationProperties == null ||
-            !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey,
-                out object? property))
-            return MessageType.MT_EVENT;
-
-        if (Enum.TryParse(property.ToString(), true, out MessageType messageType))
-            return messageType;
-
-        return MessageType.MT_EVENT;
-    }
-
-    private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
-    {
-        if (azureServiceBusMessage.ApplicationProperties is null ||
-            !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey,
-                out object? property))
-        {
-            return string.Empty;
-        }
-
-        var replyAddress = property.ToString();
-
-        return replyAddress ?? string.Empty;
-    }
-
-    private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
-    {
-        var count = 0;
-        if (azureServiceBusMessage.ApplicationProperties != null &&
-            azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
-                out object? property))
-        {
-            int.TryParse(property.ToString(), out count);
-        }
-
-        return count;
-    }
 
     protected abstract Task EnsureChannelAsync();
 

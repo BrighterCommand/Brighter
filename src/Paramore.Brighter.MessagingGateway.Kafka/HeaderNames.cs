@@ -30,13 +30,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// A dictionary of user defined values
         /// </summary>
-        public static string BAG { get; } = "Bag";
-        
-        /// <summary>
-        /// What is the content type of the message§
-        /// </summary>
-        public static string CONTENT_TYPE { get; set; } = "ContentType";
+        public const string BAG = "Bag";
 
+        /// <summary>
+        /// What is the content type of the message
+        /// </summary>
+        public const string CONTENT_TYPE  = "ContentType";
+        
         /// <summary>
         /// The correlation id
         /// </summary>
@@ -45,13 +45,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// If the message was deferred, how long for?
         /// </summary>
-        public static string DELAYED_MILLISECONDS { get; } =  "x-delay";
+        public const string DELAYED_MILLISECONDS = "x-delay";
 
         /// <summary>
         /// How many times has the message been retried with a delay
         /// </summary>
-        public static string HANDLED_COUNT { get; } = "HandledCount" ;
-
+        public const string HANDLED_COUNT = "HandledCount";
 
         /// <summary>
         /// The message type
@@ -67,6 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Used for a request-reply message to indicate the private channel to reply to
         /// </summary>
         public const string REPLY_TO = "ReplyTo";
+
         /// <summary>
         /// The key used to partition this message
         /// </summary>
@@ -86,5 +86,60 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The topic
         /// </summary>
         public const string TOPIC = "Topic";
+
+        /// <summary>
+        /// The cloud event ID
+        /// </summary>
+        public const string CLOUD_EVENTS_ID = "ce_id";
+
+        /// <summary>
+        /// The cloud event spec version
+        /// </summary>
+        public const string CLOUD_EVENTS_SPEC_VERSION = "ce_specversion";
+
+        /// <summary>
+        /// The cloud event type
+        /// </summary>
+        public const string CLOUD_EVENTS_TYPE = "ce_type";
+
+        /// <summary>
+        /// The cloud event time
+        /// </summary>
+        public const string CLOUD_EVENTS_TIME = "ce_time";
+
+        /// <summary>
+        /// The cloud event subject
+        /// </summary>
+        public const string CLOUD_EVENTS_SUBJECT = "ce_subject";
+
+        /// <summary>
+        /// The cloud event dataschema
+        /// </summary>
+        public const string CLOUD_EVENTS_DATA_SCHEMA = "ce_dataschema";
+
+        /// <summary>
+        /// The cloud event subject
+        /// </summary>
+        public const string CLOUD_EVENTS_SOURCE = "ce_source";
+        
+        /// <summary>
+        /// The cloud events for content-type
+        /// </summary>
+        public const string CLOUD_EVENTS_DATA_CONTENT_TYPE  = "content-type";
+        
+        /// <summary>
+        /// The cloud events traceparent, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_PARENT = "ce_traceparent";
+
+        /// <summary>
+        /// The cloud events tracestate, follows the W3C standard
+        /// </summary>
+        public const string CLOUD_EVENTS_TRACE_STATE = "ce_tracestate";
+
+        /// <summary>
+        /// The W3C baggage
+        /// </summary>
+        public const string W3C_BAGGAGE = "baggage";
     }
 }

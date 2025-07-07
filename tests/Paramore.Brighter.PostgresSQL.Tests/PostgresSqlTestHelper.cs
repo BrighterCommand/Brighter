@@ -8,7 +8,7 @@ using Paramore.Brighter.Outbox.PostgreSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests
 {
-    internal class PostgresSqlTestHelper
+    internal sealed class PostgresSqlTestHelper
     {
         private readonly bool _binaryMessagePayload;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlTestHelper>();
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
         {
             using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
             _tableName = $"message_{_tableName}";
-            var createTableSql = PostgreSqlOutboxBulder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
+            var createTableSql = PostgreSqlOutboxBuilder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
 
             connection.Open();
             using var command = connection.CreateCommand();
@@ -125,10 +125,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests
     }
 
 
-    internal class PostgreSqlSettings
+    internal sealed class PostgreSqlSettings
     {
-        public string TestsBrighterConnectionString { get; set; } = "Host=localhost;Username=postgres;Password=password;Database=brightertests;";
+        public string TestsBrighterConnectionString { get; set; }
+            = "Host=localhost;Username=postgres;Password=password;Database=brightertests;Include Error Detail=true;";
 
-        public string TestsMasterConnectionString { get; set; } = "Host=localhost;Username=postgres;Password=password;";
+        public string TestsMasterConnectionString { get; set; }
+            = "Host=localhost;Username=postgres;Password=password;Include Error Detail=true;";
     }
 }

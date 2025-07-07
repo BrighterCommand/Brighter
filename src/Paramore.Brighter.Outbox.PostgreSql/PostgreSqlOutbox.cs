@@ -27,13 +27,16 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
@@ -41,7 +44,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     /// <summary>
     /// Implements an outbox using PostgreSQL as a backing store
     /// </summary>
-    public class PostgreSqlOutbox : RelationDatabaseOutbox
+    public partial class PostgreSqlOutbox : RelationDatabaseOutbox
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
 
@@ -53,11 +56,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-
         public PostgreSqlOutbox(
             IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider) : base(
-            configuration.OutBoxTableName, new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
+                DbSystem.Postgresql, configuration.DatabaseName, configuration.OutBoxTableName, 
+                new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;
@@ -72,14 +75,15 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// globally</param>
         public PostgreSqlOutbox(
             IAmARelationalDatabaseConfiguration configuration,
-            NpgsqlDataSource dataSource = null)
+            NpgsqlDataSource? dataSource = null)
             : this(configuration, new PostgreSqlConnectionProvider(configuration, dataSource))
-        { }
+        {
+        }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction)
+            Action? loggingAction)
         {
             var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
@@ -93,7 +97,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    loggingAction.Invoke();
+                    loggingAction?.Invoke();
                     return;
                 }
 
@@ -106,14 +110,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction,
+            Action? loggingAction,
             CancellationToken cancellationToken)
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
-            await connection.OpenAsync(cancellationToken);
-            using var command = commandFunc.Invoke(connection);
+            await using var command = commandFunc.Invoke(connection);
             try
             {
                 if (transactionProvider is { HasOpenTransaction: true })
@@ -124,8 +127,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    s_logger.LogWarning(
-                        "PostgresSqlOutbox: A duplicate was detected in the batch");
+                    Log.DuplicateDetectedInBatch(s_logger);
                     return;
                 }
 
@@ -140,7 +142,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         protected override T ReadFromStore<T>(
             Func<DbConnection, DbCommand> commandFunc,
             Func<DbDataReader, T> resultFunc
-            )
+        )
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -159,22 +161,22 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         protected override async Task<T> ReadFromStoreAsync<T>(
             Func<DbConnection, DbCommand> commandFunc,
-            Func<DbDataReader, Task<T>> resultFunc, 
+            Func<DbDataReader, Task<T>> resultFunc,
             CancellationToken cancellationToken
-            )
+        )
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using var command = commandFunc.Invoke(connection);
+            await using var command = commandFunc.Invoke(connection);
             try
             {
                 return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
             }
             finally
             {
-                connection.Close();
+                await connection.CloseAsync();
             }
         }
 
@@ -193,20 +195,38 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return command;
         }
 
-        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
-            double milliSecondsSinceAdded,
-            int pageSize, 
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
             int pageNumber)
         {
             var parameters = new IDbDataParameter[3];
-            parameters[0] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
-            parameters[1] = CreateSqlParameter("PageSize", pageSize);
-            parameters[2] = CreateSqlParameter("PageNumber", pageNumber);
+            parameters[0] = CreateSqlParameter("TimestampSince", DateTimeOffset.UtcNow.Subtract(since));
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[2] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
 
             return parameters;
         }
 
-        protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
+        protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize,
+            int pageNumber)
+        {
+            var parameters = new IDbDataParameter[3];
+            parameters[0] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(dispatchedSince));
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[2] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+
+            return parameters;
+        }
+
+        protected override IDbDataParameter[] CreatePagedReadParameters(int pageSize, int pageNumber)
+        {
+            var parameters = new IDbDataParameter[2];
+            parameters[0] = CreateSqlParameter("Take", pageSize);
+            parameters[1] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+
+            return parameters;
+        }
+
+        protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
         {
             return new NpgsqlParameter { ParameterName = parameterName, Value = value };
         }
@@ -219,7 +239,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 new NpgsqlParameter
                 {
-                    ParameterName = $"{prefix}MessageId", NpgsqlDbType = NpgsqlDbType.Text, Value = message.Id
+                    ParameterName = $"{prefix}MessageId", 
+                    NpgsqlDbType = NpgsqlDbType.Text, 
+                    Value = message.Id.Value
                 },
                 new NpgsqlParameter
                 {
@@ -243,42 +265,93 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     ParameterName = $"{prefix}CorrelationId",
                     NpgsqlDbType = NpgsqlDbType.Text,
-                    Value = message.Header.CorrelationId
+                    Value = message.Header.CorrelationId.Value
                 },
                 new NpgsqlParameter
                 {
                     ParameterName = $"{prefix}ReplyTo",
                     NpgsqlDbType = NpgsqlDbType.Varchar,
-                    Value = message.Header.ReplyTo
+                    Value = message.Header.ReplyTo is not null ? message.Header.ReplyTo.Value : DBNull.Value
                 },
                 new NpgsqlParameter
                 {
                     ParameterName = $"{prefix}ContentType",
                     NpgsqlDbType = NpgsqlDbType.Varchar,
-                    Value = message.Header.ContentType
+                    Value = message.Header.ContentType is not null ? message.Header.ContentType.ToString() : new ContentType(MediaTypeNames.Text.Plain).ToString()
                 },
                 new NpgsqlParameter
                 {
                     ParameterName = $"{prefix}PartitionKey",
                     NpgsqlDbType = NpgsqlDbType.Varchar,
-                    Value = message.Header.PartitionKey
+                    Value = message.Header.PartitionKey.Value
                 },
                 new NpgsqlParameter
                 {
-                    ParameterName = $"{prefix}HeaderBag", NpgsqlDbType = NpgsqlDbType.Text, Value = bagjson
+                    ParameterName = $"{prefix}HeaderBag", 
+                    NpgsqlDbType = NpgsqlDbType.Text, 
+                    Value = bagjson
                 },
-                _configuration.BinaryMessagePayload ? new NpgsqlParameter
+                new NpgsqlParameter
                 {
-                    ParameterName = $"{prefix}Body",
-                    NpgsqlDbType = NpgsqlDbType.Bytea,
-                    Value = message.Body.Bytes
-                } 
-                : new NpgsqlParameter
+                    ParameterName = $"{prefix}Source",
+                    DbType = DbType.String,
+                    Value = message.Header.Source.AbsoluteUri
+                },
+                new NpgsqlParameter
                 {
-                    ParameterName = $"{prefix}Body",
-                    NpgsqlDbType = NpgsqlDbType.Text,
-                    Value = message.Body.Value
-                }
+                    ParameterName = $"{prefix}Type",
+                    DbType = DbType.String,
+                    Value = message.Header.Type
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}DataSchema",
+                    DbType = DbType.String,
+                    Value = message.Header.DataSchema is not null ? message.Header.DataSchema.AbsoluteUri : DBNull.Value
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}Subject",
+                    DbType = DbType.String,
+                    Value = message.Header.Subject is not null ? message.Header.Subject : DBNull.Value
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}SpecVersion",
+                    DbType = DbType.String,
+                    Value = message.Header.SpecVersion
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}TraceParent",
+                    DbType = DbType.String,
+                    Value = message.Header.TraceParent is not null ? message.Header.TraceParent.Value : DBNull.Value
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}TraceState",
+                    DbType = DbType.String,
+                    Value = message.Header.TraceState is not null ? message.Header.TraceState.Value : DBNull.Value
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}Baggage",
+                    DbType = DbType.String,
+                    Value = message.Header.Baggage.ToString()
+                },
+                _configuration.BinaryMessagePayload
+                    ? new NpgsqlParameter
+                    {
+                        ParameterName = $"{prefix}Body",
+                        NpgsqlDbType = NpgsqlDbType.Bytea,
+                        Value = message.Body.Bytes
+                    }
+                    : new NpgsqlParameter
+                    {
+                        ParameterName = $"{prefix}Body",
+                        NpgsqlDbType = NpgsqlDbType.Text,
+                        Value = message.Body.Value
+                    }
             };
         }
 
@@ -318,7 +391,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         protected override async Task<IEnumerable<Message>> MapListFunctionAsync(
             DbDataReader dr,
             CancellationToken cancellationToken
-            )
+        )
         {
             var messages = new List<Message>();
             while (await dr.ReadAsync(cancellationToken))
@@ -331,19 +404,34 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return messages;
         }
 
-        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken)
+        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr,
+            CancellationToken cancellationToken)
         {
             int outstandingMessages = -1;
             if (await dr.ReadAsync(cancellationToken))
             {
                 outstandingMessages = dr.GetInt32(0);
             }
+
+            await dr.CloseAsync();
+
+            return outstandingMessages;
+        }
+
+        protected override int MapOutstandingCount(DbDataReader dr)
+        {
+            int outstandingMessages = -1;
+            if (dr.Read())
+            {
+                outstandingMessages = dr.GetInt32(0);
+            }
+
             dr.Close();
 
             return outstandingMessages;
         }
 
-        public Message MapAMessage(DbDataReader dr)
+        private Message MapAMessage(DbDataReader dr)
         {
             var id = GetMessageId(dr);
             var messageType = GetMessageType(dr);
@@ -355,104 +443,259 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var contentType = GetContentType(dr);
             var partitionKey = GetPartitionKey(dr);
 
+            var source = GetSource(dr);
+            var type = GetEventType(dr);
+            var dataSchema = GetDataSchema(dr);
+            var subject = GetSubject(dr);
+            var specVersion = GetSpecVersion(dr);
+            var traceParent = GetTraceParent(dr);
+            var traceState = GetTraceState(dr);
+            var baggage = GetBaggage(dr);
+            var dataRef = GetDataRef(dr);
+
             var header = new MessageHeader(
-                messageId: id,
+                messageId: new Id(id),
                 topic: topic,
                 messageType: messageType,
+                source: source,
+                type: type,
                 timeStamp: timeStamp,
-                handledCount: 0,
-                delayed: TimeSpan.Zero,
                 correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo),
+                replyTo: replyTo ,
                 contentType: contentType,
-                partitionKey: partitionKey);
-
-            Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+                partitionKey: partitionKey,
+                dataSchema: dataSchema,
+                subject: subject,
+                handledCount: 0, // HandledCount is zero when restored from the Outbox
+                delayed: TimeSpan.Zero, // Delayed is zero when restored from the Outbox
+                traceParent: traceParent,
+                traceState: traceState,
+                baggage: baggage
+            );
+            header.SpecVersion = specVersion ?? MessageHeader.DefaultSpecVersion;
+            header.DataRef = dataRef;
+            Dictionary<string, object>? dictionaryBag = GetContextBag(dr);
             if (dictionaryBag != null)
             {
-                foreach (var key in dictionaryBag.Keys)
+                foreach (var keyValue in dictionaryBag)
                 {
-                    header.Bag.Add(key, dictionaryBag[key]);
+                    header.Bag.Add(keyValue.Key, keyValue.Value);
                 }
             }
 
             var body = _configuration.BinaryMessagePayload
                 ? new MessageBody(((NpgsqlDataReader)dr).GetFieldValue<byte[]>(dr.GetOrdinal("Body")))
-                :new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
             return new Message(header, body);
         }
-
-        private string GetContentType(DbDataReader dr)
+        
+        private static Baggage GetBaggage (DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("ContentType");
-            if (dr.IsDBNull(ordinal))
-                return null;
+            var baggage = new Baggage();
+            var (ordinal, err) = TryGetOrdinal(dr, "Baggage");
+            if (err || dr.IsDBNull(ordinal)) return baggage;
 
-            var replyTo = dr.GetString(ordinal);
-            return replyTo;
+            var baggageString = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(baggageString))
+                return baggage;
+           
+            baggage.LoadBaggage(baggageString);
+            return baggage;
         }
 
-        private static Dictionary<string, object> GetContextBag(DbDataReader dr)
+        private static ContentType GetContentType(DbDataReader dr)
         {
-            var i = dr.GetOrdinal("HeaderBag");
-            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag =
-                JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
+            var (ordinal, err) = TryGetOrdinal(dr, "ContentType");
+            if (err || dr.IsDBNull(ordinal)) return new ContentType(MediaTypeNames.Text.Plain);
+            
+            var replyTo = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(replyTo))
+                return new ContentType(MediaTypeNames.Text.Plain);
+            
+            return new ContentType(replyTo);
+        }
+
+        private static Dictionary<string, object>? GetContextBag(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "HeaderBag");
+            if (err || dr.IsDBNull(ordinal)) return new Dictionary<string, object>();
+
+            var headerBag = dr.GetString(ordinal);
+            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
             return dictionaryBag;
         }
 
-        private string GetCorrelationId(DbDataReader dr)
+        private static Id GetCorrelationId(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal))
-                return null;
-
+            var (ordinal, err) = TryGetOrdinal(dr, "CorrelationId");
+            if (err || dr.IsDBNull(ordinal)) return Id.Empty;
+            
             var correlationId = dr.GetString(ordinal);
-            return correlationId;
+            if (string.IsNullOrEmpty(correlationId))
+                return Id.Empty;
+            
+            return new Id(correlationId);
+        }
+        
+        private static string GetDataRef(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "DataRef");
+            if (err || dr.IsDBNull(ordinal)) return string.Empty;
+            
+            var dataRef = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(dataRef) ? string.Empty : dataRef;
+        }
+        
+        private static Uri? GetDataSchema(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "DataSchema");
+            if (err || dr.IsDBNull(ordinal)) return null;
+            
+            var dataSchema = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(dataSchema) ? null : new Uri(dataSchema);
+        }
+        
+        private static RoutingKey GetEventType(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "Type");
+            if (err || dr.IsDBNull(ordinal)) return RoutingKey.Empty;
+            
+            var type = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(type))
+                return RoutingKey.Empty;
+            
+            return new RoutingKey(type);
         }
 
         private static RoutingKey GetTopic(DbDataReader dr)
         {
-            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
+            var (ordinal, err) = TryGetOrdinal(dr, "Topic");
+            if (err || dr.IsDBNull(ordinal)) return RoutingKey.Empty;
+           
+           var topic = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(topic))
+                return RoutingKey.Empty;
+            
+            return new RoutingKey(topic);
         }
 
         private static MessageType GetMessageType(DbDataReader dr)
         {
-            return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+            var (ordinal, err) = TryGetOrdinal(dr, "MessageType");
+            if (err || dr.IsDBNull(ordinal)) return MessageType.MT_NONE;
+
+            var value = dr.GetString(ordinal);
+            if (string.IsNullOrEmpty(value))
+                return MessageType.MT_NONE;
+            
+            return (MessageType)Enum.Parse(typeof(MessageType), value);
         }
 
-        private static string GetMessageId(DbDataReader dr)
+        private static Id GetMessageId(DbDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("MessageId"));
+            var (ordinal, err) = TryGetOrdinal(dr, "MessageId");
+            if (err || dr.IsDBNull(ordinal)) return Id.Random;
+ 
+            var id = dr.GetString(ordinal);
+            return new Id(id);
         }
 
-        private string GetPartitionKey(DbDataReader dr)
+        private static PartitionKey GetPartitionKey(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("PartitionKey");
-            if (dr.IsDBNull(ordinal)) return null;
+            var (ordinal, err) = TryGetOrdinal(dr, "PartitionKey");
+            if (err || dr.IsDBNull(ordinal)) return PartitionKey.Empty;
+
 
             var partitionKey = dr.GetString(ordinal);
-            return partitionKey;
+            return new PartitionKey(partitionKey);
         }
 
-        private string GetReplyTo(DbDataReader dr)
+        private static RoutingKey GetReplyTo(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("ReplyTo");
-            if (dr.IsDBNull(ordinal))
-                return null;
+            var (ordinal, err) = TryGetOrdinal(dr, "ReplyTo");
+            if (err || dr.IsDBNull(ordinal)) return RoutingKey.Empty;
 
             var replyTo = dr.GetString(ordinal);
-            return replyTo;
+            if (string.IsNullOrEmpty(replyTo))
+                return RoutingKey.Empty;
+            
+            return new RoutingKey(replyTo);
+        }
+        
+        private static Uri? GetSource(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "Source");
+            if (err || dr.IsDBNull(ordinal)) return null;
+            
+            var source = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(source) ? null : new Uri(source);
+        }
+        
+        private static string GetSpecVersion(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "SpecVersion");
+            if (err || dr.IsDBNull(ordinal)) return MessageHeader.DefaultSpecVersion;
+            
+            var specVersion = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(specVersion) ? MessageHeader.DefaultSpecVersion : specVersion;
+        }
+        
+        private static string GetSubject(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "Subject");
+            if (err || dr.IsDBNull(ordinal)) return string.Empty;
+            
+            var subject = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(subject) ? string.Empty : subject;
         }
 
         private static DateTimeOffset GetTimeStamp(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("Timestamp");
+            var (ordinal, err) = TryGetOrdinal(dr, "Timestamp");
+            if (err || dr.IsDBNull(ordinal)) return DateTimeOffset.UtcNow;
+            
             var timeStamp = dr.IsDBNull(ordinal)
                 ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
+        }
+        
+        private static string GetTraceParent(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "TraceParent");
+            if (err || dr.IsDBNull(ordinal)) return string.Empty;
+            
+            var traceParent = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(traceParent) ? string.Empty : traceParent;
+        }
+        
+        private static string GetTraceState(DbDataReader dr)
+        {
+            var (ordinal, err) = TryGetOrdinal(dr, "TraceState");
+            if (err || dr.IsDBNull(ordinal)) return string.Empty;
+            
+            var traceState = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(traceState) ? string.Empty : traceState;
+        }
+        
+        private static (int, bool) TryGetOrdinal(DbDataReader dr, string columnName)
+        {
+            try
+            {
+                return (dr.GetOrdinal(columnName), false);
+            }
+            catch (IndexOutOfRangeException)
+            {
+                // SpecVersion column does not exist, return -1 and true to indicate error
+                return (-1, true);
+            }
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "PostgresSqlOutbox: A duplicate was detected in the batch")]
+            public static partial void DuplicateDetectedInBatch(ILogger logger);
         }
     }
 }

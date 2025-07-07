@@ -11,7 +11,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         public Publication Publication { get; } = new();
         
         public Activity Span { get; set; }
-        
+        public IAmAMessageScheduler? Scheduler { get; set; }
+
         public void Dispose() { }
 
         public void Send(Message message)

@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.AWS.Tests.TestDoubles
 {
-    internal class QuickHandlerFactory : IAmAHandlerFactorySync
+    internal sealed class QuickHandlerFactory : IAmAHandlerFactorySync
     {
         private readonly Func<IHandleRequests> _handlerAction;
 
@@ -10,11 +10,11 @@ namespace Paramore.Brighter.AWS.Tests.TestDoubles
         {
             _handlerAction = handlerAction;
         }
-        public IHandleRequests Create(Type handlerType)
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
         {
             return _handlerAction();
         }
 
-        public void Release(IHandleRequests handler) { }
+        public void Release(IHandleRequests handler, IAmALifetime lifetime) { }
     }
 }

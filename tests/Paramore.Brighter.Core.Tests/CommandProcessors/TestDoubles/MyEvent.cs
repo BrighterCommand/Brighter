@@ -26,18 +26,22 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyEvent() : Event(Guid.NewGuid().ToString()), IEquatable<MyEvent>
+    internal sealed class MyEvent : Event, IEquatable<MyEvent>
     {
         public int Data { get; set; }
 
-        public bool Equals(MyEvent? other)
+        public MyEvent() : base(Guid.NewGuid())
+        {
+        }
+
+        public bool Equals(MyEvent other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Data == other.Data;
         }
 
-        public override bool Equals(object? obj)
+        public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;

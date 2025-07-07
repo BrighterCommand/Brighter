@@ -1,6 +1,6 @@
-﻿using FluentAssertions;
-using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+﻿using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -22,7 +22,7 @@ public class AsyncMessageWrapRequestMissingTransformTests
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => null));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
     }
     
     [Fact]
@@ -30,8 +30,8 @@ public class AsyncMessageWrapRequestMissingTransformTests
     {
         //act
         var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ConfigurationException);
         
     }
 }

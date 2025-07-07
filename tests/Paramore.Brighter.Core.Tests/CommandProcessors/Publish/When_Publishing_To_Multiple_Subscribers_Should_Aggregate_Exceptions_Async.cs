@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -60,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
@@ -69,14 +68,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         {
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PublishAsync(_myEvent));
 
-            //_should_throw_an_aggregate_exception
-            _exception.Should().BeOfType<AggregateException>();
-            //_should_have_an_inner_exception_from_the_handler
-            ((AggregateException)_exception).InnerException.Should().BeOfType<InvalidOperationException>();
-            //_should_publish_the_command_to_the_first_event_handler
-            _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), _myEvent.Id);
-            //_should_publish_the_command_to_the_second_event_handler
-            _receivedMessages.Should().Contain(nameof(MyOtherEventHandlerAsync), _myEvent.Id);
+            //Should throw an aggregate exception
+            Assert.IsType<AggregateException>(_exception);
+            //Should have an inner exception from the handler
+            Assert.IsType<InvalidOperationException>(((AggregateException)_exception).InnerException);
+            //Should publish the command to the first event handler
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandlerAsync), _myEvent.Id), _receivedMessages);
+            //Should publish the command to the second event handler
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandlerAsync), _myEvent.Id), _receivedMessages);
         }
 
         public void Dispose()

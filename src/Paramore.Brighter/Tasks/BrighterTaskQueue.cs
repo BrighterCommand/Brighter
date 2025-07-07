@@ -6,8 +6,6 @@
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false).
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
-// Originally based on:
-
 //Also based on:
 // https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
 // https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
@@ -26,7 +24,7 @@ namespace Paramore.Brighter.Tasks;
 /// <summary>
 /// Represents a task queue that allows tasks to be added and consumed in a thread-safe manner.
 /// </summary>
-internal class BrighterTaskQueue : IDisposable
+internal sealed class BrighterTaskQueue : IDisposable
 {
     private readonly BlockingCollection<Tuple<Task, bool>> _queue = new();
 

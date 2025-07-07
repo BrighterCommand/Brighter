@@ -27,10 +27,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(_bus, timeProvider);
+            InMemoryMessageProducer messageProducer = new(_bus, timeProvider, InstrumentationOptions.All);
             _routingKey = new RoutingKey("MyRequest");
             
-            producer.Publication = new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)};
+            messageProducer.Publication = new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)};
             
             _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { _routingKey, producer },
+                    { _routingKey, messageProducer },
                 });
 
             var tracer = new BrighterTracer();
@@ -83,6 +83,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
+                new FindPublicationByPublicationTopicOrRequestType(),
                 new InMemoryOutbox(timeProvider){Tracer = tracer});
         
             CommandProcessor.ClearServiceBus();
@@ -93,7 +94,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 policyRegistry,
                 bus,
                 replySubscriptions:replySubs,
-                responseChannelFactory: inMemoryChannelFactory
+                responseChannelFactory: inMemoryChannelFactory,
+                requestSchedulerFactory: new InMemorySchedulerFactory()
             );
 
             PipelineBuilder<MyRequest>.ClearPipelineCache();
@@ -105,14 +107,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         public void When_Calling_A_Server_Via_The_Command_Processor()
         {
             //start a message pump on a new thread, to recieve the Call message
-            var provider = new CommandProcessorProvider(_commandProcessor);
-            
             Channel channel = new(
                 new("MyChannel"), _routingKey, 
                 new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000))
             );
             
-            var messagePump = new Reactor<MyRequest>(provider, _messageMapperRegistry, 
+            var messagePump = new Reactor<MyRequest>(_commandProcessor, _messageMapperRegistry, 
                     new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 

@@ -1,7 +1,9 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommandToFail() : Command(Guid.NewGuid().ToString());
+    internal sealed class MyCommandToFail : ICommand
+    { 
+        public Id Id { get; set; }
+    }
 }

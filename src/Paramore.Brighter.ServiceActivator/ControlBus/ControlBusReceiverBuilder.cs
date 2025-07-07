@@ -50,6 +50,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         public const string HEARTBEAT = "heartbeat";
 
+        private IAmAPublicationFinder _publicationFinder = new FindPublicationByPublicationTopicOrRequestType();
         private IAmAChannelFactory? _channelFactory;
         private IDispatcher? _dispatcher;
         private IAmAProducerRegistryFactory? _producerRegistryFactory;
@@ -65,6 +66,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         public INeedAProducerRegistryFactory Dispatcher(IDispatcher dispatcher)
         {
             _dispatcher = dispatcher;
+            return this;
+        }
+
+        public INeedAProducerRegistryFactory PublishFinder(IAmAPublicationFinder publicationFinder)
+        {
+            _publicationFinder = publicationFinder;
             return this;
         }
 
@@ -165,7 +172,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
                 tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
-                outbox: outbox
+                outbox: outbox,
+                publicationFinder: _publicationFinder
             );
 
             if (_dispatcher is null) throw new ArgumentException("Dispatcher must not be null");
@@ -178,6 +186,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory())
                 .Build();
             
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
@@ -197,8 +206,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             if (_channelFactory is null) throw new ArgumentException("Channel Factory must not be null");
             
             return DispatchBuilder.StartNew()
-                .CommandProcessorFactory(() => 
-                    new CommandProcessorProvider(commandProcessor), new InMemoryRequestContextFactory()
+                .CommandProcessor(commandProcessor, new InMemoryRequestContextFactory()
                 )
                 .MessageMappers(incomingMessageMapperRegistry, null, null, null)
                 .ChannelFactory(_channelFactory)                                        
@@ -211,7 +219,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
+        private sealed class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
             public IAmABrighterTracer? Tracer { private get; set; } 
             
@@ -225,17 +233,17 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                //discard message 
             }
             
-            public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
+            public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
             {
                 //ignore
             }
 
-            public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+            public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
             {
                  return new Message(){Header = new MessageHeader("",new RoutingKey(""), MessageType.MT_NONE)};
             }
 
-            public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
+            public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
             {
                 //ignore
             }
@@ -249,7 +257,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 Dictionary<string, object>? args = null
             )
             {
-                return Array.Empty<Message>();
+                return [];
             }
 
             public IEnumerable<Message> OutstandingMessages(
@@ -259,13 +267,13 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 int pageNumber = 1,
                 Dictionary<string, object>? args = null)
             {
-                return Array.Empty<Message>(); 
+                return []; 
             }
 
 
             public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince)
             {
-               return Array.Empty<Message>(); 
+               return []; 
             }
         }
     }
@@ -286,6 +294,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
     public interface INeedAProducerRegistryFactory
     {
+        INeedAProducerRegistryFactory PublishFinder(IAmAPublicationFinder publicationFinder);
         INeedAChannelFactory ProducerRegistryFactory(IAmAProducerRegistryFactory producerRegistryFactory);
     }
 

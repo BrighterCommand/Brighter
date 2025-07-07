@@ -1,20 +1,13 @@
 ﻿using System.Net.Http;
 using Amazon.Runtime;
 
-namespace Paramore.Brighter.AWS.Tests.Helpers
+namespace Paramore.Brighter.AWS.Tests.Helpers;
+
+internal sealed class InterceptingHttpClientFactory(InterceptingDelegatingHandler handler) : HttpClientFactory
 {
-    internal class InterceptingHttpClientFactory : HttpClientFactory
+    public override HttpClient CreateHttpClient(IClientConfig clientConfig)
     {
-        private readonly InterceptingDelegatingHandler _handler;
-
-        public InterceptingHttpClientFactory(InterceptingDelegatingHandler handler)
-        {
-            _handler = handler;
-        }
-
-        public override HttpClient CreateHttpClient(IClientConfig clientConfig)
-        {
-            return new HttpClient(_handler);
-        }
+        handler.InnerHandler ??= new HttpClientHandler();
+        return new HttpClient(handler);
     }
 }

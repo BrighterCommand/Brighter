@@ -43,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
     /// the stop and start of individual connections through <see cref="Open(string)"/> and <see cref="Shut(string)"/>
     /// </summary>
-    public class Dispatcher : IDispatcher
+    public partial class Dispatcher : IDispatcher
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<Dispatcher>();
 
@@ -62,12 +62,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets the command processor.
         /// </summary>
         /// <value>The command processor.</value>
-        public IAmACommandProcessor CommandProcessor { get => CommandProcessorFactory.Invoke().Get(); }
-        
-        /// <summary>
-        /// 
-        /// </summary>
-        public Func<IAmACommandProcessorProvider> CommandProcessorFactory { get; }
+        public IAmACommandProcessor CommandProcessor { get; private set; }
         
         /// <summary>
         /// Gets the connections.
@@ -97,7 +92,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Initializes a new instance of the <see cref="Dispatcher"/> class.
         /// </summary>
-        /// <param name="commandProcessorFactory">The command processor Factory.</param>
+        /// <param name="commandProcessor">The command processor we should use with the dispatcher (prefer to use Command Processor Provider for IoC Scope control</param>
         /// <param name="subscriptions">The subscriptions.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
@@ -108,7 +103,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
         public Dispatcher(
-             Func<IAmACommandProcessorProvider> commandProcessorFactory,
+            IAmACommandProcessor commandProcessor,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry? messageMapperRegistry = null,
             IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync = null, 
@@ -118,7 +113,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
-            CommandProcessorFactory = commandProcessorFactory;
+            CommandProcessor = commandProcessor;
             
             Subscriptions = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;
@@ -145,37 +140,6 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Dispatcher"/> class.
-        /// </summary>
-        /// <param name="commandProcessor">The command processor we should use with the dispatcher (prefer to use Command Processor Provider for IoC Scope control</param>
-        /// <param name="subscriptions">The subscriptions.</param>
-        /// <param name="messageMapperRegistry">The message mapper registry.</param>
-        /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
-        /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
-        /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
-        /// <param name="requestContextFactory">The factory used to make a request synchronizationHelper</param>
-        /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
-        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
-        /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>        
-        public Dispatcher(
-            IAmACommandProcessor commandProcessor,
-            IEnumerable<Subscription> subscriptions,
-            IAmAMessageMapperRegistry? messageMapperRegistry = null,
-            IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync = null, 
-            IAmAMessageTransformerFactory? messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync= null,
-            IAmARequestContextFactory? requestContextFactory = null,
-            IAmABrighterTracer? tracer = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-            : this(() => 
-                new CommandProcessorProvider(commandProcessor), subscriptions, messageMapperRegistry, 
-                messageMapperRegistryAsync, messageTransformerFactory, messageTransformerFactoryAsync, 
-                requestContextFactory, tracer, instrumentationOptions
-            )
-        {
-        }
-
-        /// <summary>
         /// Stop listening to messages
         /// </summary>
         /// <returns>Task.</returns>
@@ -183,7 +147,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                s_logger.LogInformation("Dispatcher: Stopping dispatcher");
+                Log.StoppingDispatcher(s_logger);
                 Consumers.Each(consumer => consumer.Shut(consumer.Subscription.RoutingKey));
             }
 
@@ -205,7 +169,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscription">The subscription.</param>
         public void Open(Subscription subscription)
         {
-            s_logger.LogInformation("Dispatcher: Opening subscription {ChannelName}", subscription.Name);
+            Log.OpeningSubscription(s_logger, subscription.Name);
 
             AddSubscriptionToSubscriptions(subscription);
             var addedConsumers = CreateConsumers(new[] { subscription });
@@ -264,7 +228,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                s_logger.LogInformation("Dispatcher: Stopping subscription {ChannelName}", subscription.Name);
+                Log.StoppingSubscription(s_logger, subscription.Name);
                 var consumersForConnection = Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
@@ -321,14 +285,14 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                 {
-                    s_logger.LogInformation("Dispatcher: Dispatcher starting");
+                    Log.DispatcherStarting(s_logger);
                     State = DispatcherState.DS_RUNNING;
 
                     var consumers = Consumers.ToArray();
                     consumers.Each(consumer => consumer.Open());
                     consumers.Each(consumer => _tasks.TryAdd(consumer.JobId, consumer.Job!));
 
-                    s_logger.LogInformation("Dispatcher: Dispatcher starting {Consumers} performers", _tasks.Count);
+                    Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
 
                     while (_tasks.Any())
                     {
@@ -337,12 +301,12 @@ namespace Paramore.Brighter.ServiceActivator
                             var runningTasks = _tasks.Values.ToArray();
                             var index = Task.WaitAny(runningTasks);
                             var stoppingConsumer = runningTasks[index];
-                            s_logger.LogDebug("Dispatcher: Performer stopped with state {Status}", stoppingConsumer.Status);
+                            Log.PerformerStopped(s_logger, stoppingConsumer.Status);
 
                             var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
                             if (consumer != null)
                             {
-                                s_logger.LogDebug("Dispatcher: Removing a consumer with subscription name {ChannelName}", consumer.Name);
+                                Log.RemovingConsumer(s_logger, consumer.Name);
 
                                 if (_consumers.TryRemove(consumer.Name, out consumer))
                                 {
@@ -361,14 +325,14 @@ namespace Paramore.Brighter.ServiceActivator
                         {
                             ae.Handle(ex =>
                             {
-                                s_logger.LogError(ex, "Dispatcher: Error on consumer; consumer shut down");
+                                Log.ErrorOnConsumer(s_logger, ex);
                                 return true;
                             });
                         }
                     }
 
                     State = DispatcherState.DS_STOPPED;
-                    s_logger.LogInformation("Dispatcher: Dispatcher stopped");
+                    Log.DispatcherStopped(s_logger);
                 }
             },
             TaskCreationOptions.LongRunning);
@@ -396,13 +360,13 @@ namespace Paramore.Brighter.ServiceActivator
         
         private Consumer CreateConsumer(Subscription subscription, int? consumerNumber)
         {
-            s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", consumerNumber, subscription.Name);
+            Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name);
             var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
             if (subscription.MessagePumpType == MessagePumpType.Reactor)
             {
                 var types = new[]
                 {
-                    typeof(IAmACommandProcessorProvider), typeof(Subscription),  typeof(IAmAMessageMapperRegistry),
+                    typeof(IAmACommandProcessor), typeof(Subscription),  typeof(IAmAMessageMapperRegistry),
                     typeof(IAmAMessageTransformerFactory), typeof(IAmARequestContextFactory), typeof(IAmABrighterTracer), 
                     typeof(InstrumentationOptions)
                 };
@@ -414,7 +378,7 @@ namespace Paramore.Brighter.ServiceActivator
                     
                 var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object?[]
                 {
-                    CommandProcessorFactory.Invoke(), subscription, _messageMapperRegistry,  _messageTransformerFactory,
+                    CommandProcessor, subscription, _messageMapperRegistry,  _messageTransformerFactory,
                     _requestContextFactory, _tracer, _instrumentationOptions
                     
                 })!;   
@@ -425,7 +389,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                  var types = new[]
                  {
-                     typeof(IAmACommandProcessorProvider),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), 
+                     typeof(IAmACommandProcessor),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), 
                      typeof(IAmAMessageTransformerFactoryAsync), typeof(IAmARequestContextFactory), typeof(IAmABrighterTracer), 
                      typeof(InstrumentationOptions)
                  };
@@ -437,12 +401,46 @@ namespace Paramore.Brighter.ServiceActivator
                      
                  var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object?[]
                  {
-                     CommandProcessorFactory.Invoke(),  subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync, 
+                     CommandProcessor,  subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync, 
                      _requestContextFactory, _tracer, _instrumentationOptions
                  })!;
 
                  return consumerFactory?.Create()!;
             }
         }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Stopping dispatcher")]
+            public static partial void StoppingDispatcher(ILogger logger);
+
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Opening subscription {ChannelName}")]
+            public static partial void OpeningSubscription(ILogger logger, string channelName);
+            
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Stopping subscription {ChannelName}")]
+            public static partial void StoppingSubscription(ILogger logger, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Dispatcher starting")]
+            public static partial void DispatcherStarting(ILogger logger);
+
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Dispatcher starting {Consumers} performers")]
+            public static partial void DispatcherStartingPerformers(ILogger logger, int consumers);
+
+            [LoggerMessage(LogLevel.Debug, "Dispatcher: Performer stopped with state {Status}")]
+            public static partial void PerformerStopped(ILogger logger, TaskStatus status);
+
+            [LoggerMessage(LogLevel.Debug, "Dispatcher: Removing a consumer with subscription name {ChannelName}")]
+            public static partial void RemovingConsumer(ILogger logger, string channelName);
+
+            [LoggerMessage(LogLevel.Error, "Dispatcher: Error on consumer; consumer shut down")]
+            public static partial void ErrorOnConsumer(ILogger logger, Exception ex);
+
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Dispatcher stopped")]
+            public static partial void DispatcherStopped(ILogger logger);
+            
+            [LoggerMessage(LogLevel.Information, "Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}")]
+            public static partial void CreatingConsumer(ILogger logger, int? consumerNumber, string channelName);
+        }
     }
 }
+

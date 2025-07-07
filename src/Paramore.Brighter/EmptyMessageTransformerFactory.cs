@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -44,8 +45,8 @@ namespace Paramore.Brighter
     {
         public IRequestContext? Context { get; set; }
         public void Dispose() {GC.SuppressFinalize(this);}
-        public void InitializeWrapFromAttributeParams(params object[] initializerList) { }
-        public void InitializeUnwrapFromAttributeParams(params object[] initializerList) { }
+        public void InitializeWrapFromAttributeParams(params object?[] initializerList) { }
+        public void InitializeUnwrapFromAttributeParams(params object?[] initializerList) { }
         public Message Wrap(Message message, Publication publication) { return message; }
         public Message Unwrap(Message message) { return message; }
     }

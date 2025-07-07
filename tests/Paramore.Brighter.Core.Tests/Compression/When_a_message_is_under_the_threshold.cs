@@ -1,8 +1,7 @@
 ﻿using System;
 using System.IO.Compression;
-using System.Threading.Tasks;
-using FluentAssertions;
-using Paramore.Brighter.Core.Tests.TestHelpers;
+using System.Net.Mime;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -13,30 +12,30 @@ public class SmallPayloadNotCompressedTests
     private readonly CompressPayloadTransformer _transformer;
     private readonly Message _message;
     private readonly RoutingKey _topic = new("test_topic");
-    private const ushort GZIP_LEAD_BYTES = 0x8b1f;
-    
-    
+
     public SmallPayloadNotCompressedTests()
     {
         _transformer = new CompressPayloadTransformer();
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
 
         string body = "small message";
+        var contentType = new ContentType(MediaTypeNames.Application.Json);
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, 
-                timeStamp: DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON),
-            new MessageBody(body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8)
-        );      
+            new MessageHeader(Id.Random, _topic, MessageType.MT_EVENT,
+                timeStamp: DateTime.UtcNow, contentType: contentType),
+            new MessageBody(body, contentType, CharacterEncoding.UTF8)
+        );
     }
-    
-    
+
     [Fact]
     public void When_a_message_is_under_the_threshold()
     {
         var uncompressedMessage = _transformer.Wrap(_message, new Publication{Topic = _topic});
 
         //look for gzip in the bytes
-        uncompressedMessage.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-        uncompressedMessage.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(
+            new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
+            uncompressedMessage.Body.ContentType);
+        Assert.Equal(_message.Body.Value, uncompressedMessage.Body.Value);
     }
 }

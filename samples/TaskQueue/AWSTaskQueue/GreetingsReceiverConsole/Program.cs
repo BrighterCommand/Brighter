@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -53,26 +54,48 @@ namespace GreetingsReceiverConsole
                 {
                     var subscriptions = new Subscription[]
                     {
-                        new SqsSubscription<GreetingEvent>(
-                            new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                         new SqsSubscription<GreetingEvent>(
+                            subscriptionName: new SubscriptionName("paramore.example.greeting"),
+                            channelName: new ChannelName(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
+                            channelType: ChannelType.PubSub,
+                            routingKey: new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                             bufferSize: 10,
-                            timeOut: TimeSpan.FromMilliseconds(20), 
-                            lockTimeout: 30)
+                            timeOut: TimeSpan.FromMilliseconds(20),
+                            queueAttributes: new SqsAttributes(lockTimeout: TimeSpan.FromSeconds(30))),
+                        new SqsSubscription<FarewellEvent>(
+                            subscriptionName: new SubscriptionName("paramore.example.farewell"),
+                            channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                            channelType: ChannelType.PubSub,
+                            routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                            bufferSize: 10,
+                            timeOut: TimeSpan.FromMilliseconds(20),
+                            queueAttributes: new SqsAttributes(
+                                lockTimeout: TimeSpan.FromSeconds(30),
+                                type: SqsType.Fifo  
+                            )
+                            )
                     };
 
                     //create the gateway
                     if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                     {
-                        var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                        var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                        var region = string.IsNullOrWhiteSpace(serviceURL) ? RegionEndpoint.EUWest1 : RegionEndpoint.USEast1;
+                        var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
+                            cfg =>
+                            {
+                                if (!string.IsNullOrWhiteSpace(serviceURL))
+                                {
+                                    cfg.ServiceURL = serviceURL;
+                                }
+                            });
 
                         services.AddServiceActivator(options =>
-                        {
-                            options.Subscriptions = subscriptions;
-                            options.DefaultChannelFactory = new ChannelFactory(awsConnection);
-                        })
-                        .AutoFromAssemblies();
+                            {
+                                options.Subscriptions = subscriptions;
+                                options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+                            })
+                            .AutoFromAssemblies();
                     }
 
                     services.AddHostedService<ServiceActivatorHostedService>();
@@ -82,11 +105,6 @@ namespace GreetingsReceiverConsole
                 .Build();
 
             await host.RunAsync();
-
-
-
-
         }
     }
 }
-

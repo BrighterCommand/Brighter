@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
 using Xunit;
@@ -54,27 +53,27 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox()
         {
-            _pgSqlInbox.Add(_raisedCommand, _contextKey);
+            _pgSqlInbox.Add(_raisedCommand, _contextKey, null, -1);
             
-            _exception = Catch.Exception(() => _pgSqlInbox.Add(_raisedCommand, _contextKey));
+            _exception = Catch.Exception(() => _pgSqlInbox.Add(_raisedCommand, _contextKey, null, -1));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            _pgSqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            Assert.Null(_exception);
+            Assert.True(_pgSqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey, null, -1));
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            _pgSqlInbox.Add(_raisedCommand, _contextKey);
+            _pgSqlInbox.Add(_raisedCommand, _contextKey, null, -1);
 
             var newcontext = Guid.NewGuid().ToString();
-            _pgSqlInbox.Add(_raisedCommand, newcontext);
+            _pgSqlInbox.Add(_raisedCommand, newcontext, null, -1);
 
-            var storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, newcontext);
+            var storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, newcontext, null, -1);
 
-            //_should_read_the_command_from_the__dynamo_db_inbox
-            AssertionExtensions.Should(storedCommand).NotBeNull();
+            //Should read the command from the dynamo db inbox
+            Assert.NotNull(storedCommand);
         }
 
         public void Dispose()

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
+using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
@@ -18,6 +20,8 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly DynamoDbOutbox _dynamoDbOutbox;
     private readonly string _entityTableName;
+    private readonly Dictionary<string, AttributeValue?> _entityAttributes;
+    private readonly Message _message;
 
     public DynamoDbOutboxTransactionTests(ITestOutputHelper testOutputHelper)
     {
@@ -46,14 +50,11 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
         }
 
         _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
-    }
 
-    [Fact]
-    public async void When_There_Is_A_Transaction_Between_Outbox_And_Entity()
-    {
         var context = new DynamoDBContext(Client);
         var myItem = new MyEntity { Id = Guid.NewGuid().ToString(), Value = "Test Value for Transaction Checking" };
-        var attributes = context.ToDocument(myItem).ToAttributeMap();
+        _entityAttributes = context.ToDocument(myItem).ToAttributeMap();
+
         var myMessageHeader = new MessageHeader(
             messageId: Guid.NewGuid().ToString(),
             topic: new RoutingKey("test_topic"),
@@ -63,19 +64,52 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             delayed: TimeSpan.FromMilliseconds(5),
             correlationId: Guid.NewGuid().ToString(),
             replyTo: new RoutingKey("ReplyAddress"),
-            contentType: "text/plain");
-
+            contentType: new ContentType(MediaTypeNames.Text.Plain));
         var body = new MessageBody(myItem.Value);
-        var myMessage = new MessageItem(new Message(myMessageHeader, body));
-        var messageAttributes = context.ToDocument(myMessage).ToAttributeMap();
+        _message = new Message(myMessageHeader, body);
+    }
 
+    [Fact]
+    public void When_There_Is_A_Transaction_Between_Outbox_And_Entity()
+    {
         var uow = new DynamoDbUnitOfWork(Client);
-        TransactWriteItemsResponse response = null;
+        TransactWriteItemsResponse response;
         try
         {
+            _dynamoDbOutbox.Add(_message, new RequestContext(), transactionProvider: uow);
+
+            var transaction = uow.GetTransaction();
+            transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = _entityAttributes, } });
+
+            Assert.Equal(2, transaction.TransactItems.Count);
+
+            uow.Commit();
+            response = uow.LastResponse;
+        }
+        catch (Exception e)
+        {
+            _testOutputHelper.WriteLine(e.ToString());
+            throw;
+        }
+
+        Assert.NotNull(response);
+        Assert.Equal(HttpStatusCode.OK, response.HttpStatusCode);
+        Assert.Equal(2, response.ContentLength); //number of tables in the transaction 
+    }
+
+    [Fact]
+    public async Task When_There_Is_A_Transaction_Between_Outbox_And_Entity_Async()
+    {
+        var uow = new DynamoDbUnitOfWork(Client);
+        TransactWriteItemsResponse response;
+        try
+        {
+            await _dynamoDbOutbox.AddAsync(_message, new RequestContext(), transactionProvider: uow);
+
             var transaction = await uow.GetTransactionAsync();
-            transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = attributes, } });
-            transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = OutboxTableName, Item = messageAttributes}});
+            transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = _entityAttributes, } });
+
+            Assert.Equal(2, transaction.TransactItems.Count);
 
             await uow.CommitAsync();
             response = uow.LastResponse;
@@ -88,6 +122,6 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
 
         Assert.NotNull(response);
         Assert.Equal(HttpStatusCode.OK, response.HttpStatusCode);
-        Assert.Equal(2, response.ContentLength);    //number of tables in the transaction
+        Assert.Equal(2, response.ContentLength); //number of tables in the transaction 
     }
 }

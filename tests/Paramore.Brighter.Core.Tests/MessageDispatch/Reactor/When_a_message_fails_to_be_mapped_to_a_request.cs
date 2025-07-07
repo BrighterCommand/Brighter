@@ -20,7 +20,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public MessagePumpFailingMessageTranslationTests()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
-            var provider = new CommandProcessorProvider(commandProcessor);
             _channel = new Channel(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
@@ -28,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
             var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => throw new NotImplementedException());
              
-            _messagePump = new Reactor<MyFailingMapperEvent>(provider, messageMapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory(), _channel)
+            _messagePump = new Reactor<MyFailingMapperEvent>(commandProcessor, messageMapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
             };

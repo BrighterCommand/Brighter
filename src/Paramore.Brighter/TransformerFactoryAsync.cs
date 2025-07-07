@@ -25,7 +25,7 @@ using System;
 
 namespace Paramore.Brighter
 {
-    internal class TransformerFactoryAsync<TRequest> where TRequest: class, IRequest
+    internal sealed class TransformerFactoryAsync<TRequest> where TRequest: class, IRequest
     {
         private readonly TransformAttribute _attribute;
         private readonly IAmAMessageTransformerFactoryAsync _factory;
@@ -42,8 +42,15 @@ namespace Paramore.Brighter
         {
             var transformerType = _attribute.GetHandlerType();
             var transformer = _factory.Create(transformerType);
-            if (_attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(_attribute.InitializerParams());
-            if (_attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(_attribute.InitializerParams());
+            if (_attribute is WrapWithAttribute)
+            {
+                transformer.InitializeWrapFromAttributeParams(_attribute.InitializerParams());
+            }
+
+            if (_attribute is UnwrapWithAttribute)
+            {
+                transformer.InitializeUnwrapFromAttributeParams(_attribute.InitializerParams());
+            }
             return transformer;
         }
     }

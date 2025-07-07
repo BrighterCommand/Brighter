@@ -24,9 +24,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Mime;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
@@ -46,6 +47,16 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly int _value3 = 123;
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
+
+        // new fields for full header
+        private readonly Uri _source;
+        private readonly string _type;
+        private readonly Uri _dataSchema;
+        private readonly string _subject;
+        private readonly TraceParent _traceParent;
+        private readonly TraceState _traceState;
+        private readonly Baggage _baggage;
+
         private readonly Message _messageEarliest;
         private Message _storedMessage;
 
@@ -54,17 +65,35 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
+
+            // define and assign the extra header properties
+            _source = new Uri("http://example.org/source");
+            _type = "custom-message-type";
+            _dataSchema = new Uri("http://example.org/schema");
+            _subject = "custom-subject";
+            _traceParent = new TraceParent("00-abcdef1234567890abcdef1234567890-abcdef1234567890-01");
+            _traceState = new TraceState("state");
+            _baggage = Baggage.FromString("userId=123,sessionId=xyz");
+
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid().ToString(),
-                topic: new RoutingKey("test_topic"), 
-                messageType:MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5,
-                delayed:TimeSpan.FromMilliseconds(5),
+                messageId: Guid.NewGuid().ToString(),
+                topic: new RoutingKey("test_topic"),
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyTo"),
-                contentType: "text/plain",
-                partitionKey: Guid.NewGuid().ToString());
+                contentType: new ContentType(MediaTypeNames.Text.Plain),
+                partitionKey: Guid.NewGuid().ToString(),
+                source: _source,
+                type: _type,
+                dataSchema: _dataSchema,
+                subject: _subject,
+                traceParent: _traceParent,
+                traceState: _traceState,
+                baggage: _baggage
+            );
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -80,31 +109,39 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _storedMessage = _sqlOutbox.Get(_messageEarliest.Id, new RequestContext());
             //should read the message from the sql outbox
-            _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
+            Assert.Equal(_messageEarliest.Body.Value, _storedMessage.Body.Value);
             //should read the header from the sql outbox
-            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss")
-                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
-            _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
-            _storedMessage.Header.Delayed.Should().Be(TimeSpan.Zero); // -- should be zero when read from outbox
-            _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
-            _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
-            _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey);
+            Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
+            Assert.Equal(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
+            Assert.Equal(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
+            Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
+            Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
+            Assert.Equal(_messageEarliest.Header.CorrelationId, _storedMessage.Header.CorrelationId);
+            Assert.Equal(_messageEarliest.Header.ReplyTo, _storedMessage.Header.ReplyTo);
+            Assert.Equal(_messageEarliest.Header.ContentType, _storedMessage.Header.ContentType);
+            Assert.Equal(_messageEarliest.Header.PartitionKey, _storedMessage.Header.PartitionKey);
              
             
             //Bag serialization
-            _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
-            _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
-            _storedMessage.Header.Bag[_key2].Should().Be(_value2);
-            _storedMessage.Header.Bag.ContainsKey(_key3).Should().BeTrue();
-            _storedMessage.Header.Bag[_key3].Should().Be(_value3);
-            _storedMessage.Header.Bag.ContainsKey(_key4).Should().BeTrue();
-            _storedMessage.Header.Bag[_key4].Should().Be(_value4);
-            _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
-            _storedMessage.Header.Bag[_key5].Should().Be(_value5);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));
+            Assert.Equal(_value1, _storedMessage.Header.Bag[_key1]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key2));
+            Assert.Equal(_value2, _storedMessage.Header.Bag[_key2]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key3));
+            Assert.Equal(_value3, _storedMessage.Header.Bag[_key3]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key4));
+            Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
+            Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
+
+            // assert the newly set header properties round-trip
+            Assert.Equal(_source, _storedMessage.Header.Source);
+            Assert.Equal(_type, _storedMessage.Header.Type);
+            Assert.Equal(_dataSchema, _storedMessage.Header.DataSchema);
+            Assert.Equal(_subject, _storedMessage.Header.Subject);
+            Assert.Equal(_traceParent, _storedMessage.Header.TraceParent);
+            Assert.Equal(_traceState, _storedMessage.Header.TraceState);
+            Assert.Equal(_baggage.ToString(), _storedMessage.Header.Baggage.ToString());
         }
 
         public async ValueTask DisposeAsync()

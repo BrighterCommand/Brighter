@@ -30,13 +30,13 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter;
 
 /// <summary>
-/// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="Paramore.Brighter.InMemoryProducer"/>
+/// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
 /// and <see cref="Paramore.Brighter.InternalBus"/> to provide an in-memory message bus for a modular monolith.
 /// If you set an ackTimeout then the consumer will requeue the message if it is not acknowledged
 /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
-/// and requeues them if they have been locked for longer than the timeout.
+/// and re-queues them if they have been locked for longer than the timeout.
 /// </summary>
-public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
     private readonly ConcurrentDictionary<string, LockedMessage> _lockedMessages = new();
     private readonly RoutingKey _topic;
@@ -47,7 +47,7 @@ public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsu
     private ITimer? _requeueTimer;
 
     /// <summary>
-    /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="Paramore.Brighter.InMemoryProducer"/>
+    /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
     /// and <see cref="Paramore.Brighter.InternalBus"/> to provide an in-memory message bus for a modular monolith.
     /// If you set an <paramref name="ackTimeout"/> then the consumer will requeue the message if it is not acknowledged
     /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
@@ -98,10 +98,8 @@ public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsu
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message)
-    {
-        _lockedMessages.TryRemove(message.Id, out _);
-    }
+    public bool Reject(Message message)
+        => _lockedMessages.TryRemove(message.Id, out _);
 
     /// <summary>
     /// Rejects the specified message.
@@ -109,9 +107,9 @@ public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsu
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="cancellationToken">Cancel the rejection</param>
-    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
-        await Task.Run(() => Reject(message), cancellationToken);
+        return await Task.Run(() => Reject(message), cancellationToken);
     }
 
     /// <summary>
@@ -244,13 +242,13 @@ public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsu
         }
     }
 
-    protected virtual void DisposeCore()
+    private void DisposeCore()
     {
         _lockTimer.Dispose();
         _requeueTimer?.Dispose();
     }
-    
-    protected virtual async ValueTask DisposeAsyncCore()
+
+    private async ValueTask DisposeAsyncCore()
     {
         await _lockTimer.DisposeAsync().ConfigureAwait(false);
         if (_requeueTimer != null) await _requeueTimer.DisposeAsync().ConfigureAwait(false);
@@ -271,7 +269,5 @@ public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsu
         }
     }
 
-    private record LockedMessage(Message Message, DateTimeOffset LockedAt);
-
-
+    private sealed record LockedMessage(Message Message, DateTimeOffset LockedAt);
 }

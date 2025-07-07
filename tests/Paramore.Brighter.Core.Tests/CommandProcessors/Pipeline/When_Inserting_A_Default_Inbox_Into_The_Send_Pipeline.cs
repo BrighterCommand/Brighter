@@ -1,5 +1,4 @@
 ﻿using System;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -53,6 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new InMemorySchedulerFactory(),
                 inboxConfiguration: inboxConfiguration
             );
 
@@ -69,9 +69,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             //assert we are in, and auto-context added us under our name
             var inbox = _provider.GetService<IAmAnInboxSync>();
-            inbox.Should().NotBeNull();
-            var boxed = inbox.Exists<MyCommand>(command.Id, typeof(MyCommandHandler).FullName, 100);
-            boxed.Should().BeTrue();
+            Assert.NotNull(inbox);
+            var boxed = inbox.Exists<MyCommand>(command.Id, typeof(MyCommandHandler).FullName, null, 100);
+            Assert.True(boxed);
         }
 
         public void Dispose()

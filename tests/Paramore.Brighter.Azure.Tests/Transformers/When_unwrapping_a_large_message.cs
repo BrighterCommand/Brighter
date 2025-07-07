@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Blobs;
-using FluentAssertions;
 using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.Azure;
@@ -11,23 +10,25 @@ namespace Paramore.Brighter.Azure.Tests.Transformers;
 
 [Category("Azure")]
 [Property("Fragile", "CI")]
-public class LargeMessagePaylodUnwrapTests : IDisposable
+public class LargeMessagePayloadAUnwrapTests : IDisposable
 {
     private readonly BlobContainerClient _client;
-    private readonly string _bucketName;
-    private Uri _bucketUrl;
-    private AzureBlobLuggageStore _luggageStore;
-    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
+    private readonly AzureBlobLuggageStore _luggageStore;
+    private readonly TransformPipelineBuilder _pipelineBuilder;
 
-    public LargeMessagePaylodUnwrapTests()
+    public LargeMessagePayloadAUnwrapTests()
     {
         //arrange
-        _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-        _bucketUrl = new Uri($"{TestHelper.BlobLocation}{_bucketName}");
+        var bucketName = $"brightertestbucket-{Guid.NewGuid()}";
+        var bucketUrl = new Uri($"{TestHelper.BlobLocation}{bucketName}");
 
-        _client = new BlobContainerClient(_bucketUrl, new AzureCliCredential());
+        _client = new BlobContainerClient(bucketUrl, new AzureCliCredential());
         _client.CreateIfNotExists();
-        _luggageStore = new AzureBlobLuggageStore(_bucketUrl, new AzureCliCredential());
+        _luggageStore = new AzureBlobLuggageStore(new AzureBlobLuggageOptions
+        {
+            ContainerUri = bucketUrl,
+            Credential = new AzureCliCredential()
+        });
         
         TransformPipelineBuilder.ClearPipelineCache();
 
@@ -36,16 +37,16 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
             null);
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+        var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
-    }                                                                             
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+    }
     
     [Test]
-    public async Task When_unwrapping_a_large_message()
+    public void When_unwrapping_a_large_message_async()
     {
         //arrange
-        await Task.Delay(3000); //allow bucket definition to propagate
+        Thread.Sleep(3000); //allow bucket definition to propagate
             
         //store our luggage and get the claim check
         var contents = DataGenerator.CreateString(6000);
@@ -54,10 +55,10 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         
         var stream = new MemoryStream();                                                                               
         var writer = new StreamWriter(stream);
-        await writer.WriteAsync(commandAsJson);
-        await writer.FlushAsync();
+        writer.Write(commandAsJson);
+        writer.Flush();
         stream.Position = 0;
-        var id = await _luggageStore.StoreAsync(stream, CancellationToken.None);
+        var id = _luggageStore.Store(stream);
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
@@ -68,16 +69,17 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
-
+        message.Header.DataRef = id;
+        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id; 
+         
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-        var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
+        var transformedMessage = transformPipeline.Unwrap(message, new RequestContext());
         
         //assert
         //contents should be from storage
-        transformedMessage.Value.Should().Be(contents);
-        (await _luggageStore.HasClaimAsync(id, CancellationToken.None)).Should().BeFalse();
+        Assert.Equals(contents, transformedMessage.Value);
+        Assert.That(_luggageStore.HasClaim(id));
     }
     
     public void Dispose()

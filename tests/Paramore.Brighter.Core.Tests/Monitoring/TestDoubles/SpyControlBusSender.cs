@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring.TestDoubles
 {
-    class SpyControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync
+    sealed class SpyControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync
     {
         readonly Queue<IRequest> _requests = new Queue<IRequest>();
         public bool PostHappened { get; set; }
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring.TestDoubles
             PostHappened = true;
         }
 
-        public virtual T Observe<T>() where T : class, IRequest
+        public T Observe<T>() where T : class, IRequest
         {
             return (T) _requests.Dequeue();
         }

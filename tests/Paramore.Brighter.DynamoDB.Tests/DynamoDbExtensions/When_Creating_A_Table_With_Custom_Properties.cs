@@ -6,6 +6,7 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
         }
 
         [DynamoDBTable("MyEntity")]
-        private class DynamoDbEntity
+        private sealed class DynamoDbEntity
         {
             [DynamoDBHashKey] [DynamoDBProperty] public string Id { get; set; }
 

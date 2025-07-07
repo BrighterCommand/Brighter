@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
+using Paramore.Brighter.JsonConverters;
 
 namespace Greetings.Ports.Mappers
 {

@@ -2,7 +2,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    class MyPreValidationHandlerAsyncAttribute : RequestHandlerAttribute
+    sealed class MyPreValidationHandlerAsyncAttribute : RequestHandlerAttribute
     {
         public MyPreValidationHandlerAsyncAttribute(int step, HandlerTiming timing)
             : base(step, timing)
