@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_Building_A_Handler_For_An_Async_Command()
         {
-            _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false).First();
+            _chainOfResponsibility = _chainBuilder.BuildAsync(new MyCommand(), _requestContext, false).First();
 
             Assert.NotNull(_chainOfResponsibility.Context);
             Assert.Same(_requestContext, _chainOfResponsibility.Context);

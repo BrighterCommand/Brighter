@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_A_Handler_Is_Part_Of_An_Async_Pipeline()
         {
-            _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First();
+            _pipeline = _pipelineBuilder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
             
             var trace = TracePipeline().ToString();
             Assert.Contains("MyImplicitHandlerAsync", trace);

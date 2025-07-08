@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public void When_Building_A_Pipeline_With_Global_inbox()
         {
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
+            _chainOfResponsibility = _chainBuilder.Build(new MyCommand(), _requestContext);
             
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());

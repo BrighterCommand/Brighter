@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var handlerFactory = new CheapHandlerFactorySync();
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-            _pipelineBuilder.Build(new RequestContext()).Any();
+            _pipelineBuilder.Build(new MyCommand(), new RequestContext()).Any();
         }
 
         [Fact]
@@ -30,11 +30,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             _pipelineBuilder.Dispose();
 
-            //_should_have_called_dispose_on_instances_from_ioc
             Assert.True(MyPreAndPostDecoratedHandler.DisposeWasCalled);
-            //_should_have_called_dispose_on_instances_from_pipeline_builder
             Assert.True(MyLoggingHandler<MyCommand>.DisposeWasCalled);
-            //_should_have_called_release_on_all_handlers
             Assert.Equal("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1", s_released);
         }
 

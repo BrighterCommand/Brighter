@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_Building_A_Pipeline_Allow_ForeignAttributes()
         {
-            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+            _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
             var trace = TraceFilters().ToString();
             Assert.Equal("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|", trace);

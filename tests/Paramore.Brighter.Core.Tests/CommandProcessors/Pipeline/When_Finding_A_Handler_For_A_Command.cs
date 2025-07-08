@@ -24,11 +24,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_Finding_A_Handler_For_A_Command()
         {
-            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+            _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
-           //Should return the my command handler as the implicit handler
             Assert.IsType<MyCommandHandler>(_pipeline);
-            //Should be the only element in the chain
             Assert.Equal("MyCommandHandler|", TracePipeline().ToString());
         }
 
