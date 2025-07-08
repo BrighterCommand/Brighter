@@ -40,7 +40,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns>IEnumerable&lt;Type&gt;.</returns>
-        IEnumerable<Type> Get<T>() where T : class, IRequest;
+        IEnumerable<Type> Get<T>(T request, IRequestContext requestContext) where T : class, IRequest;
+        
         /// <summary>
         /// Registers this instance.
         /// </summary>

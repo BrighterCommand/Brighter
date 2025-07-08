@@ -85,20 +85,21 @@ namespace Paramore.Brighter
         /// <summary>
         /// Builds a pipeline of synchronous handlers for the given <paramref name="requestContext"/>.
         /// </summary>
+        /// <param name="request">The <see cref="IRequest"/> that we are building the request for; used for routing at this point, not execution</param>
         /// <param name="requestContext">The <see cref="IRequestContext"/> for the pipeline. If multiple handlers are registered, a copy is made for each pipeline.</param>
         /// <returns>
         /// A <see cref="Pipelines{TRequest}"/> containing the constructed handler pipelines for the request type.
         /// </returns>
         /// <exception cref="NullReferenceException">Thrown if the synchronous handler factory is null.</exception>
         /// <exception cref="ConfigurationException">Thrown if there is an error building the pipeline.</exception>
-        public Pipelines<TRequest> Build(IRequestContext requestContext)
+        public Pipelines<TRequest> Build(TRequest request, IRequestContext requestContext)
         {
             if(_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
             
             try
             {
-                var observers = _subscriberRegistry.Get<TRequest>();
+                var observers = _subscriberRegistry.Get<TRequest>(request, requestContext);
                 
                 var pipelines = new Pipelines<TRequest>();
                 
@@ -120,10 +121,11 @@ namespace Paramore.Brighter
                 throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
             }
         }
-        
+
         /// <summary>
         /// Builds a pipeline of asynchronous handlers for the given <paramref name="requestContext"/>.
         /// </summary>
+        /// <param name="request">The <see cref="IRequest"/> that we are building the request for; used for routing at this point, not execution</param>
         /// <param name="requestContext">The <see cref="IRequestContext"/> for the pipeline. If multiple handlers are registered, a copy is made for each pipeline.</param>
         /// <param name="continueOnCapturedContext">Indicates whether to continue on the captured synchronization context for async handlers.</param>
         /// <returns>
@@ -131,14 +133,14 @@ namespace Paramore.Brighter
         /// </returns>
         /// <exception cref="NullReferenceException">Thrown if the async handler factory is null.</exception>
         /// <exception cref="ConfigurationException">Thrown if there is an error building the pipeline.</exception>
-        public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
+        public AsyncPipelines<TRequest> BuildAsync(TRequest request, IRequestContext requestContext, bool continueOnCapturedContext)
         {
             if(_asyncHandlerFactory is null)
                 throw new NullReferenceException("AsyncHandlerFactory is null");
             
             try
             {
-                var observers = _subscriberRegistry.Get<TRequest>();
+                var observers = _subscriberRegistry.Get<TRequest>(request, requestContext);
 
                 var pipelines = new AsyncPipelines<TRequest>();
                 

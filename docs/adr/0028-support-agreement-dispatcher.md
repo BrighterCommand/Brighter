@@ -16,7 +16,11 @@ One scenario that is typical here is Martin Fowler's [Agreement Dispatcher](http
 
 ## Decision
 
-We will change SubscriberRegistry to support different routing strategies. We will change the implementation of the `SubscriberRegistry` to take a lambda function that takes a `Request` and `RequestContext` and returns the `Type` of the handler. This allows users to register a method to determine the type to return. We will provide support for `Type` based routing by simply returning the `Type` that you register as the return value from this method, and allow you to register others. 
+We will change SubscriberRegistry to support different routing strategies. We will change the implementation of the `SubscriberRegistry` to take a lambda function that takes a `Request` and `RequestContext` and returns a `List<Type>` of matching handlers. This allows users to register a method to determine the type to return. We will provide support for `Type` based routing by simply returning the `List<Type>` that you register as the return value from this method, and allow you to register others. 
+
+Then we need to allow you to register a lambda explicitly, over using the default - just return this type approach - so that you can utilize the request and context to determine what handler(s) to return. As you can return one or more, we usually append new registrations for the same type. 
+
+When we do auto-registration, we are likely to register handlers that you want to provide an explicit factory for instead.  Because we append new handlers to the chain of possible handlers, for publishing, you would never override the simple route type to handler in this case. So for auto-registration we will need to support an exclusion list: don't auto-register these handlers, because you want to explicitly register how the handler is determined.
 
 ## Consequences
 

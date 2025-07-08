@@ -59,9 +59,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <typeparam name="T">The type of request</typeparam>
         /// <returns>An iterator over a set of registered handlers for that type</returns>
-        public IEnumerable<Type> Get<T>() where T : class, IRequest
+        public IEnumerable<Type> Get<T>(T request, IRequestContext requestContext) where T : class, IRequest
         {
-            return _registry.Get<T>();
+            return _registry.Get<T>(request, requestContext);
         }
 
         /// <summary>

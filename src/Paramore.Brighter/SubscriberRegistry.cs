@@ -37,22 +37,22 @@ namespace Paramore.Brighter
     /// and this is provided for testing
     /// </summary>
     public class SubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry,
-        IEnumerable<KeyValuePair<Type, List<Func<IRequest?, RequestContext?, List<Type>>>>>
+        IEnumerable<KeyValuePair<Type, List<Func<IRequest?, IRequestContext?, List<Type>>>>>
     {
-        private readonly Dictionary<Type, List<Func<IRequest?, RequestContext?, List<Type>>>> _observers = new();
+        private readonly Dictionary<Type, List<Func<IRequest?, IRequestContext?, List<Type>>>> _observers = new();
 
         /// <summary>
         /// Gets this instance.
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <returns>IEnumerable&lt;Type&gt;.</returns>
-        public IEnumerable<Type> Get<TRequest>() where TRequest : class, IRequest
+        public IEnumerable<Type> Get<TRequest>(TRequest request, IRequestContext requestContext) where TRequest : class, IRequest
         {
             var observerFactories = _observers.TryGetValue(typeof(TRequest), out var factories) ? factories : [];
             var allHandlerTypes = new List<Type>();
             foreach (var observerFactory in observerFactories)
             {
-                var handlerTypes = observerFactory(null, null);
+                var handlerTypes = observerFactory(request, requestContext);
                 allHandlerTypes.AddRange(handlerTypes);
             }
 
@@ -92,7 +92,7 @@ namespace Paramore.Brighter
         /// Returns an enumerator that iterates through the collection.
         /// </summary>
         /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
-        public IEnumerator<KeyValuePair<Type, List<Func<IRequest?, RequestContext?, List<Type>>>>> GetEnumerator()
+        public IEnumerator<KeyValuePair<Type, List<Func<IRequest?, IRequestContext?, List<Type>>>>> GetEnumerator()
         {
             return _observers.GetEnumerator();
         }
