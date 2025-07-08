@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-      <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+      <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
       <Nullable>enable</Nullable>
     </PropertyGroup>
 

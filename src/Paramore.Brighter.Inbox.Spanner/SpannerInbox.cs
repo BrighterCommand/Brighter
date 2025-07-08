@@ -61,7 +61,7 @@ public class SpannerInbox(
     /// <inheritdoc />
     protected override async Task WriteToStoreAsync(Func<DbConnection, DbCommand> commandFunc, Action? loggingAction, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
+#if NETFRAMEWORK
         using var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken)
             .ConfigureAwait(ContinueOnCapturedContext);
         
@@ -104,7 +104,7 @@ public class SpannerInbox(
     /// <inheritdoc />
     protected override async Task<T> ReadFromStoreAsync<T>(Func<DbConnection, DbCommand> commandFunc, Func<DbDataReader, string, CancellationToken, Task<T>> resultFunc, string commandId, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
+#if NETFRAMEWORK
         using var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken)
             .ConfigureAwait(ContinueOnCapturedContext);
 
@@ -200,7 +200,7 @@ public class SpannerInbox(
         }
         finally
         {
-#if NETSTANDARD
+#if NETFRAMEWORK 
             dr.Close();
 #else
 
@@ -227,7 +227,7 @@ public class SpannerInbox(
     }
 
     /// <inheritdoc />
-#if NETSTANDARD
+#if NETFRAMEWORK 
     protected override Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId, CancellationToken cancellationToken)
     {
         try
