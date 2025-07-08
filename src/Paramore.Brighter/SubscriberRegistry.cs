@@ -37,9 +37,9 @@ namespace Paramore.Brighter
     /// and this is provided for testing
     /// </summary>
     public class SubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry,
-        IEnumerable<KeyValuePair<Type, List<Type>>>
+        IEnumerable<KeyValuePair<Type, List<Func<IRequest?, RequestContext?, List<Type>>>>>
     {
-        private readonly Dictionary<Type, List<Type>> _observers = new Dictionary<Type, List<Type>>();
+        private readonly Dictionary<Type, List<Func<IRequest?, RequestContext?, List<Type>>>> _observers = new();
 
         /// <summary>
         /// Gets this instance.
@@ -48,7 +48,15 @@ namespace Paramore.Brighter
         /// <returns>IEnumerable&lt;Type&gt;.</returns>
         public IEnumerable<Type> Get<TRequest>() where TRequest : class, IRequest
         {
-            return _observers.TryGetValue(typeof(TRequest), out var observer) ? observer : [];
+            var observerFactories = _observers.TryGetValue(typeof(TRequest), out var factories) ? factories : [];
+            var allHandlerTypes = new List<Type>();
+            foreach (var observerFactory in observerFactories)
+            {
+                var handlerTypes = observerFactory(null, null);
+                allHandlerTypes.AddRange(handlerTypes);
+            }
+
+            return allHandlerTypes;
         }
 
         /// <summary>
@@ -74,16 +82,17 @@ namespace Paramore.Brighter
         public void Add(Type requestType, Type handlerType)
         {
             if (!_observers.TryGetValue(requestType, out var observer))
-                _observers.Add(requestType, [handlerType]);
+                //_observers.Add(requestType, [handlerType]);
+                _observers.Add(requestType, [(request, context) => [handlerType]] );
             else
-                observer.Add(handlerType);
+                observer.Add((request, context) => [handlerType]);
         }
 
         /// <summary>
         /// Returns an enumerator that iterates through the collection.
         /// </summary>
         /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
-        public IEnumerator<KeyValuePair<Type, List<Type>>> GetEnumerator()
+        public IEnumerator<KeyValuePair<Type, List<Func<IRequest?, RequestContext?, List<Type>>>>> GetEnumerator()
         {
             return _observers.GetEnumerator();
         }

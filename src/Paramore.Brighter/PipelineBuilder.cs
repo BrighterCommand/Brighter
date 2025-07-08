@@ -41,7 +41,6 @@ namespace Paramore.Brighter
         private readonly IAmASubscriberRegistry _subscriberRegistry;
         private readonly IAmAHandlerFactorySync? _syncHandlerFactory;
         private readonly InboxConfiguration? _inboxConfiguration;
-        private readonly IAmAnInterpreter _interpreter;
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
         private readonly List<IAmALifetime> _instanceScopes = new List<IAmALifetime>();
         //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
@@ -63,8 +62,6 @@ namespace Paramore.Brighter
             _subscriberRegistry = subscriberRegistry;
             _syncHandlerFactory = syncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
-            
-            _interpreter = new Interpreter(_subscriberRegistry);
         }
 
         /// <summary>
@@ -83,9 +80,6 @@ namespace Paramore.Brighter
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
-            
-            _interpreter = new Interpreter(_subscriberRegistry);
-            
         }
         
         /// <summary>
@@ -104,7 +98,7 @@ namespace Paramore.Brighter
             
             try
             {
-                var observers = _interpreter.GetHandlers<TRequest>();
+                var observers = _subscriberRegistry.Get<TRequest>();
                 
                 var pipelines = new Pipelines<TRequest>();
                 
@@ -144,7 +138,7 @@ namespace Paramore.Brighter
             
             try
             {
-                var observers = _interpreter.GetHandlers<TRequest>();
+                var observers = _subscriberRegistry.Get<TRequest>();
 
                 var pipelines = new AsyncPipelines<TRequest>();
                 
