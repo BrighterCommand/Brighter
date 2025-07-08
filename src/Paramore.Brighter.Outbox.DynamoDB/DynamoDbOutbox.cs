@@ -504,10 +504,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             TimeSpan dispatchedSince, 
             RequestContext? requestContext,
             int pageSize = 100, 
-            int pageNumber = 1, 
+            int pageNumber = 1,
+            string[]? trippedTopics = null,
             Dictionary<string, object>? args = null)
         {
-            return OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, args)
+            return OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, args: args)
                 .GetAwaiter()
                 .GetResult();
         }
@@ -519,6 +520,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="requestContext"></param>
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
+        /// <param name="trippedTopics">Collection of tripped topics</param>
         /// <param name="args"></param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
@@ -527,6 +529,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
+            string[]? trippedTopics = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {

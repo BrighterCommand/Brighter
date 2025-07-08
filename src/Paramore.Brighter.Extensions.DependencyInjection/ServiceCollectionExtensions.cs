@@ -31,6 +31,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
@@ -158,6 +159,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
             }
 
+            brighterBuilder.Services.TryAddSingleton<CircuitBreakerOptions>();
             brighterBuilder.Services.TryAddSingleton<IAmACircuitBreaker, InMemoryCircuitBreaker>();
 
             brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();

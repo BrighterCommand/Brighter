@@ -266,6 +266,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 RequestContext? requestContext,
                 int pageSize = 100, 
                 int pageNumber = 1,
+                string[]? trippedTopics = null,
                 Dictionary<string, object>? args = null)
             {
                 return []; 

@@ -15,8 +15,7 @@ namespace Paramore.Brighter
         /// If a topic exceeds a configurable failure threshold within a time window, mark it as "tripped" 
         /// </summary>
         /// <param name="topic">Name of the entity to circuit break</param>
-        /// <param name="coolDownCount">number of times to cool down</param>
-        public void TripTopic(string topic, int coolDownCount);
+        public void TripTopic(string topic);
 
         /// <summary>
         /// A collection of tripped topics. As the circuit breaker is injected into both mediator

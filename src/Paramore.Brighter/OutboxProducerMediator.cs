@@ -616,7 +616,7 @@ namespace Paramore.Brighter
                     if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
-                            pageSize: amountToClear, args: args, cancellationToken: cancellationToken)).ToArray();
+                            pageSize: amountToClear, trippedTopics: _circuitBreaker.TrippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
 
                     BrighterTracer.WriteOutboxEvent(BoxDbOperation.OutStandingMessages, messages, span, false, true,
                         _instrumentationOptions);
@@ -1071,6 +1071,8 @@ namespace Paramore.Brighter
 
             if (result.Outcome != OutcomeType.Successful)
             {
+                TripTopic(requestContext);
+
                 if (result.FinalException != null)
                 {
                     Log.ExceptionWhilstTryingToPublishMessage(s_logger, result.FinalException);
@@ -1081,6 +1083,11 @@ namespace Paramore.Brighter
             }
 
             return true;
+        }
+        private void TripTopic(RequestContext? requestContext)
+        {
+            if(!string.IsNullOrEmpty(requestContext?.Topic?.Value))
+               _circuitBreaker.TripTopic(requestContext!.Topic!.Value);
         }
         
         private static partial class Log

@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
@@ -23,34 +24,33 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
         private readonly IAmAnOutboxProducerMediator _mediator;
+        private readonly IAmACircuitBreaker _circuitBreaker;
 
         public CommandProcessorPostBoxBulkClearAsyncWithCircuitBreakerTests()
         {
-            var myCommand = new MyCommand{ Value = "Hello World"};
-            var myCommand2 = new MyCommand { Value = "Hello World 2" };
-
             var timeProvider = new FakeTimeProvider();
 
+            // message 1
+            var myCommand = new MyCommand{ Value = "Hello World"};
             var routingKey = new RoutingKey("MyCommand");
-
             InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
             {
-                Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
+                Publication = { Topic = routingKey, RequestType = typeof(MyCommand) }
             };
-
-            var routingKeyTwo = new RoutingKey("MyCommand2");
-            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider, InstrumentationOptions.All)
-            {
-                Publication = {Topic = routingKeyTwo, RequestType = typeof(MyCommand)}
-            };
-
             _messageOne = new Message(
                 new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
-                );
+            );
 
+            // message 2
+            var myCommand2 = new MyCommand { Value = "Hello World 2" };
+            var routingKeyTwo = new RoutingKey("MyCommand2");
+            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider, InstrumentationOptions.All)
+            {
+                Publication = { Topic = routingKeyTwo, RequestType = typeof(MyCommand) }
+            };
             _messageTwo = new Message(
-                new MessageHeader(myCommand.Id, routingKeyTwo, MessageType.MT_COMMAND),
+                new MessageHeader(myCommand2.Id, routingKeyTwo, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand2, JsonSerialisationOptions.Options))
             );
 
@@ -59,15 +59,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .RetryAsync();
 
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
+            var policyRegistry = new PolicyRegistry
+            {
+                {
+                    CommandProcessor.RETRYPOLICYASYNC, Policy
+                        .Handle<Exception>()
+                        .RetryAsync()
+                },
+                {
+                    CommandProcessor.CIRCUITBREAKERASYNC, Policy
+                        .Handle<Exception>()
+                        .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1))
+                }
+            };
 
-            var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { routingKey, messageProducer },
@@ -75,9 +81,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             });
 
             var tracer = new BrighterTracer();
+
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            var circuitBreaker = new InMemoryCircuitBreaker();
-            circuitBreaker.TripTopic(routingKeyTwo);
+
+            _circuitBreaker = new InMemoryCircuitBreaker(new CircuitBreakerOptions(){CooldownCount = 1});
 
             _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
@@ -87,11 +94,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                circuitBreaker: new InMemoryCircuitBreaker(),
+                circuitBreaker: _circuitBreaker,
                 _outbox
             );
 
             CommandProcessor.ClearServiceBus();
+
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
@@ -104,18 +112,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         [Fact]
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
+            // Arrange
             var context = new RequestContext();
+            _circuitBreaker.TripTopic(_messageTwo.Header.Topic);
+
             await _outbox.AddAsync(_messageOne, context);
             await _outbox.AddAsync(_messageTwo, context);
 
             await _mediator.ClearOutstandingFromOutboxAsync(2, TimeSpan.FromMilliseconds(-1), true, context);
 
-            await Task.Delay(3000);
-
-            //_should_send_a_message_via_the_messaging_gateway
             var routingKeyOne = new RoutingKey(_messageOne.Header.Topic);
             Assert.True(_internalBus.Stream(routingKeyOne).Any());
-
             var sentMessage = _internalBus.Dequeue(routingKeyOne);
             Assert.NotNull(sentMessage);
             Assert.Equal(_messageOne.Id, sentMessage.Id);
@@ -124,15 +131,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var routingKeyTwo = new RoutingKey(_messageTwo.Header.Topic);
             Assert.False(_internalBus.Stream(routingKeyOne).Any());
+            
+            Assert.False(_internalBus.Stream(routingKeyTwo).Any());
 
-            var sentMessage2 = _internalBus.Dequeue(routingKeyTwo, TimeSpan.FromSeconds(1));
-            Assert.NotNull(sentMessage2);
-            Assert.Equal(_messageTwo.Header.MessageType, MessageType.MT_NONE);
 
-            //trigger an additional "tic"
+            // Act (clear outbox for the second time)
             await _mediator.ClearOutstandingFromOutboxAsync(2, TimeSpan.FromMilliseconds(-1), true, context);
 
-            sentMessage2 = _internalBus.Dequeue(routingKeyTwo, TimeSpan.FromSeconds(1));
+
+            // Assert
+            var sentMessage2 = _internalBus.Dequeue(routingKeyTwo, TimeSpan.FromSeconds(1));
             Assert.NotNull(sentMessage2);
             Assert.Equal(_messageTwo.Id, sentMessage2.Id);
             Assert.Equal(_messageTwo.Header.Topic, sentMessage2.Header.Topic);

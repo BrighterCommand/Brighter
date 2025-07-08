@@ -830,6 +830,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="pageSize">The number of entries on a page</param>
         /// <param name="pageNumber">The page to return</param>
+        /// <param name="trippedTopics">Collection of tripped topics</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         public IEnumerable<Message> OutstandingMessages(
@@ -837,6 +838,7 @@ namespace Paramore.Brighter
             RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
+            string[]? trippedTopics = null,
             Dictionary<string, object>? args = null)
         {
             var dbAttributes = new Dictionary<string, string>()
@@ -871,6 +873,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">The number of entries to return in a page</param>
         /// <param name="pageNumber">The page number to return</param>
+        /// <param name="trippedTopics">Collection of tripped topics</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
@@ -879,6 +882,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
+            string[]? trippedTopics = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
