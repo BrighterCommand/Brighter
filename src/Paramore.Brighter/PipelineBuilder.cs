@@ -52,12 +52,10 @@ namespace Paramore.Brighter
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
         /// target handler which represent other filter steps in the pipeline
         /// </summary>
-        /// <param name="router">An <see cref="IAmARoutingStrategy"/> that tells us how we route requests to handlers</param>
         /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry</param>
         /// <param name="syncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
-            IAmARoutingStrategy router,
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactorySync syncHandlerFactory,
             InboxConfiguration? inboxConfiguration = null) 
@@ -66,8 +64,7 @@ namespace Paramore.Brighter
             _syncHandlerFactory = syncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
             
-            //we only have one router, so we can just cast to it, for now
-            _interpreter = router.CreateInterpreter(subscriberRegistry);
+            _interpreter = new Interpreter(_subscriberRegistry);
         }
 
         /// <summary>
@@ -79,7 +76,6 @@ namespace Paramore.Brighter
         /// <param name="asyncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
-            IAmARoutingStrategy router,
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             InboxConfiguration? inboxConfiguration = null)
@@ -88,8 +84,8 @@ namespace Paramore.Brighter
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
             
-            //we only have one router, so we can just cast to it, for now
-            _interpreter = router.CreateInterpreter(subscriberRegistry);
+            _interpreter = new Interpreter(_subscriberRegistry);
+            
         }
         
         /// <summary>
