@@ -80,6 +80,7 @@ public class InMemorySchedulerMessageTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
+            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox
         );
 

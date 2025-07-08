@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,6 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),     
                 tracer,
+                circuitBreaker: new InMemoryCircuitBreaker(),
                 outbox: _outbox,
                 maxOutStandingMessages:3,
                 maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250),

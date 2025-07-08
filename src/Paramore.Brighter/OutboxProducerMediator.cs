@@ -59,6 +59,7 @@ namespace Paramore.Brighter
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly IAmAPublicationFinder _publicationFinder;
+        private readonly IAmACircuitBreaker _circuitBreaker;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
         private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
@@ -93,6 +94,7 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="tracer"></param>
         /// <param name="publicationFinder">A publication finder.</param>
+        /// <param name="circuitBreaker">Track unhealthy topics and allow for cooldown, should be registered as singleton and shared with Outbox</param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
@@ -109,6 +111,7 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             IAmABrighterTracer tracer, 
             IAmAPublicationFinder publicationFinder,
+            IAmACircuitBreaker circuitBreaker,
             IAmAnOutbox? outbox = null,
             IAmARequestContextFactory? requestContextFactory = null,
             int outboxTimeout = 300,
@@ -155,7 +158,8 @@ namespace Paramore.Brighter
             _outBoxBag = outBoxBag ?? new Dictionary<string, object>();
             _instrumentationOptions = instrumentationOptions;
             _tracer = tracer;
-            _publicationFinder = publicationFinder; 
+            _publicationFinder = publicationFinder;
+            _circuitBreaker = circuitBreaker;
 
             ConfigureCallbacks(requestContextFactory.Create());
         }
@@ -631,6 +635,8 @@ namespace Paramore.Brighter
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
+
+                    _circuitBreaker.CoolDown();
                 }
                 catch (Exception e)
                 {

@@ -172,6 +172,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
                 tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
+                circuitBreaker: new InMemoryCircuitBreaker(),
                 outbox: outbox,
                 publicationFinder: _publicationFinder
             );

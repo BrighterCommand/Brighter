@@ -114,6 +114,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
+            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox
         );
 

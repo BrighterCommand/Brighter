@@ -94,6 +94,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
+                circuitBreaker: new InMemoryCircuitBreaker(),
                 _spyOutbox
             );
 

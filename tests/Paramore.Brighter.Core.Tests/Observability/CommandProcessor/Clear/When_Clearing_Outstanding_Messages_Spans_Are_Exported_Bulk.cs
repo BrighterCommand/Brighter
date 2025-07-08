@@ -87,6 +87,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
+            circuitBreaker: new InMemoryCircuitBreaker(),
             outbox,
             maxOutStandingMessages: -1
         );

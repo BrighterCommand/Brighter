@@ -76,6 +76,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var tracer = new BrighterTracer();
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
+            var circuitBreaker = new InMemoryCircuitBreaker();
+            circuitBreaker.TripTopic(routingKeyTwo);
 
             _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
@@ -85,6 +87,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
+                circuitBreaker: new InMemoryCircuitBreaker(),
                 _outbox
             );
 

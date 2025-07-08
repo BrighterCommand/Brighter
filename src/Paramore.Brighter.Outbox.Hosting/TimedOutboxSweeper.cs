@@ -121,7 +121,7 @@ namespace Paramore.Brighter.Outbox.Hosting
                         _options.UseBulk,
                         _options.Args);
                     
-                        await outBoxSweeper.SweepAsync();
+                    await outBoxSweeper.SweepAsync();
                 }
                 finally
                 {

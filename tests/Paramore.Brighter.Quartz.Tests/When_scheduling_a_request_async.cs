@@ -80,6 +80,7 @@ public class QuartzSchedulerRequestAsyncTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
+            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox
         );
 

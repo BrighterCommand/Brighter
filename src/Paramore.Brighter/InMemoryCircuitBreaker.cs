@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace Paramore.Brighter;
@@ -18,7 +17,7 @@ public class InMemoryCircuitBreaker : IAmACircuitBreaker
         }
     }
 
-    public void TripTopic(string topic, int coolDownCount = 2)
+    public void TripTopic(string topic, int coolDownCount = 1)
         => s_trippedTopics[topic] = coolDownCount;
 
     private static void CoolDownTopic(string trippedTopicsKey)
