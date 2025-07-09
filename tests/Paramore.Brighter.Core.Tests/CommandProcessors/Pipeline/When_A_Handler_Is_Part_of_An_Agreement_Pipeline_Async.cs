@@ -2,46 +2,47 @@
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
     [Collection("CommandProcessor")]
-    public class PipelineBuilderAgreementAsyncTests : IDisposable
+    public class PipelineBuilderAgreementTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
-        private IHandleRequests<MyCommand>? _pipeline;
+        private IHandleRequestsAsync<MyCommand>? _pipeline;
 
-        public PipelineBuilderAgreementAsyncTests()
+        public PipelineBuilderAgreementTests()
         {
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand>(((request, context) =>
+            registry.RegisterAsync<MyCommand>(((request, context) =>
             {
                 var myCommand = request as MyCommand;
                 if (myCommand?.Value == "first")
-                    return [typeof(MyImplicitHandler)];
+                    return [typeof(MyImplicitHandlerAsync)];
                 
-                return [typeof(MyCommandHandler)];
+                return [typeof(MyCommandHandlerAsync)];
             }), 
-                [typeof(MyImplicitHandler), typeof(MyCommandHandler)]
+                [typeof(MyImplicitHandlerAsync), typeof(MyCommandHandlerAsync)]
             );
 
             var container = new ServiceCollection();
-            container.AddTransient<MyImplicitHandler>();
-            container.AddTransient<MyLoggingHandler<MyCommand>>();
+            container.AddTransient<MyImplicitHandlerAsync>();
+            container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
         public void When_A_Handler_Is_Part_of_A_Pipeline()
         {
-            _pipeline = _pipelineBuilder.Build(new MyCommand{Value = "first"}, new RequestContext()).First();
+            _pipeline = _pipelineBuilder.BuildAsync(new MyCommand{Value = "first"}, new RequestContext(), true).First();
 
             var trace = TracePipeline().ToString();
             Assert.Contains("MyImplicitHandler", trace);
