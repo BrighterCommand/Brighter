@@ -6,25 +6,34 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
     [Collection("CommandProcessor")]
-    public class PipelineBuildForCommandTests : IDisposable
+    public class PipelineBuildForAgreementTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand>? _pipeline;
 
-        public PipelineBuildForCommandTests()
+        public PipelineBuildForAgreementTests ()
         {
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyCommandHandler>();
-            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler());
+            registry.Register<MyCommand>(router: (request, context) =>
+            {
+                var command = request as MyCommand;
+                if (command.Value == "new")
+                    return [typeof(MyCommandHandler)];
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+                return [typeof(MyObsoleteCommandHandler)];
+            },
+                    [typeof(MyCommandHandler), typeof(MyObsoleteCommandHandler)]
+            );
+            var handlerFactory = new SimpleHandlerFactorySync(factoryMethod: _ => new MyCommandHandler());
+
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(subscriberRegistry: registry, syncHandlerFactory: handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
         public void When_Finding_A_Handler_For_A_Command()
         {
-            _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
+            _pipeline = _pipelineBuilder.Build(new MyCommand {Value = "new"}, new RequestContext()).First();
 
             Assert.IsType<MyCommandHandler>(_pipeline);
             Assert.Equal("MyCommandHandler|", TracePipeline().ToString());
