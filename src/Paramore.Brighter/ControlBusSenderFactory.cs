@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Transactions;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
 using Paramore.Brighter.Observability;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;

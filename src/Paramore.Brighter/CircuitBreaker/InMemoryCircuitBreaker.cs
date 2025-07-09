@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Paramore.Brighter.CircuitBreaker;
 
-namespace Paramore.Brighter;
+namespace Paramore.Brighter.CircuitBreaker;
 
 public class InMemoryCircuitBreaker(CircuitBreakerOptions? options = null) : IAmACircuitBreaker
 {

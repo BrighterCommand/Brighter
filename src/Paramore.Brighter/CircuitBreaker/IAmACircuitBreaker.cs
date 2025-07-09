@@ -1,6 +1,4 @@
-﻿using System.Collections.ObjectModel;
-
-namespace Paramore.Brighter
+﻿namespace Paramore.Brighter.CircuitBreaker
 {
     public interface IAmACircuitBreaker
     {

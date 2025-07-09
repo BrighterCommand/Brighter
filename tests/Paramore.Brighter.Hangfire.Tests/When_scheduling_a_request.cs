@@ -1,6 +1,7 @@
 ﻿using System.Transactions;
 using Hangfire;
 using Hangfire.InMemory;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Hangfire.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Hangfire;
 using Paramore.Brighter.Observability;

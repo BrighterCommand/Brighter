@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
