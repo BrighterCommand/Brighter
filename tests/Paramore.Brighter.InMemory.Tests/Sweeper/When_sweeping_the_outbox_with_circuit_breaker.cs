@@ -16,6 +16,7 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
+    [Collection("CommandProcess")]
     public class SweeperTestsWithCircuitBreaker : IDisposable
     {
         private readonly Message _messageOne;
@@ -27,16 +28,15 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         private readonly IAmAnOutboxProducerMediator _mediator;
         private readonly OutboxSweeper _sweeper;
         private readonly IAmACircuitBreaker _circuitBreaker;
+        private readonly FakeTimeProvider _timeProvider = new();
+        private readonly TimeSpan _timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
         public SweeperTestsWithCircuitBreaker()
         {
-            var timeSinceSent = TimeSpan.FromMilliseconds(-100);
-            var timeProvider = new FakeTimeProvider();
-
             // message 1
             var myEvent = new MyEvent() { Value = "MyEvent1" };
             _routingKeyOne = new RoutingKey("routingKey1.MyEvent1");
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
+            InMemoryMessageProducer messageProducer = new(_internalBus, _timeProvider, InstrumentationOptions.All)
             {
                 Publication = { Topic = _routingKeyOne, RequestType = typeof(MyEvent) }
             };
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             // message 2
             var myEvent2 = new MyEvent() { Value = "MyEvent2" };
             _routingKeyTwo = new RoutingKey("routingKey2.MyEvent2");
-            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider, InstrumentationOptions.All)
+            InMemoryMessageProducer messageProducerTwo = new(_internalBus, _timeProvider, InstrumentationOptions.All)
             {
                 Publication = { Topic = _routingKeyTwo, RequestType = typeof(MyEvent) }
             };
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var tracer = new BrighterTracer();
 
-            _outbox = new InMemoryOutbox(timeProvider) { Tracer = tracer };
+            _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
 
             _circuitBreaker = new InMemoryCircuitBreaker(new CircuitBreakerOptions() { CooldownCount = 1 });
 
@@ -103,20 +103,22 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             CommandProcessor.ClearServiceBus();
 
-            _sweeper = new OutboxSweeper(timeSinceSent, _mediator, new InMemoryRequestContextFactory());
+            _sweeper = new OutboxSweeper(_timeSinceSent, _mediator, new InMemoryRequestContextFactory());
         }
 
 
         [Fact]
-        public async Task When_outstanding_in_outbox__with_trippedTopic_sweep_clears_them_async()
+        public async Task When_outstanding_in_outbox_with_trippedTopic_sweep_clears_them_async()
         {
             // Arrange
             var context = new RequestContext();
             await _outbox.AddAsync(_messageOne, context);
             await _outbox.AddAsync(_messageTwo, context);
             _circuitBreaker.TripTopic(_messageTwo.Header.Topic);
+            _timeProvider.Advance(_timeSinceSent); // advance to pick up messages
 
             await _sweeper.SweepAsync();
+            await Task.Delay(1000); //Give the sweep time to run
             Assert.True(_internalBus.Stream(_routingKeyOne).Any());
             Assert.False(_internalBus.Stream(_routingKeyTwo).Any());
             var sentMessage = _internalBus.Dequeue(_routingKeyOne);
@@ -127,6 +129,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             // Act (clear outbox for the second time)
             await _sweeper.SweepAsync();
+            await Task.Delay(1000); //Give the sweep time to run
 
             // Assert
             var sentMessage2 = _internalBus.Dequeue(_routingKeyTwo, TimeSpan.FromSeconds(1));
