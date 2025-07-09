@@ -39,15 +39,6 @@ namespace Paramore.Brighter
     /// </remarks>
     public class Reply : Command, IResponse
     {
-        /// <summary>
-        /// Gets or sets the unique identifier used to correlate this reply with a specific request.
-        /// </summary>
-        /// <value>A <see cref="Guid"/> that matches the original request identifier.</value>
-        /// <remarks>
-        /// This property is typically used to track and match replies to their originating requests,
-        /// ensuring proper communication flow in distributed systems.
-        /// </remarks>
-        public Guid CorrelationId { get; set; }
 
         /// <summary>
         /// Gets the channel that we should reply to the sender on.
@@ -60,8 +51,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The <see cref="string"/> unique identifier for the reply.</param>
         /// <param name="sendersAddress">The <see cref="ReplyAddress"/> representing the sender's address for the reply.</param>
-        /// <param name="correlationId">The <see cref="Guid"/> correlation identifier used to associate the reply with a specific request.</param>
-        public Reply(string id, ReplyAddress sendersAddress, Guid correlationId)
+        /// <param name="correlationId">The <see cref="Id"/> correlation identifier used to associate the reply with a specific request.</param>
+        public Reply(string id, ReplyAddress sendersAddress, Id correlationId)
             : base(id)
         {
             SendersAddress = sendersAddress;
@@ -73,8 +64,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The unique identifier for the reply, represented as a <see cref="Guid"/>.</param>
         /// <param name="sendersAddress">The <see cref="ReplyAddress"/> representing the sender's address for the reply.</param>
-        /// <param name="correlationId">The <see cref="Guid"/> correlation identifier used to associate the reply with a specific request.</param>
-        public Reply(Guid id, ReplyAddress sendersAddress, Guid correlationId)
+        /// <param name="correlationId">The <see cref="Id"/> correlation identifier used to associate the reply with a specific request.</param>
+        public Reply(Guid id, ReplyAddress sendersAddress, Id correlationId)
             : this(id.ToString(), sendersAddress, correlationId)
         {
         }
@@ -121,11 +112,9 @@ namespace Paramore.Brighter
         /// This method provides a safe way to extract correlation IDs from reply addresses,
         /// falling back to a new GUID if the provided correlation ID cannot be parsed.
         /// </remarks>
-        public static Guid SenderCorrelationIdOrDefault(ReplyAddress sendersAddress)
+        public static Id SenderCorrelationIdOrDefault(ReplyAddress? sendersAddress)
         {
-            return sendersAddress is not null && Guid.TryParse(sendersAddress.CorrelationId, out Guid correlationId)
-                ? correlationId
-                : Guid.NewGuid();
+            return sendersAddress is not null ? sendersAddress.CorrelationId: Id.Random;
         }
     }
 }

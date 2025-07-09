@@ -7,7 +7,7 @@ namespace SalutationApp.Requests
     {
         public string Greeting { get; set; }
         
-        public GreetingMade(string greeting) : base(Guid.NewGuid())
+        public GreetingMade(string greeting) : base(Guid.NewGuid().ToString())
         {
             Greeting = greeting;
         }
