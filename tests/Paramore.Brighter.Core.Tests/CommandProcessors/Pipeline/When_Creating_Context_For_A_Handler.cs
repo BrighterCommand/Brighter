@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         }
 
         [Fact]
-        public void When_Building_A_Handler_For_A_Command()
+        public void When_Creating_Context_For_A_Handler()
         {
             _chainOfResponsibility = _chainBuilder.Build(new MyCommand(), _requestContext).First();
 

@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         }
 
         [Fact]
-        public void When_Building_A_Handler_For_An_Async_Command()
+        public void When_Creating_Context_For_A_Handler_Async()
         {
             _chainOfResponsibility = _chainBuilder.BuildAsync(new MyCommand(), _requestContext, false).First();
 
