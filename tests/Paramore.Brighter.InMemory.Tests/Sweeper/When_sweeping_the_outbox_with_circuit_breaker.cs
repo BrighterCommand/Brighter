@@ -16,7 +16,6 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
-    [Collection("CommandProcessor")]
     public class SweeperTestsWithCircuitBreaker : IDisposable
     {
         private readonly Message _messageOne;
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             // message 1
             var myEvent = new MyEvent() { Value = "MyEvent1" };
-            _routingKeyOne = new RoutingKey("MyEvent1");
+            _routingKeyOne = new RoutingKey("routingKey1.MyEvent1");
             InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
             {
                 Publication = { Topic = _routingKeyOne, RequestType = typeof(MyEvent) }
@@ -48,7 +47,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             // message 2
             var myEvent2 = new MyEvent() { Value = "MyEvent2" };
-            _routingKeyTwo = new RoutingKey("MyEvent2");
+            _routingKeyTwo = new RoutingKey("routingKey2.MyEvent2");
             InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider, InstrumentationOptions.All)
             {
                 Publication = { Topic = _routingKeyTwo, RequestType = typeof(MyEvent) }
@@ -102,14 +101,14 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 _outbox
             );
 
-            //CommandProcessor.ClearServiceBus();
+            CommandProcessor.ClearServiceBus();
 
             _sweeper = new OutboxSweeper(timeSinceSent, _mediator, new InMemoryRequestContextFactory());
         }
 
 
         [Fact]
-        public async Task When_outstanding_in_outbox__with_trippedtopic_sweep_clears_them_async()
+        public async Task When_outstanding_in_outbox__with_trippedTopic_sweep_clears_them_async()
         {
             // Arrange
             var context = new RequestContext();
