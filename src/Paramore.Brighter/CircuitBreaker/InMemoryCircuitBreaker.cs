@@ -8,22 +8,22 @@ public class InMemoryCircuitBreaker(CircuitBreakerOptions? options = null) : IAm
 {
     private readonly CircuitBreakerOptions _circuitBreakerOptions = options ?? new CircuitBreakerOptions();
 
-    private static readonly Dictionary<string, int> s_trippedTopics = new();
+    private readonly Dictionary<string, int> _trippedTopics = new();
 
-    public string[] TrippedTopics => s_trippedTopics.Keys.ToArray();
+    public string[] TrippedTopics => _trippedTopics.Keys.ToArray();
 
     public void CoolDown()
     {
-        foreach (var trippedTopicsKey in s_trippedTopics.Keys)
+        foreach (var trippedTopicsKey in _trippedTopics.Keys)
         {
-            s_trippedTopics[trippedTopicsKey] -= 1;
+            _trippedTopics[trippedTopicsKey] -= 1;
 
-            if (s_trippedTopics[trippedTopicsKey] < 1)
-                s_trippedTopics.Remove(trippedTopicsKey);
+            if (_trippedTopics[trippedTopicsKey] < 1)
+                _trippedTopics.Remove(trippedTopicsKey);
         }
     }
 
     public void TripTopic(string topic)
-        => s_trippedTopics[topic] = _circuitBreakerOptions.CooldownCount;
+        => _trippedTopics[topic] = _circuitBreakerOptions.CooldownCount;
 }
 
