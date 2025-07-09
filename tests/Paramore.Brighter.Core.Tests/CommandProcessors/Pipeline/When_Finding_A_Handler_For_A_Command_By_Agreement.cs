@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -24,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             },
                     [typeof(MyCommandHandler), typeof(MyObsoleteCommandHandler)]
             );
-            var handlerFactory = new SimpleHandlerFactorySync(factoryMethod: _ => new MyCommandHandler());
+            var handlerFactory = new SimpleHandlerFactorySync(factoryMethod: _ => new MyCommandHandler(new Dictionary<string, string>()));
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(subscriberRegistry: registry, syncHandlerFactory: handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();

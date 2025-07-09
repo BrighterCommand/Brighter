@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Exception _exception;
+        private Exception? _exception;
 
         public CommandProcessorNoHandlersMatchAsyncTests()
         {

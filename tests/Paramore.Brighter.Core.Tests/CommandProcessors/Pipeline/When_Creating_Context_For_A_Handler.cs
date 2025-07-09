@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -16,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
-            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler());
+            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler(new Dictionary<string, string>()));
             _requestContext = new RequestContext();
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
