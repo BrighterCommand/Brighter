@@ -68,7 +68,6 @@ namespace Paramore.Brighter
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
         /// target handler which represent other filter steps in the pipeline
         /// </summary>
-        /// <param name="router">An <see cref="IAmARoutingStrategy"/> that tells us how we route requests to handlers</param>
         /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry</param>
         /// <param name="asyncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
@@ -102,12 +101,16 @@ namespace Paramore.Brighter
                 var observers = _subscriberRegistry.Get<TRequest>(request, requestContext);
                 
                 var pipelines = new Pipelines<TRequest>();
+
+                var observerTypes = observers as Type[] ?? observers.ToArray();
                 
-                observers.Each(observer =>
+                observerTypes.Each(observer =>
                 {
-                    var context = observers.Count() == 1 ? requestContext : requestContext.CreateCopy();
+                    var context = observerTypes.Count() == 1 ? requestContext : requestContext.CreateCopy();
                     var instanceScope = GetSyncInstanceScope();
-                    var handler = (RequestHandler<TRequest>)_syncHandlerFactory.Create(observer, instanceScope);
+                    var handler = (RequestHandler<TRequest>?)_syncHandlerFactory.Create(observer, instanceScope);
+                    if (handler is null)
+                        throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}");
                     var pipeline = BuildPipeline(handler, context, instanceScope);
                     pipeline.AddToLifetime(instanceScope);
                     
@@ -143,12 +146,16 @@ namespace Paramore.Brighter
                 var observers = _subscriberRegistry.Get<TRequest>(request, requestContext);
 
                 var pipelines = new AsyncPipelines<TRequest>();
+
+                var observerTypes = observers as Type[] ?? observers.ToArray();
                 
-                observers.Each(observer =>
+                observerTypes.Each(observer =>
                 {
-                    var context = observers.Count() == 1 ? requestContext : requestContext.CreateCopy();
+                    var context = observerTypes.Count() == 1 ? requestContext : requestContext.CreateCopy();
                     var instanceScope = GetAsyncInstanceScope();
-                    var handler = (RequestHandlerAsync<TRequest>)_asyncHandlerFactory.Create(observer, instanceScope);
+                    var handler = (RequestHandlerAsync<TRequest>?)_asyncHandlerFactory.Create(observer, instanceScope);
+                    if (handler is null)
+                        throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}"); 
                     var pipeline = BuildAsyncPipeline(handler, context, instanceScope,
                         continueOnCapturedContext);
                     pipeline.AddToLifetime(instanceScope);

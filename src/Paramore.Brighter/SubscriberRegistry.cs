@@ -40,6 +40,37 @@ namespace Paramore.Brighter
         IEnumerable<KeyValuePair<Type, List<Func<IRequest?, IRequestContext?, List<Type>>>>>
     {
         private readonly Dictionary<Type, List<Func<IRequest?, IRequestContext?, List<Type>>>> _observers = new();
+        
+        /// <summary>
+        /// Adds a type to the registry, with a mapping to a single handler. We will add this to any existing handlers for this type
+        /// </summary>
+        /// <remarks>Mainly intended for internal use, prefer to use <see cref="Register{TRequest,TImplementation}"/></remarks>
+        /// <param name="requestType">The <see cref="IRequest"/> type that will be sent/published</param>
+        /// <param name="handlerType">The <see cref="IHandleRequests"/> type that will handle the request </param>
+        public void Add(Type requestType, Type handlerType)
+        {
+            if (!_observers.TryGetValue(requestType, out var observer))
+                //_observers.Add(requestType, [handlerType]);
+                _observers.Add(requestType, [(request, context) => [handlerType]] );
+            else
+                observer.Add((request, context) => [handlerType]);
+        }
+
+        /// <summary>
+        /// Adds a type to the registry, with a mapping to a single handler. We will add this to any existing handlers for this type
+        /// </summary>
+        /// <remarks>Mainly intended for internal use, prefer to use <see cref="Register{TRequest}"/></remarks>
+        /// <param name="requestType">The <see cref="IRequest"/> type that will be sent/published</param>
+        /// <param name="router">The routing function that takes a request and a request context and returns one or more handlers.</param>
+        /// <param name="handlerTypes">We need a <see cref="IEnumerable{T}"/> of <see cref="Type"/> that router can return to register with the factory</param>
+        public void Add(Type requestType, Func<IRequest?, IRequestContext?, List<Type>> router, IEnumerable<Type> handlerTypes)
+        {
+            if (!_observers.TryGetValue(requestType, out var observer))
+                //_observers.Add(requestType, [handlerType]);
+                _observers.Add(requestType, [router] );
+            else
+                observer.Add(router);
+        }
 
         /// <summary>
         /// Gets this instance.
@@ -72,22 +103,25 @@ namespace Paramore.Brighter
         /// <summary>
         /// Registers this instance.
         /// </summary>
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>        
+        /// <param name="router">The routing function that takes a request and a request context and returns one or more handlers.</param>
+        /// <param name="handlerTypes">We need a <see cref="IEnumerable{T}"/> of <see cref="Type"/> that router can return to register with the factory</param>
+
+        public  void Register<TRequest>(Func<IRequest?, IRequestContext?, List<Type>> router, IEnumerable<Type> handlerTypes)
+        {
+            Add(typeof(TRequest), router, handlerTypes);    
+        }
+        
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
         public void RegisterAsync<TRequest, TImplementation>() where TRequest : class, IRequest where TImplementation : class, IHandleRequestsAsync<TRequest>
         {
             Add(typeof(TRequest), typeof(TImplementation));
         }
-
-        public void Add(Type requestType, Type handlerType)
-        {
-            if (!_observers.TryGetValue(requestType, out var observer))
-                //_observers.Add(requestType, [handlerType]);
-                _observers.Add(requestType, [(request, context) => [handlerType]] );
-            else
-                observer.Add((request, context) => [handlerType]);
-        }
-
+        
         /// <summary>
         /// Returns an enumerator that iterates through the collection.
         /// </summary>
