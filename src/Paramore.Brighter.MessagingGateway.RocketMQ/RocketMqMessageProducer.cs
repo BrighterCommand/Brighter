@@ -77,11 +77,8 @@ public class RocketMqMessageProducer(
             builder.AddProperty(HeaderNames.Type, message.Header.Type);
         }
 
-        if (message.Header.ContentType != null)
-        {
-            builder.AddProperty(HeaderNames.ContentType, message.Header.ContentType.ToString());
-            builder.AddProperty(HeaderNames.DataContentType, message.Header.ContentType.ToString());
-        }
+        builder.AddProperty(HeaderNames.ContentType, message.Header.ContentType.ToString());
+        builder.AddProperty(HeaderNames.DataContentType, message.Header.ContentType.ToString());
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
         {

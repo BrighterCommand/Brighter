@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <Authors>Rafael Andrade</Authors>
+    <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using RocketMQ</Description>
+    <PackageTags>RocketMQ;Pub/Sub;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <Nullable>enable</Nullable>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
