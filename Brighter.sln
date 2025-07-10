@@ -411,6 +411,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Inbox.Spa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Spanner", "src\Paramore.Brighter.Spanner\Paramore.Brighter.Spanner.csproj", "{A29D7CFD-825A-438C-A5DE-0BB2B1B1B474}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Outbox.Spanner", "src\Paramore.Brighter.Outbox.Spanner\Paramore.Brighter.Outbox.Spanner.csproj", "{260F3200-3C75-4350-9488-789A9652F2A6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -2365,6 +2367,18 @@ Global
 		{A29D7CFD-825A-438C-A5DE-0BB2B1B1B474}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{A29D7CFD-825A-438C-A5DE-0BB2B1B1B474}.Release|x86.ActiveCfg = Release|Any CPU
 		{A29D7CFD-825A-438C-A5DE-0BB2B1B1B474}.Release|x86.Build.0 = Release|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Debug|x86.Build.0 = Debug|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Release|x86.ActiveCfg = Release|Any CPU
+		{260F3200-3C75-4350-9488-789A9652F2A6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
