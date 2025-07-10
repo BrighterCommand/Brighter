@@ -1000,10 +1000,22 @@ namespace Paramore.Brighter
             string[] trippedTopics,
             int outboxTimeout)
         {
-            var inClause = GenerateInClauseAndAddParameters(trippedTopics.ToList());
+            var inClause = GeneratePagedOutstandingCommandInStatementAndAddParameters(trippedTopics.ToList());
 
             return CreateCommand(connection, GenerateSqlText(queries.PagedOutstandingCommand, inClause.inClause), outboxTimeout,
                 CreatePagedOutstandingParameters(timeSinceAdded, pageSize, pageNumber, inClause.parameters));
+        }
+
+        private (string inClause, IDbDataParameter[] parameters) GeneratePagedOutstandingCommandInStatementAndAddParameters(
+                List<string> topics)
+        {
+            var inClause = GenerateInClauseAndAddParameters(topics.ToList());
+            
+            var inClauseSql = topics.Count > 0
+                ? string.Format(queries.PagedOutstandingCommandInStatement, inClause.inClause)
+                : string.Empty;
+
+            return (inClauseSql, inClause.parameters);
         }
 
         private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)

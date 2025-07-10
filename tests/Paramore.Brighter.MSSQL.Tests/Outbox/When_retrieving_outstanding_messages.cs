@@ -67,14 +67,15 @@ public class MsSqlFetchOutStandingMessageTests : IDisposable
     public void When_Retrieving_Not_Dispatched_Messages_With_Tripped_Topics()
     {
         var circuitBreaker = new InMemoryCircuitBreaker();
-        circuitBreaker.TripTopic(_messageDispatched.Header.Topic.Value);
+        circuitBreaker.TripTopic(_messageUnDispatchedWithTrippedTopic.Header.Topic.Value);
         var context = new RequestContext();
         _sqlOutbox.Add([_messageUnDispatched, _messageUnDispatchedWithTrippedTopic], context);
 
         var total = _sqlOutbox.GetNumberOfOutstandingMessages(null);
 
-        var unDispatchedMessageFromOutbox = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context, trippedTopics: circuitBreaker.TrippedTopics).Single();
         var allUnDispatched = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
+        var unDispatchedMessageFromOutbox = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context, trippedTopics: circuitBreaker.TrippedTopics).Single();
+        
 
         //Assert
         Assert.Equal(2, total);
