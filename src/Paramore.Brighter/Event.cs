@@ -33,15 +33,28 @@ namespace Paramore.Brighter;
 
 /// <summary>
 /// Class Event
-/// An event is an indicator to interested parties that 'something has happened'. We expect zero to many receivers as it is one-to-many communication i.e. publish-subscribe
+/// An event is an indicator to interested parties that 'something has happened'. We expect zero to many receivers as it is one-to-many communication i.e. publish-subscribe.
 /// An event is usually fire-and-forget, because we do not know it is received.
 /// </summary>
+/// <remarks>
+/// Events represent notifications of state changes or domain events that have occurred.
+/// They follow the publish-subscribe pattern and can have multiple subscribers.
+/// </remarks>
 public class Event : IEvent
 {
     /// <summary>
+    /// Correlates this command with a previous command or event.
+    /// </summary>
+    /// <value>The <see cref="Id"/> that correlates this command with a previous command or event.</value>
+    [JsonConverter(typeof(IdConverter))]
+    [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+    [JsonSchema(JsonObjectType.String)]
+    public Id? CorrelationId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier.
     /// </summary>
-    /// <value>The identifier.</value>
+    /// <value>The <see cref="Id"/> that uniquely identifies this event instance.</value>
     [NotNull]
     [JsonConverter(typeof(IdConverter))]
     [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
@@ -51,7 +64,7 @@ public class Event : IEvent
     /// <summary>
     /// Initializes a new instance of the <see cref="Event"/> class.
     /// </summary>
-    /// <param name="id">The identifier.</param>
+    /// <param name="id">The <see cref="Id"/> that uniquely identifies this event.</param>
     public Event(Id id)
     {
         Id = id;
@@ -60,7 +73,7 @@ public class Event : IEvent
     /// <summary>
     /// Initializes a new instance of the <see cref="Event"/> class.
     /// </summary>
-    /// <param name="id">The identifier.</param>
+    /// <param name="id">The <see cref="Guid"/> that will be converted to an <see cref="Id"/> for this event.</param>
     public Event(Guid id)
     {
         Id = new Id(id.ToString());

@@ -87,8 +87,9 @@ public interface IAmABrighterTracer : IDisposable
     /// Create a span for an inbox or outbox operation
     /// </summary>
     /// <param name="info">The attributes of the claim check operation</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
     /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
-    Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info);
+    Activity? CreateClaimCheckSpan(ClaimCheckSpanInfo info, InstrumentationOptions options = InstrumentationOptions.All);
     
     /// <summary>
     /// Create a span for a request in CommandProcessor

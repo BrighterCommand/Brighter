@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer messageProducer = new(_bus, timeProvider);
+            InMemoryMessageProducer messageProducer = new(_bus, timeProvider, InstrumentationOptions.All);
             _routingKey = new RoutingKey("MyRequest");
             
             messageProducer.Publication = new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)};
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                     new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
-            //Run the pump on a new thread
+            //RunAsync the pump on a new thread
             Task pump = Task.Factory.StartNew(() => messagePump.Run());
             
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOut: TimeSpan.FromMilliseconds(500));

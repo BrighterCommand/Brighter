@@ -25,8 +25,12 @@ THE SOFTWARE. */
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// The name of a channel used to wrap communication with a Broker
+    /// The name of a channel used to wrap communication with a Broker.
     /// </summary>
+    /// <remarks>
+    /// Channel names typically represent queue names or other addressing mechanisms 
+    /// used by messaging infrastructure to route messages.
+    /// </remarks>
     public class ChannelName
     {
         private readonly string _name;
@@ -34,7 +38,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelName"/> class.
         /// </summary>
-        /// <param name="name">The name.</param>
+        /// <param name="name">The <see cref="string"/> name of the channel.</param>
         public ChannelName(string name)
         {
             _name = name;
@@ -43,46 +47,46 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the name of the channel as a string.
         /// </summary>
-        /// <value>The value.</value>
+        /// <value>The <see cref="string"/> value of the channel name.</value>
         public string Value
         {
             get { return _name; }
         }
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
+        /// <returns>A <see cref="string" /> containing the channel name.</returns>
         public override string ToString()
         {
             return _name;
         }
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="ChannelName"/> to <see cref="System.String"/>.
+        /// Performs an implicit conversion from <see cref="ChannelName"/> to <see cref="string"/>.
         /// </summary>
-        /// <param name="rhs">The RHS.</param>
-        /// <returns>The result of the conversion.</returns>
+        /// <param name="rhs">The <see cref="ChannelName"/> to convert.</param>
+        /// <returns>The <see cref="string"/> result of the conversion.</returns>
         public static implicit operator string?(ChannelName rhs)
         {
             return rhs?.ToString();
         }
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="System.String"/> to <see cref="ChannelName"/>.
+        /// Performs an implicit conversion from <see cref="string"/> to <see cref="ChannelName"/>.
         /// </summary>
-        /// <param name="rhs">The RHS.</param>
-        /// <returns>The result of the conversion.</returns>
+        /// <param name="rhs">The <see cref="string"/> to convert.</param>
+        /// <returns>The <see cref="ChannelName"/> result of the conversion.</returns>
         public static implicit operator ChannelName(string rhs)
         {
             return new ChannelName(rhs);
         }
 
         /// <summary>
-        /// Do the channel name's match?
+        /// Determines whether the channel names match.
         /// </summary>
-        /// <param name="other">The other.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        /// <param name="other">The other <see cref="ChannelName"/> to compare.</param>
+        /// <returns><c>true</c> if the channel names are equal; otherwise, <c>false</c>.</returns>
         public bool Equals(ChannelName other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -91,10 +95,10 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Do the channel name's match?
+        /// Determines whether the channel names match.
         /// </summary>
-        /// <param name="obj">The object to compare with the current object.</param>
-        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <param name="obj">The <see cref="object"/> to compare with the current object.</param>
+        /// <returns><c>true</c> if the specified <see cref="object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -113,27 +117,32 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Implements the ==. Do the channel name's match?
+        /// Implements the == operator. Determines whether the channel names match.
         /// </summary>
-        /// <param name="left">The left.</param>
-        /// <param name="right">The right.</param>
-        /// <returns>The result of the operator.</returns>
+        /// <param name="left">The left <see cref="ChannelName"/>.</param>
+        /// <param name="right">The right <see cref="ChannelName"/>.</param>
+        /// <returns><c>true</c> if the channel names are equal; otherwise, <c>false</c>.</returns>
         public static bool operator ==(ChannelName? left, ChannelName? right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// Implements the !=. Do the channel name's not match?
+        /// Implements the != operator. Determines whether the channel names do not match.
         /// </summary>
-        /// <param name="left">The left.</param>
-        /// <param name="right">The right.</param>
-        /// <returns>The result of the operator.</returns>
+        /// <param name="left">The left <see cref="ChannelName"/>.</param>
+        /// <param name="right">The right <see cref="ChannelName"/>.</param>
+        /// <returns><c>true</c> if the channel names are not equal; otherwise, <c>false</c>.</returns>
         public static bool operator !=(ChannelName? left, ChannelName? right)
         {
             return !Equals(left, right);
         }
 
+        /// <summary>
+        /// Determines whether the specified channel name is null or empty.
+        /// </summary>
+        /// <param name="channelName">The <see cref="ChannelName"/> to test.</param>
+        /// <returns><c>true</c> if the channel name is null or empty; otherwise, <c>false</c>.</returns>
         public static bool IsNullOrEmpty(ChannelName? channelName)
         {
             return channelName is not null && string.IsNullOrEmpty(channelName._name);

@@ -60,7 +60,7 @@ public class AsyncMessageDispatchPropogateContextTests
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider)
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
         {
             Publication =
             {

@@ -35,7 +35,7 @@ var subscriptions = new Subscription[]
         new ChannelName(subscriptionName),
         new RoutingKey("greeting.event"),
         timeOut: TimeSpan.FromMilliseconds(400),
-        makeChannels: OnMissingChannel.Create,
+        makeChannels: OnMissingChannel.Assume,
         requeueCount: 3,
         messagePumpType: MessagePumpType.Proactor,
         noOfPerformers: 2, unacceptableMessageLimit: 1),
@@ -44,7 +44,7 @@ var subscriptions = new Subscription[]
         new ChannelName(subscriptionName),
         new RoutingKey("greeting.Asyncevent"),
         timeOut: TimeSpan.FromMilliseconds(400),
-        makeChannels: OnMissingChannel.Create,
+        makeChannels: OnMissingChannel.Assume,
         requeueCount: 3,
         messagePumpType: MessagePumpType.Reactor,
         noOfPerformers: 2),
@@ -53,7 +53,7 @@ var subscriptions = new Subscription[]
         new ChannelName(subscriptionName),
         new RoutingKey("greeting.addGreetingCommand"),
         timeOut: TimeSpan.FromMilliseconds(400),
-        makeChannels: OnMissingChannel.Create,
+        makeChannels: OnMissingChannel.Assume,
         requeueCount: 3,
         messagePumpType: MessagePumpType.Reactor,
         noOfPerformers: 2)
@@ -67,8 +67,7 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
     o.UseSqlServer(dbConnString);
 });
 
-//TODO: add your ASB qualified name here
-var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
+var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
 
 var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
 builder.Services.AddServiceActivator(options =>
