@@ -122,7 +122,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left <see cref="ChannelName"/>.</param>
         /// <param name="right">The right <see cref="ChannelName"/>.</param>
         /// <returns><c>true</c> if the channel names are equal; otherwise, <c>false</c>.</returns>
-        public static bool operator ==(ChannelName left, ChannelName right)
+        public static bool operator ==(ChannelName? left, ChannelName? right)
         {
             return Equals(left, right);
         }
@@ -133,7 +133,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left <see cref="ChannelName"/>.</param>
         /// <param name="right">The right <see cref="ChannelName"/>.</param>
         /// <returns><c>true</c> if the channel names are not equal; otherwise, <c>false</c>.</returns>
-        public static bool operator !=(ChannelName left, ChannelName right)
+        public static bool operator !=(ChannelName? left, ChannelName? right)
         {
             return !Equals(left, right);
         }
