@@ -22,6 +22,8 @@ Because SubscriberRegistry supports many types, we can't use a generic parameter
 
 Then we need to allow you to register a lambda explicitly, over using the default—just return this type approach—so that you can utilize the request and context to determine what handler(s) to return. As you can return one or more, we usually append new registrations for the same type. 
 
+Because implementations of the `SubscriberRegistry` for `SeviceCollection` are needed to support `IAmAHandlerFactory` impelementations derived from `ServiceCollection`, the `SubscriberRegistry` method `Register` will take as a parameter the possible `IAmARequestHandler` handler types, which can be used to add them to the `ServiceCollection`, along with their lifetime.
+
 When we do auto-registration, we are likely to register handlers that you want to provide an explicit factory for instead.  Because we append new handlers to the chain of possible handlers, for publishing, you would never override the simple route type to handler in this case. So for auto-registration we will need to support an exclusion list: don't auto-register these handlers, because you want to explicitly register how the handler is determined.
 
 ## Consequences
