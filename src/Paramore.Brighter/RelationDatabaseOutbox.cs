@@ -854,7 +854,7 @@ namespace Paramore.Brighter
             try
             {
                 var result = ReadFromStore(
-                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, -1),
+                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, trippedTopics ?? [], - 1),
                     MapListFunction);
 
                 span?.AddTag("db.response.returned_rows", result.Count());
@@ -899,7 +899,7 @@ namespace Paramore.Brighter
             try
             {
                 var result = await ReadFromStoreAsync(
-                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, -1),
+                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, trippedTopics ?? [],  -1),
                     dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
 
                 span?.AddTag("db.response.returned_rows", result.Count());
@@ -997,9 +997,14 @@ namespace Paramore.Brighter
             TimeSpan timeSinceAdded,
             int pageSize,
             int pageNumber,
+            string[] trippedTopics,
             int outboxTimeout)
-            => CreateCommand(connection, GenerateSqlText(queries.PagedOutstandingCommand), outboxTimeout,
-                CreatePagedOutstandingParameters(timeSinceAdded, pageSize, pageNumber));
+        {
+            var inClause = GenerateInClauseAndAddParameters(trippedTopics.ToList());
+
+            return CreateCommand(connection, GenerateSqlText(queries.PagedOutstandingCommand, inClause.inClause), outboxTimeout,
+                CreatePagedOutstandingParameters(timeSinceAdded, pageSize, pageNumber, inClause.parameters));
+        }
 
         private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
             => CreateCommand(connection, GenerateSqlText(queries.GetNumberOfOutstandingMessagesCommand), 0);
@@ -1059,7 +1064,7 @@ namespace Paramore.Brighter
 
 
         protected abstract IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
-            int pageNumber);
+            int pageNumber, IDbDataParameter[] inParams);
 
         protected abstract IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize,
             int pageNumber);

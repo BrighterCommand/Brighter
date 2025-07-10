@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
@@ -253,14 +254,14 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
-            int pageNumber)
+            int pageNumber, IDbDataParameter[] inParams)
         {
             var parameters = new IDbDataParameter[3];
             parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
             parameters[1] = CreateSqlParameter("Take", pageSize);
             parameters[2] = CreateSqlParameter("TimestampSince", DateTimeOffset.UtcNow.Subtract(since));
 
-            return parameters;
+            return parameters.Concat(inParams).ToArray();
         }
 
         protected override Message MapFunction(DbDataReader dr)
