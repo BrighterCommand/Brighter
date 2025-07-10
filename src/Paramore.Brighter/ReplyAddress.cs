@@ -41,7 +41,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="topic">The <see cref="string"/> topic name where replies should be sent.</param>
         /// <param name="correlationId">The <see cref="string"/> correlation identifier to match requests and responses.</param>
-        public ReplyAddress(string topic, string correlationId)
+        public ReplyAddress(string topic, Id correlationId)
         {
             Topic = new RoutingKey(topic);
             CorrelationId = correlationId;
@@ -52,7 +52,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="topic">The <see cref="RoutingKey"/> specifying where replies should be sent.</param>
         /// <param name="correlationId">The <see cref="string"/> correlation identifier to match requests and responses.</param>
-        public ReplyAddress(RoutingKey topic, string correlationId)
+        public ReplyAddress(RoutingKey topic, Id correlationId)
         {
             Topic = topic;
             CorrelationId = correlationId;
@@ -67,7 +67,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets or sets the correlation identifier.
         /// </summary>
-        /// <value>The <see cref="string"/> correlation identifier used to match requests and responses.</value>
-        public string CorrelationId { get; set; }
+        /// <value>The <see cref="Id"/> correlation identifier used to match requests and responses.</value>
+        public Id CorrelationId { get; set; }
     }
 }

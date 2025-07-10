@@ -43,6 +43,15 @@ namespace Paramore.Brighter;
 public class Event : IEvent
 {
     /// <summary>
+    /// Correlates this command with a previous command or event.
+    /// </summary>
+    /// <value>The <see cref="Id"/> that correlates this command with a previous command or event.</value>
+    [JsonConverter(typeof(IdConverter))]
+    [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+    [JsonSchema(JsonObjectType.String)]
+    public Id? CorrelationId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier.
     /// </summary>
     /// <value>The <see cref="Id"/> that uniquely identifies this event instance.</value>
