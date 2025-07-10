@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_A_Handler_Is_Part_of_A_Pipeline()
         {
-            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+            _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
             var trace = TracePipeline().ToString();
             Assert.Contains("MyImplicitHandler", trace);

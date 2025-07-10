@@ -40,12 +40,21 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns>IEnumerable&lt;Type&gt;.</returns>
-        IEnumerable<Type> Get<T>() where T : class, IRequest;
+        IEnumerable<Type> Get<T>(T request, IRequestContext requestContext) where T : class, IRequest;
+        
         /// <summary>
         /// Registers this instance.
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
         void Register<TRequest, TImplementation>() where TRequest : class, IRequest where TImplementation : class, IHandleRequests<TRequest>;
+
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>        
+        /// <param name="router">The routing function that takes a request and a request context and returns one or more handlers.</param>
+        /// <param name="handlerTypes">We need a <see cref="IEnumerable{T}"/> of <see cref="Type"/> that router can return to register with the factory</param>
+        void Register<TRequest>(Func<IRequest?, IRequestContext?, List<Type>> router, IEnumerable<Type> handlerTypes);
     }
 }

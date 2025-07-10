@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public ServiceProviderHandlerFactory(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
-            var options = (IBrighterOptions) serviceProvider.GetService(typeof(IBrighterOptions));
+            var options = (IBrighterOptions?) serviceProvider.GetService(typeof(IBrighterOptions));
             if (options == null) _isSingleton = false; else _isSingleton = options.HandlerLifetime == ServiceLifetime.Singleton;
         }
 
@@ -55,15 +55,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="handlerType">The type of handler to request</param>
         /// <param name="lifetime">The brighter Handler lifetime</param>
         /// <returns>An instantiated request handler</returns>
-        IHandleRequests IAmAHandlerFactorySync.Create(Type handlerType, IAmALifetime lifetime)
+        IHandleRequests? IAmAHandlerFactorySync.Create(Type handlerType, IAmALifetime lifetime)
         {
             if (_isSingleton)
-                return (IHandleRequests)_serviceProvider.GetService(handlerType);
+                return (IHandleRequests?)_serviceProvider.GetService(handlerType);
 
             if (!_scopes.ContainsKey(lifetime))
                 _scopes.Add(lifetime, _serviceProvider.CreateScope());
             
-            return (IHandleRequests)_scopes[lifetime].ServiceProvider.GetService(handlerType);
+            return (IHandleRequests?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
         }
 
         /// <summary>
@@ -73,15 +73,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="handlerType">The type of handler to request</param>
         /// <param name="lifetime">The brighter Handler lifetime</param>
         /// <returns>An instantiated request handler</returns>
-        IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType, IAmALifetime lifetime)
+        IHandleRequestsAsync? IAmAHandlerFactoryAsync.Create(Type handlerType, IAmALifetime lifetime)
         {
             if (_isSingleton)
-                return (IHandleRequestsAsync)_serviceProvider.GetService(handlerType);
+                return (IHandleRequestsAsync?)_serviceProvider.GetService(handlerType);
             
             if (!_scopes.ContainsKey(lifetime))
                 _scopes.Add(lifetime, _serviceProvider.CreateScope());
             
-            return (IHandleRequestsAsync)_scopes[lifetime].ServiceProvider.GetService(handlerType);
+            return (IHandleRequestsAsync?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             ReleaseScope(lifetime);
         }
 
-        public void Release(IHandleRequestsAsync handler, IAmALifetime lifetime)
+        public void Release(IHandleRequestsAsync? handler, IAmALifetime lifetime)
         {
             if (_isSingleton) return;
             
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private void ReleaseScope(IAmALifetime lifetime)
         {
-            if(!_scopes.TryGetValue(lifetime, out IServiceScope scope))
+            if(!_scopes.TryGetValue(lifetime, out IServiceScope? scope))
                 return;
             
             scope.Dispose();

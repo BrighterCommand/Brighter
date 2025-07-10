@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -34,22 +35,33 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorPublishMultipleMatchesTests : IDisposable
+    public class CommandProcessorPublishMultipleMatchesAgreementAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
-        private readonly MyEvent _myEvent = new();
         private Exception? _exception;
 
-        public CommandProcessorPublishMultipleMatchesTests()
+        public CommandProcessorPublishMultipleMatchesAgreementAsyncTests()
         {
             var registry = new SubscriberRegistry();
-            registry.Register<MyEvent, MyEventHandler>();
-            registry.Register<MyEvent, MyOtherEventHandler>();
+            registry.RegisterAsync<MyEvent>((request, context) =>
+            {
+                var myEvent = request as MyEvent;
+                var handlerList = new List<Type>();
+                
+                if (myEvent.Data == 4)
+                    handlerList.Add(typeof(MyEventHandlerAsync));
+                
+                if (myEvent.Data > 2)
+                    handlerList.Add(typeof(MyOtherEventHandlerAsync));
+                
+                return handlerList;
+                    
+            }, [typeof(MyEventHandlerAsync), typeof(MyOtherEventHandlerAsync)]);
 
             var container = new ServiceCollection();
-            container.AddTransient<MyEventHandler>();
-            container.AddTransient<MyOtherEventHandler>();
+            container.AddTransient<MyEventHandlerAsync>();
+            container.AddTransient<MyOtherEventHandlerAsync>();
             container.AddSingleton(_receivedMessages);
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
@@ -61,16 +73,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         }
 
         [Fact]
-        public void When_There_Are_Multiple_Subscribers()
+        public async Task When_There_Are_Multiple_Subscribers()
         {
-            _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
+            var myEvent = new MyEvent
+            {
+                Data = 4 // This will match both handlers
+            };
+           
+            try
+            {
+                await _commandProcessor.PublishAsync(myEvent);
+            }
+            catch (Exception ex)
+            {
+                _exception = ex;
+            }
 
             //Should not throw an exception
             Assert.Null(_exception);
             //Should publish the command to the first event handler
-            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandler), _myEvent.Id), _receivedMessages);
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandlerAsync), myEvent.Id), _receivedMessages);
             //Should publish the command to the second event handler
-            Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandler), _myEvent.Id), _receivedMessages);
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandlerAsync), myEvent.Id), _receivedMessages);
         }
 
         public void Dispose()

@@ -261,7 +261,7 @@ namespace Paramore.Brighter
             try
             {
                 Log.BuildingSendPipelineForCommand(s_logger, command.GetType(), command.Id);
-                var handlerChain = builder.Build(context);
+                var handlerChain = builder.Build(command, context);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
@@ -338,7 +338,7 @@ namespace Paramore.Brighter
             try
             {
                 Log.BuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id);
-                var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
+                var handlerChain = builder.BuildAsync(command, context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
                 
@@ -414,7 +414,7 @@ namespace Paramore.Brighter
                 
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
                 Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id);
-                var handlerChain = builder.Build(context);
+                var handlerChain = builder.Build(@event, context);
 
                 var handlerCount = handlerChain.Count();
 
@@ -521,7 +521,7 @@ namespace Paramore.Brighter
             {
                 Log.BuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id);
 
-                var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
+                var handlerChain = builder.BuildAsync(@event, context, continueOnCapturedContext);
                 var handlerCount = handlerChain.Count();
 
                 Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id);

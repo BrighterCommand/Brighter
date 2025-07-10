@@ -25,32 +25,21 @@ using System;
 
 namespace Paramore.Brighter
 {
-    internal sealed class TransformerFactoryAsync<TRequest> where TRequest: class, IRequest
+    internal sealed class TransformerFactoryAsync<TRequest>(TransformAttribute attribute, IAmAMessageTransformerFactoryAsync factory)
+        where TRequest : class, IRequest
     {
-        private readonly TransformAttribute _attribute;
-        private readonly IAmAMessageTransformerFactoryAsync _factory;
-        private readonly Type _messageType;
-
-        public TransformerFactoryAsync(TransformAttribute attribute, IAmAMessageTransformerFactoryAsync factory)
-        {
-            _attribute = attribute;
-            _factory = factory;
-            _messageType = typeof(TRequest);
-        }
+        private readonly Type _messageType = typeof(TRequest);
 
         public IAmAMessageTransformAsync CreateMessageTransformer()
         {
-            var transformerType = _attribute.GetHandlerType();
-            var transformer = _factory.Create(transformerType);
-            if (_attribute is WrapWithAttribute)
-            {
-                transformer.InitializeWrapFromAttributeParams(_attribute.InitializerParams());
-            }
-
-            if (_attribute is UnwrapWithAttribute)
-            {
-                transformer.InitializeUnwrapFromAttributeParams(_attribute.InitializerParams());
-            }
+            var transformerType = attribute.GetHandlerType();
+            var transformer = factory.Create(transformerType);
+            if (transformer is null)
+                throw new ConfigurationException($"Could not create transformer {transformerType} from {factory}");
+            if (attribute is WrapWithAttribute)
+                transformer.InitializeWrapFromAttributeParams(attribute.InitializerParams());
+            if (attribute is UnwrapWithAttribute)
+                transformer.InitializeUnwrapFromAttributeParams(attribute.InitializerParams());
             return transformer;
         }
     }

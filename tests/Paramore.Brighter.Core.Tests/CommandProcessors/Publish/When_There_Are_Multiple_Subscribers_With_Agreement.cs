@@ -34,18 +34,29 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorPublishMultipleMatchesTests : IDisposable
+    public class CommandProcessorPublishMultipleMatchesAgreementTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
-        private readonly MyEvent _myEvent = new();
         private Exception? _exception;
 
-        public CommandProcessorPublishMultipleMatchesTests()
+        public CommandProcessorPublishMultipleMatchesAgreementTests()
         {
             var registry = new SubscriberRegistry();
-            registry.Register<MyEvent, MyEventHandler>();
-            registry.Register<MyEvent, MyOtherEventHandler>();
+            registry.Register<MyEvent>((request, context) =>
+            {
+                var myEvent = request as MyEvent;
+                var handlerList = new List<Type>();
+                
+                if (myEvent.Data == 4)
+                    handlerList.Add(typeof(MyEventHandler));
+                
+                if (myEvent.Data > 2)
+                    handlerList.Add(typeof(MyOtherEventHandler));
+                
+                return handlerList;
+                    
+            }, [typeof(MyEventHandler), typeof(MyOtherEventHandler)]);
 
             var container = new ServiceCollection();
             container.AddTransient<MyEventHandler>();
@@ -63,14 +74,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         [Fact]
         public void When_There_Are_Multiple_Subscribers()
         {
-            _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
+            var myEvent = new MyEvent
+            {
+                Data = 4 // This will match both handlers
+            };
+            
+            _exception = Catch.Exception(() => _commandProcessor.Publish(myEvent));
 
             //Should not throw an exception
             Assert.Null(_exception);
             //Should publish the command to the first event handler
-            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandler), _myEvent.Id), _receivedMessages);
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandler), myEvent.Id), _receivedMessages);
             //Should publish the command to the second event handler
-            Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandler), _myEvent.Id), _receivedMessages);
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandler), myEvent.Id), _receivedMessages);
         }
 
         public void Dispose()

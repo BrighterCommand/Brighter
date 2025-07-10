@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceCollectionMessageMapperRegistry _mapperRegistry;
         private readonly ServiceCollectionTransformerRegistry _transformerRegistry;
         
-        public IPolicyRegistry<string> PolicyRegistry { get; set; }
+        public IPolicyRegistry<string>? PolicyRegistry { get; set; }
 
         /// <summary>
         /// Registers the components of Brighter pipelines
@@ -53,8 +53,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IServiceCollection services,
             ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry,
             ServiceCollectionMessageMapperRegistry mapperRegistry,
-            ServiceCollectionTransformerRegistry transformerRegistry = null,
-            IPolicyRegistry<string> policyRegistry = null
+            ServiceCollectionTransformerRegistry? transformerRegistry = null,
+            IPolicyRegistry<string>? policyRegistry = null
             )
         {
             Services = services;
@@ -246,7 +246,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
         }
 
-        private static Type[] GetLoadableTypes(Assembly assembly)
+        private static Type?[] GetLoadableTypes(Assembly assembly)
         {
             try
             {

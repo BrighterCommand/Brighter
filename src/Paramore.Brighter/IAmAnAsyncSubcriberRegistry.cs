@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Collections.Generic;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -39,8 +42,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
-        void RegisterAsync<TRequest, TImplementation>() where TRequest : class, IRequest
-            where TImplementation : class, IHandleRequestsAsync<TRequest>;
+        void RegisterAsync<TRequest, TImplementation>() where TRequest : class, IRequest where TImplementation : class, IHandleRequestsAsync<TRequest>;
+        
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>        
+        /// <param name="router">The routing function that takes a request and a request context and returns one or more handlers.</param>
+        /// <param name="handlerTypes">We need a <see cref="IEnumerable{T}"/> of <see cref="Type"/> that router can return to register with the factory</param>
+        void RegisterAsync<TRequest>(Func<IRequest?, IRequestContext?, List<Type>> router, IEnumerable<Type> handlerTypes);
 
     }
 }

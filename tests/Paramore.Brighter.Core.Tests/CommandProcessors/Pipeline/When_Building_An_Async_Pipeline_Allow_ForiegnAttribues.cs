@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     [Fact]
     public void When_Building_An_Async_Pipeline_Allow_ForeignAttributes()
     {
-        _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
+        _pipeline = _pipeline_Builder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
 
         var trace = TraceFilters().ToString();
         Assert.Equal("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|", trace);

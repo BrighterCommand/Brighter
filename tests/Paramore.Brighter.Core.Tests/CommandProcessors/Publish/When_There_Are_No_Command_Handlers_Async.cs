@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Exception _exception;
+        private Exception? _exception;
 
         public CommandProcessorNoHandlersMatchAsyncTests()
         {
@@ -54,15 +54,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                 );
         }
 
-        //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
         [Fact]
         public async Task When_There_Are_No_Command_Handlers_Async()
         {
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
 
-            //_should_fail_because_multiple_receivers_found
+            //Throw an exception when there are no handlers found
             Assert.IsType<ArgumentException>(_exception);
-            //_should_have_an_error_message_that_tells_you_why
             Assert.NotNull(_exception);
             Assert.Contains(
                 "No command handler was found for the typeof command Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.",

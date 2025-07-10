@@ -51,7 +51,7 @@ public class CommandProcessorSchedulerObservabilityTests
         registry.Register<MyCommand, MyCommandHandler>();
         registry.RegisterAsync<FireSchedulerRequest, FireSchedulerRequestHandler>();
         
-        var handlerFactory = new SimpleHandlerFactory(_ => new MyCommandHandler(), _ => new FireSchedulerRequestHandler(_commandProcessor!));
+        var handlerFactory = new SimpleHandlerFactory(_ => new MyCommandHandler(new Dictionary<string, string>()), _ => new FireSchedulerRequestHandler(_commandProcessor!));
  
         var policyRegistry = new PolicyRegistry 
         {

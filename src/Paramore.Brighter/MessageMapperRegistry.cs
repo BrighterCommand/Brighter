@@ -82,11 +82,9 @@ namespace Paramore.Brighter
             }
 
             if (messageMapperType is null)
-            {
                 return null;
-            }
 
-            return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);
+            return (IAmAMessageMapper<TRequest>?)_messageMapperFactory.Create(messageMapperType);
         }
 
         /// <summary>
@@ -106,11 +104,9 @@ namespace Paramore.Brighter
             }
 
             if (messageMapperType is null)
-            {
                 return null;
-            }
 
-            return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
+            return (IAmAMessageMapperAsync<TRequest>?)_messageMapperFactoryAsync.Create(messageMapperType);
         }
 
         /// <summary>

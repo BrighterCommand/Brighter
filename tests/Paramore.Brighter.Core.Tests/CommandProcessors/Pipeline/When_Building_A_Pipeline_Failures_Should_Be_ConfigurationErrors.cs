@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_Building_A_Pipeline_Failures_Should_Be_ConfigurationErrors()
         {
-            var exception = Catch.Exception(() => _chainBuilder.Build(_requestContext));
+            var exception = Catch.Exception(() => _chainBuilder.Build(new MyCommand(), _requestContext));
             Assert.NotNull(exception);
             Assert.IsType<ConfigurationException>(exception);
             Assert.IsType<InvalidOperationException>(exception.InnerException);

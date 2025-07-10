@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
+            _chainOfResponsibility = _chainBuilder.Build(new MyCommand(), _requestContext);
 
             var chain = _chainOfResponsibility.First();
             var myCommand = new MyCommand();

@@ -8,19 +8,27 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
     [Collection("CommandProcessor")]
-    public class PipelineForeignAttributesTests : IDisposable
+    public class PipelineBuilderAgreementAsyncTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
-        private IHandleRequests<MyCommand> _pipeline;
+        private IHandleRequests<MyCommand>? _pipeline;
 
-        public PipelineForeignAttributesTests()
+        public PipelineBuilderAgreementAsyncTests()
         {
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyObsoleteCommandHandler>();
+            registry.Register<MyCommand>(((request, context) =>
+            {
+                var myCommand = request as MyCommand;
+                if (myCommand?.Value == "first")
+                    return [typeof(MyImplicitHandler)];
+                
+                return [typeof(MyCommandHandler)];
+            }), 
+                [typeof(MyImplicitHandler), typeof(MyCommandHandler)]
+            );
 
             var container = new ServiceCollection();
-            container.AddTransient<MyObsoleteCommandHandler>();
-            container.AddTransient<MyValidationHandler<MyCommand>>();
+            container.AddTransient<MyImplicitHandler>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
@@ -31,12 +39,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         }
 
         [Fact]
-        public void When_Building_A_Pipeline_Allow_ForeignAttributes()
+        public void When_A_Handler_Is_Part_of_A_Pipeline()
         {
-            _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
+            _pipeline = _pipelineBuilder.Build(new MyCommand{Value = "first"}, new RequestContext()).First();
 
-            var trace = TraceFilters().ToString();
-            Assert.Equal("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|", trace);
+            var trace = TracePipeline().ToString();
+            Assert.Contains("MyImplicitHandler", trace);
+            Assert.Contains("MyLoggingHandler", trace);
         }
 
         public void Dispose()
@@ -44,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             CommandProcessor.ClearServiceBus();
         }
 
-        private PipelineTracer TraceFilters()
+        private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();
             _pipeline.DescribePath(pipelineTracer);

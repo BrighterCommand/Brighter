@@ -94,7 +94,7 @@ var host = Host.CreateDefaultBuilder(args)
 await host.RunAsync();
 return;
 
-static PolicyRegistry RegisterPolicies()
+static PolicyRegistry? RegisterPolicies()
 {
     var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
     {

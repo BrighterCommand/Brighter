@@ -26,21 +26,9 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal sealed class MyCommandHandler : RequestHandler<MyCommand>
+    internal sealed class MyCommandHandler(IDictionary<string, string> receivedMessages) : RequestHandler<MyCommand>
     {
-        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
-        private MyCommand? _command;
-
-        public MyCommandHandler()
-        {
-            _command = null;
-        }
-        
-        public MyCommandHandler(IDictionary<string, string> receivedMessages)
-        {
-            _command = null;
-            _receivedMessages = receivedMessages;
-        }
+        private MyCommand? _command = null;
 
         public override MyCommand Handle(MyCommand command)
         {
@@ -56,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         private void LogCommand(MyCommand request)
         {
             _command = request;
-            _receivedMessages.Add(nameof(MyCommandHandler), request.Id);
+            receivedMessages.Add(nameof(MyCommandHandler), request.Id);
         }
     }
 }

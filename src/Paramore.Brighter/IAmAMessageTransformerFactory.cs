@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="transformerType">Type of the handler.</param>
         /// <returns>IAmAMessageTransformAsync</returns>
-        IAmAMessageTransform Create(Type transformerType);
+        IAmAMessageTransform? Create(Type transformerType);
         /// <summary>
         /// Releases the specified transformer.
         /// </summary>

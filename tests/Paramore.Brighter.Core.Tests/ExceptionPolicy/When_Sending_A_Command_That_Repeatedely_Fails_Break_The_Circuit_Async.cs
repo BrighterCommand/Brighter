@@ -17,9 +17,9 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Exception _thirdException;
-        private Exception _firstException;
-        private Exception _secondException;
+        private Exception? _thirdException;
+        private Exception? _firstException;
+        private Exception? _secondException;
 
         public CommandProcessorWithCircuitBreakerAsyncTests()
         {
