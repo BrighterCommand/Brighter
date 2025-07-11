@@ -1220,9 +1220,9 @@ namespace Paramore.Brighter
             int pageNumber)
         {
             var parameters = new IDbDataParameter[3];
-            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
-            parameters[1] = CreateSqlParameter("Take", pageSize);
-            parameters[2] = CreateSqlParameter("TimestampSince", DateTimeOffset.UtcNow.Subtract(since));
+            parameters[0] = CreateSqlParameter("@Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("@Take", pageSize);
+            parameters[2] = CreateSqlParameter("@TimestampSince", DateTimeOffset.UtcNow.Subtract(since));
 
             return parameters;
         }
@@ -1231,9 +1231,9 @@ namespace Paramore.Brighter
         {
             
             var parameters = new IDbDataParameter[3];
-            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
-            parameters[1] = CreateSqlParameter("Take", pageSize);
-            parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(dispatchedSince));
+            parameters[0] = CreateSqlParameter("@Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("@Take", pageSize);
+            parameters[2] = CreateSqlParameter("@DispatchedSince", DateTimeOffset.UtcNow.Subtract(dispatchedSince));
 
             return parameters;
         }
@@ -1241,8 +1241,8 @@ namespace Paramore.Brighter
         protected virtual IDbDataParameter[] CreatePagedReadParameters(int pageSize, int pageNumber)
         {
             var parameters = new IDbDataParameter[2];
-            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
-            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[0] = CreateSqlParameter("@Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("@Take", pageSize);
 
             return parameters;
         }

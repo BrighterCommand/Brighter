@@ -80,16 +80,30 @@ public class MsSqlOutbox : RelationDatabaseOutbox
         return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value, DbType = dbType };
     }
     
-    /// <inheritdoc />
-    protected override DateTimeOffset GetTimeStamp(DbDataReader dr)
-    {
-        if (!TryGetOrdinal(dr, TimestampColumnName, out var ordinal) || dr.IsDBNull(ordinal))
-        {
-            return DateTimeOffset.MinValue;
-        }
-
-        var reader = (SqlDataReader)dr;
-        var dataTime = reader.GetDateTimeOffset(ordinal);
-        return dataTime; 
+   protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize, int pageNumber)
+   {
+       var parameters = new IDbDataParameter[3];
+       parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
+       parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
+       parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(since));
+       return parameters;
     }
+   
+    protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize, int pageNumber)
+    {
+        var parameters = new IDbDataParameter[3];
+        parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
+        parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
+        parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(dispatchedSince));
+   
+        return parameters;
+    }
+   
+    protected override IDbDataParameter[] CreatePagedReadParameters(int pageSize, int pageNumber)
+    {
+        var parameters = new IDbDataParameter[2];
+        parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
+        parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
+        return parameters;
+    } 
 }
