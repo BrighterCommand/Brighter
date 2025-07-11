@@ -116,9 +116,9 @@ namespace Paramore.Brighter
         /// MUST adhere to the format specified in <see href="https://datatracker.ietf.org/doc/html/rfc2046">RFC 2046</see>
         /// Because of the complexity of serializing if you do not know the type, we regard this as required even
         /// though Cloud Events does not.
-        /// Default value is "text/plain"
+        /// Default value is "appliacation/json; charset=utf-8"
         /// </summary>
-        public ContentType? ContentType { get; set; }
+        public ContentType ContentType { get; set; }
 
         /// <summary>
         /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,
@@ -283,7 +283,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'
         /// </summary>
-        public MessageHeader() { }
+        public MessageHeader()
+        {
+            ContentType = new ContentType("application/json; charset=utf-8");
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
@@ -296,7 +299,7 @@ namespace Paramore.Brighter
         /// <param name="timeStamp">The time of message creation, will be rounded to seconds</param>
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
-        /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
+        /// <param name="contentType">The type of the payload of the message, defaults to application/json and utf8</param>
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
         /// <param name="dataSchema">A Uri that identifies the schema that data adheres to</param>
         /// <param name="subject">Describes the subject of the event in the context of the event producer</param>
@@ -334,7 +337,7 @@ namespace Paramore.Brighter
             Delayed = delayed ?? TimeSpan.Zero;
             CorrelationId = correlationId ?? new Id(string.Empty);
             ReplyTo = replyTo ?? RoutingKey.Empty;
-            ContentType = contentType; 
+            ContentType = contentType ?? new ContentType("application/json; charset=utf-8");
             PartitionKey = partitionKey ?? PartitionKey.Empty;
             DataSchema = dataSchema;
             Subject = subject;

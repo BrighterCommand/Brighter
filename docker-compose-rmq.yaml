@@ -1,16 +1,19 @@
-version: '3'
+version: '3.8'
 
 services:
   rabbitmq:
-    image: brightercommand/rabbitmq:3.13-management-delay
-    platform: linux/amd64
+    image: rabbitmq:management
+    hostname: rabbitmq-server
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     volumes:
-      - rabbitmq-home:/var/lib/rabbitmq
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
 
 volumes:
-  rabbitmq-home:
-    driver: local
-  
+  rabbitmq_data:
+  rabbitmq_logs:

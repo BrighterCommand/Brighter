@@ -116,7 +116,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                     new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
-            //Run the pump on a new thread
+            //RunAsync the pump on a new thread
             Task pump = Task.Factory.StartNew(() => messagePump.Run());
             
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOut: TimeSpan.FromMilliseconds(500));

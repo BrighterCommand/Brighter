@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -100,7 +102,7 @@ public class RmqMessageConsumerQuorumValidationTests
     }
 
     [Fact]
-    public void When_creating_classic_consumer_with_default_settings_should_succeed()
+    public async Task When_creating_classic_consumer_with_default_settings_should_succeed()
     {
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -116,11 +118,9 @@ public class RmqMessageConsumerQuorumValidationTests
             isDurable: false,
             highAvailability: true,
             queueType: QueueType.Classic);
-
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey), isDurable: true)
-            .CreateAsync()
-            .GetAwaiter()
-            .GetResult();
+        
+        var message = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
+        Assert.Equal(MessageType.MT_NONE, message.Single().Header.MessageType);
 
         Assert.NotNull(consumer);
     }

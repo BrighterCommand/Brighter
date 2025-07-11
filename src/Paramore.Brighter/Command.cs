@@ -33,14 +33,27 @@ using Paramore.Brighter.NJsonConverters;
 namespace Paramore.Brighter;
 
 /// <summary>
-/// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
+/// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point communication.
 /// </summary>
+/// <remarks>
+/// Commands represent actions that should be performed and follow the Command pattern.
+/// They are routed to a single handler and typically represent business operations that modify state.
+/// </remarks>
 public class Command : ICommand
 {
     /// <summary>
+    /// Correlates this command with a previous command or event.
+    /// </summary>
+    /// <value>The <see cref="Id"/> that correlates this command with a previous command or event.</value>
+    [JsonConverter(typeof(IdConverter))]
+    [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+    [JsonSchema(JsonObjectType.String)] 
+    public Id? CorrelationId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier.
     /// </summary>
-    /// <value>The identifier.</value>
+    /// <value>The <see cref="Id"/> that uniquely identifies this command instance.</value>
     [NotNull]
     [JsonConverter(typeof(IdConverter))]
     [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
@@ -51,7 +64,7 @@ public class Command : ICommand
     /// <summary>
     /// Initializes a new instance of the <see cref="Command"/> class.
     /// </summary>
-    /// <param name="id">The identifier.</param>
+    /// <param name="id">The <see cref="Id"/> that uniquely identifies this command.</param>
     public Command(Id id)
     {
         Id = id;
@@ -60,7 +73,7 @@ public class Command : ICommand
     /// <summary>
     /// Initializes a new instance of the <see cref="Command"/> class. 
     /// </summary>
-    /// <param name="id">The identifier</param>
+    /// <param name="id">The <see cref="Guid"/> that will be converted to an <see cref="Id"/> for this command.</param>
     public Command(Guid id)
     {
         Id = new Id(id.ToString()); 
