@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <inheritdoc />
         protected override IDbDataParameter CreateSqlParameter(string parameterName, DbType dbType, object? value)
         {
-            return new MySqlParameter { ParameterName = parameterName, Value = value, DbType = dbType };
+            return new MySqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value, DbType = dbType };
         }
 
         /// <inheritdoc />

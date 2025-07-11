@@ -1256,7 +1256,7 @@ namespace Paramore.Brighter
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             
             var body = DatabaseConfiguration.BinaryMessagePayload ? 
-                CreateSqlParameter($"@{prefix}Body", DbType.Byte, message.Body.Bytes)
+                CreateSqlParameter($"@{prefix}Body", DbType.Binary, message.Body.Bytes)
                 : CreateSqlParameter($"@{prefix}Body", DbType.String, message.Body.Value);
 
             return
@@ -1502,8 +1502,8 @@ namespace Paramore.Brighter
                 return new ContentType(MediaTypeNames.Text.Plain);
             }
             
-            var replyTo = dr.GetString(ordinal);
-            return string.IsNullOrEmpty(replyTo) ? new ContentType(MediaTypeNames.Text.Plain) : new ContentType(replyTo);
+            var contentType = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(contentType) ? new ContentType(MediaTypeNames.Text.Plain) : new ContentType(contentType);
         }
 
         protected virtual string HeaderBagColumnName => "HeaderBag";
