@@ -33,9 +33,9 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 //Brighter
-string asbEndpoint = ".servicebus.windows.net";
+string asbEndpoint = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
 
-var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoint);
+var asbConnection = new ServiceBusConnectionStringClientProvider(asbEndpoint);
 
 var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, 
     databaseName: "BrighterTests", outBoxTableName: "BrighterOutbox");
@@ -44,9 +44,9 @@ var producerRegistry = new AzureServiceBusProducerRegistryFactory(
         asbConnection,
         new AzureServiceBusPublication[]
         {
-            new() { Topic = new RoutingKey("greeting.event") },
-            new() { Topic = new RoutingKey("greeting.addGreetingCommand") },
-            new() { Topic = new RoutingKey("greeting.Asyncevent") }
+            new() { Topic = new RoutingKey("greeting.event"), MakeChannels = OnMissingChannel.Assume},
+            new() { Topic = new RoutingKey("greeting.addGreetingCommand"), MakeChannels = OnMissingChannel.Assume },
+            new() { Topic = new RoutingKey("greeting.Asyncevent"), MakeChannels = OnMissingChannel.Assume }
         }
     )
     .Create();

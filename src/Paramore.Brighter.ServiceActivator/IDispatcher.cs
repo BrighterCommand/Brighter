@@ -32,64 +32,76 @@ namespace Paramore.Brighter.ServiceActivator
     /// Interface IDispatcher
     /// The 'core' Service Activator class, the Dispatcher controls and co-ordinates the creation of readers from channels, and dispatching the commands and
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
-    /// the stop and start of individual connections through <see cref="Open"/> and <see cref="Shut"/>
+    /// the stop and start of individual connections through <see cref="Open"/> and <see cref="Shut"/>.
     /// </summary>
+    /// <remarks>
+    /// The Dispatcher implements the Service Activator pattern and coordinates multiple message pumps
+    /// to process messages from different channels concurrently.
+    /// </remarks>
     public interface IDispatcher
     {
         /// <summary>
-        /// Gets the <see cref="Consumer"/>s
+        /// Gets the <see cref="Consumer"/>s managed by this dispatcher.
         /// </summary>
-        /// <value>The consumers.</value>
+        /// <value>An <see cref="IEnumerable{T}"/> of <see cref="IAmAConsumer"/> instances.</value>
         IEnumerable<IAmAConsumer> Consumers { get; }
 
         /// <summary>
         /// Gets or sets the name for this dispatcher instance.
-        /// Used when communicating with this instance via the Control Bus
+        /// Used when communicating with this instance via the Control Bus.
         /// </summary>
-        /// <value>The name of the host.</value>
+        /// <value>The <see cref="HostName"/> of the dispatcher instance.</value>
         HostName HostName { get; set; }
 
         /// <summary>
-        /// Ends this instance.
+        /// Ends this dispatcher instance, stopping all message processing.
         /// </summary>
-        /// <returns>Task.</returns>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task End();
 
         /// <summary>
-        /// Opens the specified subscription.
+        /// Opens the specified subscription for message processing.
         /// </summary>
-        /// <param name="subscription">The subscription.</param>
+        /// <param name="subscription">The <see cref="Subscription"/> to open.</param>
         void Open(Subscription subscription);
 
         /// <summary>
-        /// Opens the specified subscription name.
+        /// Opens the specified subscription by name for message processing.
         /// </summary>
-        /// <param name="subscriptionName"></param>
+        /// <param name="subscriptionName">The <see cref="SubscriptionName"/> of the subscription to open.</param>
         void Open(SubscriptionName subscriptionName);
 
         /// <summary>
         /// Begins listening for messages on channels, and dispatching them to request handlers.
         /// </summary>
+        /// <remarks>
+        /// This method will typically block and run continuously until <see cref="End"/> is called.
+        /// </remarks>
         void Receive();
 
         /// <summary>
-        /// Shuts the specified subscription.
+        /// Shuts down the specified subscription, stopping message processing for that subscription.
         /// </summary>
-        /// <param name="subscription">The subscription.</param>
+        /// <param name="subscription">The <see cref="Subscription"/> to shut down.</param>
         void Shut(Subscription subscription);
 
         /// <summary>
-        /// Shuts the specified subscription name.
+        /// Shuts down the specified subscription by name, stopping message processing for that subscription.
         /// </summary>
-        /// <param name="subscriptionName">Name of the subscription.</param>
+        /// <param name="subscriptionName">The <see cref="SubscriptionName"/> of the subscription to shut down.</param>
         void Shut(SubscriptionName subscriptionName);
 
         /// <summary>
-        /// Get the current running state of the dispatcher
+        /// Gets the current running state of the dispatcher.
         /// </summary>
-        /// <returns>Array of all available subscriptions and how many are currency running</returns>
+        /// <returns>An array of <see cref="DispatcherStateItem"/> showing all available subscriptions and how many are currently running.</returns>
         DispatcherStateItem[] GetState();
 
+        /// <summary>
+        /// Sets the number of active performers for a specific connection.
+        /// </summary>
+        /// <param name="connectionName">The <see cref="string"/> name of the connection.</param>
+        /// <param name="numberOfPerformers">The <see cref="int"/> number of performers to set.</param>
         void SetActivePerformers(string connectionName, int numberOfPerformers);
     }
 }

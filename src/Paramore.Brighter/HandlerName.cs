@@ -25,8 +25,12 @@ THE SOFTWARE. */
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Strongly typed class for the name of a handler
+    /// Strongly typed class for the name of a handler.
     /// </summary>
+    /// <remarks>
+    /// Provides type safety for handler names to prevent confusion with other string values
+    /// and enables better Intellisense support when working with handler identification.
+    /// </remarks>
     public class HandlerName
     {
         private readonly string _name;
@@ -34,16 +38,16 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="HandlerName"/> class.
         /// </summary>
-        /// <param name="name">The name.</param>
+        /// <param name="name">The <see cref="string"/> name of the handler.</param>
         public HandlerName(string name)
         {
             _name = name;
         }
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
+        /// <returns>A <see cref="string" /> that contains the handler name.</returns>
         public override string ToString()
         {
             return _name;

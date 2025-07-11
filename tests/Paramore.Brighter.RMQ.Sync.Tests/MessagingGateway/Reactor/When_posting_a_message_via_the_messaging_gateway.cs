@@ -27,7 +27,6 @@ using System.Linq;
 using System.Net.Mime;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.RMQ.Tests.MessagingGateway;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;

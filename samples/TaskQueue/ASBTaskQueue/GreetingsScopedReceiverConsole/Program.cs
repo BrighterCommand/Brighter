@@ -36,7 +36,7 @@ namespace GreetingsScopedReceiverConsole
                             new ChannelName("paramore.example.greeting"),
                             new RoutingKey("greeting.Asyncevent"),
                             timeOut: TimeSpan.FromMilliseconds(400),
-                            makeChannels: OnMissingChannel.Create,
+                            makeChannels: OnMissingChannel.Assume,
                             requeueCount: 3,
                             messagePumpType: MessagePumpType.Proactor),
 
@@ -45,13 +45,13 @@ namespace GreetingsScopedReceiverConsole
                             new ChannelName("paramore.example.greeting"),
                             new RoutingKey("greeting.event"),
                             timeOut: TimeSpan.FromMilliseconds(400),
-                            makeChannels: OnMissingChannel.Create,
+                            makeChannels: OnMissingChannel.Assume,
                             requeueCount: 3,
                             messagePumpType: MessagePumpType.Proactor)
                     };
 
                     //TODO: add your ASB qualified name here
-                    var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
+                    var asbClientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
                     var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbClientProvider);
                     services
                         .AddServiceActivator(options =>

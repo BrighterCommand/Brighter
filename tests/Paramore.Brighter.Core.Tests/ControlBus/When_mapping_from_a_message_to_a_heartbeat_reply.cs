@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             Assert.Equal(_correlationId, _request.SendersAddress.CorrelationId);
 
             // Reply should have the same correlation id as the original message
-            Assert.NotEqual(Reply.SenderCorrelationIdOrDefault(_request.SendersAddress), Guid.Empty);
+            Assert.NotEqual(Reply.SenderCorrelationIdOrDefault(_request.SendersAddress), Id.Empty);
             Assert.Equal(_request.CorrelationId, Reply.SenderCorrelationIdOrDefault(_request.SendersAddress));
 
             // Should set the hostName
