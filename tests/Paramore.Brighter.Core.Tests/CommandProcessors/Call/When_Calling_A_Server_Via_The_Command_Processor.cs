@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
@@ -84,6 +85,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
+                circuitBreaker: new InMemoryCircuitBreaker(),
                 new InMemoryOutbox(timeProvider){Tracer = tracer});
         
             CommandProcessor.ClearServiceBus();

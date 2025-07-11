@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Transactions;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
 using Paramore.Brighter.Observability;
@@ -61,6 +62,7 @@ namespace Paramore.Brighter
                 mapperRegistry: mapper,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
+                circuitBreaker:new InMemoryCircuitBreaker(),
                 outbox: outbox,
                 publicationFinder: publicationFinder ?? new FindPublicationByPublicationTopicOrRequestType()
                 ); 

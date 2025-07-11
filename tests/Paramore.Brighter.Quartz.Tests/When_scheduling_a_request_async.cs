@@ -2,6 +2,7 @@
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
@@ -80,6 +81,7 @@ public class QuartzSchedulerRequestAsyncTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
+            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox
         );
 

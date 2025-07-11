@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
 using Xunit;
@@ -43,6 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),     
                 tracer,
+                circuitBreaker: new InMemoryCircuitBreaker(),
                 outbox: _outbox,
                 maxOutStandingMessages:3,
                 maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250),

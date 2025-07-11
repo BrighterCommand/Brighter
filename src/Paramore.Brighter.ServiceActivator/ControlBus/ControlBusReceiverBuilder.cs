@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Transactions;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -172,6 +173,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
                 tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
+                circuitBreaker: new InMemoryCircuitBreaker(),
                 outbox: outbox,
                 publicationFinder: _publicationFinder
             );
@@ -265,6 +267,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 RequestContext? requestContext,
                 int pageSize = 100, 
                 int pageNumber = 1,
+                string[]? trippedTopics = null,
                 Dictionary<string, object>? args = null)
             {
                 return []; 

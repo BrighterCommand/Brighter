@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
@@ -196,14 +197,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
         protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
-            int pageNumber)
+            int pageNumber, IDbDataParameter[] inParams)
         {
             var parameters = new IDbDataParameter[3];
             parameters[0] = CreateSqlParameter("TimestampSince", DateTimeOffset.UtcNow.Subtract(since));
             parameters[1] = CreateSqlParameter("Take", pageSize);
             parameters[2] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
 
-            return parameters;
+            return parameters.Concat(inParams).ToArray();
         }
 
         protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize,

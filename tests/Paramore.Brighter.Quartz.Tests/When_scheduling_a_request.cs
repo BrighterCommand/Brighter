@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Transactions;
 using Paramore.Brighter;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
@@ -70,6 +71,7 @@ public class QuartzSchedulerRequestTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
+            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox
         );
 
