@@ -510,6 +510,7 @@ namespace Paramore.Brighter
                 var now = _timeProvider.GetUtcNow();
                 var sentBefore = now - dispatchedSince;
                 var outstandingMessages = Requests.Values
+                    .OrderBy(oe=>oe.Message.Header.TimeStamp)
                     .Where(oe => 
                         oe.TimeFlushed == DateTimeOffset.MinValue 
                         && oe.WriteTime <= sentBefore.DateTime

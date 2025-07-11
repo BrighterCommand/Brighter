@@ -600,6 +600,8 @@ namespace Paramore.Brighter
             WaitHandle[] clearTokens = new WaitHandle[2];
             clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
             clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
+            _circuitBreaker.CoolDown();
+
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
                 //NOTE: The wait handle only signals availability, still need to increment the counter:
@@ -636,8 +638,6 @@ namespace Paramore.Brighter
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
-
-                    _circuitBreaker.CoolDown();
                 }
                 catch (Exception e)
                 {
@@ -851,7 +851,6 @@ namespace Paramore.Brighter
 
                         Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key);
 
-
                         var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
                         
                         await foreach (var successfulMessage in dispatchesMessages)
@@ -906,40 +905,29 @@ namespace Paramore.Brighter
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
-                        if (producer is ISupportPublishConfirmation)
-                        {
-                            //mark dispatch handled by a callback - set in constructor
-                            await RetryAsync(
-                                    async _ =>
-                                        await producerAsync.SendAsync(message, cancellationToken)
-                                            .ConfigureAwait(continueOnCapturedContext),
-                                    requestContext,
-                                    continueOnCapturedContext,
-                                    cancellationToken)
-                                .ConfigureAwait(continueOnCapturedContext);
-                        }
-                        else
-                        {
-                            var sent = await RetryAsync(
-                                    async _ => await producerAsync.SendAsync(message, cancellationToken)
-                                        .ConfigureAwait(continueOnCapturedContext),
-                                    requestContext,
-                                    continueOnCapturedContext,
-                                    cancellationToken
-                                )
-                                .ConfigureAwait(continueOnCapturedContext
-                                );
+                        var sent = await RetryAsync(
+                                async _ => await producerAsync.SendAsync(message, cancellationToken)
+                                    .ConfigureAwait(continueOnCapturedContext),
+                                requestContext,
+                                continueOnCapturedContext,
+                                cancellationToken
+                            )
+                            .ConfigureAwait(continueOnCapturedContext);
 
-                            if (sent)
-                                await RetryAsync(
-                                    async _ => await _asyncOutbox.MarkDispatchedAsync(
-                                        message.Id, requestContext, _timeProvider.GetUtcNow(),
-                                        cancellationToken: cancellationToken
-                                    ),
-                                    requestContext,
+                        if (producer is not ISupportPublishConfirmation && sent)
+                        {
+                            await RetryAsync(
+                                async _ => await _asyncOutbox.MarkDispatchedAsync(
+                                    message.Id, requestContext, _timeProvider.GetUtcNow(),
                                     cancellationToken: cancellationToken
-                                );
+                                ),
+                                requestContext,
+                                cancellationToken: cancellationToken
+                            );
                         }
+
+                        if(!sent) TripTopic(message);
+   
                     }
                     else
                         throw new InvalidOperationException("No async message producer defined.");
@@ -1072,8 +1060,6 @@ namespace Paramore.Brighter
 
             if (result.Outcome != OutcomeType.Successful)
             {
-                TripTopic(requestContext);
-
                 if (result.FinalException != null)
                 {
                     Log.ExceptionWhilstTryingToPublishMessage(s_logger, result.FinalException);
@@ -1085,10 +1071,11 @@ namespace Paramore.Brighter
 
             return true;
         }
-        private void TripTopic(RequestContext? requestContext)
+
+        private void TripTopic(Message message)
         {
-            if(!string.IsNullOrEmpty(requestContext?.Topic?.Value))
-               _circuitBreaker.TripTopic(requestContext!.Topic!.Value);
+            if(!string.IsNullOrEmpty(message.Header.Topic?.Value))
+                _circuitBreaker.TripTopic(message.Header.Topic!.Value);
         }
         
         private static partial class Log

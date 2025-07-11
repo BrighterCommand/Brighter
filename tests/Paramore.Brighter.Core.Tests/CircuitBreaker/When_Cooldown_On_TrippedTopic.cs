@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
     public class CircuitBreakerTests
     {
         [Fact]
-        public void When_TripTopic()
+        public void When_TripTopic_Then_TrippedTopics_Must_Contain_Topic()
         {
             // Arrange
             var trippedTopic = "topic";
@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
         }
 
         [Fact]
-        public void When_Cooldown_OnTrippedTopic()
+        public void When_Cooldown_Decrements_CooldownCount_Then_TrippedTopicRemoved()
         {
             // Arrange
             var trippedTopic = "topic";
@@ -35,6 +35,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
             circuitBreaker.TripTopic(trippedTopic);
 
             // Act
+            circuitBreaker.CoolDown();
             circuitBreaker.CoolDown();
 
             // Assert

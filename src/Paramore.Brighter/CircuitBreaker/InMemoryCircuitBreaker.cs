@@ -17,7 +17,7 @@ public class InMemoryCircuitBreaker(CircuitBreakerOptions? options = null) : IAm
         {
             _trippedTopics[trippedTopicsKey] -= 1;
 
-            if (_trippedTopics[trippedTopicsKey] < 1)
+            if (_trippedTopics[trippedTopicsKey] < 0)
                 _trippedTopics.Remove(trippedTopicsKey);
         }
     }
