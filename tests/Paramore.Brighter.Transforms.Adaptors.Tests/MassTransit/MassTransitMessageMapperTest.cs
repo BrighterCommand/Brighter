@@ -173,6 +173,7 @@ public class TestEvent() : Event(Guid.NewGuid())
 
 public class TestOtherRequest : IRequest
 {
+    public Id? CorrelationId { get; set; }
     public Id Id { get; set; } = Id.Random;
     public string Name { get; set; } = string.Empty;
 }
