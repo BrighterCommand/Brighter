@@ -27,10 +27,10 @@ namespace Paramore.Brighter.Inbox.Sqlite
 {
     public class SqliteQueries : IRelationalDatabaseInboxQueries
     {
-        public string AddCommand { get; } = "INSERT INTO {0} (CommandId, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandId, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
+        public string AddCommand { get; } = "INSERT INTO {0} (CommandId, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
 
-        public string ExistsCommand { get; } = "SELECT CommandId FROM {0} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
+        public string ExistsCommand { get; } = "SELECT CommandId FROM {0} WHERE CommandId = @CommandID and ContextKey = @ContextKey LIMIT 1";
 
-        public string GetCommand { get; } = "SELECT * FROM {0} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
+        public string GetCommand { get; } = "SELECT * FROM {0} WHERE CommandId = @CommandID AND ContextKey = @ContextKey";
     }
 }

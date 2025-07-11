@@ -27,10 +27,10 @@ namespace Paramore.Brighter.Inbox.Postgres
 {
     public class PostgreSqlQueries : IRelationalDatabaseInboxQueries
     {
-        public string AddCommand { get; } = "INSERT INTO {0} (CommandId, CommandType, CommandBody, Timestamp, ContextKey) VALUES (@CommandId, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
+        public string AddCommand { get; } = "INSERT INTO {0} (CommandId, CommandType, CommandBody, Timestamp, ContextKey) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
 
-        public string ExistsCommand { get; } = "SELECT DISTINCT CommandId FROM {0} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
+        public string ExistsCommand { get; } = "SELECT DISTINCT CommandId FROM {0} WHERE CommandId = @CommandID AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
 
-        public string GetCommand { get; } = "SELECT * FROM {0} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
+        public string GetCommand { get; } = "SELECT * FROM {0} WHERE CommandId = @CommandID AND ContextKey = @ContextKey";
     }
 }
