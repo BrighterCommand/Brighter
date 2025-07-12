@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
-using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
@@ -189,8 +188,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             //NOTE: It is a little unsatisfactory to hard code our types in here
             RegisterRelationalProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider,
-                transactionProvider, serviceLifetime);
-            RegisterDynamoProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider,
                 transactionProvider, serviceLifetime);
             
             //we always need an outbox in case of producer callbacks
@@ -543,28 +540,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
 
             return messageMapperRegistry;
-        }
-
-        private static void RegisterDynamoProviderServicesMaybe(
-            IBrighterBuilder brighterBuilder,
-            Type connectionProvider,
-            Type transactionProvider,
-            ServiceLifetime serviceLifetime)
-        {
-            //not all box transaction providers are also relational connection providers
-            if (typeof(IAmADynamoDbConnectionProvider).IsAssignableFrom(connectionProvider))
-            {
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbConnectionProvider),
-                    connectionProvider, serviceLifetime));
-            }
-
-            //not all box transaction providers are also relational connection providers
-            if (typeof(IAmADynamoDbTransactionProvider).IsAssignableFrom(transactionProvider))
-            {
-                //register the combined interface just in case
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbTransactionProvider),
-                    transactionProvider, serviceLifetime));
-            }
         }
 
         private static void RegisterRelationalProviderServicesMaybe(

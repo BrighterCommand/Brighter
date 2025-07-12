@@ -2,6 +2,8 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+
+    <AwsDynamoDbV4>4.0.1.9</AwsDynamoDbV4>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.407.23, 4)" />
