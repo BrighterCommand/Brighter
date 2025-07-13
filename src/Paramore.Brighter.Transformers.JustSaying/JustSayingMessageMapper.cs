@@ -27,7 +27,6 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     /// <inheritdoc cref="IAmAMessageMapper{TRequest}.Context" />
     public IRequestContext? Context { get; set; }
 
-    
     /// <inheritdoc />
     public Task<Message> MapToMessageAsync(TMessage request, Publication publication, CancellationToken cancellationToken = default)
     {
@@ -76,24 +75,19 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options),
                 s_justSaying));
 
-        string GetId()
+        Id GetId()
         {
-            if (Guid.TryParse(justSaying.Id, out _))
-            {
-                return Guid.NewGuid().ToString();
-            }
-            
-            return justSaying.Id;
+            return Guid.TryParse(justSaying.Id, out _) ? Id.Random : justSaying.Id;
         }
         
-        string GetCorrelationId(string? currentValue)
+        Id GetCorrelationId(Id? currentValue)
         {
-            if (!string.IsNullOrEmpty(currentValue))
+            if (!Id.IsNullOrEmpty(currentValue))
             {
                 return currentValue!;
             }
 
-            return GetFromContext(nameof(MessageHeader.CorrelationId), Guid.NewGuid().ToString())!;
+            return GetFromContext(nameof(MessageHeader.CorrelationId), Id.Random)!;
         }
         
         string GetRaisingComponent(string? currentValue)
@@ -103,7 +97,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 return currentValue!;
             }
 
-            var context =  GetFromContext(JustSayingAttributesName.RaisingComponent);
+            var context = GetFromContext(JustSayingAttributesName.RaisingComponent);
             if (!string.IsNullOrEmpty(context))
             {
                 return context!;

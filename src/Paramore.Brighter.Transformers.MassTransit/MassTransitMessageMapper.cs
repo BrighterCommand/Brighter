@@ -66,7 +66,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     public virtual Message MapToMessage(TMessage request, Publication publication)
     {
         var timestamp = DateTimeOffset.UtcNow;
-        var bag = new Dictionary<string, object?>();
+        var bag = new Dictionary<string, object>();
         if (Context is { Bag.Count: > 0 })
         {
             foreach (var pair in Context.Bag)
@@ -92,8 +92,8 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
             MessageId = request.Id,
             MessageType = GetMessageType(),
             RequestId = GetRequestId(),
-            ResponseAddress = GetResponseAddress(publication),
-            SourceAddress = GetSourceAddress(publication),
+            ResponseAddress = GetResponseAddress(),
+            SourceAddress = GetSourceAddress(),
             SentTime = timestamp.DateTime
         };
 
@@ -109,18 +109,27 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
                     _ => MessageType.MT_DOCUMENT
                 },
                 timeStamp: timestamp,
-                topic: publication.Topic!),
+                topic: publication.Topic!)
+            {
+                Bag = bag
+            },
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(envelop, JsonSerialisationOptions.Options),
                 MassTransitContentType)
         );
     }
 
-    private string GetCorrelationId()
-    {
-        return GetFromContext(nameof(MessageHeader.CorrelationId), Guid.NewGuid().ToString())!;
-    }
+    private Id GetCorrelationId() => GetFromContext(nameof(MessageHeader.CorrelationId), Id.Random)!;
 
-    private string? GetConversationId() => GetFromContext(MassTransitHeaderNames.ConversationId);
+    private Id? GetConversationId()
+    {
+        var conversationId = GetFromContext(MassTransitHeaderNames.ConversationId);
+        if (string.IsNullOrEmpty(conversationId))
+        {
+            return null;
+        }
+
+        return Id.Create(conversationId);
+    }
 
     private string? GetDestinationAddress()
     {
@@ -162,11 +171,29 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
         return GetMassTransitAttribute()?.FaultAddress;
     }
 
-    private string? GetInitiatorId() => GetFromContext(MassTransitHeaderNames.InitiatorId);
+    private Id? GetInitiatorId()
+    {
+        var initiatorId = GetFromContext(MassTransitHeaderNames.InitiatorId);
+        if (string.IsNullOrEmpty(initiatorId))
+        {
+            return null;
+        }
 
-    private string? GetRequestId() => GetFromContext(MassTransitHeaderNames.RequestId);
+        return Id.Create(initiatorId);
+    }
 
-    private string? GetResponseAddress(Publication publication)
+    private Id? GetRequestId()
+    {
+        var requestId = GetFromContext(MassTransitHeaderNames.RequestId);
+        if (string.IsNullOrEmpty(requestId))
+        {
+            return null;
+        }
+
+        return Id.Create(requestId);
+    }
+
+    private string? GetResponseAddress()
     {
         var response = GetFromContext(MassTransitHeaderNames.ResponseAddress);
         if (!string.IsNullOrEmpty(response))
@@ -177,7 +204,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
         return GetMassTransitAttribute()?.ResponseAddress;
     }
 
-    private string? GetSourceAddress(Publication publication)
+    private string? GetSourceAddress()
     {
         var source = GetFromContext(MassTransitHeaderNames.SourceAddress);
         if (!string.IsNullOrEmpty(source))

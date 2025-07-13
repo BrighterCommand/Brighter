@@ -23,7 +23,11 @@ public class JustSayingCommand : Command, IJustSayingRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="JustSayingCommand"/> class. 
     /// </summary>
+#if NET9_0_OR_GREATER
+    public JustSayingCommand() : this(Guid.CreateVersion7())
+#else
     public JustSayingCommand() : this(Guid.NewGuid())
+#endif
     {
     }
     
@@ -59,5 +63,5 @@ public class JustSayingCommand : Command, IJustSayingRequest
     public string? Tenant { get; set; }
     
     /// <inheritdoc />
-    public string? Conversation { get; set; }
+    public Id? Conversation { get; set; }
 }

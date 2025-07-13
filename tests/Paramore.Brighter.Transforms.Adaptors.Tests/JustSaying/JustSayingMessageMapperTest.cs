@@ -129,7 +129,7 @@ public class JustSayingMessageMapperTest
         Assert.NotNull(obj);
         Assert.False(Id.IsNullOrEmpty(obj.Id));
         Assert.NotNull(obj.Conversation);
-        Assert.NotEmpty(obj.Conversation);
+        Assert.False(Id.IsNullOrEmpty(obj.Conversation));
         Assert.NotEqual(DateTimeOffset.MinValue, obj.TimeStamp);
         
         Assert.Equal(raisingComponent, obj.RaisingComponent);

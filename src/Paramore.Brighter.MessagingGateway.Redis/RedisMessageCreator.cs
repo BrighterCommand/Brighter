@@ -308,7 +308,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string? header))
             {
-                    return new HeaderResult<Id>(header, true);
+                return new HeaderResult<Id>(Id.Create(header), true);
             }
             
             return new HeaderResult<Id>(Id.Empty, false);

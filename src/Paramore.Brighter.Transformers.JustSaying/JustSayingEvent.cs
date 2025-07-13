@@ -23,7 +23,11 @@ public class JustSayingEvent : Event, IJustSayingRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="JustSayingEvent"/> class. 
     /// </summary>
+#if NET9_0_OR_GREATER
+    public JustSayingEvent() : this(Guid.CreateVersion7())
+#else
     public JustSayingEvent() : this(Guid.NewGuid())
+#endif
     {
         
     }
@@ -60,5 +64,5 @@ public class JustSayingEvent : Event, IJustSayingRequest
     public string? Tenant { get; set; }
     
     /// <inheritdoc />
-    public string? Conversation { get; set; }
+    public Id? Conversation { get; set; }
 }

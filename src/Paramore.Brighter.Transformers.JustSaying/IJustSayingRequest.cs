@@ -37,5 +37,5 @@ public interface IJustSayingRequest : IRequest
     /// <summary>
     /// The conversation id.
     /// </summary>
-    string? Conversation { get; set; }
+    Id? Conversation { get; set; }
 }

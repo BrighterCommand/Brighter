@@ -126,8 +126,17 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
         return message;
     }
 
-    private string? GetConversationId() => Get(MassTransitHeaderNames.ConversationId);
-    
+    private Id? GetConversationId()
+    {
+        var conversationId = Get(MassTransitHeaderNames.ConversationId);
+        if (string.IsNullOrEmpty(conversationId))
+        {
+            return null;
+        }
+
+        return Id.Create(conversationId);
+    }
+
     private string? GetDestinationAddress()
     {
         if(!string.IsNullOrEmpty(_destinationAddress)) 
@@ -164,10 +173,28 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
         
         return Get(MassTransitHeaderNames.FaultAddress);
     }
-    private string? GetInitiatorId() => Get(MassTransitHeaderNames.InitiatorId);
-    
-    private string? GetRequestId() => Get(MassTransitHeaderNames.RequestId);
-    
+    private Id? GetInitiatorId()
+    {
+        var initiatorId =  Get(MassTransitHeaderNames.InitiatorId);
+        if (string.IsNullOrEmpty(initiatorId))
+        {
+            return null;
+        }
+
+        return Id.Create(initiatorId);
+    }
+
+    private Id? GetRequestId()
+    {
+        var requestId = Get(MassTransitHeaderNames.RequestId);
+        if (string.IsNullOrEmpty(requestId))
+        {
+            return null;
+        }
+
+        return Id.Create(requestId);
+    }
+
     private string? GetResponseAddress(Message message)
     {
         if (!string.IsNullOrEmpty(_responseAddress)) 
@@ -217,7 +244,7 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
         return null;
     }
 
-    private DateTime GetSentTime(Message message)
+    private static DateTime GetSentTime(Message message)
     {
         if (message.Header.TimeStamp == DateTimeOffset.MinValue)
         {
@@ -244,8 +271,8 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
 
         if (envelop != null)
         {
-            var messageId = Guid.NewGuid().ToString();
-            if (!string.IsNullOrEmpty(envelop.MessageId))
+            var messageId = Id.Random;
+            if (!Id.IsNullOrEmpty(envelop.MessageId))
             {
                messageId = envelop.MessageId!;
             }
@@ -256,7 +283,7 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
                 timestamp = envelop.SentTime.Value;
             }
             
-            if (!string.IsNullOrEmpty(envelop.CorrelationId))
+            if (!Id.IsNullOrEmpty(envelop.CorrelationId))
             {
                 message.Header.CorrelationId = envelop.CorrelationId!;
             }
@@ -273,7 +300,7 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
 
             return new Message(
                 new MessageHeader(
-                    new Id(messageId),
+                    messageId,
                     message.Header.Topic,
                     message.Header.MessageType,
                     source: message.Header.Source,
