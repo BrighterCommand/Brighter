@@ -67,7 +67,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     {
         var timestamp = DateTimeOffset.UtcNow;
         var bag = new Dictionary<string, object?>();
-        if (Context is { Bag.Count: 0 })
+        if (Context is { Bag.Count: > 0 })
         {
             foreach (var pair in Context.Bag)
             {

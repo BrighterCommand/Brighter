@@ -9,7 +9,7 @@ public static class MassTransitHeaderNames
     /// <summary>
     /// The header prefix
     /// </summary>
-    public const string HeaderPrefix = "Brighter-MassTranist-";
+    public const string HeaderPrefix = "Brighter-MassTransit-";
     
     /// <summary>
     /// The conversation id.

@@ -206,7 +206,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
         var jsonNode = node[nameof(IJustSayingRequest.Conversation)];
         if (jsonNode != null
             && jsonNode.GetValueKind() == JsonValueKind.String
-            && DateTimeOffset.TryParse(jsonNode.GetValue<string>(), out _))
+            && Guid.TryParse(jsonNode.GetValue<string>(), out _))
         {
             return;
         }
