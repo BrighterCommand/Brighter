@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Paramore.Brighter
 {
@@ -55,7 +56,8 @@ namespace Paramore.Brighter
         /// Creates a new Id with a randomly assigned UUID as the key
         /// </summary>
         /// <value>An <see cref="Id"/> with a GUID value.</value>
-        public static Id Random { get; } = new(Guid.NewGuid().ToString()); 
+        public static Id Random { get; } = new(Uuid.NewAsString()); 
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Id"/> class.
@@ -73,7 +75,7 @@ namespace Paramore.Brighter
         /// <returns>A new <see cref="Id"/> instance with the provided value or a random GUID if value is null or empty.</returns>
         public static Id Create(string? value)
         {
-            return new Id(value ?? Guid.NewGuid().ToString());
+            return new Id(value ?? Uuid.NewAsString());
         }
        
         /// <summary>
@@ -81,7 +83,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The <see cref="Id"/> to test.</param>
         /// <returns><c>true</c> if the <paramref name="id"/> is null or has an empty value; otherwise, <c>false</c>.</returns>
-        public static bool IsNullOrEmpty(Id? id)
+        public static bool IsNullOrEmpty([NotNullWhen(false)]Id? id)
         {
             return id == null || string.IsNullOrEmpty(id.Value);
         }

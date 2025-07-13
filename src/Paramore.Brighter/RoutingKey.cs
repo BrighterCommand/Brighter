@@ -111,7 +111,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="other">The other <see cref="RoutingKey"/> to compare.</param>
         /// <returns><c>true</c> if the routing keys are equal; otherwise, <c>false</c>.</returns>
-        public bool Equals(RoutingKey other)
+        public bool Equals(RoutingKey? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -146,7 +146,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left <see cref="RoutingKey"/>.</param>
         /// <param name="right">The right <see cref="RoutingKey"/>.</param>
         /// <returns><c>true</c> if the routing keys are equal; otherwise, <c>false</c>.</returns>
-        public static bool operator ==(RoutingKey left, RoutingKey right)
+        public static bool operator ==(RoutingKey? left, RoutingKey? right)
         {
             return Equals(left, right);
         }

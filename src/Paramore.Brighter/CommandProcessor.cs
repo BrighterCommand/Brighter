@@ -1349,7 +1349,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("No ResponseChannelFactory registered");
 
             //create a reply queue via creating a consumer - we use random identifiers as we will destroy
-            var channelName = Guid.NewGuid();
+            var channelName = Uuid.New();
             var routingKey = channelName.ToString();
 
             subscription.ChannelName = new ChannelName(channelName.ToString());

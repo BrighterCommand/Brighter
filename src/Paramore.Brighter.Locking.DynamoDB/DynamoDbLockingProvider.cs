@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Locking.DynamoDb
         /// <returns>The id of the lock that has been acquired or null if no lock was able to be acquired</returns>
         public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken = default)
         {
-            var lockId = Guid.NewGuid().ToString();
+            var lockId = Uuid.NewAsString();
 
             try
             {

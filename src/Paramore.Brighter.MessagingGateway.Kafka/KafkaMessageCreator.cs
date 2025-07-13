@@ -308,7 +308,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 return id;
             }
 
-            var newMessageId = Guid.NewGuid().ToString();
+            var newMessageId = Uuid.NewAsString();
             return ReadHeader(headers, HeaderNames.MESSAGE_ID)
                 .Map(messageId =>
                 {

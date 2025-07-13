@@ -128,7 +128,7 @@ internal sealed partial class RmqMessagePublisher
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> that cancels the requeue</param>
     public async Task RequeueMessageAsync(Message message, ChannelName queueName, TimeSpan timeOut, CancellationToken cancellationToken = default)
     {
-        var messageId = Guid.NewGuid().ToString();
+        var messageId = Uuid.NewAsString();
         const string deliveryTag = "1";
 
         Log.RegeneratingMessage(s_logger, message.Id, deliveryTag, messageId, 1);
