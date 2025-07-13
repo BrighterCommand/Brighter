@@ -84,7 +84,7 @@ var host = Host.CreateDefaultBuilder(args)
             {
                 configure.ProducerRegistry = producerRegistry;
             })
-            .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
+            .MapperRegistryFromAssemblies([typeof(GreetingEvent).Assembly]);
 
         services.AddHostedService<TimedMessageGenerator>();
     })

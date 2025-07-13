@@ -80,7 +80,7 @@ static class Program
                                 SchedulerTopicOrQueue = new RoutingKey("message-scheduler-topic"),
                                 OnConflict = OnSchedulerConflict.Overwrite
                             })
-                            .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                            .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
                     }
 
                     services.AddHostedService<RunCommandProcessor>();
