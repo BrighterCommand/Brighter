@@ -155,9 +155,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (busConfiguration.ProducerRegistry == null)
                 throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
-            
-            if (busConfiguration.ConnectionProvider == null)
-                throw new ConfigurationException("An external bus must have an ConnectionProvider");
 
             if (busConfiguration.UseRpc && busConfiguration.ReplyQueueSubscriptions == null)
                 throw new ConfigurationException("If the you configure RPC, you must configure the ReplyQueueSubscriptions");
@@ -190,10 +187,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             brighterBuilder.Services.Add(new ServiceDescriptor(boxProviderType, transactionProvider, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), transactionProvider, serviceLifetime));
 
-            //NOTE: It is a little unsatisfactory to hard code our types in here
-            RegisterRelationalProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
-            RegisterDynamoProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
-            
+            if (busConfiguration.ConnectionProvider != null)
+            {
+                //NOTE: It is a little unsatisfactory to hard code our types in here
+                RegisterRelationalProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
+                RegisterDynamoProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
+            }
+
             //we always need an outbox in case of producer callbacks
             var outbox = busConfiguration.Outbox ?? new InMemoryOutbox(TimeProvider.System);
 
@@ -432,8 +432,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private static IAmACommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
-            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            ApplicationLogging.LoggerFactory = loggerFactory;
+            var loggerFactory = provider.GetService<ILoggerFactory>();
+            //if not supplied, use the default logger factory, which has no providers
+            if (loggerFactory != null)
+                ApplicationLogging.LoggerFactory = loggerFactory;
+
 
             var options = provider.GetRequiredService<IBrighterOptions>();
             var subscriberRegistry = provider.GetRequiredService<ServiceCollectionSubscriberRegistry>();
