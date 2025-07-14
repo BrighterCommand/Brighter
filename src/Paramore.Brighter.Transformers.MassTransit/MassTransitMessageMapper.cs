@@ -118,130 +118,82 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
         );
     }
 
-    private Id GetCorrelationId() => GetFromContext(nameof(MessageHeader.CorrelationId), Id.Random)!;
+    private Id GetCorrelationId() => Context.GetIdFromBag(nameof(MessageHeader.CorrelationId), Id.Random)!;
 
-    private Id? GetConversationId()
+    private Id? GetConversationId() => Context.GetIdFromBag(nameof(MessageHeader.CorrelationId));
+    
+    private Uri? GetDestinationAddress()
     {
-        var conversationId = GetFromContext(MassTransitHeaderNames.ConversationId);
-        if (string.IsNullOrEmpty(conversationId))
-        {
-            return null;
-        }
-
-        return Id.Create(conversationId);
-    }
-
-    private string? GetDestinationAddress()
-    {
-        var response = GetFromContext(MassTransitHeaderNames.DestinationAddress);
-        if (!string.IsNullOrEmpty(response))
+        var response = Context.GetUriFromBag(MassTransitHeaderNames.DestinationAddress);
+        if (response != null)
         {
             return response;
         }
 
-        return GetMassTransitAttribute()?.DestinationAddress;
+        var address = GetMassTransitAttribute()?.DestinationAddress;
+        return string.IsNullOrEmpty(address) ? null : new Uri(address, UriKind.RelativeOrAbsolute);
     }
 
     private DateTime? GetExpirationTime()
     {
-        if (Context != null && Context.Bag.TryGetValue(MassTransitHeaderNames.ExpirationTime, out var val))
+        var val = Context.GetFromBag(MassTransitHeaderNames.ExpirationTime);
+        return val switch
         {
-            if (val is DateTimeOffset offset)
-            {
-                return offset.DateTime;
-            }
-
-            if (val is DateTime dateTime)
-            {
-                return dateTime;
-            }
-        }
-
-        return null;
+            DateTimeOffset offset => offset.DateTime,
+            DateTime dateTime => dateTime,
+            _ => null
+        };
     }
 
-    private string? GetFaultAddress()
+    private Uri? GetFaultAddress()
     {
-        var response = GetFromContext(MassTransitHeaderNames.FaultAddress);
-        if (!string.IsNullOrEmpty(response))
+        var response = Context.GetUriFromBag(MassTransitHeaderNames.FaultAddress);
+        if (response != null)
         {
             return response;
         }
 
-        return GetMassTransitAttribute()?.FaultAddress;
+        var address = GetMassTransitAttribute()?.FaultAddress;
+        return string.IsNullOrEmpty(address) ? null : new Uri(address, UriKind.RelativeOrAbsolute);
     }
 
-    private Id? GetInitiatorId()
+    private Id? GetInitiatorId() => Context.GetIdFromBag(MassTransitHeaderNames.InitiatorId);
+
+    private Id? GetRequestId() => Context.GetIdFromBag(MassTransitHeaderNames.RequestId);
+
+    private Uri? GetResponseAddress()
     {
-        var initiatorId = GetFromContext(MassTransitHeaderNames.InitiatorId);
-        if (string.IsNullOrEmpty(initiatorId))
-        {
-            return null;
-        }
-
-        return Id.Create(initiatorId);
-    }
-
-    private Id? GetRequestId()
-    {
-        var requestId = GetFromContext(MassTransitHeaderNames.RequestId);
-        if (string.IsNullOrEmpty(requestId))
-        {
-            return null;
-        }
-
-        return Id.Create(requestId);
-    }
-
-    private string? GetResponseAddress()
-    {
-        var response = GetFromContext(MassTransitHeaderNames.ResponseAddress);
-        if (!string.IsNullOrEmpty(response))
+        var response = Context.GetUriFromBag(MassTransitHeaderNames.ResponseAddress);
+        if (response != null)
         {
             return response;
         }
 
-        return GetMassTransitAttribute()?.ResponseAddress;
+        var address = GetMassTransitAttribute()?.ResponseAddress;
+        return string.IsNullOrEmpty(address) ? null : new Uri(address, UriKind.RelativeOrAbsolute);
     }
 
-    private string? GetSourceAddress()
+    private Uri? GetSourceAddress()
     {
-        var source = GetFromContext(MassTransitHeaderNames.SourceAddress);
-        if (!string.IsNullOrEmpty(source))
+        var source = Context.GetUriFromBag(MassTransitHeaderNames.SourceAddress);
+        if (source != null)
         {
             return source;
         }
-
-        return GetMassTransitAttribute()?.SourceAddress;
+        
+        var address = GetMassTransitAttribute()?.SourceAddress;
+        return string.IsNullOrEmpty(address) ? null : new Uri(address, UriKind.RelativeOrAbsolute);
     }
-
 
     private string[]? GetMessageType()
     {
-        if (Context != null && Context.Bag.TryGetValue(MassTransitHeaderNames.MessageType, out var obj))
+        var obj = Context.GetFromBag(MassTransitHeaderNames.MessageType);
+        return obj switch
         {
-            if (obj is string type && !string.IsNullOrEmpty(type))
-            {
-                return [type];
-            }
-
-            if (obj is IEnumerable<string> types)
-            {
-                return types.ToArray();
-            }
-        }
-
-        return GetMassTransitAttribute()?.MessageType;
-    }
-
-    private string? GetFromContext(string headerName, string? defaultValue = null)
-    {
-        if (Context != null && Context.Bag.TryGetValue(headerName, out var val))
-        {
-            return val?.ToString() ?? defaultValue;
-        }
-
-        return defaultValue;
+            string type when !string.IsNullOrEmpty(type) => [type],
+            IEnumerable<string> types => types.ToArray(),
+            _ => GetMassTransitAttribute()?.MessageType
+        };
     }
 
     /// <inheritdoc />
@@ -271,5 +223,4 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
             return attribute;
         });
     }
-
 }

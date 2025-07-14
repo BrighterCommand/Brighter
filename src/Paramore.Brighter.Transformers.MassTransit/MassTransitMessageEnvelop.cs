@@ -28,16 +28,16 @@ public sealed class MassTransitMessageEnvelop<T>
     public Id? InitiatorId { get; set; }
 
     /// <summary>Source address where the message originated</summary>
-    public string? SourceAddress { get; set; }
+    public Uri? SourceAddress { get; set; }
 
     /// <summary>Destination address for the message</summary>
-    public string? DestinationAddress { get; set; }
+    public Uri? DestinationAddress { get; set; }
 
     /// <summary>Address where responses should be sent</summary>
-    public string? ResponseAddress { get; set; }
+    public Uri? ResponseAddress { get; set; }
 
     /// <summary>Address where faults should be reported</summary>
-    public string? FaultAddress { get; set; }
+    public Uri? FaultAddress { get; set; }
 
     /// <summary>Message type URIs supported by MassTransit</summary>
     public string[]? MessageType { get; set; }

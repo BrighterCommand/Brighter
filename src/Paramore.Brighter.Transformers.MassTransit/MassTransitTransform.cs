@@ -42,10 +42,10 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
     private static readonly HostInfo?  s_hostInfo = HostInfo.Create();
     private static readonly ContentType s_massTransitContentType = new("application/vnd.masstransit+json");
 
-    private string? _destinationAddress; 
-    private string? _faultAddress;
-    private string? _responseAddress;
-    private string? _sourceAddress;
+    private Uri? _destinationAddress; 
+    private Uri? _faultAddress;
+    private Uri? _responseAddress;
+    private Uri? _sourceAddress;
     private string[]? _messageType;
     
     /// <inheritdoc cref="IAmAMessageTransform.Context"/>
@@ -56,22 +56,22 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
     {
         if (initializerList[0] is string destinationAddress)
         {
-            _destinationAddress = destinationAddress;
+            _destinationAddress = new Uri(destinationAddress, UriKind.RelativeOrAbsolute);
         }
 
         if (initializerList[1] is string faultAddress)
         {
-            _faultAddress = faultAddress;
+            _faultAddress = new Uri(faultAddress, UriKind.RelativeOrAbsolute);
         }
         
         if (initializerList[2] is string responseAddress)
         {
-            _responseAddress = responseAddress;
+            _responseAddress = new Uri(responseAddress, UriKind.RelativeOrAbsolute);
         }
 
         if (initializerList[3] is string sourceAddress)
         {
-            _sourceAddress = sourceAddress;
+            _sourceAddress = new Uri(sourceAddress, UriKind.RelativeOrAbsolute);
         }
 
         if (initializerList[4] is string[] messageType)
@@ -126,143 +126,61 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
         return message;
     }
 
-    private Id? GetConversationId()
-    {
-        var conversationId = Get(MassTransitHeaderNames.ConversationId);
-        if (string.IsNullOrEmpty(conversationId))
-        {
-            return null;
-        }
+    private Id? GetConversationId() => Context.GetIdFromBag(MassTransitHeaderNames.ConversationId);
 
-        return Id.Create(conversationId);
-    }
+    private Uri? GetDestinationAddress() => _destinationAddress ?? Context.GetUriFromBag(MassTransitHeaderNames.DestinationAddress);
 
-    private string? GetDestinationAddress()
-    {
-        if(!string.IsNullOrEmpty(_destinationAddress)) 
-        { 
-            return _destinationAddress;
-        }
-        
-        return Get(MassTransitHeaderNames.DestinationAddress);
-    }
-    
     private DateTime? GetExpirationTime()
     {
-        if (Context != null && Context.Bag.TryGetValue(MassTransitHeaderNames.ExpirationTime, out var val))
+        var val = Context.GetFromBag(MassTransitHeaderNames.ExpirationTime);
+        return val switch
         {
-            if (val is DateTimeOffset offset)
-            {
-                return offset.DateTime;
-            }
-
-            if (val is DateTime dateTime)
-            {
-                return dateTime;
-            }
-        }
-        
-        return null;
+            DateTimeOffset offset => offset.DateTime,
+            DateTime dateTime => dateTime,
+            _ => null
+        };
     }
-    private string? GetFaultAddress()
-    {
-        if (!string.IsNullOrEmpty(_faultAddress)) 
-        { 
-            return _faultAddress;
-        }
-        
-        return Get(MassTransitHeaderNames.FaultAddress);
-    }
-    private Id? GetInitiatorId()
-    {
-        var initiatorId =  Get(MassTransitHeaderNames.InitiatorId);
-        if (string.IsNullOrEmpty(initiatorId))
-        {
-            return null;
-        }
+    private Uri? GetFaultAddress() => _faultAddress ?? Context.GetUriFromBag(MassTransitHeaderNames.FaultAddress);
 
-        return Id.Create(initiatorId);
-    }
+    private Id? GetInitiatorId() => Context.GetIdFromBag(MassTransitHeaderNames.InitiatorId);
 
-    private Id? GetRequestId()
+    private Id? GetRequestId() => Context.GetIdFromBag(MassTransitHeaderNames.RequestId);
+
+    private Uri? GetResponseAddress(Message message)
     {
-        var requestId = Get(MassTransitHeaderNames.RequestId);
-        if (string.IsNullOrEmpty(requestId))
-        {
-            return null;
-        }
-
-        return Id.Create(requestId);
-    }
-
-    private string? GetResponseAddress(Message message)
-    {
-        if (!string.IsNullOrEmpty(_responseAddress)) 
+        if (_responseAddress != null) 
         { 
             return _responseAddress;
         }
         
-        if (message.Header.ReplyTo != null) 
+        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo)) 
         { 
-            return message.Header.ReplyTo!; 
+            return new Uri(message.Header.ReplyTo!, UriKind.RelativeOrAbsolute); 
         }
         
-        return Get(MassTransitHeaderNames.ResponseAddress);
+        return Context.GetUriFromBag(MassTransitHeaderNames.ResponseAddress);
     }
     
-    private string? GetSourceAddress()
-    {
-        if (!string.IsNullOrEmpty(_sourceAddress)) 
-        { 
-            return _sourceAddress;
-        }
-        
-        return Get(MassTransitHeaderNames.SourceAddress);
-    }
-    
+    private Uri? GetSourceAddress() => _sourceAddress ?? Context.GetUriFromBag(MassTransitHeaderNames.SourceAddress);
+
     private string[]? GetMessageType()
     {
         if (_messageType is { Length: > 0 })
         {
             return _messageType;
         }
-        
-        if (Context != null && Context.Bag.TryGetValue(MassTransitHeaderNames.MessageType, out var obj))
+
+        var obj = Context.GetFromBag(MassTransitHeaderNames.MessageType);
+        return obj switch
         {
-            if (obj is string type && !string.IsNullOrEmpty(type))
-            {
-                return [type];
-            }
-
-            if (obj is IEnumerable<string> types)
-            {
-                return types.ToArray();
-            }
-
-        }
-        
-        return null;
+            string type when !string.IsNullOrEmpty(type) => [type],
+            IEnumerable<string> types => types.ToArray(),
+            _ => null
+        };
     }
 
-    private static DateTime GetSentTime(Message message)
-    {
-        if (message.Header.TimeStamp == DateTimeOffset.MinValue)
-        {
-            return DateTime.UtcNow;
-        }
+    private static DateTime GetSentTime(Message message) => message.Header.TimeStamp == DateTimeOffset.MinValue ? DateTime.UtcNow : message.Header.TimeStamp.DateTime;
 
-        return message.Header.TimeStamp.DateTime;
-    }
-
-    private string? Get(string headerName)
-    {
-        if (Context != null && Context.Bag.TryGetValue(headerName, out var val))
-        {
-            return val?.ToString();
-        }
-
-        return null;
-    }
 
     /// <inheritdoc />
     public Message Unwrap(Message message)

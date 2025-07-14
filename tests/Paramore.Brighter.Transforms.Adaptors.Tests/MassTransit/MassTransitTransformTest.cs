@@ -86,13 +86,13 @@ public class MassTransitTransformTest
             JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(wrap.Body.Bytes,
                 JsonSerialisationOptions.Options);
         Assert.NotNull(envelop);
-        Assert.Equal(conversationId, envelop.ConversationId);
-        Assert.Equal(destinationAddress, envelop.DestinationAddress);
-        Assert.Equal(faultAddress, envelop.FaultAddress);
+        Assert.Equal(conversationId, envelop.ConversationId?.Value);
+        Assert.Equal(destinationAddress, envelop.DestinationAddress?.ToString());
+        Assert.Equal(faultAddress, envelop.FaultAddress?.ToString());
         Assert.Equal(messageType, envelop.MessageType);
-        Assert.Equal(requestId, envelop.RequestId);
-        Assert.Equal(responseAddress, envelop.ResponseAddress);
-        Assert.Equal(sourceAddress, envelop.SourceAddress);
+        Assert.Equal(requestId, envelop.RequestId?.Value);
+        Assert.Equal(responseAddress, envelop.ResponseAddress?.ToString());
+        Assert.Equal(sourceAddress, envelop.SourceAddress?.ToString());
         Assert.Equal(expirationTime, envelop.ExpirationTime);
         Assert.Equal(message.Header.MessageId, envelop.MessageId);
         Assert.Equal(message.Header.CorrelationId, envelop.CorrelationId);
@@ -140,13 +140,13 @@ public class MassTransitTransformTest
             JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(wrap.Body.Bytes,
                 JsonSerialisationOptions.Options);
         Assert.NotNull(envelop);
-        Assert.Equal(conversationId, envelop.ConversationId);
-        Assert.Equal(destinationAddress, envelop.DestinationAddress);
-        Assert.Equal(faultAddress, envelop.FaultAddress);
+        Assert.Equal(conversationId, envelop.ConversationId?.Value);
+        Assert.Equal(destinationAddress, envelop.DestinationAddress?.ToString());
+        Assert.Equal(faultAddress, envelop.FaultAddress?.ToString());
         Assert.Equal(messageType, envelop.MessageType);
-        Assert.Equal(requestId, envelop.RequestId);
-        Assert.Equal(responseAddress, envelop.ResponseAddress);
-        Assert.Equal(sourceAddress, envelop.SourceAddress);
+        Assert.Equal(requestId, envelop.RequestId?.Value);
+        Assert.Equal(responseAddress, envelop.ResponseAddress?.ToString());
+        Assert.Equal(sourceAddress, envelop.SourceAddress?.ToString());
         Assert.Equal(expirationTime, envelop.ExpirationTime);
         Assert.Equal(message.Header.MessageId, envelop.MessageId);
         Assert.Equal(message.Header.CorrelationId, envelop.CorrelationId);
@@ -156,17 +156,6 @@ public class MassTransitTransformTest
     [Fact]
     public void unwrap()
     {
-        var data = new MassTransitMessageEnvelop<SomeEvent>
-        { 
-            MessageId = Id.Random,
-            CorrelationId = Id.Random,
-            SentTime = DateTime.UtcNow,
-            Message = new SomeEvent
-            {
-                Name = $"Name{Guid.NewGuid().ToString()}",
-            }
-        };
-
         var message = new Message(
             new MessageHeader
             {
@@ -209,13 +198,13 @@ public class MassTransitTransformTest
             JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(wrap.Body.Bytes,
                 JsonSerialisationOptions.Options);
         Assert.NotNull(envelop);
-        Assert.Equal(conversationId, envelop.ConversationId);
-        Assert.Equal(destinationAddress, envelop.DestinationAddress);
-        Assert.Equal(faultAddress, envelop.FaultAddress);
+        Assert.Equal(conversationId, envelop.ConversationId?.Value);
+        Assert.Equal(destinationAddress, envelop.DestinationAddress?.ToString());
+        Assert.Equal(faultAddress, envelop.FaultAddress?.ToString());
         Assert.Equal(messageType, envelop.MessageType);
-        Assert.Equal(requestId, envelop.RequestId);
-        Assert.Equal(responseAddress, envelop.ResponseAddress);
-        Assert.Equal(sourceAddress, envelop.SourceAddress);
+        Assert.Equal(requestId, envelop.RequestId?.Value);
+        Assert.Equal(responseAddress, envelop.ResponseAddress?.ToString());
+        Assert.Equal(sourceAddress, envelop.SourceAddress?.ToString());
         Assert.Equal(expirationTime, envelop.ExpirationTime);
         Assert.Equal(message.Header.MessageId, envelop.MessageId);
         Assert.Equal(message.Header.CorrelationId, envelop.CorrelationId);
