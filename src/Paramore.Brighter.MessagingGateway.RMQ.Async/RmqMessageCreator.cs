@@ -296,7 +296,7 @@ internal sealed partial class RmqMessageCreator
     {
         if (string.IsNullOrEmpty(messageId))
         {
-            var newMessageId = Id.Create(null);
+            var newMessageId = Id.Random;
             Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
             return new HeaderResult<Id?>(newMessageId, true);
         }
