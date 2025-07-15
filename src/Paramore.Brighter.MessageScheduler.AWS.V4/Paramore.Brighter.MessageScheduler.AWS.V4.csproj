@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.MessagingGateway.AWS.V4\Paramore.Brighter.MessagingGateway.AWS.V4.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.IdentityManagement" VersionOverride="4.0.1.9" />
+    <PackageReference Include="AWSSDK.Scheduler" VersionOverride="4.0.0.11" />
+  </ItemGroup>
+</Project>
