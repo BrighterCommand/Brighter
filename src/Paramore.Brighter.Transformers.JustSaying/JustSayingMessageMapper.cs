@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Transformers.JustSaying.Extensions;
+using Paramore.Brighter.Transformers.JustSaying.JsonConverters;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
 
@@ -23,6 +25,14 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
 {
     // ReSharper disable once StaticMemberInGenericType
     private static readonly ContentType s_justSaying = new("application/json");
+
+    /// <summary>
+    /// Initialize <see cref="JustSayingMessageMapper{TMessage}"/>
+    /// </summary>
+    public JustSayingMessageMapper()
+    {
+        RegisterConverters.Register();
+    }
     
     /// <inheritdoc cref="IAmAMessageMapper{TRequest}.Context" />
     public IRequestContext? Context { get; set; }
@@ -55,12 +65,12 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     private Message JustSayingToMessage(TMessage request, MessageType messageType, Publication publication)
     {
         var justSaying = (IJustSayingRequest)request;
-        justSaying.Id = GetId();
+        justSaying.Id = GetId(justSaying.Id);
         justSaying.Conversation = GetCorrelationId(justSaying.Conversation);
-        justSaying.RaisingComponent = GetRaisingComponent(justSaying.RaisingComponent);
+        justSaying.RaisingComponent = GetRaisingComponent(publication, justSaying.RaisingComponent);
         justSaying.Tenant = GetTenant(justSaying.Tenant);
         justSaying.Version = GetVersion(justSaying.Version);
-        justSaying.TimeStamp = GetTimeStamp();
+        justSaying.TimeStamp = GetTimeStamp(justSaying.TimeStamp);
         
         return new Message(
             new MessageHeader(
@@ -75,80 +85,21 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options),
                 s_justSaying));
 
-        Id GetId()
-        {
-            return Guid.TryParse(justSaying.Id, out _) ? Id.Random : justSaying.Id;
-        }
         
-        Id GetCorrelationId(Id? currentValue)
-        {
-            if (!Id.IsNullOrEmpty(currentValue))
-            {
-                return currentValue!;
-            }
-
-            return GetFromContext(nameof(MessageHeader.CorrelationId), Id.Random)!;
-        }
-        
-        string GetRaisingComponent(string? currentValue)
-        {
-            if (!string.IsNullOrEmpty(currentValue))
-            {
-                return currentValue!;
-            }
-
-            var context = GetFromContext(JustSayingAttributesName.RaisingComponent);
-            if (!string.IsNullOrEmpty(context))
-            {
-                return context!;
-            }
-
-            return publication.Source.ToString();
-        }
-        
-        string? GetVersion(string? currentValue)
-        {
-            if (!string.IsNullOrEmpty(currentValue))
-            {
-                return currentValue!;
-            }
-            
-            return GetFromContext(JustSayingAttributesName.Version);
-        }
-        
-        string? GetTenant(string? currentValue)
-        {
-           if (!string.IsNullOrEmpty(currentValue))
-           {
-               return currentValue!;
-           }
-            
-           return GetFromContext(JustSayingAttributesName.Tenant);
-        }
-
-        DateTimeOffset GetTimeStamp()
-        {
-            if (justSaying.TimeStamp == DateTimeOffset.MinValue)
-            {
-                return DateTimeOffset.UtcNow;
-            }
-            
-            return justSaying.TimeStamp;
-        }
     }
 
     private Message GenericToMessage(TMessage request, MessageType messageType, Publication publication)
     {
         var doc = JsonSerializer.SerializeToNode(request, JsonSerialisationOptions.Options)!;
-        var correlationId = GetCorrelationId(); 
-        var messageId = GetId();
-        var timestamp = GetTimeStamp();
+        var messageId = GetId(doc.GetId(nameof(IJustSayingRequest.Id)));
+        var correlationId = GetCorrelationId(doc.GetId(nameof(IJustSayingRequest.Conversation))); 
+        var timestamp = GetTimeStamp(doc.GetDateTimeOffset(nameof(IJustSayingRequest.TimeStamp)));
         
-        doc[nameof(IJustSayingRequest.Id)] = messageId;
-        doc[nameof(IJustSayingRequest.Conversation)] = correlationId;
-        doc[nameof(IJustSayingRequest.RaisingComponent)] = GetRaisingComponent();
-        doc[nameof(IJustSayingRequest.Tenant)] = GetTenant();
-        doc[nameof(IJustSayingRequest.Version)] = GetVersion();
+        doc[nameof(IJustSayingRequest.Id)] = messageId.Value;
+        doc[nameof(IJustSayingRequest.Conversation)] = correlationId.Value;
+        doc[nameof(IJustSayingRequest.RaisingComponent)] = GetRaisingComponent(publication, doc.GetString(nameof(IJustSayingRequest.RaisingComponent)));
+        doc[nameof(IJustSayingRequest.Tenant)] = GetTenant(doc.GetString(nameof(IJustSayingRequest.Tenant), string.Empty)!)?.Value;
+        doc[nameof(IJustSayingRequest.Version)] = GetVersion(doc.GetString(nameof(IJustSayingRequest.Version)));
         doc[nameof(IJustSayingRequest.TimeStamp)] = timestamp; 
         
         return new Message(
@@ -163,97 +114,11 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
             new MessageBody(
                 doc.ToJsonString(JsonSerialisationOptions.Options),
                 s_justSaying));
-
-        string GetId()
-        {
-            var node = doc[nameof(IJustSayingRequest.Id)];
-            if (node == null 
-                || node.GetValueKind() != JsonValueKind.String 
-                || !Guid.TryParse(node.GetValue<string>(), out _))
-            {
-                return Guid.NewGuid().ToString();
-            }
-            
-            return node.GetValue<string>();
-        }
-        
-        string GetCorrelationId()
-        {
-            var node = doc[nameof(IJustSayingRequest.Conversation)];
-            if (node != null 
-                && node.GetValueKind() == JsonValueKind.String
-                && !string.IsNullOrEmpty(node.GetValue<string>()))
-            {
-                return node.GetValue<string>();
-            }
-
-            return GetFromContext(nameof(MessageHeader.CorrelationId), Guid.NewGuid().ToString())!;
-        }
-        
-        string GetRaisingComponent()
-        {
-            var node = doc[nameof(IJustSayingRequest.RaisingComponent)];
-            if (node != null 
-                && node.GetValueKind() == JsonValueKind.String 
-                && !string.IsNullOrEmpty(node.GetValue<string>()))
-            {
-                return node.GetValue<string>();
-            }
-
-            var context =  GetFromContext(JustSayingAttributesName.RaisingComponent);
-            if (!string.IsNullOrEmpty(context))
-            {
-                return context!;
-            }
-
-            return publication.Source.ToString();
-        }
-        
-        
-        string? GetTenant()
-        {
-            var node = doc[nameof(IJustSayingRequest.Tenant)];
-            if (node != null 
-                && node.GetValueKind() == JsonValueKind.String 
-                && !string.IsNullOrEmpty(node.GetValue<string>()))
-            {
-                return node.GetValue<string>();
-            }
-            
-            return GetFromContext(JustSayingAttributesName.Tenant);
-        }
-        
-        string? GetVersion()
-        {
-            var node = doc[nameof(IJustSayingRequest.Version)];
-            if (node != null 
-                && node.GetValueKind() == JsonValueKind.String 
-                && !string.IsNullOrEmpty(node.GetValue<string>()))
-            {
-                return node.GetValue<string>();
-            }
-            
-            return GetFromContext(JustSayingAttributesName.Version);
-        }
-        
-        DateTimeOffset GetTimeStamp()
-        {
-            var node = doc[nameof(IJustSayingRequest.TimeStamp)];
-            if (node != null
-                && node.GetValueKind() == JsonValueKind.String 
-                && DateTimeOffset.TryParse(node.GetValue<string>(), out var ts)
-                && ts != DateTimeOffset.MinValue)
-            {
-                return ts;
-            }
-            
-            return DateTimeOffset.UtcNow;
-        }
     }
     
     private string GetSubject(Publication publication)
     {
-        var subject = GetFromContext(JustSayingAttributesName.Subject);
+        var subject = Context.GetFromBag<string>(JustSayingAttributesName.Subject);
         if (!string.IsNullOrEmpty(subject))
         {
             return subject!;
@@ -272,16 +137,71 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
         return typeof(TMessage).Name;
     }
     
-    private string? GetFromContext(string headerName, string? defaultValue = null)
+    private string GetRaisingComponent(Publication publication, string? raisingComponent)
     {
-        if (Context != null 
-            && Context.Bag.TryGetValue(headerName, out var obj) 
-            && obj is string data && !string.IsNullOrEmpty(data))
+        if (!string.IsNullOrEmpty(raisingComponent))
         {
-            return data;
+            return raisingComponent!;
         }
 
-        return defaultValue;
+        raisingComponent = Context.GetFromBag<string>(JustSayingAttributesName.RaisingComponent);
+        if (!string.IsNullOrEmpty(raisingComponent))
+        {
+            return raisingComponent!;
+        }
+
+        return publication.Source.ToString();
+    }
+    
+    private Id GetId(Id? id)
+    {
+        return Guid.TryParse(id?.Value, out _) ? id! : Id.Random;
+    }
+    
+    private Id GetCorrelationId(Id? currentValue)
+    {
+        if (!Id.IsNullOrEmpty(currentValue))
+        {
+            return currentValue;
+        }
+
+        return Context.GetIdFromBag(JustSayingAttributesName.Conversation, Id.Random)!;
+    }
+    
+    private Tenant? GetTenant(Tenant? currentValue)
+    {
+        if (!Tenant.IsNullOrEmpty(currentValue))
+        {
+            return currentValue;
+        }
+            
+        var val = Context.GetFromBag(JustSayingAttributesName.Tenant);
+        return val switch
+        {
+            string valString when !string.IsNullOrEmpty(valString) => new Tenant(valString),
+            Tenant tenant when Tenant.IsNullOrEmpty(tenant) => tenant,
+            _ => (Tenant?)null
+        };
+    }
+    
+    private string? GetVersion(string? currentValue)
+    {
+        if (!string.IsNullOrEmpty(currentValue))
+        {
+            return currentValue!;
+        }
+            
+        return Context.GetFromBag<string>(JustSayingAttributesName.Version);
+    }
+    
+    private static DateTimeOffset GetTimeStamp(DateTimeOffset currentValue)
+    {
+        if (currentValue == DateTimeOffset.MinValue)
+        {
+            return DateTimeOffset.UtcNow;
+        }
+            
+        return currentValue;
     }
 
     /// <inheritdoc />

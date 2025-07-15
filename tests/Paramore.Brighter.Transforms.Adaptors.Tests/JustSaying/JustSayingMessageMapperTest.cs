@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Paramore.Brighter.JsonConverters;
@@ -51,6 +52,7 @@ public class JustSayingMessageMapperTest
             Version = $"Version{Guid.NewGuid().ToString()}",
             TimeStamp = DateTimeOffset.UtcNow,
             Name = $"Name{Guid.NewGuid().ToString()}",
+            SourceIp = IPAddress.Loopback
         };
         
         var message = mapper.MapToMessage(@event, new Publication());
@@ -64,6 +66,7 @@ public class JustSayingMessageMapperTest
         Assert.Equal(@event.Version, obj.Version);
         Assert.Equal(@event.TimeStamp, obj.TimeStamp);
         Assert.Equal(@event.Name, obj.Name);
+        Assert.Equal(IPAddress.Loopback, obj.SourceIp);
         Assert.Equal(MessageType.MT_EVENT, message.Header.MessageType);
     }
     

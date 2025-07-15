@@ -1,4 +1,5 @@
 ﻿using System;
+using Paramore.Brighter.Transformers.JustSaying.JsonConverters;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
 
@@ -29,6 +30,7 @@ public class JustSayingAttribute : WrapWithAttribute
     /// </param>
     public JustSayingAttribute(int step) : base(step)
     {
+        RegisterConverters.Register();
     }
     
     /// <summary>

@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Net;
+using System.Text.Json.Serialization;
+using Paramore.Brighter.Transformers.JustSaying.JsonConverters;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
 
@@ -23,11 +26,7 @@ public class JustSayingEvent : Event, IJustSayingRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="JustSayingEvent"/> class. 
     /// </summary>
-#if NET9_0_OR_GREATER
-    public JustSayingEvent() : this(Guid.CreateVersion7())
-#else
-    public JustSayingEvent() : this(Guid.NewGuid())
-#endif
+    public JustSayingEvent() : this(Id.Random)
     {
         
     }
@@ -58,10 +57,12 @@ public class JustSayingEvent : Event, IJustSayingRequest
     public string? Version { get; set; }
     
     /// <inheritdoc />
-    public string? SourceIp { get; set; }
+    [JsonConverter(typeof(IpAddressConverter))]
+    public IPAddress? SourceIp { get; set; }
     
     /// <inheritdoc />
-    public string? Tenant { get; set; }
+    [JsonConverter(typeof(TenantConverter))]
+    public Tenant? Tenant { get; set; }
     
     /// <inheritdoc />
     public Id? Conversation { get; set; }

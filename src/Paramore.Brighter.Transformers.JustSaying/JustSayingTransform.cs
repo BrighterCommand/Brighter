@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Transformers.JustSaying.Extensions;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
 
@@ -133,21 +134,20 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
 
     private string GetSubject(Message message, Publication publication)
     {
-        if (!string.IsNullOrEmpty(_subject))
-        {
-            return _subject!;
-        }
-
         if (!string.IsNullOrEmpty(message.Header.Subject))
         {
             return message.Header.Subject!;
         }
 
-        if (Context != null
-            && Context.Bag.TryGetValue(JustSayingAttributesName.Subject, out var obj)
-            && obj is string subject && !string.IsNullOrEmpty(subject))
+        var subject = Context.GetFromBag<string>(JustSayingAttributesName.Subject);
+        if (!string.IsNullOrEmpty(subject))
         {
-            return subject;
+            return subject!;
+        }
+        
+        if (!string.IsNullOrEmpty(_subject))
+        {
+            return _subject!;
         }
 
         if (!string.IsNullOrEmpty(publication.Subject))
@@ -165,10 +165,8 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
 
     private static void SetId(JsonNode node, Message message)
     {
-        var jsonNode = node[nameof(IJustSayingRequest.Id)];
-        if (jsonNode != null
-            && jsonNode.GetValueKind() == JsonValueKind.String
-            && Guid.TryParse(jsonNode.GetValue<string>(), out _))
+        var guid = node.GetGuid(nameof(IJustSayingRequest.Id));
+        if (guid != Guid.Empty)
         {
             return;
         }
@@ -182,134 +180,108 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
         node[nameof(IJustSayingRequest.Id)] = id.Value;
     }
     
-    private static void SetTimeStamp(JsonNode node, Message message)
+    private void SetTimeStamp(JsonNode node, Message message)
     {
-        var jsonNode = node[nameof(IJustSayingRequest.TimeStamp)];
-        if (jsonNode != null
-            && jsonNode.GetValueKind() == JsonValueKind.String
-            && DateTimeOffset.TryParse(jsonNode.GetValue<string>(), out _))
-        {
-            return;
-        }
-
-        var timestamp = message.Header.TimeStamp;
-        if (timestamp == DateTimeOffset.MinValue)
-        {
-            timestamp = DateTimeOffset.UtcNow;
-        }
-        
-        node[nameof(IJustSayingRequest.TimeStamp)] = timestamp;
+        node[nameof(IJustSayingRequest.TimeStamp)] = GetTimeStamp(message, node.GetDateTimeOffset(nameof(IJustSayingRequest.TimeStamp)));
     }
     
-    private static void SetConversation(JsonNode node, Message message)
+    private static DateTime GetTimeStamp(Message message, DateTimeOffset timestamp)
     {
-        var jsonNode = node[nameof(IJustSayingRequest.Conversation)];
-        if (jsonNode != null
-            && jsonNode.GetValueKind() == JsonValueKind.String
-            && Guid.TryParse(jsonNode.GetValue<string>(), out _))
+        if (timestamp != DateTimeOffset.MinValue)
         {
-            return;
+            return timestamp.DateTime;
         }
 
-        var correlationId = message.Header.CorrelationId;
-        if (Id.IsNullOrEmpty(correlationId))
+        if (message.Header.TimeStamp != DateTimeOffset.MinValue)
         {
-            correlationId = Id.Random;
+            return message.Header.TimeStamp.DateTime;
         }
-        
-        node[nameof(IJustSayingRequest.Conversation)] = correlationId.Value;
+
+        return DateTime.UtcNow;
     }
     
-
-    private void SetTenant(JsonNode node)
+    private void SetConversation(JsonNode node, Message message)
     {
-        var jsonNode = node[nameof(IJustSayingRequest.Tenant)];
-        if (jsonNode != null && jsonNode.GetValueKind() == JsonValueKind.String)
-        {
-            return;
-        }
-
-        node[nameof(IJustSayingRequest.Tenant)] =  GetTenant();
-        return;
-            
-        string? GetTenant()
-        {
-            if (!string.IsNullOrEmpty(_tenant))
-            {
-                return _tenant;
-            }
-
-            if (Context != null 
-                && Context.Bag.TryGetValue(JustSayingAttributesName.Tenant, out var obj) 
-                && obj is string tenant && !string.IsNullOrEmpty(tenant))
-            {
-                return tenant;
-            }
-
-            return null;
-        }
+        node[nameof(IJustSayingRequest.Conversation)] = GetConversation(message, node.GetId(nameof(IJustSayingRequest.Conversation))).Value;
     }
-
-    private void SetRaisingComponent(JsonNode node, Message message, Publication publication)
+    
+    private Id GetConversation(Message message, Id? conversation)
     {
-        var jsonNode = node[nameof(IJustSayingRequest.RaisingComponent)];
-        if (jsonNode != null && jsonNode.GetValueKind() == JsonValueKind.String)
+        if (!Id.IsNullOrEmpty(conversation))
         {
-            return;
+            return conversation;
         }
 
-        node[nameof(IJustSayingRequest.RaisingComponent)] = GetRaisingComponent();
-        return;
-
-        string GetRaisingComponent()
+        if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
         {
-            if (!string.IsNullOrEmpty(_raisingComponent))
-            {
-                return _raisingComponent!;
-            }
-
-            if (Context != null
-                && Context.Bag.TryGetValue(JustSayingAttributesName.RaisingComponent, out var obj)
-                && obj is string component && !string.IsNullOrEmpty(component))
-            {
-                return component;
-            }
-
-            if (message.Header.Source.ToString() != MessageHeader.DefaultSource)
-            {
-                return message.Header.Source.ToString();
-            }
-
-            return publication.Source.ToString();
-        }
-    }
-
-    private void SetVersion(JsonNode node)
-    {
-        var jsonNode = node[nameof(IJustSayingRequest.Version)];
-        if (jsonNode != null && jsonNode.GetValueKind() == JsonValueKind.String)
-        {
-            return;
+            return message.Header.CorrelationId;
         }
         
-        node[nameof(IJustSayingRequest.Version)] = GetVersion();
-        return;
-        
-        string GetVersion()
+        return Context.GetIdFromBag(JustSayingAttributesName.Conversation) ?? Id.Random;
+    }
+
+    private void SetTenant(JsonNode node) => node[nameof(IJustSayingRequest.Tenant)] =  GetTenant(node.GetString(nameof(IJustSayingRequest.Tenant)));
+
+    private string? GetTenant(string? tenant)
+    {
+        if (!string.IsNullOrEmpty(tenant))
         {
-            if (!string.IsNullOrEmpty(_version))
-            {
-                return _version!;
-            }
-
-            if (Context != null
-                && Context.Bag.TryGetValue(JustSayingAttributesName.Version, out var obj)
-                && obj is string version && !string.IsNullOrEmpty(version))
-            {
-                return version;
-            }
-
-            return "1.0.0";
+            return tenant;
         }
+        
+        if (!string.IsNullOrEmpty(_tenant))
+        {
+            return _tenant;
+        }
+
+        return Context.GetFromBag<string>(JustSayingAttributesName.Tenant);
+    }
+
+    private void SetRaisingComponent(JsonNode node, Message message, Publication publication) =>
+        node[nameof(IJustSayingRequest.RaisingComponent)] = GetRaisingComponent(message, publication, 
+            node.GetString(nameof(IJustSayingRequest.RaisingComponent)));
+
+    private static readonly Uri s_defaultSource = new Uri(MessageHeader.DefaultSource);
+    private string GetRaisingComponent(Message message, Publication publication, string? raisingComponent)
+    {
+        if (!string.IsNullOrEmpty(raisingComponent))
+        {
+            return raisingComponent!;
+        }
+        
+        if (message.Header.Source != s_defaultSource)
+        {
+            return message.Header.Source.ToString();
+        }
+        
+        raisingComponent = Context.GetFromBag<string>(JustSayingAttributesName.RaisingComponent);
+        if (!string.IsNullOrEmpty(raisingComponent))
+        {
+            return raisingComponent!;
+        }
+        
+        if (!string.IsNullOrEmpty(_raisingComponent))
+        {
+            return _raisingComponent!;
+        }
+
+        return publication.Source.ToString();
+    }
+
+    private void SetVersion(JsonNode node) => node[nameof(IJustSayingRequest.Version)] = GetVersion(node.GetString(nameof(IJustSayingRequest.Version)));
+
+    private string? GetVersion(string? version)
+    {
+        if (!string.IsNullOrEmpty(version))
+        {
+            return version!;
+        }
+
+        if (!string.IsNullOrEmpty(_version))
+        {
+            return _version;
+        }
+
+        return Context.GetFromBag<string>(JustSayingAttributesName.Version);
     }
 }

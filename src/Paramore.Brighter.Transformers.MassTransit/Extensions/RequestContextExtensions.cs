@@ -13,17 +13,7 @@ internal static class RequestContextExtensions
 
         return defaultValue;
     }
-    
-    public static T? GetFromBag<T>(this IRequestContext? context, string key, T? defaultValue = default)
-    {
-        if (context != null && context.Bag.TryGetValue(key, out var val) && val is T value)
-        {
-            return value;
-        }
 
-        return defaultValue;
-    }
-    
     public static Uri? GetUriFromBag(this IRequestContext? context, string key)
     {
         if (context == null || !context.Bag.TryGetValue(key, out var val))

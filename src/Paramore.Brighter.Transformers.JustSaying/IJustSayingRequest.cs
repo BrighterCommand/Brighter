@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
 
@@ -27,12 +28,12 @@ public interface IJustSayingRequest : IRequest
     /// <summary>
     /// The source IP
     /// </summary>
-    string? SourceIp { get; set; }
+    IPAddress? SourceIp { get; set; }
 
     /// <summary>
     /// The message tenant.
     /// </summary>
-    string? Tenant { get; set; }
+    Tenant? Tenant { get; set; }
 
     /// <summary>
     /// The conversation id.

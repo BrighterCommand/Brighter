@@ -35,4 +35,10 @@ public static class JustSayingAttributesName
     /// Format: "{HeaderPrefix}-Version"
     /// </summary>
     public const string Version = $"{HeaderPrefix}-Version";
+    
+    /// <summary>
+    /// The conversation that raised/published the message.
+    /// Format: "{HeaderPrefix}-Raising-Component"
+    /// </summary>
+    public const string Conversation = $"{HeaderPrefix}-Conversation";
 }

@@ -117,7 +117,7 @@ public class MassTransitMessageMapperTests
 
         var envelope = JsonSerializer.Deserialize<MassTransitMessageEnvelop<TestOtherRequest>>(message.Body.Bytes, JsonSerialisationOptions.Options);
 
-        Assert.Equal(conversationId, envelope?.ConversationId);
+        Assert.Equal(conversationId, envelope?.ConversationId?.Value);
     }
 
     [Fact]
