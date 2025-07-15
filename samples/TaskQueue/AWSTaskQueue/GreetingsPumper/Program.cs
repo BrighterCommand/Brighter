@@ -62,7 +62,7 @@ namespace GreetingsPumper
                                 {
                                     configure.ProducerRegistry = producerRegistry;
                                 })
-                                .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                                .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
                         }
 
                         services.AddHostedService<RunCommandProcessor>();

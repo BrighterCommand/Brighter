@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
@@ -15,6 +16,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private Pipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
+        private readonly Dictionary<string, string> _receivedMessages = new();
 
         public PipelineGlobalInboxTests()
         {
@@ -24,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             registry.Register<MyCommand, MyCommandHandler>();
             
             var container = new ServiceCollection();
-            container.AddTransient<MyCommandHandler>();
+            container.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(_receivedMessages));
             container.AddSingleton(inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
@@ -43,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public void When_Building_A_Pipeline_With_Global_inbox()
         {
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
+            _chainOfResponsibility = _chainBuilder.Build(new MyCommand(), _requestContext);
             
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());

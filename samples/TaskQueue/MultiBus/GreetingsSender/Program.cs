@@ -121,7 +121,7 @@ var host = Host.CreateDefaultBuilder(args)
             {
                 configure.ProducerRegistry = new CombinedProducerRegistryFactory(rmqMessageProducerFactory, kafkaMessageProducerFactory).Create();
             })
-            .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
+            .MapperRegistryFromAssemblies([typeof(GreetingEvent).Assembly]);
 
         services.AddHostedService<TimedMessageGenerator>();
     })

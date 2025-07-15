@@ -87,7 +87,7 @@ namespace GreetingsSender
                         HttpClientFactory = provider.GetService<IHttpClientFactory>(),
                         Strategy = StorageStrategy.Validate
                     }))
-                    .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                    .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
 
                 //We need this for the check as to whether an S3 bucket exists
                 serviceCollection.AddHttpClient();
