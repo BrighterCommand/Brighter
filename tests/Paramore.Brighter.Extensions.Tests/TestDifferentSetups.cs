@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -60,8 +61,8 @@ namespace Tests
                 {
                     config.ProducerRegistry = producerRegistry;
                     config.MessageMapperRegistry = messageMapperRegistry;
-                    config.ConnectionProvider = typeof(RelationalDbConnectionProvider);
-                    config.TransactionProvider = typeof(RelationalDbTransactionProvider);
+                    config.ConnectionProvider = typeof(SomeSqlConnectionProvider);
+                    config.TransactionProvider = typeof(SomeSqlUnitOfBox);
                 })
                 .AutoFromAssemblies();
 
@@ -115,6 +116,23 @@ namespace Tests
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
             
             Assert.NotNull(commandProcessor);
+        }
+        
+        public class SomeSqlConnectionProvider : RelationalDbConnectionProvider
+        {
+            public override DbConnection GetConnection()
+            {
+                throw new NotImplementedException();
+            }
+        }
+        
+        
+        public class SomeSqlUnitOfBox :  RelationalDbTransactionProvider
+        {
+            public override DbConnection GetConnection()
+            {
+                throw new NotImplementedException();
+            }
         }
 
     }
