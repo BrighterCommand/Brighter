@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_Building_A_Sync_Pipeline_That_Has_Async_Handlers()
         {
-            _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new RequestContext()).First());
+            _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First());
 
             Assert.NotNull(_exception);
             Assert.IsType<ConfigurationException>(_exception);

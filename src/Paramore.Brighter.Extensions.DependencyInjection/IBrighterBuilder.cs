@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Polly.Registry;
@@ -35,11 +36,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public interface IBrighterBuilder
     {
         /// <summary>
-        /// Scan the assemblies provided for implementations of IHandleRequests, IHandleRequestsAsync, IAmAMessageMapper and register them with ServiceCollection
+        /// Scan the assemblies of the current app domain for implementations of IHandleRequests, IHandleRequestsAsync, IAmAMessageMapper and register them with ServiceCollection
         /// </summary>
-        /// <param name="assemblies">The assemblies to scan</param>
+        /// <param name="extraAssemblies">Additional assemblies not in the current app domain</param>
+        /// <param name="excludeDynamicHandlerTypes">If you want to register a handler with a dynamic routing rule - an agreement - you need to excluce it from auto-regisration by adding it to this list</param>
         /// <returns></returns>
-        IBrighterBuilder AutoFromAssemblies(params Assembly[] assemblies);
+        IBrighterBuilder AutoFromAssemblies(IEnumerable<Assembly>? extraAssemblies = null, IEnumerable<Type>? excludeDynamicHandlerTypes = null);
         
         /// <summary>
         /// Scan the assemblies provided for implementations of IHandleRequestsAsync and register them with ServiceCollection
@@ -52,8 +54,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection 
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
+        /// <param name="excludeDynamicHandlerTypes">If you want to register a handler with a dynamic routing rule - an agreement - you need to excluce it from auto-regisration by adding it to this list</param>
         /// <returns>This builder, allows chaining calls</returns>
-        IBrighterBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies);
+        IBrighterBuilder AsyncHandlersFromAssemblies(IEnumerable<Assembly> assemblies, IEnumerable<Type>? excludeDynamicHandlerTypes = null);
         
         /// <summary>
         /// Register handlers with the built in subscriber registry
@@ -66,8 +69,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
+        /// <param name="excludeDynamicHandlerTypes">If you want to register a handler with a dynamic routing rule - an agreement - you need to excluce it from auto-regisration by adding it to this list</param>
         /// <returns>This builder, allows chaining calls</returns>
-        IBrighterBuilder HandlersFromAssemblies(params Assembly[] assemblies);
+        IBrighterBuilder HandlersFromAssemblies(IEnumerable<Assembly> assemblies, IEnumerable<Type>? excludeDynamicHandlerTypes = null);
 
         /// <summary>
         /// Register message mappers
@@ -81,20 +85,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns>This builder, allows chaining calls</returns>
-        IBrighterBuilder MapperRegistryFromAssemblies(params Assembly[] assemblies);
+        IBrighterBuilder MapperRegistryFromAssemblies(IEnumerable<Assembly> assemblies);
 
         /// <summary>
         /// Scan the assemblies for implementations of IAmAMessageTransformAsync and register them with ServiceCollection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns>This builder, allows chaining calls</returns>
-        IBrighterBuilder TransformsFromAssemblies(params Assembly[] assemblies);
+        IBrighterBuilder TransformsFromAssemblies(IEnumerable<Assembly> assemblies);
 
         /// <summary>
         /// The policy registry to use for the command processor and the event bus
         /// It needs to be here as we need to pass it between AddBrighter and UseExternalBus
         /// </summary>
-        IPolicyRegistry<string> PolicyRegistry { get; set; }
+        IPolicyRegistry<string>? PolicyRegistry { get; set; }
 
         /// <summary>
         /// The IoC container to populate

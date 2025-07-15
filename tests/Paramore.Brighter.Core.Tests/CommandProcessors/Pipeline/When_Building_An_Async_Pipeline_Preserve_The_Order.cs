@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_Building_An_Async_Pipeline_Preserve_The_Order()
         {
-            _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
+            _pipeline = _pipeline_Builder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
 
             var trace = PipelineTracer().ToString();
             Assert.Equal("MyLoggingHandlerAsync`1|MyValidationHandlerAsync`1|MyDoubleDecoratedHandlerAsync|", trace);

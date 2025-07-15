@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public void When_Building_A_Pipeline_With_Global_inbox()
         {
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
+            _chainOfResponsibility = _chainBuilder.Build(new MyCommand(), _requestContext);
             
             var firstHandler = _chainOfResponsibility.First();
             var myCommmand = new MyCommand();

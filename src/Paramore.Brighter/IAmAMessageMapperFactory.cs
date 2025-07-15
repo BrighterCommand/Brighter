@@ -41,6 +41,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        IAmAMessageMapper Create(Type messageMapperType);
+        IAmAMessageMapper? Create(Type messageMapperType);
     }
 }

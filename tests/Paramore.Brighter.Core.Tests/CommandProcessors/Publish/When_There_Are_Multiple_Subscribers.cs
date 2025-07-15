@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
         private readonly MyEvent _myEvent = new();
-        private Exception _exception;
+        private Exception? _exception;
 
         public CommandProcessorPublishMultipleMatchesTests()
         {

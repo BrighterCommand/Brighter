@@ -38,8 +38,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Builds the specified request context.
         /// </summary>
+        /// <param name="request">The <see cref="IRequest"/> that we are building the pipeline for</param>
         /// <param name="requestContext">The request context.</param>
         /// <returns>Pipelines&lt;TRequest&gt;.</returns>
-        Pipelines<TRequest> Build(IRequestContext requestContext);
+        Pipelines<TRequest> Build(TRequest request, IRequestContext requestContext);
     }
 }
