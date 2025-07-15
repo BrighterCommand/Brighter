@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Constructs a transformer factory
         /// </summary>
         /// <param name="serviceProvider">The IoC container we use to satisfy requests for transforms</param>
-        /// <exception cref="IBrighterOptions">Throws if there is <see cref="IBrighterOptions"/> registered</exception>
+        /// <exception cref="InvalidOperationException">Thrown if <see cref="IBrighterOptions"/> is not registered in the service provider</exception>
         public ServiceProviderTransformerFactory(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;

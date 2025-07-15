@@ -50,7 +50,6 @@ namespace Paramore.Brighter
         public void Add(Type requestType, Type handlerType)
         {
             if (!_observers.TryGetValue(requestType, out var observer))
-                //_observers.Add(requestType, [handlerType]);
                 _observers.Add(requestType, [(request, context) => [handlerType]] );
             else
                 observer.Add((request, context) => [handlerType]);
@@ -66,7 +65,6 @@ namespace Paramore.Brighter
         public void Add(Type requestType, Func<IRequest?, IRequestContext?, List<Type>> router, IEnumerable<Type> handlerTypes)
         {
             if (!_observers.TryGetValue(requestType, out var observer))
-                //_observers.Add(requestType, [handlerType]);
                 _observers.Add(requestType, [router] );
             else
                 observer.Add(router);

@@ -8,13 +8,13 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorSendViaAgreementAyncTests : IDisposable
+    public class CommandProcessorSendViaAgreementAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand; 
         private readonly MyCommandHandlerAsync _myCommandHandler;
 
-        public CommandProcessorSendViaAgreementAyncTests ()
+        public CommandProcessorSendViaAgreementAsyncTests ()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand>((request, context) =>
