@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Amazon.DynamoDBv2.Model;
-using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Xunit;
