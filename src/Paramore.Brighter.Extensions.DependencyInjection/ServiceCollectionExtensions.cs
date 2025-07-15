@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -186,9 +187,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             brighterBuilder.Services.Add(new ServiceDescriptor(boxProviderType, transactionProvider, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), transactionProvider, serviceLifetime));
 
-            //NOTE: It is a little unsatisfactory to hard code our types in here
-            RegisterRelationalProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider,
-                transactionProvider, serviceLifetime);
+            RegisterConnectionAndTransactionProvider(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
             
             //we always need an outbox in case of producer callbacks
             var outbox = busConfiguration.Outbox ?? new InMemoryOutbox(TimeProvider.System);
@@ -542,26 +541,67 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return messageMapperRegistry;
         }
 
-        private static void RegisterRelationalProviderServicesMaybe(
-            IBrighterBuilder brighterBuilder,
+        private static void RegisterConnectionAndTransactionProvider(IBrighterBuilder brighterBuilder, 
             Type connectionProvider,
             Type transactionProvider,
-            ServiceLifetime serviceLifetime
-        )
+            ServiceLifetime serviceLifetime)
         {
-            //not all box transaction providers are also relational connection providers
-            if (typeof(IAmARelationalDbConnectionProvider).IsAssignableFrom(connectionProvider))
+            var connectionProviderInterface = GetConnectionProviderInterface(connectionProvider);
+            if(connectionProviderInterface != null)
             {
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmARelationalDbConnectionProvider),
-                    connectionProvider, serviceLifetime));
+                brighterBuilder.Services.TryAdd(new ServiceDescriptor(connectionProviderInterface, connectionProvider, serviceLifetime));
+                
+                var transactionProviderInterface = GetPossibleTransactionInterface(transactionProvider, connectionProviderInterface );
+                if(transactionProviderInterface != null)
+                {
+                    brighterBuilder.Services.TryAdd(new ServiceDescriptor(transactionProviderInterface, transactionProvider, serviceLifetime));
+                }
             }
+            return;
 
-            //not all box transaction providers are also relational connection providers
-            if (typeof(IAmATransactionConnectionProvider).IsAssignableFrom(transactionProvider))
+            static Type GetConnectionProviderInterface(Type type)
             {
-                //register the combined interface just in case
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmATransactionConnectionProvider),
-                    transactionProvider, serviceLifetime));
+                // all connection provider interfaces must be extended from IAmAConnectionProvider  
+                var interfaces = GetInterfaces(type);
+                foreach (var @interface in interfaces)
+                {
+                    var inner = GetInterfaces(@interface);
+                    if (inner.Any(x => x == typeof(IAmAConnectionProvider)))
+                    {
+                        return @interface;
+                    }
+                }
+                
+                return null;
+            }
+            
+            static Type GetPossibleTransactionInterface(Type type, Type connectionProvider)
+            {
+                // All Brighter transaction provider interface must be extended from connection provider and IAmABoxTransactionProvider
+                var interfaces = GetInterfaces(type);
+                foreach (var @interface in interfaces)
+                {
+                    var inner = GetInterfaces(@interface).ToList();
+                    if (inner.Any(x => x == connectionProvider) &&
+                        inner.Any(x => x == typeof(IAmABoxTransactionProvider)))
+                    {
+                        return @interface;
+                    }
+                }
+                
+                return null;
+            }
+            
+            static IEnumerable<Type> GetInterfaces(Type type)
+            {
+                var interfaces = type.GetInterfaces().AsEnumerable();
+
+                if (type.BaseType != null)
+                {
+                    interfaces = interfaces.Concat(GetInterfaces(type.BaseType));
+                }
+
+                return interfaces;
             }
         }
 

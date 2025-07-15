@@ -56,10 +56,12 @@ namespace Tests
 
             serviceCollection
                 .AddBrighter()
-                .UseExternalBus((config) =>
+                .UseExternalBus(config =>
                 {
                     config.ProducerRegistry = producerRegistry;
                     config.MessageMapperRegistry = messageMapperRegistry;
+                    config.ConnectionProvider = typeof(RelationalDbConnectionProvider);
+                    config.TransactionProvider = typeof(RelationalDbTransactionProvider);
                 })
                 .AutoFromAssemblies();
 
@@ -69,7 +71,6 @@ namespace Tests
             
             Assert.NotNull(commandProcessor);
         }
-
         
         [Fact]
         public void WithCustomPolicy()
