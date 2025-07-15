@@ -56,7 +56,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The bag.</value>
         public ConcurrentDictionary<string, object> Bag { get; } = new();
-        
+
+        /// <inheritdoc />
+        public ResiliencePipelineRegistry<string>? ResiliencePipeline { get; set; }
+
         /// <summary>
         /// Gets the Feature Switches
         /// </summary>
@@ -71,6 +74,7 @@ namespace Paramore.Brighter
             {
                 Span = Span,
                 Policies = Policies,
+                ResiliencePipeline = ResiliencePipeline,
                 FeatureSwitches = FeatureSwitches,
                 OriginatingMessage = OriginatingMessage
             };

@@ -58,6 +58,7 @@ namespace Paramore.Brighter
         private readonly IAmAHandlerFactoryAsync? _handlerFactoryAsync;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IPolicyRegistry<string> _policyRegistry;
+        private readonly ResiliencePipelineRegistry<string> _resiliencePipelineRegistry;
         private readonly InboxConfiguration? _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private readonly IEnumerable<Subscription>? _replySubscriptions;
@@ -121,6 +122,7 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="resilienceResiliencePipelineRegistry">The resilience pipeline registry.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
@@ -131,6 +133,7 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            ResiliencePipelineRegistry<string> resilienceResiliencePipelineRegistry,
             IAmARequestSchedulerFactory requestSchedulerFactory,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
@@ -155,6 +158,7 @@ namespace Paramore.Brighter
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _schedulerFactory = requestSchedulerFactory;
+            _resiliencePipelineRegistry = resilienceResiliencePipelineRegistry;
         }
 
         /// <summary>
@@ -166,6 +170,7 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="resilienceResiliencePipelineRegistry">The resilience pipeline registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over.</param>
         /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -180,6 +185,7 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            ResiliencePipelineRegistry<string> resilienceResiliencePipelineRegistry,
             IAmAnOutboxProducerMediator bus,
             IAmARequestSchedulerFactory  requestSchedulerFactory,
             IAmABoxTransactionProvider? transactionProvider = null,
@@ -189,7 +195,8 @@ namespace Paramore.Brighter
             IAmAChannelFactory? responseChannelFactory = null,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, requestSchedulerFactory, featureSwitchRegistry, inboxConfiguration)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, 
+                resilienceResiliencePipelineRegistry, requestSchedulerFactory, featureSwitchRegistry, inboxConfiguration)
         {
             _responseChannelFactory = responseChannelFactory;
             _tracer = tracer;
@@ -206,6 +213,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="resilienceResiliencePipelineRegistry">The resilience pipeline registry.</param>
         /// <param name="mediator">The external service bus that we want to send messages over</param>
         /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -217,6 +225,7 @@ namespace Paramore.Brighter
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            ResiliencePipelineRegistry<string> resilienceResiliencePipelineRegistry,
             IAmAnOutboxProducerMediator mediator,
             IAmARequestSchedulerFactory requestSchedulerFactory,
             IAmABoxTransactionProvider? transactionProvider = null,
@@ -228,6 +237,7 @@ namespace Paramore.Brighter
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
+            _resiliencePipelineRegistry = resilienceResiliencePipelineRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _replySubscriptions = replySubscriptions;
@@ -1507,6 +1517,7 @@ namespace Paramore.Brighter
             var context = requestContext ?? _requestContextFactory.Create();
             context.Span = span;
             context.Policies = _policyRegistry;
+            context.ResiliencePipeline = _resiliencePipelineRegistry;
             context.FeatureSwitches = _featureSwitchRegistry;
             return context;
         }
