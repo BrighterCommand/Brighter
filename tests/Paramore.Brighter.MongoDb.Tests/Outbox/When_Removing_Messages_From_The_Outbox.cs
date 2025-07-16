@@ -42,7 +42,7 @@ public class MongoDbOutboxDeletingMessagesTests : IDisposable
     public MongoDbOutboxDeletingMessagesTests()
     {
         _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new MongoDbOutbox(Configuration.Create(_collection));
+        _outbox = new MongoDbOutbox(Configuration.CreateOutbox(_collection));
 
         _firstMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test"),
                 MessageType.MT_COMMAND,

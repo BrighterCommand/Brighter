@@ -39,7 +39,7 @@ public class MongoDbOutboxEmptyStoreTests : IDisposable
     public MongoDbOutboxEmptyStoreTests()
     {
         _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new (Configuration.Create(_collection));
+        _outbox = new (Configuration.CreateOutbox(_collection));
         _messageEarliest = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
             new MessageBody("message body")

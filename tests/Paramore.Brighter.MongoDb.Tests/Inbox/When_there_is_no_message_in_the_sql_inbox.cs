@@ -42,7 +42,7 @@ public class MongoDbInboxEmptyWhenSearchedTests : IDisposable
     public MongoDbInboxEmptyWhenSearchedTests()
     {
         _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new MongoDbInbox(Configuration.Create(_collection));
+        _inbox = new MongoDbInbox(Configuration.CreateInbox(_collection));
         _contextKey = "context-key";
     }
 
