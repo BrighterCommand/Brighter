@@ -275,7 +275,7 @@ namespace Paramore.Brighter.ServiceActivator
             Channel.Acknowledge(message);
         }
         
-        private void DispatchRequest(MessageHeader messageHeader, IRequest request, RequestContext requestContext)
+        private void DispatchRequest<TRequest>(MessageHeader messageHeader, TRequest request, RequestContext requestContext) where TRequest : class, IRequest
         {
             Log.DispatchingMessage(s_logger, request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
@@ -325,14 +325,12 @@ namespace Paramore.Brighter.ServiceActivator
             // runtime type (e.g., MyEvent), we need to use reflection to construct and invoke the generic method with the correct type.
             
             var requestType = request.GetType();
-            var dispatchMethod = typeof(Proactor)
+            var dispatchMethod = typeof(Reactor)
                 .GetMethod(nameof(DispatchRequest), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.MakeGenericMethod(requestType);
 
             if (dispatchMethod is null)
-            {
                 throw new InvalidOperationException($"Could not find DispatchRequest method for type {requestType.FullName}");
-            }
 
             dispatchMethod.Invoke(this, [message.Header, request, context]);
         }
