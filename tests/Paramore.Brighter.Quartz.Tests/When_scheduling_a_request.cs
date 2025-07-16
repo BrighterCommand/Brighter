@@ -1,7 +1,6 @@
 ﻿using System.Collections.Specialized;
 using System.Transactions;
 using Paramore.Brighter;
-using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;

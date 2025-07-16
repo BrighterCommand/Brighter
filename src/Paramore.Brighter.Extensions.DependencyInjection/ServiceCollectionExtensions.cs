@@ -31,7 +31,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
-using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;

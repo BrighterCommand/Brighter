@@ -2,7 +2,6 @@
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
-using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
