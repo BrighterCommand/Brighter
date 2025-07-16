@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private async Task Archive(object state, CancellationToken cancellationToken)
         {
-            if (_outboxSync is null && _outboxAsync is null)
+            if (_outboxSync == null && _outboxAsync == null)
             {
                 s_logger.LogWarning("No outbox implementation found. Cannot archive messages.");
                 return;
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                         _archiveProvider,
                         _options.BatchSize);
 
-                    if (_outboxAsync is not null)
+                    if (_outboxAsync != null)
                     {
                         await outBoxArchiver.ArchiveAsync(_options.MinimumAge, cancellationToken, _options.ParallelArchiving);
                     }
