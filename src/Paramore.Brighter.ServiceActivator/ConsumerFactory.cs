@@ -27,7 +27,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
 {
-    internal sealed class ConsumerFactory<TRequest> : IConsumerFactory where TRequest : class, IRequest
+    internal sealed class ConsumerFactory : IConsumerFactory
     {
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly IAmAMessageMapperRegistry? _messageMapperRegistry;
@@ -39,6 +39,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly ConsumerName _consumerName;
         private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync? _messageTransformerFactoryAsync;
+        private readonly Func<Message, Type> _getRequestType;
 
         public ConsumerFactory(
             IAmACommandProcessor commandProcessor,
@@ -52,6 +53,7 @@ namespace Paramore.Brighter.ServiceActivator
             _commandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
             _subscription = subscription;
+            _getRequestType = subscription.GetRequestType;
             _messageTransformerFactory = messageTransformerFactory ?? new EmptyMessageTransformerFactory();
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
@@ -71,6 +73,7 @@ namespace Paramore.Brighter.ServiceActivator
             _commandProcessor = commandProcessor;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _subscription = subscription;
+            _getRequestType = subscription.GetRequestType;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync ?? new EmptyMessageTransformerFactoryAsync();
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
@@ -95,7 +98,7 @@ namespace Paramore.Brighter.ServiceActivator
                 throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
             
             var channel = _subscription.ChannelFactory.CreateSyncChannel(_subscription);
-            var messagePump = new Reactor<TRequest>(_commandProcessor, _messageMapperRegistry, 
+            var messagePump = new Reactor(_commandProcessor,  _getRequestType, _messageMapperRegistry, 
                 _messageTransformerFactory, _requestContextFactory, channel, _tracer, _instrumentationOptions)
             {
                 Channel = channel,
@@ -117,7 +120,7 @@ namespace Paramore.Brighter.ServiceActivator
                 throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
             
             var channel = _subscription.ChannelFactory.CreateAsyncChannel(_subscription);
-            var messagePump = new Proactor<TRequest>(_commandProcessor, _messageMapperRegistryAsync, 
+            var messagePump = new Proactor(_commandProcessor, _getRequestType, _messageMapperRegistryAsync, 
                 _messageTransformerFactoryAsync, _requestContextFactory, channel, _tracer, _instrumentationOptions)
             {
                 Channel = channel,

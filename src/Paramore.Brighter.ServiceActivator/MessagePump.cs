@@ -43,9 +43,9 @@ namespace Paramore.Brighter.ServiceActivator
     /// Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     /// Timeout on the handler should be provided by timeout policy using an attribute on the handler 
     /// </summary>
-    public abstract partial class MessagePump<TRequest> where TRequest : class, IRequest
+    public abstract partial class MessagePump
     {
-        internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
+        internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump>();
 
         protected readonly IAmACommandProcessor CommandProcessor;
         protected readonly IAmARequestContextFactory RequestContextFactory;
@@ -123,7 +123,7 @@ namespace Paramore.Brighter.ServiceActivator
             UnacceptableMessageCount++;
         }
 
-        protected void ValidateMessageType(MessageType messageType, TRequest request)
+        protected void ValidateMessageType(MessageType messageType, IRequest request)
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {

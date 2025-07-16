@@ -38,15 +38,16 @@ namespace Paramore.Brighter.ServiceActivator
     /// Used when we don't want to block for I/O, but queue on a completion port and be notified when done
     /// <remarks>See <a href ="https://www.dre.vanderbilt.edu/~schmidt/PDF/Proactor.pdf">Proactor Pattern</a></remarks> 
     /// </summary>
-    /// <typeparam name="TRequest">The Request on the Data Type Channel</typeparam>
-    public partial class Proactor<TRequest> : MessagePump<TRequest>, IAmAMessagePump where TRequest : class, IRequest
+    public partial class Proactor : MessagePump, IAmAMessagePump
     {
-        private readonly UnwrapPipelineAsync<TRequest> _unwrapPipeline;
+        private readonly Func<Message, Type> _getRequestType;
+        private readonly TransformPipelineBuilderAsync _transformPipelineBuilder;
 
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessor">Provides a way to grab a command processor correctly scoped</param>
+        /// <param name="getRequestType">Pass in a <see cref="Func[Message, Type]" />which we use to determine the type of message on the channel. For a datatype channel, always returns the same type, for cloud events uses the header type</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         /// <param name="requestContextFactory">A factory to create instances of request synchronizationHelper, used to add synchronizationHelper to a pipeline</param>
@@ -55,6 +56,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         public Proactor(
             IAmACommandProcessor commandProcessor,
+            Func<Message, Type> getRequestType,
             IAmAMessageMapperRegistryAsync messageMapperRegistry, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
@@ -63,8 +65,8 @@ namespace Paramore.Brighter.ServiceActivator
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
             : base(commandProcessor, requestContextFactory, tracer, instrumentationOptions)
         {
-            var transformPipelineBuilder = new TransformPipelineBuilderAsync(messageMapperRegistry, messageTransformerFactory, instrumentationOptions);
-            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
+            _getRequestType = getRequestType;
+            _transformPipelineBuilder = new TransformPipelineBuilderAsync(messageMapperRegistry, messageTransformerFactory, instrumentationOptions);
             Channel = channel;
         }
 
@@ -100,7 +102,7 @@ namespace Paramore.Brighter.ServiceActivator
             await Channel.AcknowledgeAsync(message);
         }
         
-        private async Task DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
+        private async Task DispatchRequest(MessageHeader messageHeader, IRequest request, RequestContext requestContext)
         {
             Log.DispatchingMessage(s_logger, request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
@@ -305,11 +307,33 @@ namespace Paramore.Brighter.ServiceActivator
             Tracer?.EndSpan(pumpSpan);
         }
 
-        private async Task<TRequest> TranslateAsync(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
+        private async Task<IRequest> TranslateMessage(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
         {
+            Log.TranslateMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId);
+            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
+
+            var requestType = _getRequestType(message);
+            if (requestType == null)
+                throw new MessageMappingException($"Failed to find request type for message {message.Id} ", 
+                    new ArgumentNullException(nameof(requestType), "The request type cannot be null."));
+
             try
             {
-                return await _unwrapPipeline.UnwrapAsync(message, requestContext, cancellationToken);
+                // Get the generic method definition
+                var method = typeof(TransformPipelineBuilderAsync).GetMethod(nameof(TransformPipelineBuilderAsync.BuildUnwrapPipeline), Type.EmptyTypes);
+
+                // Make the generic method with the runtime type
+                var genericMethod = method!.MakeGenericMethod(requestType);
+
+                // Invoke the method to get the pipeline instance
+                var pipeline = genericMethod.Invoke(_transformPipelineBuilder, null);
+
+                // Call UnwrapAsync on the pipeline
+                var unwrapMethod = pipeline!.GetType().GetMethod("UnwrapAsync");
+                var task = (Task)unwrapMethod!.Invoke(pipeline, new object[] { message, requestContext, cancellationToken })!;
+                await task.ConfigureAwait(false);
+                var resultProperty = task.GetType().GetProperty("Result");
+                return (IRequest)resultProperty!.GetValue(task)!;
             }
             catch (ConfigurationException)
             {
@@ -317,16 +341,8 @@ namespace Paramore.Brighter.ServiceActivator
             }
             catch (Exception exception)
             {
-                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+                throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", exception);
             }
-        }
-        
-        private async Task<TRequest> TranslateMessage(Message message, RequestContext requestContext)
-        {
-            Log.TranslateMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId);
-            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
-            
-            return await TranslateAsync(message, requestContext);
         }
         
         private RequestContext InitRequestContext(Activity? span, Message message)

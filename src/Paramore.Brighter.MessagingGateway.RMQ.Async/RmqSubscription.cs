@@ -76,6 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
+        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="dataType"/> if null</param>
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
@@ -99,6 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
         public RmqSubscription(
             Type dataType, 
+            Func<Message, Type>? getRequestType = null,
             SubscriptionName? subscriptionName = null, 
             ChannelName? channelName = null, 
             RoutingKey? routingKey = null, 
@@ -120,7 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             TimeSpan? channelFailureDelay = null,
             int? maxQueueLength = null,
             QueueType queueType = QueueType.Classic) 
-            : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(dataType, getRequestType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
             DeadLetterChannelName = deadLetterChannelName;
@@ -137,6 +139,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
+        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
@@ -158,6 +161,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
         public RmqSubscription(
+            Func<Message, Type>? getRequestType = null,
             SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
@@ -178,7 +182,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             QueueType queueType = QueueType.Classic)
-            : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
+            : base(typeof(T), getRequestType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
                 unacceptableMessageLimit, isDurable, messagePumpType, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels, emptyChannelDelay, channelFailureDelay, null, queueType)
         { }
 

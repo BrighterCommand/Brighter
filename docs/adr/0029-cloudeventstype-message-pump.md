@@ -16,5 +16,6 @@ In this case then the metadata of the message decides how it is routed. Our exis
 
 ## Decision
 
+We need to remove the generic parameter from Reactor and Proactor and instead rely on runtime determination of the type. To do this we will use the [Strategy Pattern](https://en.wikipedia.org/wiki/Strategy_pattern) passing in a `Func<Message, Type>` to the message pump. This function will be used to determine the type of the message at runtime based on the metadata of the message. 
 
 ## Consequences
