@@ -62,8 +62,8 @@ namespace Paramore.Brighter
                 mapperRegistry: mapper,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
-                circuitBreaker:new InMemoryCircuitBreaker(),
                 outbox: outbox,
+                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
                 publicationFinder: publicationFinder ?? new FindPublicationByPublicationTopicOrRequestType()
                 ); 
             

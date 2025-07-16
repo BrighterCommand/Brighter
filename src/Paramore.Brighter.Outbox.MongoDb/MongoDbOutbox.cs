@@ -447,7 +447,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         RequestContext requestContext,
         int pageSize = 100,
         int pageNumber = 1,
-        string[]? trippedTopics = null,
+        IEnumerable<RoutingKey>? trippedTopics = null,
         Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
@@ -819,7 +819,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext,
         int pageSize = 100,
         int pageNumber = 1,
-        string[]? trippedTopics = null,
+        IEnumerable<RoutingKey>? trippedTopics = null,
         Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(

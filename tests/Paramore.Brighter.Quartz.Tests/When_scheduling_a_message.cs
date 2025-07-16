@@ -70,7 +70,6 @@ public class QuartzSchedulerMessageTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox
         );
 

@@ -88,7 +88,6 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox
         );
 

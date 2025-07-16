@@ -173,8 +173,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
                 tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
-                circuitBreaker: new InMemoryCircuitBreaker(),
                 outbox: outbox,
+                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
                 publicationFinder: _publicationFinder
             );
 
@@ -267,7 +267,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 RequestContext? requestContext,
                 int pageSize = 100, 
                 int pageNumber = 1,
-                string[]? trippedTopics = null,
+                IEnumerable<RoutingKey>? trippedTopics = null,
                 Dictionary<string, object>? args = null)
             {
                 return []; 

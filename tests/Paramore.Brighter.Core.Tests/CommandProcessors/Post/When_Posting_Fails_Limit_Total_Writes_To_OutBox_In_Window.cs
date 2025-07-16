@@ -44,7 +44,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),     
                 tracer,
-                circuitBreaker: new InMemoryCircuitBreaker(),
                 outbox: _outbox,
                 maxOutStandingMessages:3,
                 maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250),

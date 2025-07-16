@@ -83,7 +83,6 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             _tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox,
             timeProvider:_timeProvider);
     }

@@ -80,7 +80,6 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             outbox,
             maxOutStandingMessages: -1
         );

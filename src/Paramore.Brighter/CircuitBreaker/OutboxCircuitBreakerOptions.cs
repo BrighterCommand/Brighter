@@ -2,13 +2,13 @@
 {
 
     /// <summary>
-    /// The configuration options for <see cref="IAmACircuitBreaker"/>
+    /// The configuration options for <see cref="IAmAnOutboxCircuitBreaker"/>
     /// </summary>
-    public class CircuitBreakerOptions
+    public class OutboxCircuitBreakerOptions
     {
-        /// <summary>
+        /// <value>
         /// Circuit break unhealthy topics for a specific cooldown period in ticks (on clear outbox)
-        /// </summary>
+        /// </value>
         public int CooldownCount { get; set; } = 10;
     }
 }

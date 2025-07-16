@@ -115,7 +115,7 @@ namespace Paramore.Brighter
             RequestContext? requestContext,
             int pageSize = 100, 
             int pageNumber = 1,
-            string[]? trippedTopics = null,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null);
     }
 }

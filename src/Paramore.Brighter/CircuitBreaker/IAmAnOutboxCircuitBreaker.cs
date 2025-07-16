@@ -1,9 +1,11 @@
-﻿namespace Paramore.Brighter.CircuitBreaker
+﻿using System.Collections.Generic;
+
+namespace Paramore.Brighter.CircuitBreaker
 {
-    public interface IAmACircuitBreaker
+    public interface IAmAnOutboxCircuitBreaker
     {
         /// <summary>
-        /// Each time an attempt to ClearOutstandingFromOutbox the IAmACircuitBreaker is cooled down,
+        /// Each time an attempt to ClearOutstandingFromOutbox the IAmAnOutboxCircuitBreaker is cooled down,
         /// this decrements the tripped topics, making them available for publication once the Cooldown
         /// period is set to zero.
         /// </summary>
@@ -13,12 +15,11 @@
         /// If a topic exceeds a configurable failure threshold within a time window, mark it as "tripped" 
         /// </summary>
         /// <param name="topic">Name of the entity to circuit break</param>
-        public void TripTopic(string topic);
+        public void TripTopic(RoutingKey topic);
 
         /// <summary>
-        /// A collection of tripped topics. As the circuit breaker is injected into both mediator
-        /// and stores, the list of tripped topics is required to be readonly.
+        /// A collection of tripped topics.
         /// </summary>
-        public string[] TrippedTopics { get; }
+        public IEnumerable<RoutingKey> TrippedTopics { get; }
     }
 }

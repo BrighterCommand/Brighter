@@ -838,7 +838,7 @@ namespace Paramore.Brighter
             RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            string[]? trippedTopics = null,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null)
         {
             var dbAttributes = new Dictionary<string, string>()
@@ -882,7 +882,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            string[]? trippedTopics = null,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
@@ -997,7 +997,7 @@ namespace Paramore.Brighter
             TimeSpan timeSinceAdded,
             int pageSize,
             int pageNumber,
-            string[] trippedTopics,
+            IEnumerable<RoutingKey> trippedTopics,
             int outboxTimeout)
         {
             var inClause = GeneratePagedOutstandingCommandInStatementAndAddParameters(trippedTopics.ToList());
@@ -1007,11 +1007,12 @@ namespace Paramore.Brighter
         }
 
         private (string inClause, IDbDataParameter[] parameters) GeneratePagedOutstandingCommandInStatementAndAddParameters(
-                List<string> topics)
+            IEnumerable<RoutingKey> topics)
         {
-            var inClause = GenerateInClauseAndAddParameters(topics.ToList());
+            var topicsList = topics.Select(x => x.Value).ToList();
+            var inClause = GenerateInClauseAndAddParameters(topicsList);
             
-            var inClauseSql = topics.Count > 0
+            var inClauseSql = topicsList.Count > 0
                 ? string.Format(queries.PagedOutstandingCommandInStatement, inClause.inClause)
                 : string.Empty;
 

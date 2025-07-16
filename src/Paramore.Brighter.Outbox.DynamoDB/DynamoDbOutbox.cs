@@ -498,6 +498,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
+        /// <param name="trippedTopics">Collection of tripped topics</param>
         /// <param name="args"></param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public IEnumerable<Message> OutstandingMessages(
@@ -505,7 +506,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             RequestContext? requestContext,
             int pageSize = 100, 
             int pageNumber = 1,
-            string[]? trippedTopics = null,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null)
         {
             return OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, args: args)
@@ -529,7 +530,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            string[]? trippedTopics = null,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {

@@ -66,7 +66,7 @@ public class MsSqlFetchOutStandingMessageTests : IDisposable
     [Fact]
     public void When_Retrieving_Not_Dispatched_Messages_With_Tripped_Topics()
     {
-        var circuitBreaker = new InMemoryCircuitBreaker();
+        var circuitBreaker = new InMemoryOutboxCircuitBreaker();
         circuitBreaker.TripTopic(_messageUnDispatchedWithTrippedTopic.Header.Topic.Value);
         var context = new RequestContext();
         _sqlOutbox.Add([_messageUnDispatched, _messageUnDispatchedWithTrippedTopic], context);

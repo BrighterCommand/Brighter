@@ -252,7 +252,6 @@ public class CommandProcessorClearObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             outbox,
             maxOutStandingMessages: -1,
             instrumentationOptions: instrumentationOptions

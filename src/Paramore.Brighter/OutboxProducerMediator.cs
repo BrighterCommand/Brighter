@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly IAmAPublicationFinder _publicationFinder;
-        private readonly IAmACircuitBreaker _circuitBreaker;
+        private readonly IAmAnOutboxCircuitBreaker? _outboxCircuitBreaker;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
         private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
@@ -95,7 +95,7 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="tracer"></param>
         /// <param name="publicationFinder">A publication finder.</param>
-        /// <param name="circuitBreaker">Track unhealthy topics and allow for cooldown, should be registered as singleton and shared with Outbox</param>
+        /// <param name="outboxCircuitBreaker">Track unhealthy topics and allow for cooldown, should be registered as singleton and shared with Outbox</param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
@@ -112,8 +112,8 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             IAmABrighterTracer tracer, 
             IAmAPublicationFinder publicationFinder,
-            IAmACircuitBreaker circuitBreaker,
             IAmAnOutbox? outbox = null,
+            IAmAnOutboxCircuitBreaker? outboxCircuitBreaker = null,
             IAmARequestContextFactory? requestContextFactory = null,
             int outboxTimeout = 300,
             int maxOutStandingMessages = -1,
@@ -152,6 +152,7 @@ namespace Paramore.Brighter
 
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+            _outboxCircuitBreaker = outboxCircuitBreaker;
 
             _outboxTimeout = outboxTimeout;
             _maxOutStandingMessages = maxOutStandingMessages;
@@ -160,7 +161,6 @@ namespace Paramore.Brighter
             _instrumentationOptions = instrumentationOptions;
             _tracer = tracer;
             _publicationFinder = publicationFinder;
-            _circuitBreaker = circuitBreaker;
 
             ConfigureCallbacks(requestContextFactory.Create());
         }
@@ -600,7 +600,7 @@ namespace Paramore.Brighter
             WaitHandle[] clearTokens = new WaitHandle[2];
             clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
             clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
-            _circuitBreaker.CoolDown();
+            _outboxCircuitBreaker?.CoolDown();
 
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
@@ -619,7 +619,7 @@ namespace Paramore.Brighter
                     if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
-                            pageSize: amountToClear, trippedTopics: _circuitBreaker.TrippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
+                            pageSize: amountToClear, trippedTopics: _outboxCircuitBreaker?.TrippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
 
                     BrighterTracer.WriteOutboxEvent(BoxDbOperation.OutStandingMessages, messages, span, false, true,
                         _instrumentationOptions);
@@ -1074,8 +1074,8 @@ namespace Paramore.Brighter
 
         private void TripTopic(Message message)
         {
-            if(!string.IsNullOrEmpty(message.Header.Topic?.Value))
-                _circuitBreaker.TripTopic(message.Header.Topic!.Value);
+            if(RoutingKey.IsNullOrEmpty(message.Header.Topic))
+                _outboxCircuitBreaker?.TripTopic(message.Header.Topic);
         }
         
         private static partial class Log

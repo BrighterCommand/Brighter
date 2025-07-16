@@ -80,7 +80,6 @@ public class CommandProcessorDepositObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             _outbox,
             maxOutStandingMessages: -1
         );

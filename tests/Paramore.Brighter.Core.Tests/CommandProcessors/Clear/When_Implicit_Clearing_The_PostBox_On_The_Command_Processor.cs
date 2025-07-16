@@ -82,7 +82,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                circuitBreaker: new InMemoryCircuitBreaker(),
                 _outbox
                 );
 

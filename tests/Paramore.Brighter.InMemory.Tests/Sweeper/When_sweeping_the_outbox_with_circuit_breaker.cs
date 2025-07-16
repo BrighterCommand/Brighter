@@ -30,7 +30,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         private readonly InternalBus _internalBus = new ();
         private readonly IAmAnOutboxProducerMediator _mediator;
         private readonly OutboxSweeper _sweeper;
-        private readonly IAmACircuitBreaker _circuitBreaker;
+        private readonly IAmAnOutboxCircuitBreaker _circuitBreaker;
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly TimeSpan _timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
@@ -111,7 +111,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
 
-            _circuitBreaker = new InMemoryCircuitBreaker(new CircuitBreakerOptions() { CooldownCount = 1 });
+            _circuitBreaker = new InMemoryOutboxCircuitBreaker(new OutboxCircuitBreakerOptions() { CooldownCount = 1 });
 
             _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
@@ -121,8 +121,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                circuitBreaker: _circuitBreaker,
-                _outbox
+                _outbox,
+                outboxCircuitBreaker: _circuitBreaker
             );
 
             CommandProcessor.ClearServiceBus();

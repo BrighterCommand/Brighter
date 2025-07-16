@@ -141,7 +141,6 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             fakeOutbox
         );
 
@@ -190,7 +189,6 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             fakeOutbox
         );
 
@@ -240,7 +238,6 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             fakeOutbox
         );
 
@@ -294,7 +291,6 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            circuitBreaker: new InMemoryCircuitBreaker(),
             fakeOutbox
         );
 
