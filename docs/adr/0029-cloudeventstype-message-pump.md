@@ -21,3 +21,5 @@ We need to remove the generic parameter from Reactor and Proactor and instead re
 ## Consequences
 
 There is likely to be an impact on performance as we move from a compile time decision, and one which optimizes by pre-building its meaage mapper middleware pipeline, to one which needs to calculate the type at runtime. This is a trade-off we are willing to make in order to support the use case of multiple message types on the same channel. However, we should look at options to optimize this in the future, such as caching the type of the message based on the metadata.
+
+An easy first optimization would be to cache the unwrap pipeline for a type after creating it, so that when we receive the same type again, we can reuse the existing pipeline instead of creating a new one. This would reduce the overhead of creating the pipeline for each message and improve performance.
