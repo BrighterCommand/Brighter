@@ -479,7 +479,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
             var busType = typeof(OutboxProducerMediator<,>).MakeGenericType(typeof(Message), transactionType);
-            var circuitBreaker = serviceProvider.GetService<IAmAnOutboxCircuitBreaker>();
 
             return (IAmAnOutboxProducerMediator?)Activator.CreateInstance(
                 busType,
@@ -490,8 +489,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactoryAsync(serviceProvider),
                 Tracer(serviceProvider),
                 PublicationFinder(serviceProvider),
-                circuitBreaker,
                 outbox,
+                OutboxCircuitBreaker(serviceProvider),
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
@@ -591,6 +590,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private static IAmABrighterTracer? Tracer(IServiceProvider serviceProvider)
         {
             return serviceProvider.GetService<BrighterTracer>();
+        }
+        private static IAmAnOutboxCircuitBreaker? OutboxCircuitBreaker(IServiceProvider serviceProvider)
+        {
+            return serviceProvider.GetService<IAmAnOutboxCircuitBreaker>();
         }
 
         /// <summary>                                                            x
