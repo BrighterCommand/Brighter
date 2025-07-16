@@ -12,7 +12,8 @@ namespace Paramore.Brighter.Extensions.Hosting
     {
         private readonly TimedOutboxArchiverOptions _options;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
-        private IAmAnOutbox<Message> _outbox;
+        private IAmAnOutboxSync<Message> _outboxSync;
+        private IAmAnOutboxAsync<Message> _outboxAsync;
         private IAmAnArchiveProvider _archiveProvider;
         private readonly IDistributedLock _distributedLock;
         private Timer _timer;
@@ -22,7 +23,11 @@ namespace Paramore.Brighter.Extensions.Hosting
         public TimedOutboxArchiver(IAmAnOutbox<Message> outbox, IAmAnArchiveProvider archiveProvider,
             IDistributedLock distributedLock, TimedOutboxArchiverOptions options)
         {
-            _outbox = outbox;
+            if (outbox is IAmAnOutboxSync<Message> syncBox)
+                _outboxSync = syncBox;
+            
+            if (outbox is IAmAnOutboxAsync<Message> asyncBox)
+                _outboxAsync = asyncBox;
             _archiveProvider = archiveProvider;
             _distributedLock = distributedLock;
             _options = options;
@@ -54,6 +59,12 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private async Task Archive(object state, CancellationToken cancellationToken)
         {
+            if (_outboxSync is null && _outboxAsync is null)
+            {
+                s_logger.LogWarning("No outbox implementation found. Cannot archive messages.");
+                return;
+            }
+
             var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
             if (lockId != null)
             {
@@ -61,11 +72,18 @@ namespace Paramore.Brighter.Extensions.Hosting
                 try
                 {
                     var outBoxArchiver = new OutboxArchiver(
-                        _outbox,
+                        _outboxAsync as IAmAnOutbox<Message> ?? _outboxSync,
                         _archiveProvider,
                         _options.BatchSize);
 
-                    await outBoxArchiver.ArchiveAsync(_options.MinimumAge, cancellationToken, _options.ParallelArchiving);
+                    if (_outboxAsync is not null)
+                    {
+                        await outBoxArchiver.ArchiveAsync(_options.MinimumAge, cancellationToken, _options.ParallelArchiving);
+                    }
+                    else
+                    {
+                        outBoxArchiver.Archive(_options.MinimumAge);
+                    }
                 }
                 catch (Exception e)
                 {
