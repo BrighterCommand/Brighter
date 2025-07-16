@@ -195,12 +195,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             {
                 new Subscription<ConfigurationCommand>(
                     subscriptionName: new SubscriptionName($"{hostName}.{CONFIGURATION}"),
-                    channelName:new ChannelName($"{hostName}.{CONFIGURATION}"),
-                    routingKey:new RoutingKey($"{hostName}.{CONFIGURATION}")),
+                    channelName: new ChannelName($"{hostName}.{CONFIGURATION}"),
+                    routingKey: new RoutingKey($"{hostName}.{CONFIGURATION}")),
                 new Subscription<HeartbeatRequest>(
-                    subscriptionName:new SubscriptionName($"{hostName}.{HEARTBEAT}"),
-                    channelName:new ChannelName($"{hostName}.{HEARTBEAT}"),
-                    routingKey:new RoutingKey($"{hostName}.{HEARTBEAT}"))
+                    subscriptionName: new SubscriptionName($"{hostName}.{HEARTBEAT}"),
+                    channelName: new ChannelName($"{hostName}.{HEARTBEAT}"),
+                    routingKey: new RoutingKey($"{hostName}.{HEARTBEAT}"))
             };
 
             if (_channelFactory is null) throw new ArgumentException("Channel Factory must not be null");

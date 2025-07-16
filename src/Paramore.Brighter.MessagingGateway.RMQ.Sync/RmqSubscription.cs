@@ -73,6 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="dataType"/> if null</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
         /// <param name="timeOut">The timeout in milliseconds.</param>
@@ -95,6 +96,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             SubscriptionName? subscriptionName = null, 
             ChannelName? channelName = null, 
             RoutingKey? routingKey = null, 
+            Func<Message, Type>? getRequestType = null,
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -112,7 +114,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             int? maxQueueLength = null) 
-            : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(dataType, subscriptionName, channelName, routingKey, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
             DeadLetterChannelName = deadLetterChannelName;
@@ -131,6 +133,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="dataType"/> if null</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
         /// <param name="timeOut">The timeout in milliseconds.</param>
@@ -151,6 +154,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
+            Func<Message, Type>? getRequestType = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -167,7 +171,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null)
-            : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
+            : base(typeof(T), subscriptionName, channelName, routingKey, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
                 unacceptableMessageLimit, isDurable, messagePumpType, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels, emptyChannelDelay, channelFailureDelay)
         { }
 

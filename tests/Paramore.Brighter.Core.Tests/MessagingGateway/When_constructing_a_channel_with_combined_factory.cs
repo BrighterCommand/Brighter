@@ -86,13 +86,14 @@ public class CombinedChannelFactoryTest
     {
         public override Type ChannelFactoryType { get; }
 
-        public MockSubscription(Type dataType, Type channelFactoryType, SubscriptionName? name = null,
-            ChannelName? channelName = null, RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1,
-            TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
+        public MockSubscription(
+            Type dataType, Type channelFactoryType, SubscriptionName? name = null,
+            ChannelName? channelName = null, RoutingKey? routingKey = null, Func<Message, Type>? getRequestType = null,
+            int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0, MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null, OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null, TimeSpan? channelFailureDelay = null) : base(dataType, name,
-            channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
+            channelName, routingKey, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
             unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
             channelFailureDelay)
         {

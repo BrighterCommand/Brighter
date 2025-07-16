@@ -158,10 +158,10 @@ namespace Paramore.Brighter
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">The <see cref="Type"/> of the data that this subscription handles.</param>
-        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="DataType"/> if null</param>
         /// <param name="subscriptionName">The <see cref="SubscriptionName"/> for identification. Defaults to the data type's full name.</param>
         /// <param name="channelName">The <see cref="ChannelName"/> for the channel. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The <see cref="RoutingKey"/> for message routing. Defaults to the data type's full name.</param>
+        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="DataType"/> if null</param>
         /// <param name="bufferSize">The <see cref="int"/> number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10.</param>
         /// <param name="noOfPerformers">The <see cref="int"/> number of threads reading this channel.</param>
         /// <param name="timeOut">The <see cref="TimeSpan"/> timeout for the subscription to consider the queue empty and pause.</param>
@@ -174,12 +174,11 @@ namespace Paramore.Brighter
         /// <param name="emptyChannelDelay">The <see cref="TimeSpan"/> to pause when a channel is empty in milliseconds.</param>
         /// <param name="channelFailureDelay">The <see cref="TimeSpan"/> to pause when there is a channel failure in milliseconds.</param>
         /// <exception cref="ConfigurationException">Thrown when <paramref name="messagePumpType"/> is <see cref="MessagePumpType.Unknown"/>.</exception>
-        public Subscription(
-            Type dataType,
-            Func<Message, Type>? getRequestType = null,
+        public Subscription(Type dataType,
             SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
+            Func<Message, Type>? getRequestType = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -239,11 +238,11 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class with data type T.
         /// </summary>
-        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
         /// <param name="bufferSize">The number of messages to buffer on the channel</param>
         /// <param name="timeOut">The timeout before we consider the subscription empty and pause</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
@@ -255,11 +254,11 @@ namespace Paramore.Brighter
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
-            Func<Message, Type>? getRequestType = null,
             SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
             int noOfPerformers = 1,
+            Func<Message, Type>? getRequestType = null,
             int bufferSize = 1,
             TimeSpan? timeOut = null,
             int requeueCount = -1,
@@ -272,10 +271,10 @@ namespace Paramore.Brighter
             TimeSpan? channelFailureDelay = null)
             : base(
                 typeof(T),
-                getRequestType,
                 subscriptionName,
                 channelName,
                 routingKey,
+                getRequestType,
                 bufferSize,
                 noOfPerformers,
                 timeOut,
@@ -285,8 +284,7 @@ namespace Paramore.Brighter
                 messagePumpType,
                 channelFactory,
                 makeChannels,
-                emptyChannelDelay,
-                channelFailureDelay)
+                emptyChannelDelay, channelFailureDelay)
         {
         }
     }

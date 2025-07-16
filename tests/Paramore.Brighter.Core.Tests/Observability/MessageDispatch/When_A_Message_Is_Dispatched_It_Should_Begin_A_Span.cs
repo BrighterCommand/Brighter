@@ -98,8 +98,8 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
-                new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
+            _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent), 
+                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
             };

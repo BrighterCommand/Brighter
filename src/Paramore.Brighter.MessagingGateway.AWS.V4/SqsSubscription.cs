@@ -70,11 +70,11 @@ public class SqsSubscription : Subscription
     /// Initializes a new instance of the <see cref="Subscription"/> class.
     /// </summary>
     /// <param name="dataType">Type of the data.</param>
-    /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="dataType"/> if null</param>
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="channelType">Specifies the routing key type</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+    /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="dataType"/> if null</param>
     /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
     /// <param name="noOfPerformers">The no of threads reading this channel.</param>
     /// <param name="timeOut">The timeout that infers nothing could be read from the queue.</param>
@@ -90,13 +90,12 @@ public class SqsSubscription : Subscription
     /// <param name="queueAttributes">What are the <see cref="SqsAttributes"/> of the Sqs queue we use to receive messages</param>
     /// <param name="topicAttributes">What are the <see cref="SnsAttributes"/>  of the topic to which are queue subscribes, if we are <see cref="ChannelType.PubSub"/> </param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-    protected SqsSubscription(
-        Type dataType,
-        Func<Message, Type>? getRequestType = null,
+    protected SqsSubscription(Type dataType,
         SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
         ChannelType channelType = ChannelType.PubSub,
         RoutingKey? routingKey = null,
+        Func<Message, Type>? getRequestType = null,
         int bufferSize = 1,
         int noOfPerformers = 1,
         TimeSpan? timeOut = null,
@@ -112,9 +111,9 @@ public class SqsSubscription : Subscription
         SqsAttributes? queueAttributes = null,
         SnsAttributes? topicAttributes = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
-        : base(dataType, getRequestType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
-            requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
-            channelFailureDelay)
+        : base(dataType, subscriptionName, channelName, routingKey, getRequestType, bufferSize, noOfPerformers, timeOut,
+            requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels,
+            emptyChannelDelay, channelFailureDelay)
     {
         if (channelType == ChannelType.PubSub && routingKey is null)
             throw new ArgumentNullException(nameof(routingKey), "Routing Key is required for PubSub channels");
@@ -187,7 +186,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         SqsAttributes? queueAttributes = null,
         SnsAttributes? topicAttributes = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
-        : base(typeof(T), getRequestType, subscriptionName, channelName, channelType, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
-            requeueDelay,  unacceptableMessageLimit, messagePumpType, channelFactory,  emptyChannelDelay,  
-            channelFailureDelay, findTopicBy, findQueueBy, queueAttributes, topicAttributes, makeChannels) { }
+        : base(typeof(T), subscriptionName, channelName, channelType, routingKey, getRequestType, bufferSize, noOfPerformers, timeOut,
+            requeueCount,  requeueDelay, unacceptableMessageLimit, messagePumpType,  channelFactory,  
+            emptyChannelDelay, channelFailureDelay, findTopicBy, findQueueBy, queueAttributes, topicAttributes, makeChannels) { }
 }

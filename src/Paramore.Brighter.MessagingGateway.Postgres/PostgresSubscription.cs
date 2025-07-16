@@ -16,6 +16,7 @@ public class PostgresSubscription : Subscription
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+    /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="dataType"/> if null</param>
     /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
     /// <param name="noOfPerformers">The no of threads reading this channel.</param>
     /// <param name="timeOut">The timeout for the subscription to consider the queue empty and pause</param>
@@ -32,10 +33,12 @@ public class PostgresSubscription : Subscription
     /// <param name="visibleTimeout">The duration for which a retrieved message is hidden from other consumers.</param>
     /// <param name="tableWithLargeMessage">A flag indicating whether the queue table is configured to handle large messages stored as streams.</param>
     /// <param name="binaryMessagePayload">A flag indicating whether the message payload is stored as binary JSON (JSONB) in the database.</param>
-    public PostgresSubscription(Type dataType, 
+    public PostgresSubscription(
+        Type dataType, 
         SubscriptionName? subscriptionName = null, 
         ChannelName? channelName = null, 
         RoutingKey? routingKey = null,
+        Func<Message, Type>? getRequestType = null,
         int bufferSize = 1,
         int noOfPerformers = 1,
         TimeSpan? timeOut = null,
@@ -52,7 +55,7 @@ public class PostgresSubscription : Subscription
         TimeSpan? visibleTimeout = null,
         bool tableWithLargeMessage = false,
         bool? binaryMessagePayload = null) 
-        : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+        : base(dataType, subscriptionName, channelName, routingKey, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
     {
         SchemaName = schemaName;
         QueueStoreTable = queueStoreTable;
@@ -109,6 +112,7 @@ public class PostgresSubscription<T> : PostgresSubscription
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+    /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="dataType"/> if null</param>
     /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
     /// <param name="noOfPerformers">The no of threads reading this channel.</param>
     /// <param name="timeOut">The timeout for the subscription to consider the queue empty and pause</param>
@@ -125,9 +129,11 @@ public class PostgresSubscription<T> : PostgresSubscription
     /// <param name="visibleTimeout">The duration for which a retrieved message is hidden from other consumers.</param>
     /// <param name="tableWithLargeMessage">A flag indicating whether the queue table is configured to handle large messages stored as streams.</param>
     /// <param name="binaryMessagePayload">A flag indicating whether the message payload is stored as binary JSON (JSONB) in the database.</param>
-    public PostgresSubscription(SubscriptionName? subscriptionName = null, 
+    public PostgresSubscription(
+        SubscriptionName? subscriptionName = null, 
         ChannelName? channelName = null, 
         RoutingKey? routingKey = null,
+        Func<Message, Type>? getRequestType = null,
         int bufferSize = 1,
         int noOfPerformers = 1, 
         TimeSpan? timeOut = null,
@@ -144,7 +150,7 @@ public class PostgresSubscription<T> : PostgresSubscription
         TimeSpan? visibleTimeout = null,
         bool tableWithLargeMessage = false,
         bool? binaryMessagePayload = null) 
-        : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, 
+        : base(typeof(T), subscriptionName, channelName, routingKey, getRequestType, bufferSize, noOfPerformers, 
             timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, 
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, schemaName,
             queueStoreTable, visibleTimeout, tableWithLargeMessage, binaryMessagePayload)
