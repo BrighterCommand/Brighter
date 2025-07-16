@@ -42,6 +42,7 @@ public class AzureServiceBusSubscription : Subscription
     /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
     /// </summary>
     /// <param name="dataType">The type for this Subscription.</param>
+    /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="dataType"/> if null</param>
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
@@ -59,6 +60,7 @@ public class AzureServiceBusSubscription : Subscription
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     public AzureServiceBusSubscription(
         Type dataType,
+        Func<Message, Type>? getRequestType = null,
         SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
         RoutingKey? routingKey = null,
@@ -74,7 +76,7 @@ public class AzureServiceBusSubscription : Subscription
         AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null)
-        : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
+        : base(dataType, getRequestType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
             requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, 
             channelFailureDelay)
     {
@@ -91,6 +93,7 @@ public class AzureServiceBusSubscription<T> : AzureServiceBusSubscription where 
     /// <summary>
     /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
     /// </summary>
+    /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
@@ -107,6 +110,7 @@ public class AzureServiceBusSubscription<T> : AzureServiceBusSubscription where 
     /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     public AzureServiceBusSubscription(
+        Func<Message, Type>? getRequestType = null,
         SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
         RoutingKey? routingKey = null,
@@ -122,7 +126,7 @@ public class AzureServiceBusSubscription<T> : AzureServiceBusSubscription where 
         AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null)
-        : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize, noOfPerformers,
+        : base(typeof(T), getRequestType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers,
             timeOut ?? TimeSpan.FromMilliseconds(400), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, 
             subscriptionConfiguration, emptyChannelDelay, channelFailureDelay)
     {

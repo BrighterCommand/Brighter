@@ -16,6 +16,8 @@ In this case then the metadata of the message decides how it is routed. Our exis
 
 ## Decision
 
-We need to remove the generic parameter from Reactor and Proactor and instead rely on runtime determination of the type. To do this we will use the [Strategy Pattern](https://en.wikipedia.org/wiki/Strategy_pattern) passing in a `Func<Message, Type>` to the message pump. This function will be used to determine the type of the message at runtime based on the metadata of the message. 
+We need to remove the generic parameter from Reactor and Proactor and instead rely on runtime determination of the type. To do this we will use the [Strategy Pattern](https://en.wikipedia.org/wiki/Strategy_pattern) passing in a `Func<Message, Type>` to the message pump. This function will be used to determine the type of the `IRequest` at runtime based on the metadata of the message.  The `Subscription` will then set this, allowing the user to use strategies other than DataType Channel, for example, reading the Cloud Events type. We will make the `Func<Message, Type>` an otional parameter of the `Subscription` and default to returning the `DataType` of the `Subscriiption` if not set, which is the current behavior. This will allow us to keep the existing behavior for users that do not need to differentiate between message types.
 
 ## Consequences
+
+There is likely to be an impact on performance as we move from a compile time decision, and one which optimizes by pre-building its meaage mapper middleware pipeline, to one which needs to calculate the type at runtime. This is a trade-off we are willing to make in order to support the use case of multiple message types on the same channel. However, we should look at options to optimize this in the future, such as caching the type of the message based on the metadata.
