@@ -96,6 +96,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
+            new ResiliencePipelineRegistry<string>(),
             _mediator,
             new InMemorySchedulerFactory(),
             tracer: tracer, 

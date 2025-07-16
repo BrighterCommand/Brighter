@@ -43,6 +43,7 @@ public class RequestContextPresentTests : IDisposable
             handlerFactory,
             spyRequestContextFactory,
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()
         );
 
@@ -74,6 +75,7 @@ public class RequestContextPresentTests : IDisposable
             handlerFactory,
             spyRequestContextFactory,
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()
         );
 
@@ -103,6 +105,7 @@ public class RequestContextPresentTests : IDisposable
             handlerFactory,
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()
         );
 
@@ -132,6 +135,7 @@ public class RequestContextPresentTests : IDisposable
             handlerFactory,
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()
         );
 
@@ -187,6 +191,7 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory()
         );
@@ -239,6 +244,7 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory()
         );
@@ -291,6 +297,7 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory()
         );
@@ -347,6 +354,7 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory()
         );

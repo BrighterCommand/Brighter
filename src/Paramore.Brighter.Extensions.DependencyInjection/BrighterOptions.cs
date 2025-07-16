@@ -43,6 +43,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         public IPolicyRegistry<string> PolicyRegistry { get; set; } = new DefaultPolicy();
 
+        /// <inheritdoc />
+        public ResiliencePipelineRegistry<string> ResiliencePipelineRegistry { get; set; }
+
         /// <summary>
         /// Configures the request context factory. Defaults to <see cref="InMemoryRequestContextFactory" />.
         /// </summary>
@@ -93,6 +96,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  Configures the polly policy registry.
         /// </summary>
         IPolicyRegistry<string> PolicyRegistry { get; set; }
+        
+        /// <summary>
+        /// Configure the polly resilience pipeline registry
+        /// </summary>
+        ResiliencePipelineRegistry<string> ResiliencePipelineRegistry { get; set; }
 
         /// <summary>
         ///     Configures the request context factory. Defaults to <see cref="InMemoryRequestContextFactory" />.

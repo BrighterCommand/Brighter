@@ -100,6 +100,7 @@ public class HangfireSchedulerRequestAsyncTests : IDisposable
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             outboxBus,
             _scheduler
         );

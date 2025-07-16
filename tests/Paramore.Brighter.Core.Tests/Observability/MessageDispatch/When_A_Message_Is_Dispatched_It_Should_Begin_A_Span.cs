@@ -81,6 +81,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);

@@ -50,6 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                 new ServiceProviderHandlerFactory(container.BuildServiceProvider()),
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 new InMemorySchedulerFactory()
                 );
         }

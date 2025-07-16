@@ -89,6 +89,7 @@ public class InMemorySchedulerMessageTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             outboxBus,
             _scheduler
         );

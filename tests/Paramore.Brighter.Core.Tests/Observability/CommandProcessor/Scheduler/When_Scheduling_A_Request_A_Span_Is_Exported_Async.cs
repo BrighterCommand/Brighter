@@ -74,6 +74,7 @@ public class CommandProcessorSchedulerObservabilityAsyncTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory{TimeProvider = _timeProvider},
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All

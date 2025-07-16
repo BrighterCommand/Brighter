@@ -21,12 +21,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
              _myRequest.RequestValue = "Hello World";
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
-            {
-                    return new MyResponseMessageMapper();
-
-                throw new ConfigurationException($"No mapper found for {type.Name}");
-            }), null);
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyResponseMessageMapper()), null);
 
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
 
@@ -77,6 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
+                new ResiliencePipelineRegistry<string>(),
                 bus,
                 replySubscriptions:replySubs,
                 responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System),

@@ -54,6 +54,7 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
         var commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
             .Policies(policyRegistry)
+            .DefaultResilencePipeline()
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())

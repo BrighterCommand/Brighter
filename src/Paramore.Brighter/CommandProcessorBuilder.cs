@@ -28,7 +28,10 @@ using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.FeatureSwitch.Providers;
 using Paramore.Brighter.Observability;
+using Polly;
+using Polly.CircuitBreaker;
 using Polly.Registry;
+using Polly.Retry;
 
 namespace Paramore.Brighter
 {
@@ -85,12 +88,14 @@ namespace Paramore.Brighter
         INeedInstrumentation,
         INeedARequestContext,
         INeedARequestSchedulerFactory,
+        INeedResiliencePipeline,
         IAmACommandProcessorBuilder
     {
         private IAmARequestContextFactory? _requestContextFactory;
         private IAmASubscriberRegistry? _registry;
         private IAmAHandlerFactory? _handlerFactory;
         private IPolicyRegistry<string>? _policyRegistry;
+        private ResiliencePipelineRegistry<string>? _resiliencePipelineRegistry;
 
         private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private IAmAnOutboxProducerMediator? _bus;
@@ -148,7 +153,7 @@ namespace Paramore.Brighter
         /// <returns>INeedLogging.</returns>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required</exception>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required</exception>
-        public INeedMessaging Policies(IPolicyRegistry<string> policyRegistry)
+        public INeedResiliencePipeline Policies(IPolicyRegistry<string> policyRegistry)
         {
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException(
@@ -166,9 +171,10 @@ namespace Paramore.Brighter
         /// Use this if you do not require a policy and only want to retry once(i.e. No Tasks Queues or QoS needs).
         /// </summary>
         /// <returns>INeedLogging.</returns>
-        public INeedMessaging DefaultPolicy()
+        public INeedResiliencePipeline DefaultPolicy()
         {
             _policyRegistry = new DefaultPolicy();
+            _resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
             return this;
         }
 
@@ -291,6 +297,9 @@ namespace Paramore.Brighter
             if (_policyRegistry == null)
                 throw new ConfigurationException(
                     "A PolicyRegistry must be provided to construct a command processor");
+            if (_resiliencePipelineRegistry == null)
+                throw new ConfigurationException(
+                    "A ResiliencePipelineRegistry must be provided to construct a command processor");
             if (_instrumetationOptions == null)
                 throw new ConfigurationException(
                     "InstrumentationOptions must be provided to construct a command processor");
@@ -301,6 +310,7 @@ namespace Paramore.Brighter
                     handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory, 
                     policyRegistry: _policyRegistry,
+                    resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry,
                     instrumentationOptions: _instrumetationOptions.Value,
                     requestSchedulerFactory: _requestSchedulerFactory);
@@ -312,6 +322,7 @@ namespace Paramore.Brighter
                     handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
+                    resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     bus: _bus,
                     transactionProvider: _transactionProvider,
                     featureSwitchRegistry: _featureSwitchRegistry, 
@@ -327,6 +338,7 @@ namespace Paramore.Brighter
                     handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
+                    resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     bus: _bus,
                     transactionProvider: _transactionProvider,
                     featureSwitchRegistry: _featureSwitchRegistry, 
@@ -340,6 +352,33 @@ namespace Paramore.Brighter
 
             throw new ConfigurationException(
                 "The configuration options chosen cannot be used to construct a command processor");
+        }
+
+        /// <inheritdoc />
+        public INeedMessaging ResilencePipeline(ResiliencePipelineRegistry<string> resiliencePipelineRegistry)
+        {
+            _resiliencePipelineRegistry = resiliencePipelineRegistry;
+            return this;
+        }
+
+        /// <inheritdoc />
+        public INeedMessaging DefaultResilencePipeline()
+        {
+            _resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>(new ResiliencePipelineRegistryOptions<string>
+            {
+                BuilderFactory = () => new ResiliencePipelineBuilder()
+                    .AddCircuitBreaker(new CircuitBreakerStrategyOptions
+                    {
+                        BreakDuration = TimeSpan.FromTicks(5_000)
+                    })
+                    .AddRetry(new RetryStrategyOptions
+                    {
+                        BackoffType = DelayBackoffType.Linear,
+                        Delay = TimeSpan.FromMilliseconds(50)
+                    })
+            });
+            
+            return this;
         }
     }
 
@@ -375,13 +414,32 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <returns>INeedLogging.</returns>
-        INeedMessaging Policies(IPolicyRegistry<string> policyRegistry);
+        INeedResiliencePipeline Policies(IPolicyRegistry<string> policyRegistry);
 
         /// <summary>
         /// Knows the policy.
         /// </summary>
         /// <returns>INeedMessaging.</returns>
-        INeedMessaging DefaultPolicy();
+        INeedResiliencePipeline DefaultPolicy();
+    }
+    
+    /// <summary>
+    /// Interface INeedResiliencePipeline
+    /// </summary>
+    public interface INeedResiliencePipeline
+    {
+        /// <summary>
+        /// Policies the specified policy registry.
+        /// </summary>
+        /// <param name="resiliencePipelineRegistry">The policy registry.</param>
+        /// <returns>INeedLogging.</returns>
+        INeedMessaging ResilencePipeline(ResiliencePipelineRegistry<string> resiliencePipelineRegistry);
+
+        /// <summary>
+        /// Knows the policy.
+        /// </summary>
+        /// <returns>INeedMessaging.</returns>
+        INeedMessaging DefaultResilencePipeline();
     }
 
 

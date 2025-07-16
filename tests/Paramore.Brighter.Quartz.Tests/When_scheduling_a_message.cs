@@ -88,6 +88,7 @@ public class QuartzSchedulerMessageTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             outboxBus,
             _scheduler
         );

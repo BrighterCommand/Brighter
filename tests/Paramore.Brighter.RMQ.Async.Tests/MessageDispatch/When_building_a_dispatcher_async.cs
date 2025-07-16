@@ -58,6 +58,7 @@ public class DispatchBuilderTestsAsync : IDisposable
                 { CommandProcessor.RETRYPOLICY, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             })
+            .DefaultResilencePipeline()
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())

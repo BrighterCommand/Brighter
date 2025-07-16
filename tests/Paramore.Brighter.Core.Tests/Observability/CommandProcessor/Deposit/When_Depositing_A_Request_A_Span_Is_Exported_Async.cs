@@ -90,6 +90,7 @@ public class AsyncCommandProcessorDepositObservabilityTests
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory(),
             tracer: tracer, 

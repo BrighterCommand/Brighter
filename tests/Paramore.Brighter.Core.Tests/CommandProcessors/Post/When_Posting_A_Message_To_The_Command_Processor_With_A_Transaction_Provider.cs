@@ -100,6 +100,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
+                new ResiliencePipelineRegistry<string>(),
                 bus,
                 scheduler,
                 _transactionProvider

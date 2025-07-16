@@ -67,6 +67,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 mediator,
                 new InMemorySchedulerFactory());
 
@@ -145,6 +146,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 mediator,
                 new InMemorySchedulerFactory());
             
@@ -222,6 +224,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 mediator,
                 new InMemorySchedulerFactory());
             
@@ -308,6 +311,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 mediator,
                 new InMemorySchedulerFactory());           
             

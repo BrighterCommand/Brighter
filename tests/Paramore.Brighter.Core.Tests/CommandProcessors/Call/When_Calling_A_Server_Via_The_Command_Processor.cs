@@ -92,6 +92,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 handlerFactory,
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
+                new ResiliencePipelineRegistry<string>(),
                 bus,
                 replySubscriptions:replySubs,
                 responseChannelFactory: inMemoryChannelFactory,

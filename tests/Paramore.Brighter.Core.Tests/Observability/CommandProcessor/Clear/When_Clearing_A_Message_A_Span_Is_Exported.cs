@@ -261,6 +261,7 @@ public class CommandProcessorClearObservabilityTests
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory(),
             tracer: tracer, 

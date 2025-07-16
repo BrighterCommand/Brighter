@@ -28,6 +28,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 new InMemorySchedulerFactory()
                 );
 

@@ -117,6 +117,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
+                new ResiliencePipelineRegistry<string>(),
                 bus,
                 new InMemorySchedulerFactory()
             );

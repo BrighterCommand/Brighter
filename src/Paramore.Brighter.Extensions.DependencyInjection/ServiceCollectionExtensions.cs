@@ -445,9 +445,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             var policyBuilder = handlerBuilder.Handlers(handlerConfiguration);
 
-            var messagingBuilder = options.PolicyRegistry == null
+            var resiliencePipelineBuilder = options.PolicyRegistry == null
                 ? policyBuilder.DefaultPolicy()
                 : policyBuilder.Policies(options.PolicyRegistry);
+
+            var messagingBuilder = options.ResiliencePipelineRegistry == null
+                ? resiliencePipelineBuilder.DefaultResilencePipeline()
+                : resiliencePipelineBuilder.ResilencePipeline(options.ResiliencePipelineRegistry);
             
             var command = AddEventBus(provider, messagingBuilder, useRequestResponse)
                 .ConfigureInstrumentation(provider.GetService<IAmABrighterTracer>(), options.InstrumentationOptions)

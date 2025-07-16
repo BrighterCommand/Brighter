@@ -93,6 +93,7 @@ public class AsyncCommandProcessorClearObservabilityTests
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory(),
             tracer: tracer, 

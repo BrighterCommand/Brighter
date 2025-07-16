@@ -54,6 +54,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);

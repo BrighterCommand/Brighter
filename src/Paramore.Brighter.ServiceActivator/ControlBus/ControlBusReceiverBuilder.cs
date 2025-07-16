@@ -31,7 +31,9 @@ using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Registry;
+using Polly.Retry;
 
 //Needs a different namespace to the DispatchBuilder to avoid collisions
 namespace Paramore.Brighter.ServiceActivator.ControlBus
@@ -142,7 +144,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
                 { CommandProcessor.RETRYPOLICY, retryPolicy }
             };
-
+            
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
@@ -183,6 +185,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
+                .DefaultResilencePipeline()
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())

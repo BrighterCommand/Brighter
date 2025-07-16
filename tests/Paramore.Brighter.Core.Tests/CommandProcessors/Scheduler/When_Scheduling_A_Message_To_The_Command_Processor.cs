@@ -122,6 +122,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory { TimeProvider = _timeProvider });
         PipelineBuilder<MyCommand>.ClearPipelineCache();

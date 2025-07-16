@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                 .StartNew()
                 .Handlers(new HandlerConfiguration(registry, handlerFactory))
                 .DefaultPolicy()
+                .DefaultResilencePipeline()
                 .NoExternalBus()
                 .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())

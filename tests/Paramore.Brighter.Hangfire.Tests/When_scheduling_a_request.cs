@@ -92,6 +92,7 @@ public class HangfireSchedulerRequestTests : IDisposable
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             outboxBus,
             _scheduler
         );

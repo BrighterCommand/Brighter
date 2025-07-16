@@ -69,6 +69,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             CommandProcessor commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
+                new ResiliencePipelineRegistry<string>(),
                 bus, 
                 new InMemorySchedulerFactory()
             );
