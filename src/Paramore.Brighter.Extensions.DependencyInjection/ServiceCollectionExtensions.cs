@@ -159,9 +159,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
             }
 
-            brighterBuilder.Services.TryAddSingleton<OutboxCircuitBreakerOptions>();
-            brighterBuilder.Services.TryAddSingleton<IAmAnOutboxCircuitBreaker, InMemoryOutboxCircuitBreaker>();
-
             brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
@@ -480,7 +477,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
             var busType = typeof(OutboxProducerMediator<,>).MakeGenericType(typeof(Message), transactionType);
-            var circuitBreaker = serviceProvider.GetRequiredService<IAmAnOutboxCircuitBreaker>();
+            var circuitBreaker = serviceProvider.GetService<IAmAnOutboxCircuitBreaker>();
 
             return (IAmAnOutboxProducerMediator)Activator.CreateInstance(
                 busType,
