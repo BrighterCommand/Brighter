@@ -70,6 +70,7 @@ public class SqsSubscription : Subscription
     /// Initializes a new instance of the <see cref="Subscription"/> class.
     /// </summary>
     /// <param name="dataType">Type of the data.</param>
+    /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="dataType"/> if null</param>
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="channelType">Specifies the routing key type</param>
@@ -91,6 +92,7 @@ public class SqsSubscription : Subscription
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
     protected SqsSubscription(
         Type dataType,
+        Func<Message, Type>? getRequestType = null,
         SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
         ChannelType channelType = ChannelType.PubSub,
@@ -110,7 +112,7 @@ public class SqsSubscription : Subscription
         SqsAttributes? queueAttributes = null,
         SnsAttributes? topicAttributes = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
-        : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
+        : base(dataType, getRequestType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
             requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
             channelFailureDelay)
     {
@@ -144,6 +146,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscription"/> class.
     /// </summary>
+    /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="channelType">Specifies the routing key type</param>
@@ -164,6 +167,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
     /// <param name="topicAttributes">What are the <see cref="SnsAttributes"/>  of the topic to which are queue subscribes, if we are <see cref="ChannelType.PubSub"/> </param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
     public SqsSubscription(
+        Func<Message, Type>? getRequestType = null,
         SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
         ChannelType channelType = ChannelType.PubSub,
@@ -183,7 +187,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         SqsAttributes? queueAttributes = null,
         SnsAttributes? topicAttributes = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
-        : base(typeof(T), subscriptionName, channelName, channelType, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
+        : base(typeof(T), getRequestType, subscriptionName, channelName, channelType, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
             requeueDelay,  unacceptableMessageLimit, messagePumpType, channelFactory,  emptyChannelDelay,  
             channelFailureDelay, findTopicBy, findQueueBy, queueAttributes, topicAttributes, makeChannels) { }
 }
