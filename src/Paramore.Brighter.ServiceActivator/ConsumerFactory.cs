@@ -34,7 +34,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly Subscription _subscription;
         private readonly IAmAMessageTransformerFactory? _messageTransformerFactory;
         private readonly IAmARequestContextFactory _requestContextFactory;
-        private readonly IAmABrighterTracer _tracer;
+        private readonly IAmABrighterTracer? _tracer;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly ConsumerName _consumerName;
         private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageTransformerFactory? messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmABrighterTracer tracer,
+            IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _commandProcessor = commandProcessor;
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync,
             IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync,
             IAmARequestContextFactory requestContextFactory,
-            IAmABrighterTracer tracer,
+            IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _commandProcessor = commandProcessor;

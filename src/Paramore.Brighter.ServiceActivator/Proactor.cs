@@ -102,7 +102,7 @@ namespace Paramore.Brighter.ServiceActivator
             await Channel.AcknowledgeAsync(message);
         }
         
-        private async Task DispatchRequest(MessageHeader messageHeader, IRequest request, RequestContext requestContext)
+        private async Task DispatchRequest<TRequest>(MessageHeader messageHeader, TRequest request, RequestContext requestContext) where TRequest : class, IRequest
         {
             Log.DispatchingMessage(s_logger, request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
@@ -219,7 +219,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                     var request = await TranslateMessage(message, context);
                     
-                    await DispatchRequest(message.Header, request, context);
+                    await InvokeDispatchRequest(request, message, context);
 
                     span?.SetStatus(ActivityStatusCode.Ok);
                 }
@@ -307,44 +307,25 @@ namespace Paramore.Brighter.ServiceActivator
             Tracer?.EndSpan(pumpSpan);
         }
 
-        private async Task<IRequest> TranslateMessage(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
+        private async Task InvokeDispatchRequest(IRequest request, Message message, RequestContext context)
         {
-            Log.TranslateMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId);
-            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
+            // NOTE: DispatchRequest<TRequest> is a generic method constrained to TRequest : class, IRequest, but at runtime
+            // we only have an IRequest reference due to the dynamic type lookup. To call the generic method with the actual
+            // runtime type (e.g., MyEvent), we need to use reflection to construct and invoke the generic method with the correct type.
+            
+            var requestType = request.GetType();
+            var dispatchMethod = typeof(Proactor)
+                .GetMethod(nameof(DispatchRequest), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.MakeGenericMethod(requestType);
 
-            var requestType = _getRequestType(message);
-            if (requestType == null)
-                throw new MessageMappingException($"Failed to find request type for message {message.Id} ", 
-                    new ArgumentNullException(nameof(requestType), "The request type cannot be null."));
-
-            try
+            if (dispatchMethod is null)
             {
-                // Get the generic method definition
-                var method = typeof(TransformPipelineBuilderAsync).GetMethod(nameof(TransformPipelineBuilderAsync.BuildUnwrapPipeline), Type.EmptyTypes);
-
-                // Make the generic method with the runtime type
-                var genericMethod = method!.MakeGenericMethod(requestType);
-
-                // Invoke the method to get the pipeline instance
-                var pipeline = genericMethod.Invoke(_transformPipelineBuilder, null);
-
-                // Call UnwrapAsync on the pipeline
-                var unwrapMethod = pipeline!.GetType().GetMethod("UnwrapAsync");
-                var task = (Task)unwrapMethod!.Invoke(pipeline, new object[] { message, requestContext, cancellationToken })!;
-                await task.ConfigureAwait(false);
-                var resultProperty = task.GetType().GetProperty("Result");
-                return (IRequest)resultProperty!.GetValue(task)!;
+                throw new InvalidOperationException($"Could not find DispatchRequest method for type {requestType.FullName}");
             }
-            catch (ConfigurationException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", exception);
-            }
+
+            await (Task)dispatchMethod.Invoke(this, [message.Header, request, context])!;
         }
-        
+ 
         private RequestContext InitRequestContext(Activity? span, Message message)
         {
             var context = RequestContextFactory.Create();
@@ -385,6 +366,45 @@ namespace Paramore.Brighter.ServiceActivator
 
             return await Channel.RequeueAsync(message, RequeueDelay);
         }
+        
+        private async Task<IRequest> TranslateMessage(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
+        {
+            Log.TranslateMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId);
+            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
+
+            var requestType = _getRequestType(message);
+            if (requestType == null)
+                throw new MessageMappingException($"Failed to find request type for message {message.Id} ", 
+                    new ArgumentNullException(nameof(requestType), "The request type cannot be null."));
+
+            try
+            {
+                // Get the generic method definition
+                var method = typeof(TransformPipelineBuilderAsync).GetMethod(nameof(TransformPipelineBuilderAsync.BuildUnwrapPipeline), Type.EmptyTypes);
+
+                // Make the generic method with the runtime type
+                var genericMethod = method!.MakeGenericMethod(requestType);
+
+                // Invoke the method to get the pipeline instance
+                var pipeline = genericMethod.Invoke(_transformPipelineBuilder, null);
+
+                // Call UnwrapAsync on the pipeline
+                var unwrapMethod = pipeline!.GetType().GetMethod("UnwrapAsync");
+                var task = (Task)unwrapMethod!.Invoke(pipeline, new object[] { message, requestContext, cancellationToken })!;
+                await task.ConfigureAwait(false);
+                var resultProperty = task.GetType().GetProperty("Result");
+                return (IRequest)resultProperty!.GetValue(task)!;
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", exception);
+            }
+        }
+
 
         private bool UnacceptableMessageLimitReached()
         {

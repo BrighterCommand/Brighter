@@ -179,7 +179,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                     var request = TranslateMessage(message, context);
                     
-                    DispatchRequest(message.Header, request, context);
+                    InvokeDispatchRequest(request, message, context);
 
                     span?.SetStatus(ActivityStatusCode.Ok);
                 }
@@ -317,6 +317,26 @@ namespace Paramore.Brighter.ServiceActivator
 
             return Channel.Reject(message);
         }
+        
+        private void InvokeDispatchRequest(IRequest request, Message message, RequestContext context)
+        {
+            // NOTE: DispatchRequest<TRequest> is a generic method constrained to TRequest : class, IRequest, but at runtime
+            // we only have an IRequest reference due to the dynamic type lookup. To call the generic method with the actual
+            // runtime type (e.g., MyEvent), we need to use reflection to construct and invoke the generic method with the correct type.
+            
+            var requestType = request.GetType();
+            var dispatchMethod = typeof(Proactor)
+                .GetMethod(nameof(DispatchRequest), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.MakeGenericMethod(requestType);
+
+            if (dispatchMethod is null)
+            {
+                throw new InvalidOperationException($"Could not find DispatchRequest method for type {requestType.FullName}");
+            }
+
+            dispatchMethod.Invoke(this, [message.Header, request, context]);
+        }
+
 
         private bool RequeueMessage(Message message)
         {
