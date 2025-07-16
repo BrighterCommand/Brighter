@@ -26,11 +26,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     [Fact]
     public void When_Finding_A_Handler_That_Has_Dependencies()
     {
-        _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+        _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
-        // Should return the command handler as the implicit handler
         Assert.IsType<MyDependentCommandHandler>(_pipeline);
-        //  Should be the only element in the chain
         Assert.Equal("MyDependentCommandHandler|", TracePipeline().ToString());
     }
 

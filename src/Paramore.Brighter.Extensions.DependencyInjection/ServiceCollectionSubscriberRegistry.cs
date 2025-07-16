@@ -53,15 +53,45 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _registry = new SubscriberRegistry();
             _lifetime = lifetime;
         }
+        
+        /// <summary>
+        /// Register a handler type for a request type
+        /// Registers with IoC container :-
+        ///  - the handler type (TImplementation); allows factory instantiation of request handler
+        /// </summary>
+        /// <remarks>Mainly intended for internal use, prefer to use <see cref="Register{TRequest,TImplementation}"/></remarks>
+        /// <param name="requestType">The handler</param>
+        /// <param name="handlerType">The type of the handler for this request type</param>
+        public void Add(Type requestType, Type handlerType)
+        {
+            _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+            _registry.Add(requestType, handlerType);
+        }
+
+        /// <summary>
+        /// Adds a type to the registry, with a mapping to a single handler. We will add this to any existing handlers for this type
+        /// </summary>
+        /// <remarks>Mainly intended for internal use, prefer to use <see cref="Register{TRequest}"/></remarks>
+        /// <param name="requestType">The <see cref="IRequest"/> type that will be sent/published</param>
+        /// <param name="router">The routing function that takes a request and a request context and returns one or more handlers.</param>
+        /// <param name="handlerTypes">We need a <see cref="IEnumerable{T}"/> of <see cref="Type"/> that router can return to register with the factory</param>
+        public void Add(Type requestType, Func<IRequest?, IRequestContext?, List<Type>> router, IEnumerable<Type>handlerTypes)
+        {
+            handlerTypes.Each(handlerType =>
+            {
+                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+            });
+            _registry.Add(requestType, router, handlerTypes); 
+        }
 
         /// <summary>
         /// Get the matching set of handlers for a request type
         /// </summary>
         /// <typeparam name="T">The type of request</typeparam>
         /// <returns>An iterator over a set of registered handlers for that type</returns>
-        public IEnumerable<Type> Get<T>() where T : class, IRequest
+        public IEnumerable<Type> Get<T>(T request, IRequestContext requestContext) where T : class, IRequest
         {
-            return _registry.Get<T>();
+            return _registry.Get(request, requestContext);
         }
 
         /// <summary>
@@ -77,6 +107,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             _services.TryAdd(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), _lifetime));
             _registry.Register<TRequest, TImplementation>();
+        }
+        
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>        
+        /// <param name="router">The routing function that takes a request and a request context and returns one or more handlers.</param>
+        /// <param name="handlerTypes">We need a <see cref="IEnumerable{T}"/> of <see cref="Type"/> that router can return to register with the factory</param>
+        public  void Register<TRequest>(Func<IRequest?, IRequestContext?, List<Type>> router, IEnumerable<Type> handlerTypes)
+        {
+            handlerTypes.Each(handlerType =>
+            {
+                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+            });
+           _registry.Register<TRequest>(router, handlerTypes);
         }
 
         /// <summary>
@@ -95,16 +140,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Register a handler type for a request type
-        /// Registers with IoC container :-
-        ///  - the handler type (TImplementation); allows factory instantiation of request handler
+        /// Registers this instance.
         /// </summary>
-        /// <param name="requestType">The handler</param>
-        /// <param name="handlerType">The type of the handler for this request type</param>
-        public void Add(Type requestType, Type handlerType)
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>        
+        /// <param name="router">The routing function that takes a request and a request context and returns one or more handlers.</param>
+        /// <param name="handlerTypes">We need a <see cref="IEnumerable{T}"/> of <see cref="Type"/> that router can return to register with the factory</param>
+        public void RegisterAsync<TRequest>(Func<IRequest?, IRequestContext?, List<Type>> router, IEnumerable<Type> handlerTypes)
         {
-            _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
-            _registry.Add(requestType, handlerType);
+            handlerTypes.Each(handlerType =>
+            {
+                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+            });
+            _registry.RegisterAsync<TRequest>(router, handlerTypes); 
         }
     }
 }

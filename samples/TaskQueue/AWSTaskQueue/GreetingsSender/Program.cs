@@ -86,7 +86,7 @@ namespace GreetingsSender
                     {
                         configure.ProducerRegistry = producerRegistry;
                     })
-                    .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                    .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
 
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
