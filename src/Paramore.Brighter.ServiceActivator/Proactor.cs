@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -312,18 +313,25 @@ namespace Paramore.Brighter.ServiceActivator
             // NOTE: DispatchRequest<TRequest> is a generic method constrained to TRequest : class, IRequest, but at runtime
             // we only have an IRequest reference due to the dynamic type lookup. To call the generic method with the actual
             // runtime type (e.g., MyEvent), we need to use reflection to construct and invoke the generic method with the correct type.
-            
-            var requestType = request.GetType();
-            var dispatchMethod = typeof(Proactor)
-                .GetMethod(nameof(DispatchRequest), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                ?.MakeGenericMethod(requestType);
 
-            if (dispatchMethod is null)
+            try
             {
-                throw new InvalidOperationException($"Could not find DispatchRequest method for type {requestType.FullName}");
-            }
+                var requestType = request.GetType();
+                var dispatchMethod = typeof(Proactor)
+                    .GetMethod(nameof(DispatchRequest), BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?.MakeGenericMethod(requestType);
 
-            await (Task)dispatchMethod.Invoke(this, [message.Header, request, context])!;
+                if (dispatchMethod is null)
+                {
+                    throw new InvalidOperationException($"Could not find DispatchRequest method for type {requestType.FullName}");
+                }
+
+                await (Task)dispatchMethod.Invoke(this, [message.Header, request, context])!;
+            }
+            catch (TargetInvocationException tie)
+            {
+                throw tie.InnerException ?? tie; // Unwrap the inner exception if it exists
+            }
         }
  
         private RequestContext InitRequestContext(Activity? span, Message message)
