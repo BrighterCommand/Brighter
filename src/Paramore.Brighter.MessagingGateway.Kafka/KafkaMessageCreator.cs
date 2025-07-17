@@ -122,7 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return message;
         }
 
-        private Message SuccessMessage(MessageHeaderResults headers, ConsumeResult<string, byte[]> consumeResult)
+        private static Message SuccessMessage(MessageHeaderResults headers, ConsumeResult<string, byte[]> consumeResult)
         {
             var messageHeader = new MessageHeader(
                 messageId: (headers.MessageId.Success ? headers.MessageId.Result : Id.Empty)!,

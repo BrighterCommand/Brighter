@@ -306,12 +306,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private static HeaderResult<Id> ReadMessageId(IDictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string? header))
+            if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string? header) && !string.IsNullOrEmpty(header))
             {
                 return new HeaderResult<Id>(Id.Create(header), true);
             }
             
-            return new HeaderResult<Id>(Id.Empty, false);
+            return new HeaderResult<Id>(Id.Random, true);
         }
         
         private static HeaderResult<RoutingKey> ReadReplyTo(Dictionary<string, string> headers)
