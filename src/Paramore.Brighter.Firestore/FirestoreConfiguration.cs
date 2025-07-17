@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore.V1;
 using Paramore.Brighter.Observability;
@@ -14,7 +12,6 @@ namespace Paramore.Brighter.Firestore;
 /// </summary>
 public class FirestoreConfiguration(string projectId, string database, string collection)
 {
-    
     /// <summary>
     /// Gets the Google Cloud Project ID.
     /// </summary>
@@ -77,29 +74,4 @@ public class FirestoreConfiguration(string projectId, string database, string co
     /// <param name="id">The id.</param>
     /// <returns>returns the document name</returns>
     public string GetDocumentName(string id) => $"{CollectionPath}/{id}";
-
-    /// <summary>
-    /// Creates and returns a new synchronous <see cref="FirestoreClient"/> instance
-    /// based on the current configuration.
-    /// </summary>
-    /// <returns>A new <see cref="FirestoreClient"/> instance.</returns>
-    public FirestoreClient CreateFirestoreClient()
-    {
-        var builder = new FirestoreClientBuilder { Credential = Credential };
-        Configure?.Invoke(builder);
-        return builder.Build();
-    }
-    
-    /// <summary>
-    /// Asynchronously creates and returns a new <see cref="FirestoreClient"/> instance
-    /// based on the current configuration.
-    /// </summary>
-    /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains a new <see cref="FirestoreClient"/> instance.</returns>
-    public async Task<FirestoreClient> CreateFirestoreClientAsync(CancellationToken cancellationToken = default)
-    {
-        var builder = new FirestoreClientBuilder { Credential = Credential };
-        Configure?.Invoke(builder);
-        return await builder.BuildAsync(cancellationToken);
-    }
 }

@@ -13,14 +13,27 @@ namespace Paramore.Brighter.Locking.Firestore;
 /// the "AlreadyExists" status code to ensure only one client can create
 /// a lock document for a given resource at a time.
 /// </summary>
-public class FirestoreDistributedLock(FirestoreConfiguration configuration) : IDistributedLock
+public class FirestoreDistributedLock(IAmAFirestoreConnectionProvider connectionProvider, FirestoreConfiguration configuration) : IDistributedLock
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FirestoreDistributedLock"/> class with just
+    /// the Firestore configuration. This constructor internally creates a default
+    /// <see cref="FirestoreConnectionProvider"/> based on the provided configuration.
+    /// </summary>
+    /// <param name="configuration">The configuration settings for connecting to Firestore,
+    /// including project ID, database ID, and collection names for locks.</param>
+    public FirestoreDistributedLock(FirestoreConfiguration configuration)
+        : this(new FirestoreConnectionProvider(configuration), configuration)
+    {
+        
+    }
+    
     /// <inheritdoc />
     public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
         try
         {
-            var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
+            var client = await connectionProvider.GetFirestoreClientAsync(cancellationToken);
             await client.CommitAsync(new CommitRequest
             {
                 Database = configuration.Database,
@@ -55,7 +68,7 @@ public class FirestoreDistributedLock(FirestoreConfiguration configuration) : ID
     {
         try
         {
-            var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
+            var client = await connectionProvider.GetFirestoreClientAsync(cancellationToken);
             await client.DeleteDocumentAsync(
                 new DeleteDocumentRequest { Name = configuration.GetDocumentName(lockId) },
                 CallSettings.FromCancellationToken(cancellationToken));

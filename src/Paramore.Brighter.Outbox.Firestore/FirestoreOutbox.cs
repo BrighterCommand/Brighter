@@ -34,8 +34,21 @@ namespace Paramore.Brighter.Outbox.Firestore;
 /// transaction, preventing data loss in case of application failures before
 /// message dispatch.
 /// </remarks>
-public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>
+public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider, FirestoreConfiguration configuration) : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FirestoreOutbox"/> class with just
+    /// the Firestore configuration. This constructor internally creates a default
+    /// <see cref="FirestoreConnectionProvider"/> based on the provided configuration.
+    /// </summary>
+    /// <param name="configuration">The configuration settings for connecting to Firestore,
+    /// including project ID, database ID, and collection names.</param>
+    public FirestoreOutbox(FirestoreConfiguration configuration)
+        : this(new FirestoreConnectionProvider(configuration), configuration)
+    {
+        
+    }
+    
     private const string Dispatched = "Dispatched";
     
     /// <inheritdoc />
@@ -75,7 +88,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
 
             var commit = new CommitRequest { Database = configuration.Database, Writes = { write } };
 
-            var client = configuration.CreateFirestoreClient();
+            var client = connectionProvider.GetFirestoreClient();
             client.Commit(commit);
         }
         finally
@@ -124,7 +137,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
                 var request = new CommitRequest { Database = configuration.DatabasePath };
                 request.Writes.AddRange(writes);
 
-                var client = configuration.CreateFirestoreClient();
+                var client = connectionProvider.GetFirestoreClient();
                 client.Commit(request, CallSettings.FromExpiration(ToExpiration(outBoxTimeout)));
             }
         }
@@ -164,7 +177,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
             var request = new CommitRequest { Database = configuration.DatabasePath };
             request.Writes.AddRange(writes);
             
-            var client = configuration.CreateFirestoreClient();
+            var client = connectionProvider.GetFirestoreClient();
             client.Commit(request);
         }
         finally
@@ -215,7 +228,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
                 Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = configuration.CreateFirestoreClient();
+            var client = connectionProvider.GetFirestoreClient();
             return BrighterAsyncContext.Run(async () =>
             {
                 var messages = new List<Message>(pageSize);
@@ -250,7 +263,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
 
         try
         {
-            var client = configuration.CreateFirestoreClient();
+            var client = connectionProvider.GetFirestoreClient();
             var document = client.GetDocument(new GetDocumentRequest { Name = configuration.GetDocumentName(messageId) },
                 CallSettings.FromExpiration(ToExpiration(outBoxTimeout)));
 
@@ -277,7 +290,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
 
         try
         {
-            var client = configuration.CreateFirestoreClient();
+            var client = connectionProvider.GetFirestoreClient();
             var document = new Document
             {
                 Name = configuration.GetDocumentName(id),
@@ -345,7 +358,7 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
             StructuredQuery = query
         };
         
-        var client = configuration.CreateFirestoreClient();
+        var client = connectionProvider.GetFirestoreClient();
         return BrighterAsyncContext.Run(async () =>
         {
             var messages = new List<Message>(pageSize);
@@ -397,8 +410,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
 
             var commit = new CommitRequest { Database = configuration.Database, Writes = { write } };
 
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             await client
@@ -454,8 +467,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
                 var request = new CommitRequest { Database = configuration.DatabasePath };
                 request.Writes.AddRange(writes);
 
-                var client = await configuration
-                    .CreateFirestoreClientAsync(cancellationToken)
+                var client = await connectionProvider
+                    .GetFirestoreClientAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
                 
                 await client
@@ -500,8 +513,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
             var request = new CommitRequest { Database = configuration.DatabasePath };
             request.Writes.AddRange(writes);
 
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             await client
@@ -556,8 +569,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
                 Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             var messages = new List<Message>(pageSize);
@@ -593,8 +606,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
         try
         {
 
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             var document = await client
@@ -638,8 +651,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
                 }
             };
 
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             await client
@@ -708,8 +721,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
             var request = new CommitRequest { Database = configuration.DatabasePath };
             request.Writes.AddRange(writes);
             
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             await client
@@ -757,8 +770,8 @@ public class FirestoreOutbox(FirestoreConfiguration configuration) : IAmAnOutbox
             StructuredQuery = query
         };
         
-        var client = await configuration
-            .CreateFirestoreClientAsync(cancellationToken)
+        var client = await connectionProvider
+            .GetFirestoreClientAsync(cancellationToken)
             .ConfigureAwait(ContinueOnCapturedContext);
         
         var messages = new List<Message>(pageSize);

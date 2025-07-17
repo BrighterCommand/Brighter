@@ -11,10 +11,23 @@ namespace Paramore.Brighter.Firestore;
 /// This class handles the low-level interactions with the Firestore API to
 /// begin, commit, and rollback transactions.
 /// </summary>
-public class FirestoreTransactionProvider(FirestoreConfiguration configuration) : IAmABoxTransactionProvider<FirestoreTransaction>
+public class FirestoreUnitOfWork : FirestoreConnectionProvider, IAmAFirestoreTransactionProvider
 {
     private FirestoreTransaction? _transaction;
-    
+    private readonly FirestoreConfiguration _configuration;
+
+    /// <summary>
+    /// Provides a concrete implementation for managing Firestore transactions,
+    /// adhering to the <see cref="IAmABoxTransactionProvider{TTransaction}"/> interface.
+    /// This class handles the low-level interactions with the Firestore API to
+    /// begin, commit, and rollback transactions.
+    /// </summary>
+    public FirestoreUnitOfWork(FirestoreConfiguration configuration) 
+        : base(configuration)
+    {
+        _configuration = configuration;
+    }
+
     /// <inheritdoc />
     public void Close() => Rollback();
 
@@ -28,12 +41,12 @@ public class FirestoreTransactionProvider(FirestoreConfiguration configuration) 
         
         var request = new CommitRequest
         {
-            Database = configuration.Database, 
+            Database = _configuration.Database, 
             Transaction = _transaction.Transaction
         };
         
         request.Writes.AddRange(_transaction.Writes);
-        var client = configuration.CreateFirestoreClient();
+        var client = GetFirestoreClient();
         client.Commit(request);
         
         _transaction = null;
@@ -49,13 +62,13 @@ public class FirestoreTransactionProvider(FirestoreConfiguration configuration) 
         
         var request = new CommitRequest
         {
-            Database = configuration.Database, 
+            Database = _configuration.Database, 
             Transaction = _transaction.Transaction
         };
             
         request.Writes.AddRange(_transaction.Writes);
             
-        var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
+        var client = await GetFirestoreClientAsync(cancellationToken);
         await client.CommitAsync(request, CallSettings.FromCancellationToken(cancellationToken));
         
         _transaction = null;
@@ -77,11 +90,11 @@ public class FirestoreTransactionProvider(FirestoreConfiguration configuration) 
 
         var request = new RollbackRequest
         {
-            Database = configuration.Database,
+            Database = _configuration.Database,
             Transaction = _transaction.Transaction
         };
         
-        var client = configuration.CreateFirestoreClient();
+        var client = GetFirestoreClient();
         client.Rollback(request);
         
         _transaction = null;
@@ -97,11 +110,11 @@ public class FirestoreTransactionProvider(FirestoreConfiguration configuration) 
 
         var request = new RollbackRequest
         {
-            Database = configuration.Database,
+            Database = _configuration.Database,
             Transaction = _transaction.Transaction
         };
         
-        var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
+        var client = await GetFirestoreClientAsync(cancellationToken);
         await client.RollbackAsync(request, CallSettings.FromCancellationToken(cancellationToken));
         
         _transaction = null;
@@ -115,8 +128,8 @@ public class FirestoreTransactionProvider(FirestoreConfiguration configuration) 
             return _transaction;
         }
         
-        var client = configuration.CreateFirestoreClient();
-        var transaction = client.BeginTransaction(new BeginTransactionRequest { Database = configuration.Database });
+        var client = GetFirestoreClient();
+        var transaction = client.BeginTransaction(new BeginTransactionRequest { Database = _configuration.Database });
         return _transaction = new FirestoreTransaction(transaction.Transaction);
     }
 
@@ -128,8 +141,8 @@ public class FirestoreTransactionProvider(FirestoreConfiguration configuration) 
             return _transaction;
         }
         
-        var client = await configuration.CreateFirestoreClientAsync(cancellationToken);
-        var transaction = await client.BeginTransactionAsync(new BeginTransactionRequest { Database = configuration.Database },
+        var client = await GetFirestoreClientAsync(cancellationToken);
+        var transaction = await client.BeginTransactionAsync(new BeginTransactionRequest { Database = _configuration.Database },
             CallSettings.FromCancellationToken(cancellationToken));
         return _transaction = new FirestoreTransaction(transaction.Transaction);
     }

@@ -26,8 +26,20 @@ namespace Paramore.Brighter.Inbox.Firestore;
 /// The inbox stores a record for each processed message, typically including the message ID
 /// and a context key (e.g., the handler's name) to uniquely identify the processing event.
 /// </remarks>
-public class FirestoreInbox(FirestoreConfiguration configuration) : IAmAnInboxSync, IAmAnInboxAsync
+public class FirestoreInbox(IAmAFirestoreConnectionProvider connectionProvider, FirestoreConfiguration configuration) : IAmAnInboxSync, IAmAnInboxAsync
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FirestoreInbox"/> class with just
+    /// the Firestore configuration. This constructor internally creates a default
+    /// <see cref="FirestoreConnectionProvider"/> based on the provided configuration.
+    /// </summary>
+    /// <param name="configuration">The configuration settings for connecting to Firestore,
+    /// including project ID, database ID, and collection names for inbox entries.</param>
+    public FirestoreInbox(FirestoreConfiguration configuration)
+        : this(new FirestoreConnectionProvider(configuration), configuration)
+    {
+    }
+
     /// <inheritdoc />
     public IAmABrighterTracer? Tracer { get; set; }
     
@@ -64,7 +76,7 @@ public class FirestoreInbox(FirestoreConfiguration configuration) : IAmAnInboxSy
                 }
             };
 
-            var client = configuration.CreateFirestoreClient();
+            var client = connectionProvider.GetFirestoreClient();
             client.Commit(request, CallSettings.FromExpiration(timeoutInMilliseconds.ToExpiration()));
         }
         finally
@@ -134,7 +146,7 @@ public class FirestoreInbox(FirestoreConfiguration configuration) : IAmAnInboxSy
                 Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = configuration.CreateFirestoreClient();
+            var client = connectionProvider.GetFirestoreClient();
             using var response = client.RunQuery(request);
             var stream = response.GetResponseStream();
 
@@ -216,7 +228,7 @@ public class FirestoreInbox(FirestoreConfiguration configuration) : IAmAnInboxSy
                 Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = configuration.CreateFirestoreClient();
+            var client = connectionProvider.GetFirestoreClient();
             using var response = client.RunQuery(request);
             var stream = response.GetResponseStream();
             return BrighterAsyncContext.Run(async () => await stream.MoveNextAsync());
@@ -261,8 +273,8 @@ public class FirestoreInbox(FirestoreConfiguration configuration) : IAmAnInboxSy
                 }
             };
 
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             await client
@@ -337,8 +349,8 @@ public class FirestoreInbox(FirestoreConfiguration configuration) : IAmAnInboxSy
                 Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             using var response = client.RunQuery(request);
@@ -419,8 +431,8 @@ public class FirestoreInbox(FirestoreConfiguration configuration) : IAmAnInboxSy
                 Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = await configuration
-                .CreateFirestoreClientAsync(cancellationToken)
+            var client = await connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             using var response = client.RunQuery(request);
