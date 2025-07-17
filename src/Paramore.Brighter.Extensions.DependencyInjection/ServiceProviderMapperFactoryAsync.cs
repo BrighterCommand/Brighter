@@ -48,9 +48,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="messageMapperType">The type of mapper to instantiate</param>
         /// <returns></returns>
-        public IAmAMessageMapperAsync Create(Type messageMapperType)
+        public IAmAMessageMapperAsync? Create(Type messageMapperType)
         {
-            return (IAmAMessageMapperAsync) _serviceProvider.GetService(messageMapperType);
+            return (IAmAMessageMapperAsync?) _serviceProvider.GetService(messageMapperType);
         }
     }
 }

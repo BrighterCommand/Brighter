@@ -11,12 +11,27 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     IAmAnOutboxSync<Message, IClientSessionHandle>
 {
     /// <summary>
-    /// Initialize MongoDbOutbox
+    /// The implementation for MongoDB for the Outbox pattern within Brighter.
+    /// This class manages the storage and retrieval of outgoing messages, ensuring
+    /// atomic operations between database writes and message publishing through
+    /// the use of MongoDB. It supports both asynchronous and synchronous operations
+    /// and leverages MongoDB sessions for transactional consistency.
     /// </summary>
-    /// <param name="configuration">The <see cref="MongoDbConfiguration"/>.</param>
-    public MongoDbOutbox(MongoDbConfiguration configuration)
-        : base(configuration)
+    public MongoDbOutbox(IAmAMongoDbConnectionProvider connectionProvider, IAmAMongoDbConfiguration configuration)
+        : base(connectionProvider, configuration, configuration.Outbox ?? throw new ArgumentException("Outbox can't be null"))
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MongoDbOutbox"/> class using only the
+    /// main MongoDB configuration. A <see cref="MongoDbConnectionProvider"/> will be
+    /// created internally.
+    /// </summary>
+    /// <param name="configuration">The overall MongoDB configuration, which must include outbox settings.</param>
+    public MongoDbOutbox(IAmAMongoDbConfiguration configuration)
+        : this(new MongoDbConnectionProvider(configuration), configuration)
+    {
+        
     }
 
     /// <inheritdoc />
@@ -43,7 +58,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName),
+                CollectionConfiguration.Name),
             null,
             options: Configuration.InstrumentationOptions);
 
@@ -85,7 +100,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <returns></returns>
     public async Task<IEnumerable<Message>> GetAsync(
         IEnumerable<Id> messageIds,
-        RequestContext requestContext,
+        RequestContext? requestContext,
         int outBoxTimeout = -1,
         CancellationToken cancellationToken = default
     )
@@ -100,9 +115,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
-            null,
+            requestContext?.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -139,7 +154,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName),
+                CollectionConfiguration.Name),
             null,
             options: Configuration.InstrumentationOptions);
 
@@ -158,7 +173,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
     /// <inheritdoc />
     public async Task AddAsync(Message message,
-        RequestContext requestContext,
+        RequestContext? requestContext,
         int outBoxTimeout = -1,
         IAmABoxTransactionProvider<IClientSessionHandle>? transactionProvider = null,
         CancellationToken cancellationToken = default)
@@ -171,9 +186,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Add,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
-            requestContext.Span,
+            requestContext?.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -224,7 +239,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Add,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -267,7 +282,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Delete,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext.Span,
             options: Configuration.InstrumentationOptions);
@@ -295,7 +310,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.DispatchedMessages,
-                Configuration.CollectionName),
+                CollectionConfiguration.Name),
             requestContext.Span,
             options: Configuration.InstrumentationOptions);
         try
@@ -347,7 +362,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext.Span,
             options: Configuration.InstrumentationOptions);
@@ -382,7 +397,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.MarkDispatched,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext.Span,
             options: Configuration.InstrumentationOptions);
@@ -420,7 +435,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.MarkDispatched,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext.Span,
             options: Configuration.InstrumentationOptions);
@@ -444,7 +459,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc />
     public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
         TimeSpan dispatchedSince,
-        RequestContext requestContext,
+        RequestContext? requestContext,
         int pageSize = 100,
         int pageNumber = 1, Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
@@ -453,8 +468,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.OutStandingMessages,
-                Configuration.CollectionName),
-            requestContext.Span,
+                CollectionConfiguration.Name),
+            requestContext?.Span,
             options: Configuration.InstrumentationOptions);
         try
         {
@@ -503,7 +518,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName),
+                CollectionConfiguration.Name),
             null,
             options: Configuration.InstrumentationOptions);
 
@@ -556,7 +571,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -592,7 +607,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName),
+                CollectionConfiguration.Name),
             null,
             options: Configuration.InstrumentationOptions);
 
@@ -607,7 +622,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1,
+    public void Add(Message message, RequestContext? requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<IClientSessionHandle>? transactionProvider = null)
     {
         var dbAttributes = new Dictionary<string, string>()
@@ -618,9 +633,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Add,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
-            requestContext.Span,
+            requestContext?.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -654,7 +669,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     public void Add(IEnumerable<Message> messages, RequestContext? requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<IClientSessionHandle>? transactionProvider = null)
     {
-        var dbAttributes = new Dictionary<string, string>()
+        var dbAttributes = new Dictionary<string, string>
         {
             {"db.operation.parameter.message.ids", string.Join(",", messages.Select(m => m.Id.Value))}
         };
@@ -662,7 +677,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Add,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -696,7 +711,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Delete,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -714,7 +729,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc />
     public IEnumerable<Message> DispatchedMessages(
         TimeSpan dispatchedSince, 
-        RequestContext requestContext,
+        RequestContext? requestContext,
         int pageSize = 100,
         int pageNumber = 1, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
@@ -722,8 +737,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.DispatchedMessages,
-                Configuration.CollectionName),
-            requestContext.Span,
+                CollectionConfiguration.Name),
+            requestContext?.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -759,7 +774,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+    public Message Get(Id messageId, RequestContext? requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
         var dbAttributes = new Dictionary<string, string>()
         {
@@ -769,9 +784,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
-            requestContext.Span,
+            requestContext?.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -787,14 +802,14 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
+    public void MarkDispatched(Id id, RequestContext? requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.MarkDispatched,
-                Configuration.CollectionName),
-            requestContext.Span,
+                CollectionConfiguration.Name),
+            requestContext?.Span,
             options: Configuration.InstrumentationOptions);
 
         try
@@ -822,7 +837,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.OutStandingMessages,
-                Configuration.CollectionName),
+                CollectionConfiguration.Name),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
         try
