@@ -43,10 +43,11 @@ namespace Paramore.Brighter
              where TRequest : class, IRequest
         {
             var handlerType = attribute.GetHandlerType().MakeGenericType(typeof(TRequest));
-            var handler = (IHandleRequestsAsync<TRequest>)factory.Create(handlerType, lifetime);
+            var handler = (IHandleRequestsAsync<TRequest>?)factory.Create(handlerType, lifetime);
 
             if (handler is null)
                 throw new ConfigurationException($"Could not create handler {handlerType} from {factory}"); 
+            
             //Load the context before the initializer - in case we want to use the context from within the initializer
             handler.Context = requestContext;
             handler.InitializeFromAttributeParams(attribute.InitializerParams());

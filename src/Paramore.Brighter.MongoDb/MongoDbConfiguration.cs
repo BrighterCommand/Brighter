@@ -4,82 +4,57 @@ using Paramore.Brighter.Observability;
 namespace Paramore.Brighter.MongoDb;
 
 /// <summary>
-/// The MongoDB configuration
+/// Implements the <see cref="IAmAMongoDbConfiguration"/> interface, providing a concrete
+/// configuration for Brighter's MongoDB integration. This class facilitates setting up
+/// the MongoDB client, database name, and specific collection configurations for
+/// outbox, inbox, and locking mechanisms.
 /// </summary>
-public class MongoDbConfiguration
+public class MongoDbConfiguration : IAmAMongoDbConfiguration
 {
     /// <summary>
-    /// Initialize new instance of <see cref="MongoDbConfiguration"/>
+    /// Initializes a new instance of the <see cref="MongoDbConfiguration"/> class with a pre-configured
+    /// MongoDB client and the database name.
     /// </summary>
-    /// <param name="client">The Mongo client.</param>
-    /// <param name="databaseName">The database name.</param>
-    /// <param name="collectionName">The collection name.</param>
-    public MongoDbConfiguration(MongoClient client, string databaseName, string collectionName)
+    /// <param name="client">The <see cref="IMongoClient"/> instance to use for MongoDB operations.</param>
+    /// <param name="databaseName">The name of the MongoDB database.</param>
+    public MongoDbConfiguration(IMongoClient client, string databaseName)
     {
         Client = client;
         DatabaseName = databaseName;
-        CollectionName = collectionName;
     }
 
     /// <summary>
-    /// Initialize new instance of <see cref="MongoDbConfiguration"/>
+    /// Initializes a new instance of the <see cref="MongoDbConfiguration"/> class using a connection string
+    /// and the database name. A new <see cref="MongoClient"/> is created internally.
     /// </summary>
-    /// <param name="connectionString">The Mongo db connection string.</param>
-    /// <param name="databaseName">The database name.</param>
-    /// <param name="collectionName">The collection name.</param>
-    public MongoDbConfiguration(string connectionString, string databaseName, string collectionName)
-        : this(new MongoClient(connectionString), databaseName, collectionName)
+    /// <param name="connectionString">The MongoDB connection string.</param>
+    /// <param name="databaseName">The name of the MongoDB database.</param>
+    public MongoDbConfiguration(string connectionString, string databaseName)
+        : this(new MongoClient(connectionString), databaseName)
     {
     }
 
-    /// <summary>
-    /// The <see cref="MongoClient"/>
-    /// </summary>
-    public MongoClient Client { get; set; }
+    /// <inheritdoc />
+    public IMongoClient Client { get; set; }
 
-    /// <summary>
-    /// The mongodb database name
-    /// </summary>
+    /// <inheritdoc />
     public string DatabaseName { get; }
 
-    /// <summary>
-    /// The mongodb collection
-    /// </summary>
-    public string CollectionName { get; }
-
-    /// <summary>
-    /// The <see cref="System.TimeProvider"/>
-    /// </summary>
+    /// <inheritdoc />
     public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
-
-    /// <summary>
-    /// Action to be performed when it's resolving a collection  
-    /// </summary>
-    public OnResolvingACollection MakeCollection { get; set; } = OnResolvingACollection.Assume;
-
-    /// <summary>
-    /// The <see cref="MongoDatabaseSettings"/> used when access the database.
-    /// </summary>
+    
+    /// <inheritdoc />
     public MongoDatabaseSettings? DatabaseSettings { get; set; }
 
-    /// <summary>
-    /// The <see cref="MongoDatabaseSettings"/> used to get collection
-    /// </summary>
-    public MongoCollectionSettings? CollectionSettings { get; set; }
-
-    /// <summary>
-    /// The <see cref="CreateCollectionOptions"/>.
-    /// </summary>
-    public CreateCollectionOptions? CreateCollectionOptions { get; set; }
-
-    /// <summary>
-    /// The <see cref="InstrumentationOptions"/>.
-    /// </summary>
+    /// <inheritdoc />
     public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
+    
+    /// <inheritdoc />
+    public MongoDbCollectionConfiguration? Outbox { get; set; }
+    
+    /// <inheritdoc />
+    public MongoDbCollectionConfiguration? Inbox { get; set; }
 
-    /// <summary>
-    /// Optional time to live for the messages in the outbox
-    /// By default, messages will not expire
-    /// </summary>
-    public TimeSpan? TimeToLive { get; set; }
+    /// <inheritdoc />
+    public MongoDbCollectionConfiguration? Locking { get; set; }
 }

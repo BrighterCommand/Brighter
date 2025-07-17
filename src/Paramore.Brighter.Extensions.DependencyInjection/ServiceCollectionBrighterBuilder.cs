@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceCollectionMessageMapperRegistry _mapperRegistry;
         private readonly ServiceCollectionTransformerRegistry _transformerRegistry;
         
-        public IPolicyRegistry<string> PolicyRegistry { get; set; }
+        public IPolicyRegistry<string>? PolicyRegistry { get; set; }
 
         /// <summary>
         /// Registers the components of Brighter pipelines
@@ -53,8 +53,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IServiceCollection services,
             ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry,
             ServiceCollectionMessageMapperRegistry mapperRegistry,
-            ServiceCollectionTransformerRegistry transformerRegistry = null,
-            IPolicyRegistry<string> policyRegistry = null
+            ServiceCollectionTransformerRegistry? transformerRegistry = null,
+            IPolicyRegistry<string>? policyRegistry = null
             )
         {
             Services = services;
@@ -88,29 +88,31 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection 
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
+        /// <param name="excludeDynamicHandlerTypes">If you want to register a handler with a dynamic routing rule - an agreement - you need to excluce it from auto-regisration by adding it to this list</param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies)
+        public IBrighterBuilder AsyncHandlersFromAssemblies(IEnumerable<Assembly> assemblies, IEnumerable<Type>? excludeDynamicHandlerTypes)
         {
-            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).Assembly);
+            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).Assembly, excludeDynamicHandlerTypes);
             return this;
         }
 
         /// <summary>
         /// Scan the assemblies provided for implementations of IHandleRequests, IHandleRequestsAsync, IAmAMessageMapper and register them with ServiceCollection
         /// </summary>
-        /// <param name="extraAssemblies">The assemblies to scan</param>
+        /// <param name="extraAssemblies">Additional assemblies to scan</param>
+        /// <param name="excludeDynamicHandlerTypes">If you want to register a handler with a dynamic routing rule - an agreement - you need to excluce it from auto-regisration by adding it to this list</param>
         /// <returns></returns>
-        public IBrighterBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
+        public IBrighterBuilder AutoFromAssemblies(IEnumerable<Assembly>? extraAssemblies = null, IEnumerable<Type>? excludeDynamicHandlerTypes = null)
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
                 !a.IsDynamic && a.FullName?.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) != true &&
                 a.FullName?.StartsWith("System.", true, CultureInfo.InvariantCulture) != true);
 
-            var assemblies = appDomainAssemblies.Concat(extraAssemblies).ToArray();
+            var assemblies = extraAssemblies !=  null ? appDomainAssemblies.Concat(extraAssemblies) : appDomainAssemblies;
 
             MapperRegistryFromAssemblies(assemblies);
-            HandlersFromAssemblies(assemblies);
-            AsyncHandlersFromAssemblies(assemblies);
+            HandlersFromAssemblies(assemblies, excludeDynamicHandlerTypes);
+            AsyncHandlersFromAssemblies(assemblies, excludeDynamicHandlerTypes);
             TransformsFromAssemblies(assemblies);
 
             return this;
@@ -136,9 +138,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterBuilder MapperRegistryFromAssemblies(params Assembly[] assemblies)
+        public IBrighterBuilder MapperRegistryFromAssemblies(IEnumerable<Assembly> assemblies)
         {
-            if (assemblies.Length == 0)
+            if (!assemblies.Any())
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(assemblies));
 
             RegisterMappersFromAssemblies(assemblies);
@@ -167,10 +169,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
+        /// <param name="excludeDynamicHandlerTypes">If you want to register a handler with a dynamic routing rule - an agreement - you need to excluce it from auto-regisration by adding it to this list</param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterBuilder HandlersFromAssemblies(params Assembly[] assemblies)
+        public IBrighterBuilder HandlersFromAssemblies(IEnumerable<Assembly> assemblies, IEnumerable<Type>? excludeDynamicHandlerTypes)
         {
-            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).Assembly);
+            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).Assembly, excludeDynamicHandlerTypes);
             return this;
         }
 
@@ -180,9 +183,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns>This builder, allows chaining calls</returns>
         /// <exception cref="ArgumentException">Thrown if there are no assemblies passed to the method</exception>
-        public IBrighterBuilder TransformsFromAssemblies(params Assembly[] assemblies)
+        public IBrighterBuilder TransformsFromAssemblies(IEnumerable<Assembly> assemblies)
         {
-            if (assemblies.Length == 0)
+            if (!assemblies.Any())
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(assemblies));
 
             var transforms =
@@ -200,7 +203,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return this;
         }
         
-        private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies, Assembly assembly)
+        private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies, Assembly assembly, IEnumerable<Type>? excludeDynamicHandlerTypes)
         {
             assemblies = assemblies.Concat([assembly]);
             var subscribers =
@@ -212,11 +215,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             foreach (var subscriber in subscribers)
             {
+                if (excludeDynamicHandlerTypes != null && excludeDynamicHandlerTypes.Contains(subscriber.HandlerType))
+                    continue; // Skip dynamic handlers
+                
                 _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
             }
         }
         
-        private void RegisterMappersFromAssemblies(Assembly[] assemblies)
+        private void RegisterMappersFromAssemblies(IEnumerable<Assembly> assemblies)
         {
             var mappers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
@@ -231,7 +237,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
         }
         
-        private void RegisterAsyncMappersFromAssemblies(Assembly[] assemblies)
+        private void RegisterAsyncMappersFromAssemblies(IEnumerable<Assembly> assemblies)
         {
             var mappers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
@@ -246,7 +252,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
         }
 
-        private static Type[] GetLoadableTypes(Assembly assembly)
+        private static Type?[] GetLoadableTypes(Assembly assembly)
         {
             try
             {

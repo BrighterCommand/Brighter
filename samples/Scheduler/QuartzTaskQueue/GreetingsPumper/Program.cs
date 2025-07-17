@@ -84,7 +84,7 @@ static class Program
                                 return new QuartzSchedulerFactory(
                                     factory.GetScheduler().GetAwaiter().GetResult());
                             })
-                            .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                            .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
                     }
 
                     services.AddHostedService<RunCommandProcessor>();
