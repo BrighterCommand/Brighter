@@ -557,7 +557,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(connectionProviderInterface, connectionProvider, serviceLifetime));
                 
-                var transactionProviderInterface = GetPossibleTransactionInterface(transactionProvider, connectionProviderInterface );
+                var transactionProviderInterface = GetTransactionInterface(transactionProvider, connectionProviderInterface );
                 if(transactionProviderInterface != null)
                 {
                     brighterBuilder.Services.TryAdd(new ServiceDescriptor(transactionProviderInterface, transactionProvider, serviceLifetime));
@@ -571,8 +571,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 var interfaces = GetInterfaces(type);
                 foreach (var @interface in interfaces)
                 {
-                    var inner = GetInterfaces(@interface);
-                    if (inner.Any(x => x == typeof(IAmAConnectionProvider)))
+                    if (typeof(IAmAConnectionProvider).IsAssignableFrom(@interface) 
+                        && !typeof(IAmABoxTransactionProvider).IsAssignableFrom(@interface)) 
                     {
                         return @interface;
                     }
@@ -581,15 +581,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return null;
             }
             
-            static Type? GetPossibleTransactionInterface(Type type, Type connectionProvider)
+            static Type? GetTransactionInterface(Type type, Type connectionProvider)
             {
                 // All Brighter transaction provider interface must be extended from connection provider and IAmABoxTransactionProvider
                 var interfaces = GetInterfaces(type);
                 foreach (var @interface in interfaces)
                 {
-                    var inner = GetInterfaces(@interface).ToList();
-                    if (inner.Any(x => x == connectionProvider) &&
-                        inner.Any(x => x == typeof(IAmABoxTransactionProvider)))
+                    if (connectionProvider.IsAssignableFrom(@interface) 
+                        && typeof(IAmABoxTransactionProvider).IsAssignableFrom(@interface)) 
                     {
                         return @interface;
                     }

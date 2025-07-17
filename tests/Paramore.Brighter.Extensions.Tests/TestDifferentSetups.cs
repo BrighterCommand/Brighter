@@ -30,8 +30,10 @@ namespace Tests
             Assert.NotNull(commandProcessor);
         }
 
-        [Fact]
-        public void WithExternalBus()
+        [Theory]
+        [InlineData(typeof(SomeSqlConnectionProvider), typeof(SomeSqlUnitOfBox))]
+        [InlineData(typeof(SomeSqlUnitOfBox), typeof(SomeSqlUnitOfBox))]
+        public void WithExternalBus(Type connectionProvider, Type transactionProvider)
         {
             var serviceCollection = new ServiceCollection();
             const string mytopic = "MyTopic";
@@ -61,8 +63,8 @@ namespace Tests
                 {
                     config.ProducerRegistry = producerRegistry;
                     config.MessageMapperRegistry = messageMapperRegistry;
-                    config.ConnectionProvider = typeof(SomeSqlConnectionProvider);
-                    config.TransactionProvider = typeof(SomeSqlUnitOfBox);
+                    config.ConnectionProvider = connectionProvider;
+                    config.TransactionProvider = transactionProvider;
                 })
                 .AutoFromAssemblies();
 
