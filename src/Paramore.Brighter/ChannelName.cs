@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -143,7 +145,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="channelName">The <see cref="ChannelName"/> to test.</param>
         /// <returns><c>true</c> if the channel name is null or empty; otherwise, <c>false</c>.</returns>
-        public static bool IsNullOrEmpty(ChannelName? channelName)
+        public static bool IsNullOrEmpty([NotNullWhen(false)]ChannelName? channelName)
         {
             return channelName is not null && string.IsNullOrEmpty(channelName._name);
         }

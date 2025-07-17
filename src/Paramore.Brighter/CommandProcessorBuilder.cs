@@ -148,8 +148,11 @@ namespace Paramore.Brighter
         /// <returns>INeedLogging.</returns>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required</exception>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required</exception>
-        public INeedMessaging Policies(IPolicyRegistry<string> policyRegistry)
+        public INeedMessaging Policies(IPolicyRegistry<string>? policyRegistry)
         {
+            if (policyRegistry == null)
+                throw new ConfigurationException("You must register a policy registry");
+            
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException(
                     "The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
@@ -375,7 +378,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <returns>INeedLogging.</returns>
-        INeedMessaging Policies(IPolicyRegistry<string> policyRegistry);
+        INeedMessaging Policies(IPolicyRegistry<string>? policyRegistry);
 
         /// <summary>
         /// Knows the policy.

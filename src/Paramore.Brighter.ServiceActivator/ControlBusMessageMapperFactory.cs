@@ -35,7 +35,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        public IAmAMessageMapper Create(Type messageMapperType)
+        public IAmAMessageMapper? Create(Type messageMapperType)
         {
             if (messageMapperType == typeof (ConfigurationCommandMessageMapper))
             {
