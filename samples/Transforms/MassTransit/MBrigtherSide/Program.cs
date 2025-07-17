@@ -49,7 +49,7 @@ var host = new HostBuilder()
                         ])
                     .Create();
             })
-            .TransformsFromAssemblies(typeof(MassTransitWrapAttribute).Assembly)
+            .TransformsFromAssemblies([typeof(MassTransitWrapAttribute).Assembly])
             .AutoFromAssemblies();
     })
     .Build();
