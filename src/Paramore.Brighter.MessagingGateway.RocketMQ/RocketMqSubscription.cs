@@ -33,6 +33,10 @@ public class RocketSubscription : Subscription
     /// </summary>
     public FilterExpression Filter { get; }
 
+
+    /// <inheritdoc />
+    public override Type ChannelFactoryType => typeof(RocketMqChannelFactory);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscription"/> class.
     /// </summary>
