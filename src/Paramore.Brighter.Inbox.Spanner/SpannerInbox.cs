@@ -9,6 +9,7 @@ using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Spanner;
 
 namespace Paramore.Brighter.Inbox.Spanner;
 
@@ -36,6 +37,12 @@ public class SpannerInbox(
     : RelationalDatabaseInbox(DbSystem.Spanner, configuration.DatabaseName, configuration.InBoxTableName,
         new SpannerSqlQueries(), ApplicationLogging.CreateLogger<SpannerInbox>())
 {
+    public SpannerInbox(IAmARelationalDatabaseConfiguration configuration)
+        : this(new SpannerConnectionProvider(configuration), configuration)
+    {
+        
+    }
+    
     /// <inheritdoc />
     protected override void WriteToStore(Func<DbConnection, DbCommand> commandFunc, Action? loggingAction)
     {
