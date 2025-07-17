@@ -1,6 +1,7 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Cloud.PubSub.V1;
 using Google.Cloud.ResourceManager.V3;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 

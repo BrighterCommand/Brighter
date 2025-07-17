@@ -23,14 +23,18 @@ public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerS
     private readonly TopicName _topicName;
     private readonly GcpMessagingGatewayConnection _connection;
     private readonly GcpPublication _publication;
+    private readonly InstrumentationOptions _instrumentation;
 
     /// <summary>
     /// The Google Cloud PubSub producer
     /// </summary>
-    public GcpMessageProducer(GcpMessagingGatewayConnection connection, GcpPublication publication)
+    public GcpMessageProducer(GcpMessagingGatewayConnection connection, 
+        GcpPublication publication, 
+        InstrumentationOptions instrumentation = InstrumentationOptions.None)
     {
         _connection = connection;
         _publication = publication;
+        _instrumentation = instrumentation;
         if (_publication.TopicAttributes != null && TopicName.TryParse(_publication.TopicAttributes.Name, out var topicName))
         {
             _topicName = topicName;
@@ -60,7 +64,7 @@ public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerS
             foreach (var message in chuck)
             {
                 pubSubMessages.Add(Parser.ToPubSubMessage(message));
-                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message);
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message, _instrumentation);
             }
 
             await client.PublishAsync(
@@ -89,7 +93,7 @@ public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerS
         if (delay == null || delay == TimeSpan.Zero)
         {
             var pubSubMessage = Parser.ToPubSubMessage(message);
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message, _instrumentation);
             await client.PublishAsync(
                 new PublishRequest { TopicAsTopicName = _topicName, Messages = { pubSubMessage } },
                 CallSettings.FromCancellationToken(cancellationToken));
@@ -116,7 +120,7 @@ public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerS
         if (delay == null || delay == TimeSpan.Zero)
         {
             var pubSubMessage = Parser.ToPubSubMessage(message);
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message, _instrumentation);
             client.Publish(new PublishRequest { TopicAsTopicName = _topicName, Messages = { pubSubMessage } });
         }
         else if (Scheduler is IAmAMessageSchedulerSync scheduler)

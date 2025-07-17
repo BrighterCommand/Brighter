@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tranformers.Gcp;
 using Paramore.Brighter.Transforms.Transformers;
 
@@ -46,7 +47,7 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.None);
     }
 
     [Fact]

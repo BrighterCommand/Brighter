@@ -4,6 +4,7 @@ using Google.Apis.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tranformers.Gcp;
 using Paramore.Brighter.Transforms.Transformers;
 
@@ -49,7 +50,7 @@ public class LargeMessagePayloadWrapTests : IAsyncDisposable
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.None);
     }
 
     [Fact]

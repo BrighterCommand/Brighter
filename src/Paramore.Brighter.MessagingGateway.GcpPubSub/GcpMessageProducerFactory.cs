@@ -1,4 +1,5 @@
-﻿using Paramore.Brighter.Tasks;
+﻿using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -7,6 +8,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// </summary>
 public class GcpMessageProducerFactory : GcpPubSubMessageGateway, IAmAMessageProducerFactory
 {
+    private readonly InstrumentationOptions? _instrumentation;
     private readonly GcpMessagingGatewayConnection _connection;
     private readonly IEnumerable<GcpPublication> _publications;
 
@@ -15,11 +17,14 @@ public class GcpMessageProducerFactory : GcpPubSubMessageGateway, IAmAMessagePro
     /// </summary>
     /// <param name="connection">The <see cref="GcpMessagingGatewayConnection"/>.</param>
     /// <param name="publications">The collection of <see cref="GcpPublication"/>.</param>
+    /// <param name="instrumentation">The <see cref="InstrumentationOptions"/>.</param>
     public GcpMessageProducerFactory(GcpMessagingGatewayConnection connection,
-        IEnumerable<GcpPublication> publications) : base(connection)
+        IEnumerable<GcpPublication> publications,
+        InstrumentationOptions? instrumentation = null) : base(connection)
     {
         _connection = connection;
         _publications = publications;
+        _instrumentation = instrumentation;
     }
 
     /// <inheritdoc />
@@ -45,7 +50,7 @@ public class GcpMessageProducerFactory : GcpPubSubMessageGateway, IAmAMessagePro
             }
 
             await EnsureTopicExistAsync(publication.TopicAttributes, publication.MakeChannels);
-            producers[publication.Topic] = new GcpMessageProducer(_connection, publication);
+            producers[publication.Topic] = new GcpMessageProducer(_connection, publication, _instrumentation ?? InstrumentationOptions.None);
         }
 
         return producers;
