@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
         private readonly string _originalRequestAsJson;
         private readonly DateTime _at;
         private MonitorEvent _afterEvent;
-        private Exception _exception;
+        private Exception? _exception;
 
         public MonitorHandlerMustObserveButRethrowTests()
         {

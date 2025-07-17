@@ -16,9 +16,9 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
      public class CommandProcessorWithBothRetryAndCircuitBreakerAsync : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private Exception _thirdException;
-        private Exception _firstException;
-        private Exception _secondException;
+        private Exception? _thirdException;
+        private Exception? _firstException;
+        private Exception? _secondException;
         private int _retryCount;
         private Polly.Context _context;
 

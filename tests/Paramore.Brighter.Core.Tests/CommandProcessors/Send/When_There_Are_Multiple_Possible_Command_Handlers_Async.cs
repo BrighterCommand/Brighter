@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
         private readonly MyCommand _myCommand = new MyCommand();
-        private Exception _exception;
+        private Exception? _exception;
 
         public CommandProcessorSendWithMultipleMatchesAsyncTests()
         {

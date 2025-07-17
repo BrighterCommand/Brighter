@@ -13,8 +13,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
     public class CommandProcessorSendWithMultipleMatchesTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
-        private readonly MyCommand _myCommand = new MyCommand();
+        private readonly Dictionary<string, string> _receivedMessages = new();
+        private readonly MyCommand _myCommand = new();
         private Exception _exception;
 
         public CommandProcessorSendWithMultipleMatchesTests()
@@ -24,10 +24,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
             registry.Register<MyCommand, MyImplicitHandler>();
 
             var container = new ServiceCollection();
-            container.AddTransient<MyCommandHandler>();
+            container.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(_receivedMessages));
             container.AddTransient<MyImplicitHandler>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
-            container.AddSingleton(_receivedMessages);
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());

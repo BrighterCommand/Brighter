@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -16,6 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly ServiceProvider _provider;
+        private readonly Dictionary<string, string> _receivedMessages = new();
 
         public CommandProcessorBuildDefaultInboxSendTests()
         {
@@ -24,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             subscriberRegistry.Add(typeof(MyCommand), typeof(MyCommandHandler));
 
             var container = new ServiceCollection();
-            container.AddTransient<MyCommandHandler>();
+            container.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(_receivedMessages));
             container.AddSingleton<IAmAnInboxSync>(new InMemoryInbox(new FakeTimeProvider()));
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
