@@ -13,7 +13,7 @@ public class MongoDbLockingProviderTest
 
     public MongoDbLockingProviderTest()
     {
-        _locking = new MongoDbLockingProvider(Configuration.Create("locking"));
+        _locking = new MongoDbLockingProvider(Configuration.CreateLocking("locking"));
     }
 
     [Fact]
