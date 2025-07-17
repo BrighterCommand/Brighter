@@ -6,18 +6,37 @@ using Paramore.Brighter.Observability;
 namespace Paramore.Brighter.Inbox.MongoDb;
 
 /// <summary>
-/// The inbox implementation to MongoDB 
+/// Implements the Brighter Inbox pattern using MongoDB as the backing store.
+/// This class handles both asynchronous and synchronous operations for adding,
+/// retrieving, and checking the existence of messages in the inbox, ensuring
+/// idempotent message processing. It leverages MongoDB's TTL feature for message expiration.
 /// </summary>
 public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInboxSync
 {
     /// <summary>
-    /// Initialize a new instance of <see cref="MongoDbInbox"/>.
+    /// Initializes a new instance of the <see cref="MongoDbInbox"/> class with explicit
+    /// connection and configuration providers.
     /// </summary>
-    /// <param name="configuration">The configuration.</param>
-    public MongoDbInbox(MongoDbConfiguration configuration)
-        : base(configuration)
+    /// <param name="connectionProvider">The MongoDB connection provider.</param>
+    /// <param name="configuration">The overall MongoDB configuration, which must include inbox settings.</param>
+    /// <exception cref="ArgumentException">Thrown if the inbox configuration is null.</exception>
+    public MongoDbInbox(IAmAMongoDbConnectionProvider connectionProvider, IAmAMongoDbConfiguration configuration)
+        : base(connectionProvider, configuration, configuration.Inbox ?? throw new ArgumentException("Inbox can't be null"))
     {
     }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MongoDbInbox"/> class using only the
+    /// main MongoDB configuration. A <see cref="MongoDbConnectionProvider"/> will be
+    /// created internally.
+    /// </summary>
+    /// <param name="configuration">The overall MongoDB configuration, which must include inbox settings.</param>
+    public MongoDbInbox(IAmAMongoDbConfiguration configuration)
+        : this(new MongoDbConnectionProvider(configuration), configuration)
+    {
+        
+    }
+    
 
     /// <inheritdoc />
     public bool ContinueOnCapturedContext { get; set; }
@@ -25,16 +44,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     /// <inheritdoc />
     public IAmABrighterTracer? Tracer { private get; set; }
 
-    /// <summary>
-    ///   Awaitably adds a command to the store.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="command">The command.</param>
-    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
-    /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
-    /// <returns><see cref="Task"/>.</returns>
+    /// <inheritdoc />
     public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
@@ -46,7 +56,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Add,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -73,16 +83,8 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         }
     }
 
-    /// <summary>
-    ///   Awaitably finds a command with the specified identifier.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="id">The identifier.</param>
-    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
-    /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
-    /// <returns><see cref="Task{T}"/>.</returns>
+   
+    /// <inheritdoc />
     public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
@@ -94,7 +96,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -121,16 +123,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         }
     }
 
-    /// <summary>
-    ///   Awaitable checks whether a command with the specified identifier exists in the store.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="id">The identifier.</param>
-    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
-    /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
-    /// <returns><see cref="Task{true}"/> if it exists, otherwise <see cref="Task{false}"/>.</returns>
+    /// <inheritdoc />
     public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
@@ -142,7 +135,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Exists,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -161,15 +154,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         }
     }
 
-    /// <summary>
-    ///   Adds a command to the store.
-    ///   Will block, and consume another thread for callback on threadpool; use within sync pipeline only.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="command">The command.</param>
-    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
+    /// <inheritdoc />
     public void Add<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         var dbAttributes = new Dictionary<string, string>()
@@ -180,7 +165,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Add,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -206,15 +191,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         }
     }
 
-    /// <summary>
-    ///   Finds a command with the specified identifier.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="id">The identifier.</param>
-    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
-    /// <returns><see cref="T"/></returns>
+    /// <inheritdoc />
     public T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         var dbAttributes = new Dictionary<string, string>()
@@ -225,7 +202,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Get,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);
@@ -249,15 +226,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         }
     }
 
-    /// <summary>
-    ///   Checks whether a command with the specified identifier exists in the store.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="id">The identifier.</param>
-    /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-    /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-    /// <param name="timeoutInMilliseconds">Timeout is ignored as the timeout is handled by the MongoDb SDK</param>
-    /// <returns><see langword="true"/> if it exists, otherwise <see langword="false"/>.</returns>
+    /// <inheritdoc />
     public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         var dbAttributes = new Dictionary<string, string>()
@@ -268,7 +237,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
                 BoxDbOperation.Exists,
-                Configuration.CollectionName,
+                CollectionConfiguration.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);

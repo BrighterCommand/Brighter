@@ -47,9 +47,9 @@ namespace Paramore.Brighter.Core.Tests.TestHelpers
 
             return exception;
         }
-        public static async Task<Exception> ExceptionAsync(Func<Task> action)
+        public static async Task<Exception?> ExceptionAsync(Func<Task> action)
         {
-            var tcs = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
             //Exception exception = null;
             
             try
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.TestHelpers
                 await action();
                 tcs.SetResult(null);
             }
-            catch (Exception e)
+            catch (Exception? e)
             {
                 //exception = e;
                 tcs.SetResult(e);

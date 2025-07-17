@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         private void When_Building_An_Async_Pipeline_Allow_Pre_And_Post_Tasks()
         {
-            _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First();
+            _pipeline = _pipelineBuilder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
 
             var trace = TraceFilters().ToString();
             Assert.Equal("MyValidationHandlerAsync`1|MyPreAndPostDecoratedHandlerAsync|MyLoggingHandlerAsync`1|", trace);

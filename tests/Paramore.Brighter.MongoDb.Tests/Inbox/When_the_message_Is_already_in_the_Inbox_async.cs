@@ -43,7 +43,7 @@ public class MongoDbInboxDuplicateMessageAsyncTests : IDisposable
     public MongoDbInboxDuplicateMessageAsyncTests()
     {
         _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new MongoDbInbox(Configuration.Create(_collection));
+        _inbox = new MongoDbInbox(Configuration.CreateInbox(_collection));
         _raisedCommand = new MyCommand { Value = "Test" };
         _contextKey = "test-context";
     }

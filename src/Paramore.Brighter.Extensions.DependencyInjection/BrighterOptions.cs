@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Do we support feature switching? In which case please supply an initialized feature switch registry
         /// </summary>
         /// <returns></returns>
-        public IAmAFeatureSwitchRegistry FeatureSwitchRegistry { get; set; } = null;
+        public IAmAFeatureSwitchRegistry? FeatureSwitchRegistry { get; set; } = null;
 
         /// <summary>
         /// Configures the lifetime of the Handlers. Defaults to Scoped.
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Configures the polly policy registry.
         /// </summary>
-        public IPolicyRegistry<string> PolicyRegistry { get; set; } = new DefaultPolicy();
+        public IPolicyRegistry<string>? PolicyRegistry { get; set; } = new DefaultPolicy();
 
         /// <summary>
         /// Configures the request context factory. Defaults to <see cref="InMemoryRequestContextFactory" />.
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Do we support feature switching? In which case please supply an initialized feature switch registry
         /// </summary>
         /// <returns></returns>
-        IAmAFeatureSwitchRegistry FeatureSwitchRegistry { get; set; }
+        IAmAFeatureSwitchRegistry? FeatureSwitchRegistry { get; set; }
         
          /// <summary>
         /// Configures the lifetime of the Handlers.
@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         ///  Configures the polly policy registry.
         /// </summary>
-        IPolicyRegistry<string> PolicyRegistry { get; set; }
+        IPolicyRegistry<string>? PolicyRegistry { get; set; }
 
         /// <summary>
         ///     Configures the request context factory. Defaults to <see cref="InMemoryRequestContextFactory" />.

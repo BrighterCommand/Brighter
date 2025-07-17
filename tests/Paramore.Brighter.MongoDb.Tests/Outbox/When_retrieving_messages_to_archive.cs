@@ -17,7 +17,7 @@ public class MongoDbArchiveFetchTests : IDisposable
     public MongoDbArchiveFetchTests()
     {
         _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new MongoDbOutbox(Configuration.Create(_collection));
+        _outbox = new MongoDbOutbox(Configuration.CreateOutbox(_collection));
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(

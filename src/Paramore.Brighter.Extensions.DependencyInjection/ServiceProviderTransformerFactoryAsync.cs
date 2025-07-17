@@ -39,11 +39,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Constructs a transformer factory
         /// </summary>
         /// <param name="serviceProvider">The IoC container we use to satisfy requests for transforms</param>
+        /// <exception cref="InvalidOperationException">Thrown if <see cref="IBrighterOptions"/> is not registered in the service provider</exception>
         public ServiceProviderTransformerFactoryAsync(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
+            //Will throw if the options are not registered
             var options = serviceProvider.GetRequiredService<IBrighterOptions>();
-            if (options == null) _isTransient = false; else _isTransient = options.HandlerLifetime == ServiceLifetime.Transient;  
+            //We use the lifetime to determine if we need to dispose of the transformer after use
+             _isTransient = options.HandlerLifetime == ServiceLifetime.Transient;  
         }
     
         /// <summary>
@@ -51,9 +54,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="transformerType">The type of transformer to create</param>
         /// <returns></returns>
-        public IAmAMessageTransformAsync Create(Type transformerType)
+        public IAmAMessageTransformAsync? Create(Type transformerType)
         {
-            return (IAmAMessageTransformAsync) _serviceProvider.GetService(transformerType);
+            return (IAmAMessageTransformAsync?) _serviceProvider.GetService(transformerType);
         }
 
         /// <summary>
