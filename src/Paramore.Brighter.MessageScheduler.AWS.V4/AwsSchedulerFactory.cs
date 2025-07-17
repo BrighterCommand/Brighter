@@ -28,12 +28,12 @@ public class AwsSchedulerFactory(AWSMessagingGatewayConnection connection, strin
     /// <summary>
     /// Get or create a message scheduler id
     /// </summary>
-    public Func<Message, string> GetOrCreateMessageSchedulerId { get; set; } = _ => Guid.NewGuid().ToString("N");
+    public Func<Message, string> GetOrCreateMessageSchedulerId { get; set; } = _ => Uuid.NewAsString();
 
     /// <summary>
     /// Get or create a request scheduler id
     /// </summary>
-    public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Guid.NewGuid().ToString("N");
+    public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Uuid.NewAsString();
 
     /// <summary>
     /// The flexible time window
