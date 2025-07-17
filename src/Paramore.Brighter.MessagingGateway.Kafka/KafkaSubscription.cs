@@ -114,11 +114,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="dataType">Type of the data.</param>
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
-        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="dataType"/> if null</param>
+        /// <param name="requestType">Type of the data.</param>
+        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="requestType"/> if null</param>
         /// <param name="groupId">What is the id of the consumer group that this consumer belongs to; will not process the same partition as others in group</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
@@ -142,10 +142,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
         /// ///
-        public KafkaSubscription(Type dataType,
-            SubscriptionName? subscriptionName = null,
-            ChannelName? channelName = null,
-            RoutingKey? routingKey = null,
+        public KafkaSubscription(
+            SubscriptionName subscriptionName,
+            ChannelName channelName,
+            RoutingKey routingKey,
+            Type requestType,
             Func<Message, Type>? getRequestType = null,
             string? groupId = null,
             int bufferSize = 1,
@@ -169,8 +170,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
             Action<ConsumerConfig>? configHook = null) 
-            : base(dataType, subscriptionName, channelName, routingKey,  getRequestType, bufferSize, noOfPerformers, 
-                timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(subscriptionName, channelName, routingKey,  requestType, getRequestType, bufferSize, 
+                noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
             GroupId = groupId;
@@ -248,11 +249,34 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
             Action<ConsumerConfig>? configHook = null) 
-            : base(typeof(T), subscriptionName, channelName, routingKey, getRequestType, groupId, bufferSize, noOfPerformers, 
-                timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, offsetDefault, 
-                commitBatchSize, sessionTimeout, maxPollInterval, sweepUncommittedOffsetsInterval, isolationLevel, 
-                messagePumpType, numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay,
-                channelFailureDelay, partitionAssignmentStrategy, configHook)
+            : base(
+                subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
+                channelName ?? new ChannelName(typeof(T).FullName!), 
+                routingKey ?? new RoutingKey(typeof(T).FullName!), 
+                typeof(T), 
+                getRequestType, 
+                groupId, 
+                bufferSize, 
+                noOfPerformers, 
+                timeOut, 
+                requeueCount, 
+                requeueDelay, 
+                unacceptableMessageLimit, 
+                offsetDefault, 
+                commitBatchSize, 
+                sessionTimeout, 
+                maxPollInterval, 
+                sweepUncommittedOffsetsInterval, 
+                isolationLevel, 
+                messagePumpType,
+                numOfPartitions, 
+                replicationFactor, 
+                channelFactory, 
+                makeChannels,
+                emptyChannelDelay, 
+                channelFailureDelay, 
+                partitionAssignmentStrategy, 
+                configHook)
         {
         }
     }

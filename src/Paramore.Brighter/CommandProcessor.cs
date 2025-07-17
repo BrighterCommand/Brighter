@@ -1340,7 +1340,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
             }
 
-            var subscription = _replySubscriptions?.FirstOrDefault(s => s.DataType == typeof(TResponse));
+            var subscription = _replySubscriptions?.FirstOrDefault(s => s.RequestType == typeof(TResponse));
 
             if (subscription is null)
                 throw new InvalidOperationException($"No Subscription registered fpr replies of type {typeof(T)}");

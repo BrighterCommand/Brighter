@@ -66,7 +66,7 @@ namespace Paramore.Brighter
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
         /// </summary>
         /// <value>The <see cref="Type"/> of the data.</value>
-        public Type DataType { get; }
+        public Type? RequestType { get; }
 
         /// <summary>
         /// How long to pause when a channel is empty in milliseconds
@@ -77,13 +77,13 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// Determines the type of the message on the channel.
-        /// For a <see href = "https://www.enterpriseintegrationpatterns.com/patterns/messaging/DatatypeChannel.html">Datatype Channel</see>, <see cref="DataType"/> is the type of the <see cref="IRequest"/> that the channel will read and we just return that.
+        /// For a <see href = "https://www.enterpriseintegrationpatterns.com/patterns/messaging/DatatypeChannel.html">Datatype Channel</see>, <see cref="RequestType"/> is the type of the <see cref="IRequest"/> that the channel will read and we just return that.
         /// If you want to determine the type of the <see cref="IRequest"/> from the <see cref="Message"/>, you can set this property to a function that takes a <see cref="Message"/> and returns a <see cref="Type"/>.
         /// A typical strategy is to use the <see cref="MessageHeader"/> to read the Cloud Event Type and use that to look up the <see cref="Type"/>.
-        /// We default to a Datatype Channel, where the <see cref="DataType"/> is the type of the <see cref="IRequest"/> that the channel will read.
+        /// We default to a Datatype Channel, where the <see cref="RequestType"/> is the type of the <see cref="IRequest"/> that the channel will read.
         /// </summary>
-        /// <remarks>We recommend using a DataType channel, as it is operationally easier to reason about, but we support other strategies if needed</remarks>
-        public Func<Message, Type> GetRequestType { get; set; } 
+        /// <remarks>We recommend using a RequestType channel, as it is operationally easier to reason about, but we support other strategies if needed</remarks>
+        public Func<Message, Type> MapRequestType { get; set; } 
 
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
@@ -157,11 +157,11 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="dataType">The <see cref="Type"/> of the data that this subscription handles.</param>
         /// <param name="subscriptionName">The <see cref="SubscriptionName"/> for identification. Defaults to the data type's full name.</param>
         /// <param name="channelName">The <see cref="ChannelName"/> for the channel. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The <see cref="RoutingKey"/> for message routing. Defaults to the data type's full name.</param>
-        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="DataType"/> if null</param>
+        /// <param name="requestType">The <see cref="Type"/> of the data that this subscription handles.</param>
+        /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="RequestType"/> if null</param>
         /// <param name="bufferSize">The <see cref="int"/> number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10.</param>
         /// <param name="noOfPerformers">The <see cref="int"/> number of threads reading this channel.</param>
         /// <param name="timeOut">The <see cref="TimeSpan"/> timeout for the subscription to consider the queue empty and pause.</param>
@@ -174,10 +174,11 @@ namespace Paramore.Brighter
         /// <param name="emptyChannelDelay">The <see cref="TimeSpan"/> to pause when a channel is empty in milliseconds.</param>
         /// <param name="channelFailureDelay">The <see cref="TimeSpan"/> to pause when there is a channel failure in milliseconds.</param>
         /// <exception cref="ConfigurationException">Thrown when <paramref name="messagePumpType"/> is <see cref="MessagePumpType.Unknown"/>.</exception>
-        public Subscription(Type dataType,
-            SubscriptionName? subscriptionName = null,
-            ChannelName? channelName = null,
-            RoutingKey? routingKey = null,
+        public Subscription(
+            SubscriptionName subscriptionName,
+            ChannelName channelName,
+            RoutingKey routingKey,
+            Type? requestType = null,
             Func<Message, Type>? getRequestType = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
@@ -194,11 +195,14 @@ namespace Paramore.Brighter
             if (messagePumpType == MessagePumpType.Unknown)
                 throw new ConfigurationException("You must set a message pump type: use Reactor for sync pipelines; use Proactor for async pipelines");
             
-            DataType = dataType;
-            GetRequestType = getRequestType ?? (message => dataType);
-            Name = subscriptionName ?? new SubscriptionName(dataType.FullName!);
-            ChannelName = channelName ?? new ChannelName(dataType.FullName!);
-            RoutingKey = routingKey ?? new RoutingKey(dataType.FullName!);
+            if (requestType is null && getRequestType is null)
+                throw new ConfigurationException("You must set a request type or a function to map a message to a request type");
+            
+            RequestType = requestType;
+            MapRequestType = getRequestType ?? (message => requestType!);
+            Name = subscriptionName;
+            ChannelName = channelName;
+            RoutingKey = routingKey; 
             BufferSize = bufferSize;
             NoOfPerformers = noOfPerformers;
             timeOut ??= TimeSpan.FromMilliseconds(300);
@@ -270,10 +274,10 @@ namespace Paramore.Brighter
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null)
             : base(
+                subscriptionName  ?? new SubscriptionName(typeof(T).FullName!),
+                channelName ?? new ChannelName(typeof(T).FullName!),
+                routingKey ?? new RoutingKey(typeof(T).FullName!),
                 typeof(T),
-                subscriptionName,
-                channelName,
-                routingKey,
                 getRequestType,
                 bufferSize,
                 noOfPerformers,
@@ -283,8 +287,7 @@ namespace Paramore.Brighter
                 unacceptableMessageLimit,
                 messagePumpType,
                 channelFactory,
-                makeChannels,
-                emptyChannelDelay, channelFailureDelay)
+                makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
     }

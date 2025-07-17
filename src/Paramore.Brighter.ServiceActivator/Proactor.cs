@@ -41,14 +41,14 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public partial class Proactor : MessagePump, IAmAMessagePump
     {
-        private readonly Func<Message, Type> _getRequestType;
+        private readonly Func<Message, Type> _mapRequestType;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilder;
 
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessor">Provides a way to grab a command processor correctly scoped</param>
-        /// <param name="getRequestType">Pass in a <see cref="Func[Message, Type]" />which we use to determine the type of message on the channel. For a datatype channel, always returns the same type, for cloud events uses the header type</param>
+        /// <param name="mapRequestType">Pass in a <see cref="Func[Message, Type]" />which we use to determine the type of message on the channel. For a datatype channel, always returns the same type, for cloud events uses the header type</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         /// <param name="requestContextFactory">A factory to create instances of request synchronizationHelper, used to add synchronizationHelper to a pipeline</param>
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         public Proactor(
             IAmACommandProcessor commandProcessor,
-            Func<Message, Type> getRequestType,
+            Func<Message, Type> mapRequestType,
             IAmAMessageMapperRegistryAsync messageMapperRegistry, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.ServiceActivator
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
             : base(commandProcessor, requestContextFactory, tracer, instrumentationOptions)
         {
-            _getRequestType = getRequestType;
+            _mapRequestType = mapRequestType;
             _transformPipelineBuilder = new TransformPipelineBuilderAsync(messageMapperRegistry, messageTransformerFactory, instrumentationOptions);
             Channel = channel;
         }
@@ -380,7 +380,7 @@ namespace Paramore.Brighter.ServiceActivator
             Log.TranslateMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId);
             requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
 
-            var requestType = _getRequestType(message);
+            var requestType = _mapRequestType(message);
             if (requestType == null)
                 throw new MessageMappingException($"Failed to find request type for message {message.Id} ", 
                     new ArgumentNullException(nameof(requestType), "The request type cannot be null."));

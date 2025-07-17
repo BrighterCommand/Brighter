@@ -34,11 +34,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="dataType">Type of the data.</param>
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
-        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="dataType"/> if null</param>
+        /// <param name="requestType">Type of the data.</param>
+        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="requestType"/> if null</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
         /// <param name="timeOut">The timeout</param>
@@ -50,11 +50,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        protected RedisSubscription(
-            Type dataType,
-            SubscriptionName? subscriptionName = null,
-            ChannelName? channelName = null,
-            RoutingKey? routingKey = null,
+        protected RedisSubscription(SubscriptionName subscriptionName,
+            ChannelName channelName,
+            RoutingKey routingKey,
+            Type requestType,
             Func<Message, Type>? getRequestType = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
@@ -67,8 +66,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
-            : base(dataType, subscriptionName, channelName, routingKey, getRequestType, bufferSize, noOfPerformers,
-                timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
+                noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
     }
@@ -108,8 +107,23 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
-            : base(typeof(T), subscriptionName, channelName, routingKey, getRequestType, bufferSize, noOfPerformers, timeOut, 
-                requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(
+                subscriptionName ?? new SubscriptionName(typeof(T).FullName!), 
+                channelName ?? new ChannelName(typeof(T).FullName!), 
+                routingKey ?? new RoutingKey(typeof(T).FullName!), 
+                typeof(T), 
+                getRequestType, 
+                bufferSize, 
+                noOfPerformers, 
+                timeOut, 
+                requeueCount, 
+                requeueDelay, 
+                unacceptableMessageLimit, 
+                messagePumpType, 
+                channelFactory, 
+                makeChannels, 
+                emptyChannelDelay, 
+                channelFailureDelay)
         {
         }
     }
