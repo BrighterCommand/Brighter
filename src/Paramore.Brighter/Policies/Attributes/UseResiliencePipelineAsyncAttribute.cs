@@ -50,14 +50,19 @@ public class UseResiliencePipelineAsyncAttribute : RequestHandlerAttribute
     }
     
     /// <summary>
-    /// The policy name
+    /// Gets the policy name
     /// </summary>
     public string Policy { get; }
+    
+    /// <summary>
+    /// Gets or sets the type pipeline
+    /// </summary>
+    public bool UseTypePipeline { get; set; }
 
     /// <inheritdoc />
     public override object[] InitializerParams()
     {
-        return [Policy];
+        return [Policy, UseTypePipeline];
     }
 
     /// <inheritdoc />

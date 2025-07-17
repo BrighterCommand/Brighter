@@ -22,29 +22,32 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Policies.Attributes;
 
-namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
-
-internal sealed class MyDoesNotFailResiliencePipelineHandler : RequestHandler<MyCommand>
+namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
-    public static bool ReceivedCommand { get; set; }
-
-    static MyDoesNotFailResiliencePipelineHandler()
+    internal sealed class MyDoesNotFailTypeResiliencePipelineHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        ReceivedCommand = false;
-    }
+        public static bool ReceivedCommand { get; set; }
 
-    [UseResiliencePipeline("MyDivideByZeroPolicy", 1)]
-    public override MyCommand Handle(MyCommand command)
-    {
-        ReceivedCommand = true;
-        return base.Handle(command);
-    }
+        static MyDoesNotFailTypeResiliencePipelineHandlerAsync()
+        {
+            ReceivedCommand = false;
+        }
 
-    public static bool Shouldreceive(MyCommand myCommand)
-    {
-        return ReceivedCommand;
+        [UseResiliencePipelineAsync("MyDivideByZeroPolicy", 1, UseTypePipeline = true)]
+        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
+        {
+            ReceivedCommand = true;
+            return base.HandleAsync(command, cancellationToken);
+        }
+
+        public static bool Shouldreceive(MyCommand myCommand)
+        {
+            return ReceivedCommand;
+        }
     }
 }

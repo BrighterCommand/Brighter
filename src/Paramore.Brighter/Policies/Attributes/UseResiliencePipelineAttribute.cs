@@ -30,34 +30,79 @@ using Polly.Registry;
 namespace Paramore.Brighter.Policies.Attributes;
 
 /// <summary>
-/// This attribute supports the use of <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to provide quality of service around exceptions
-/// thrown from subsequent steps in the handler pipeline. A Polly Resilience Policy can be used to support a Retry or Circuit Breaker approach to exception handling
-/// Policies used by the attribute are identified by a string based key, which is used as a lookup into an <see cref="ResiliencePipelineRegistry{TKey}"/> and it is 
-/// assumed that you have registered required policies with a Resilience Pipeline Registry such as <see cref="ResiliencePipelineRegistry{TKey}"/> and configured that as a 
-/// dependency of the <see cref="CommandProcessor"/> using the <see cref="CommandProcessorBuilder"/>
+/// This attribute supports the use of <a href="https://github.com/App-vNext/Polly">Polly</a> to provide quality of service
+/// around exceptions thrown from subsequent steps in the Brighter handler pipeline.
+/// A Polly <see cref="ResiliencePipeline"/> can be used to support a Retry, Circuit Breaker, Timeout,
+/// or other resilience strategy approach to exception handling for the decorated handler method.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Policies used by this attribute are identified by a string-based key, which is used as a lookup
+/// into an <see cref="ResiliencePipelineRegistry{TKey}"/>. It is assumed that you have registered
+/// your required resilience pipelines with a <see cref="ResiliencePipelineRegistry{TKey}"/> instance
+/// and configured that registry as a dependency of the <see cref="Paramore.Brighter.CommandProcessor"/>
+/// (or similar Brighter dispatcher) using the <see cref="Paramore.Brighter.CommandProcessorBuilder"/>.
+/// </para>
+/// <para>
+/// When applied, Brighter will automatically wrap the execution of the decorated handler method
+/// with the specified <see cref="ResiliencePipeline"/>, ensuring that operations
+/// are resilient to transient faults.
+/// </para>
+/// </remarks>
 [AttributeUsage(AttributeTargets.Method)]
 public class UseResiliencePipelineAttribute : RequestHandlerAttribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="UsePolicyAttribute"/> class.
+    /// Initializes a new instance of the <see cref="UseResiliencePipelineAttribute"/> class.
     /// </summary>
-    /// <param name="policy">The policy key, used as a lookup into an <see cref="ResiliencePipelineRegistry{TKey}"/>.</param>
-    /// <param name="step">The step.</param>
+    /// <param name="policy">
+    /// The key identifying the <see cref="ResiliencePipeline"/> to use.
+    /// This key is used as a lookup into the <see cref="ResiliencePipelineRegistry{TKey}"/>
+    /// that is configured with the <see cref="Paramore.Brighter.CommandProcessor"/>.
+    /// </param>
+    /// <param name="step">
+    /// The zero-based order in which this attribute should be applied within the handler pipeline.
+    /// Lower values are executed earlier. This attribute is typically applied <see cref="Paramore.Brighter.HandlerTiming.Before"/>
+    /// subsequent handler logic.
+    /// </param>
     public UseResiliencePipelineAttribute(string policy, int step) : base(step, HandlerTiming.Before)
     {
         Policy = policy;
     }
     
     /// <summary>
-    /// The policy name
+    /// Gets the key that identifies the <see cref="ResiliencePipeline"/> to be applied.
     /// </summary>
+    /// <value>
+    /// The string key used to retrieve the desired <see cref="ResiliencePipeline"/> from the registry.
+    /// </value>
     public string Policy { get; }
+    
+    /// <summary>
+    /// Gets or sets a value indicating whether the pipeline should be scoped per handler type.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When <see langword="true"/>, the <see cref="ResiliencePipeline"/> is looked up using a key
+    /// composed of the handler type's full name and the specified <see cref="Policy"/> name.
+    /// This allows different instances of the same resilience strategy (e.g., a circuit breaker)
+    /// to be associated uniquely with each specific handler type.
+    /// </para>
+    /// <para>
+    /// When <see langword="false"/> (default), the pipeline is looked up solely by the <see cref="Policy"/> name,
+    /// implying a shared pipeline instance across all handlers using that same policy name.
+    /// </para>
+    /// <para>
+    /// This is particularly useful for strategies like Circuit Breaker, where you might want a separate
+    /// breaker for each distinct handler's external dependency.
+    /// </para>
+    /// </remarks>
+    public bool UseTypePipeline { get; set; }
 
     /// <inheritdoc />
     public override object[] InitializerParams()
     {
-        return [Policy];
+        return [Policy, UseTypePipeline];
     }
 
     /// <inheritdoc />

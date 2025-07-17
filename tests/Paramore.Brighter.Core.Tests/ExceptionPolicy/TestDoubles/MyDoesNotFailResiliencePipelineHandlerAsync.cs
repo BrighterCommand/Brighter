@@ -22,25 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Policies.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 
-internal sealed class MyDoesNotFailResiliencePipelineHandler : RequestHandler<MyCommand>
+internal sealed class MyDoesNotFailResiliencePipelineHandlerAsync : RequestHandlerAsync<MyCommand>
 {
     public static bool ReceivedCommand { get; set; }
 
-    static MyDoesNotFailResiliencePipelineHandler()
+    static MyDoesNotFailResiliencePipelineHandlerAsync()
     {
         ReceivedCommand = false;
     }
 
-    [UseResiliencePipeline("MyDivideByZeroPolicy", 1)]
-    public override MyCommand Handle(MyCommand command)
+    [UseResiliencePipelineAsync("MyDivideByZeroPolicy", 1)]
+    public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
     {
         ReceivedCommand = true;
-        return base.Handle(command);
+        return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
     }
 
     public static bool Shouldreceive(MyCommand myCommand)

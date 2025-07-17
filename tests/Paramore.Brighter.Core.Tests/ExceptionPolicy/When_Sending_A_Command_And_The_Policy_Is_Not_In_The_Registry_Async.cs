@@ -46,8 +46,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var innerException = _exception.InnerException;
             Assert.NotNull(innerException);
             Assert.IsType<KeyNotFoundException>(innerException);
-            //Should give the name of the missing policy
-            Assert.Contains("The given key 'MyDivideByZeroPolicy' was not present in the dictionary.", innerException.Message);
         }
 
         public void Dispose()

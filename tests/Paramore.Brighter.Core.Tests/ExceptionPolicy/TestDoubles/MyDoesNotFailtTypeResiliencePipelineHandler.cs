@@ -27,16 +27,16 @@ using Paramore.Brighter.Policies.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 
-internal sealed class MyDoesNotFailResiliencePipelineHandler : RequestHandler<MyCommand>
+internal sealed class MyDoesNotFailTypeResiliencePipelineHandler : RequestHandler<MyCommand>
 {
     public static bool ReceivedCommand { get; set; }
 
-    static MyDoesNotFailResiliencePipelineHandler()
+    static MyDoesNotFailTypeResiliencePipelineHandler()
     {
         ReceivedCommand = false;
     }
 
-    [UseResiliencePipeline("MyDivideByZeroPolicy", 1)]
+    [UseResiliencePipeline("MyDivideByZeroPolicy", 1, UseTypePipeline = true)]
     public override MyCommand Handle(MyCommand command)
     {
         ReceivedCommand = true;

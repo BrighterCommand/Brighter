@@ -22,16 +22,17 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Policies.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 
-internal sealed class MyDoesNotFailResiliencePipelineHandler : RequestHandler<MyCommand>
+internal sealed class MyFailsWithDivideByZeroWithResiliencePipelineHandler : RequestHandler<MyCommand>
 {
     public static bool ReceivedCommand { get; set; }
 
-    static MyDoesNotFailResiliencePipelineHandler()
+    static MyFailsWithDivideByZeroWithResiliencePipelineHandler()
     {
         ReceivedCommand = false;
     }
@@ -40,10 +41,10 @@ internal sealed class MyDoesNotFailResiliencePipelineHandler : RequestHandler<My
     public override MyCommand Handle(MyCommand command)
     {
         ReceivedCommand = true;
-        return base.Handle(command);
+        throw new DivideByZeroException();
     }
 
-    public static bool Shouldreceive(MyCommand myCommand)
+    public static bool ShouldReceive(MyCommand myCommand)
     {
         return ReceivedCommand;
     }

@@ -1,23 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
+using Polly;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
-using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Polly.Retry;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy;
 
-public class CommandProcessorMissingResiliencePipelineFromRegistryTests : IDisposable
+public class CommandProcessorWithExceptionResiliencePipelineNothingThrowTests : IDisposable
 {
     private readonly CommandProcessor _commandProcessor;
     private readonly MyCommand _myCommand = new MyCommand();
-    private Exception? _exception;
+    private int _retryCount;
 
-    public CommandProcessorMissingResiliencePipelineFromRegistryTests()
+    public CommandProcessorWithExceptionResiliencePipelineNothingThrowTests()
     {
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyDoesNotFailResiliencePipelineHandler>();
@@ -27,25 +28,36 @@ public class CommandProcessorMissingResiliencePipelineFromRegistryTests : IDispo
         container.AddTransient<ResilienceExceptionPolicyHandler<MyCommand>>();
         container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
-
         var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
+        var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
+        resiliencePipelineRegistry.TryAddBuilder("MyDivideByZeroPolicy", 
+            (builder, _) => builder.AddRetry(new RetryStrategyOptions
+            {
+                BackoffType = DelayBackoffType.Linear,
+                Delay = TimeSpan.FromSeconds(1),
+                OnRetry = _ =>
+                {
+                    _retryCount++;
+                    return new ValueTask();
+                }
+            }));
+
         MyDoesNotFailResiliencePipelineHandler.ReceivedCommand = false;
 
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), resiliencePipelineRegistry, new InMemorySchedulerFactory());
     }
 
     //We have to catch the final exception that bubbles out after retry
     [Fact]
-    public void When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry()
+    public void When_Sending_A_Command_That_Passes_Policy_Check()
     {
-        _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
+        _commandProcessor.Send(_myCommand);
 
-        //Should throw an exception
-        Assert.IsType<ConfigurationException>(_exception);
-        var innerException = _exception.InnerException;
-        Assert.NotNull(innerException);
-        Assert.IsType<KeyNotFoundException>(innerException);
+        // Should send the command to the command handler
+        Assert.True(MyDoesNotFailResiliencePipelineHandler.Shouldreceive(_myCommand));
+        // Should not retry
+        Assert.Equal(0, _retryCount);
     }
 
     public void Dispose()
