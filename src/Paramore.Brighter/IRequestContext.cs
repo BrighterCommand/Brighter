@@ -66,6 +66,11 @@ namespace Paramore.Brighter
         ResiliencePipelineRegistry<string>? ResiliencePipeline { get; }
         
         /// <summary>
+        /// Gets the <see cref="ResilienceContext"/>
+        /// </summary>
+        ResilienceContext? ResilienceContext { get; }
+        
+        /// <summary>
         /// Gets the Feature Switches
         /// </summary>
         IAmAFeatureSwitchRegistry? FeatureSwitches { get; }

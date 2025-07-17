@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
+using Polly;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -59,6 +60,9 @@ namespace Paramore.Brighter
 
         /// <inheritdoc />
         public ResiliencePipelineRegistry<string>? ResiliencePipeline { get; set; }
+
+        /// <inheritdoc />
+        public ResilienceContext? ResilienceContext { get; set; }
 
         /// <summary>
         /// Gets the Feature Switches

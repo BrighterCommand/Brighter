@@ -42,8 +42,7 @@ namespace Paramore.Brighter.Policies.Handlers;
 public class ResilienceExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
 {
     private bool _initialized;
-    private ResiliencePipeline _pipeline = ResiliencePipeline.Empty;
-    private ResiliencePipeline<TRequest> _pipelineGeneric = ResiliencePipeline<TRequest>.Empty;
+    private ResiliencePipeline<TRequest> _pipeline = ResiliencePipeline<TRequest>.Empty;
 
     /// <summary>
     /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry"/> from the <see cref="IRequestContext"/> and query it for the
@@ -60,23 +59,10 @@ public class ResilienceExceptionPolicyHandler<TRequest> : RequestHandler<TReques
             return;
         }
 
-        var useGeneric = false;
-        if (initializerList[1] is bool generic)
-        {
-            useGeneric = generic;
-        }
-            
         //we expect the first and only parameter to be a string
         if (initializerList[0] is string pipeline && Context is { ResiliencePipeline: not null })
         {
-            if (useGeneric)
-            {
-                _pipelineGeneric =  Context.ResiliencePipeline.GetPipeline<TRequest>(pipeline);
-            }
-            else
-            {
-                _pipeline = Context.ResiliencePipeline.GetPipeline(pipeline);
-            }
+            _pipeline =  Context.ResiliencePipeline.GetPipeline<TRequest>(pipeline);
         }
         
         _initialized = true;
@@ -87,13 +73,6 @@ public class ResilienceExceptionPolicyHandler<TRequest> : RequestHandler<TReques
     /// </summary>
     /// <param name="command">The command.</param>
     /// <returns>TRequest.</returns>
-    public override TRequest Handle(TRequest command)
-    {
-        if (_pipelineGeneric != ResiliencePipeline<TRequest>.Empty)
-        {
-            return _pipelineGeneric.Execute(() => base.Handle(command));
-        }
-        
-        return _pipeline.Execute(() => base.Handle(command));
-    }
+    public override TRequest Handle(TRequest command) 
+        => Context?.ResilienceContext != null ? _pipeline.Execute(_ => base.Handle(command), Context.ResilienceContext) : _pipeline.Execute(() => base.Handle(command));
 }

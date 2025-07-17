@@ -54,20 +54,15 @@ public class UseResiliencePipelineAttribute : RequestHandlerAttribute
     /// </summary>
     public string Policy { get; }
 
-    /// <summary>
-    /// If Brighter should use the <see cref="ResiliencePipeline{T}"/> or <see cref="ResiliencePipeline"/>
-    /// </summary>
-    public bool UseGenericResilience { get; set; } = true;
-
     /// <inheritdoc />
     public override object[] InitializerParams()
     {
-        return [Policy, UseGenericResilience];
+        return [Policy];
     }
 
     /// <inheritdoc />
     public override Type GetHandlerType()
     {
-        return typeof(ExceptionPolicyHandler<>);
+        return typeof(ResilienceExceptionPolicyHandler<>);
     }
 }

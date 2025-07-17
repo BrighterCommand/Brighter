@@ -48,8 +48,7 @@ public class ResilienceExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsy
 {
     private bool _initialized;
     
-    private ResiliencePipeline _pipeline = ResiliencePipeline.Empty;
-    private ResiliencePipeline<TRequest> _pipelineGeneric = ResiliencePipeline<TRequest>.Empty;
+    private ResiliencePipeline<TRequest> _pipeline = ResiliencePipeline<TRequest>.Empty;
     
     /// <summary>
     /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry" /> from the <see cref="IRequestContext" /> and query it for the
@@ -62,23 +61,9 @@ public class ResilienceExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsy
         if (_initialized) return;
 
         //we expect the first and only parameter to be a string
-        var useGeneric = false;
-        if (initializerList[1] is bool generic)
-        {
-            useGeneric = generic;
-        }
-            
-        //we expect the first and only parameter to be a string
         if (initializerList[0] is string pipeline && Context is { ResiliencePipeline: not null })
         {
-            if (useGeneric)
-            {
-                _pipelineGeneric =  Context.ResiliencePipeline.GetPipeline<TRequest>(pipeline);
-            }
-            else
-            {
-                _pipeline = Context.ResiliencePipeline.GetPipeline(pipeline);
-            }
+            _pipeline =  Context.ResiliencePipeline.GetPipeline<TRequest>(pipeline);
         }
         
         _initialized = true;
@@ -91,10 +76,11 @@ public class ResilienceExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsy
     /// <param name="cancellationToken">Allow the sender to cancel the reques (optional) </param>
     /// <returns>AA Task<TRequest> that wraps the asynchronous call to the policy, which itself wraps the handler chain</TRequest></returns>
     public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
-    { 
-        if (_pipelineGeneric != ResiliencePipeline<TRequest>.Empty)
+    {
+        if (Context?.ResilienceContext != null)
         {
-            return await _pipelineGeneric.ExecuteAsync(async ct => await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext), cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await _pipeline.ExecuteAsync(async context => await base.HandleAsync(command, context.CancellationToken).ConfigureAwait(ContinueOnCapturedContext), Context.ResilienceContext)
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
         
         return await _pipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct), cancellationToken).ConfigureAwait(ContinueOnCapturedContext);

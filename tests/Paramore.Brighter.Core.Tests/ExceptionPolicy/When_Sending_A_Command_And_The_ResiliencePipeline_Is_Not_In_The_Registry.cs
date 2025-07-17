@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Xunit;
@@ -12,34 +11,35 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorMissingPolicyFromRegistryAsyncTests : IDisposable
+    public class CommandProcessorMissingResiliencePipelineFromRegistryTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Exception _exception;
+        private Exception? _exception;
 
-        public CommandProcessorMissingPolicyFromRegistryAsyncTests()
+        public CommandProcessorMissingResiliencePipelineFromRegistryTests()
         {
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyDoesNotFailPolicyHandlerAsync>();
+            registry.Register<MyCommand, MyDoesNotFailResiliencePipelineHandler>();
 
             var container = new ServiceCollection();
-            container.AddTransient<MyDoesNotFailPolicyHandlerAsync>();
-            container.AddTransient<ExceptionPolicyHandlerAsync<MyCommand>>();
+            container.AddTransient<MyDoesNotFailResiliencePipelineHandler>();
+            container.AddTransient<ResilienceExceptionPolicyHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
-            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            MyDoesNotFailPolicyHandlerAsync.ReceivedCommand = false;
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+            
+            MyDoesNotFailResiliencePipelineHandler.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
         //We have to catch the final exception that bubbles out after retry
         [Fact]
-        public async Task When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async()
+        public void When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry()
         {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
+            _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //Should throw an exception
             Assert.IsType<ConfigurationException>(_exception);
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             Assert.NotNull(innerException);
             Assert.IsType<KeyNotFoundException>(innerException);
             //Should give the name of the missing policy
-            Assert.Contains("The given key 'MyDivideByZeroPolicy' was not present in the dictionary.", innerException.Message);
+            Assert.Contains("Unable to find a generic resilience pipeline of 'MyCommand' associated with the key 'MyDivideByZeroPolicy'. Please ensure that either the generic resilience pipeline or the generic builder is registered.", innerException.Message);
         }
 
         public void Dispose()
