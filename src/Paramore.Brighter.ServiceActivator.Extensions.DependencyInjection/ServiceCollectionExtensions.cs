@@ -60,7 +60,9 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
             var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
-            ApplicationLogging.LoggerFactory = loggerFactory;
+            //if not supplied, use the default logger factory, which has no providers
+            if (loggerFactory != null)
+                ApplicationLogging.LoggerFactory = loggerFactory;
         
             var options = serviceProvider.GetService<IServiceActivatorOptions>();
         

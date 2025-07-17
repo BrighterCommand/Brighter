@@ -3,6 +3,7 @@
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <Authors>Daniel Stockhammer, Toby Henderson</Authors>
     <Description>Brighter Microsoft.Extensions.DependencyInjection support</Description>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj"/>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>
 </Project>

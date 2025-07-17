@@ -26,7 +26,7 @@ public class MongoDbBinaryOutboxWritingMessageTests : IDisposable
     public MongoDbBinaryOutboxWritingMessageTests()
     {
         _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new(Configuration.Create(_collection));
+        _outbox = new(Configuration.CreateOutbox(_collection));
         var messageHeader = new MessageHeader(
             messageId: Guid.NewGuid().ToString(),
             topic: new RoutingKey("test_topic"),

@@ -39,9 +39,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Builds the specified request context.
         /// </summary>
+        /// <param name="request">The <see cref="IRequest"/> that we are building a pipeline for; used for routing here, not execution</param>
         /// <param name="requestContext">The request context.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns><see cref="AsyncPipelines{TRequest}"/></returns>
-        AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext);
+        AsyncPipelines<TRequest> BuildAsync(TRequest request, IRequestContext requestContext, bool continueOnCapturedContext);
     }
 }

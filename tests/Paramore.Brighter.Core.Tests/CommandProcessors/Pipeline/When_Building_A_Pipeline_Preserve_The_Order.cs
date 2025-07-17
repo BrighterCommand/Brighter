@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_Building_A_Pipeline_Preserve_The_Order()
         {
-            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+            _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
             Assert.Equal("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|", PipelineTracer().ToString());
         }

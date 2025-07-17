@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -29,8 +30,10 @@ namespace Tests
             Assert.NotNull(commandProcessor);
         }
 
-        [Fact]
-        public void WithExternalBus()
+        [Theory]
+        [InlineData(typeof(SomeSqlConnectionProvider), typeof(SomeSqlUnitOfBox))]
+        [InlineData(typeof(SomeSqlUnitOfBox), typeof(SomeSqlUnitOfBox))]
+        public void WithExternalBus(Type connectionProvider, Type transactionProvider)
         {
             var serviceCollection = new ServiceCollection();
             const string mytopic = "MyTopic";
@@ -56,10 +59,12 @@ namespace Tests
 
             serviceCollection
                 .AddBrighter()
-                .UseExternalBus((config) =>
+                .UseExternalBus(config =>
                 {
                     config.ProducerRegistry = producerRegistry;
                     config.MessageMapperRegistry = messageMapperRegistry;
+                    config.ConnectionProvider = connectionProvider;
+                    config.TransactionProvider = transactionProvider;
                 })
                 .AutoFromAssemblies();
 
@@ -69,7 +74,6 @@ namespace Tests
             
             Assert.NotNull(commandProcessor);
         }
-
         
         [Fact]
         public void WithCustomPolicy()
@@ -114,6 +118,23 @@ namespace Tests
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
             
             Assert.NotNull(commandProcessor);
+        }
+        
+        public class SomeSqlConnectionProvider : RelationalDbConnectionProvider
+        {
+            public override DbConnection GetConnection()
+            {
+                throw new NotImplementedException();
+            }
+        }
+        
+        
+        public class SomeSqlUnitOfBox :  RelationalDbTransactionProvider
+        {
+            public override DbConnection GetConnection()
+            {
+                throw new NotImplementedException();
+            }
         }
 
     }

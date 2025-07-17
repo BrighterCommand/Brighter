@@ -44,10 +44,11 @@ namespace Paramore.Brighter
         public IHandleRequests<TRequest> CreateRequestHandler(IAmALifetime lifetime)
         {
             var handlerType = _attribute.GetHandlerType().MakeGenericType(_messageType);
-            var handler = (IHandleRequests<TRequest>)_factorySync.Create(handlerType, lifetime);
+            var handler = (IHandleRequests<TRequest>?)_factorySync.Create(handlerType, lifetime);
 
             if (handler is null)
                 throw new ConfigurationException($"Could not create handler {handlerType} from {_factorySync}");
+            
             //Load the context before the initializer - in case we want to use the context from within the initializer
             handler.Context = _requestContext;
             handler.InitializeFromAttributeParams(_attribute.InitializerParams());
