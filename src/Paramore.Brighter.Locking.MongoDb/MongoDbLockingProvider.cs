@@ -1,21 +1,38 @@
-﻿using System.Collections.ObjectModel;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using Paramore.Brighter.MongoDb;
 
 namespace Paramore.Brighter.Locking.MongoDb;
 
 /// <summary>
-/// The MongoDb implementation to <see cref="IDistributedLock"/>
+/// Implements a distributed lock mechanism using MongoDB as the backing store.
+/// This class extends <see cref="BaseMongoDb{TCollection}"/> to manage a collection
+/// of <see cref="LockMessage"/> documents, enabling coordinated access to shared resources
+/// across distributed services.
 /// </summary>
 public class MongoDbLockingProvider : BaseMongoDb<LockMessage>, IDistributedLock
-{
+{ 
     /// <summary>
-    /// Initialize new instance of <see cref="MongoDbLockingProvider"/>
+    /// Initializes a new instance of the <see cref="MongoDbLockingProvider"/> class
+    /// with explicit connection and configuration providers.
     /// </summary>
-    /// <param name="configuration">The <see cref="MongoDbConfiguration"/></param>
-    public MongoDbLockingProvider(MongoDbConfiguration configuration)
-        : base(configuration)
+    /// <param name="connectionProvider">The MongoDB connection provider.</param>
+    /// <param name="configuration">The overall MongoDB configuration, which must include locking settings.</param>
+    /// <exception cref="ArgumentException">Thrown if the locking configuration is null.</exception>
+    public MongoDbLockingProvider(IAmAMongoDbConnectionProvider connectionProvider, IAmAMongoDbConfiguration configuration)
+        : base(connectionProvider, configuration, configuration.Locking ?? throw new ArgumentException("Locking can't be null"))
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MongoDbLockingProvider"/> class
+    /// using only the main MongoDB configuration. A <see cref="MongoDbConnectionProvider"/>
+    /// will be created internally.
+    /// </summary>
+    /// <param name="configuration">The overall MongoDB configuration, which must include locking settings.</param>
+    public MongoDbLockingProvider(IAmAMongoDbConfiguration configuration)
+        : this(new MongoDbConnectionProvider(configuration), configuration)
+    {
+        
     }
 
     /// <inheritdoc />

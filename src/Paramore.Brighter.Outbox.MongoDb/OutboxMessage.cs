@@ -31,7 +31,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
             : message.Header.TimeStamp;
         Body = message.Body.Bytes;
         var bodyContentType = message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain;
-        var headerContentType = message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain;
+        var headerContentType = message.Header.ContentType.ToString();
         
         BodyContentType = bodyContentType;
         ContentType = headerContentType;
@@ -95,8 +95,9 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// </summary>
     public string? CorrelationId { get; set; }
     
-   /// <summary>
-   /// The CloudEvents DataRef for a Claim Check of the message, if any
+    /// <summary>
+    /// The CloudEvents DataRef for a Claim Check of the message, if any
+    /// </summary>
     public string? DataRef { get; set; }
     
     /// <summary>
