@@ -5,7 +5,8 @@
         // All column are created with lower case because during table creating we didn't scape colum
         public string PagedDispatchedCommand { get; } = "SELECT * FROM {0} WHERE \"dispatched\" IS NOT NULL AND \"dispatched\" < @DispatchedSince ORDER BY \"timestamp\" DESC LIMIT @Take OFFSET @Skip";
         public string PagedReadCommand { get; } = "SELECT * FROM {0} ORDER BY \"timestamp\" ASC LIMIT @Take OFFSET @Skip";
-        public string PagedOutstandingCommand { get; } = "SELECT * FROM {0} WHERE \"dispatched\" IS NULL AND \"timestamp\" < @TimestampSince ORDER BY \"timestamp\" DESC LIMIT @Take OFFSET @Skip";
+        public string PagedOutstandingCommand { get; } = "SELECT * FROM {0} WHERE \"dispatched\" IS NULL AND \"timestamp\" < @TimestampSince {1} ORDER BY \"timestamp\" DESC LIMIT @Take OFFSET @Skip";
+        public string PagedOutstandingCommandInStatement { get; } = "AND \"topic\" NOT IN ( {0} )";
         public string AddCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +

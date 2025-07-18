@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using System.Net.Mime;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
@@ -187,13 +188,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
-            int pageNumber)
+            int pageNumber, IDbDataParameter[] inParams)
         {
             var parameters = new IDbDataParameter[3];
             parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
             parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
             parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(since));
-            return parameters;
+ 
+            return parameters.Concat(inParams).ToArray();
         }
 
         protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize,
