@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
@@ -43,11 +44,23 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
         if(publication.Topic is null)
             throw new ArgumentException($"No Topic Defined for {publication}");
 
- #if NETSTANDARD2_0
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType("application/json"));
- #else       
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType(MediaTypeNames.Application.Json));
+        var header = new MessageHeader(
+            messageId: request.Id,
+            topic: publication.Topic,
+            messageType: messageType,
+            partitionKey: Context?.PartitionKey,
+            traceParent: Context?.TraceParent,
+            traceState: Context?.TraceState,
+            baggage: Context?.Baggage,
+#if NETSTANDARD2_0
+            contentType: new ContentType("application/json")
+#else
+            contentType: new ContentType(MediaTypeNames.Application.Json)
 #endif
+        )
+        {
+            Bag = Context?.Headers ?? new Dictionary<string, object>()
+        };
 
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);

@@ -48,22 +48,42 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
         }
 
         var headerContentType = new ContentType("application/cloudevents+json");
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: headerContentType);
+        var header = new MessageHeader(
+            messageId: request.Id,
+            topic: publication.Topic,
+            messageType: messageType,
+            contentType: headerContentType,
+            partitionKey: Context?.PartitionKey,
+            traceParent: Context?.TraceParent,
+            traceState: Context?.TraceState,
+            baggage: Context?.Baggage
+        )
+        {
+            Bag = Context?.Headers ?? new Dictionary<string, object>()
+        };
+        
 #if NETSTANDARD2_0
         var bodyContentType = new ContentType("application/json");   
  #else           
         var bodyContentType = new ContentType(MediaTypeNames.Application.Json);
-#endif            
+#endif
+
+        var headers = new Dictionary<string, object>(publication.CloudEventsAdditionalProperties ?? []);
+
+        foreach (var value in Context?.Headers ?? [])
+        {
+            headers[value.Key!] = value.Value!;
+        }
         
         var body = new MessageBody(JsonSerializer.Serialize(new CloudEventMessage
         {
             Id = request.Id,
             Source = publication.Source,
             Type = publication.Type,
-            DataContentType = bodyContentType!.ToString(),
+            DataContentType = bodyContentType.ToString(),
             Subject = publication.Subject,
             DataSchema = publication.DataSchema,
-            AdditionalProperties = publication.CloudEventsAdditionalProperties,
+            AdditionalProperties = headers,
             Time = DateTimeOffset.UtcNow,
             Data = request
         }, JsonSerialisationOptions.Options));

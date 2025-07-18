@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -62,6 +63,21 @@ namespace Paramore.Brighter
         /// </summary>
         public IAmAFeatureSwitchRegistry? FeatureSwitches { get; set; }
 
+        /// <inheritdoc />
+        public PartitionKey PartitionKey { get; set; } = PartitionKey.Empty;
+        
+        /// <inheritdoc />
+        public Dictionary<string, object>? Headers { get; set; }
+
+        /// <inheritdoc />
+        public TraceParent? TraceParent { get; set; }
+        
+        /// <inheritdoc />
+        public TraceState? TraceState { get; set; }
+        
+        /// <inheritdoc />
+        public Baggage? Baggage { get; set; }
+
         /// <summary>
         /// Create a new instance of the Request Context
         /// </summary>
@@ -72,7 +88,12 @@ namespace Paramore.Brighter
                 Span = Span,
                 Policies = Policies,
                 FeatureSwitches = FeatureSwitches,
-                OriginatingMessage = OriginatingMessage
+                OriginatingMessage = OriginatingMessage,
+                PartitionKey = PartitionKey,
+                Headers = Headers,
+                TraceParent = TraceParent,
+                TraceState = TraceState,
+                Baggage = Baggage
             };
 
         /// <summary>
