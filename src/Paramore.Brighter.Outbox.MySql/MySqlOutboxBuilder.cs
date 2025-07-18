@@ -33,55 +33,61 @@ namespace Paramore.Brighter.Outbox.MySql
     /// </summary>
     public class MySqlOutboxBuilder
     {
-        const string TextOutboxDdl = @"CREATE TABLE {0} ( 
-	`MessageId`VARCHAR(255) NOT NULL , 
-	`Topic` VARCHAR(255) NOT NULL , 
-	`MessageType` VARCHAR(32) NOT NULL , 
-	`Timestamp` TIMESTAMP(3) NOT NULL , 
-    `CorrelationId`VARCHAR(255) NULL ,
-    `ReplyTo` VARCHAR(255) NULL ,
-    `ContentType` VARCHAR(128) NULL , 
-    `PartitionKey` VARCHAR(128) NULL , 
-    `Dispatched` TIMESTAMP(3) NULL , 
-	`HeaderBag` TEXT NOT NULL , 
-	`Body` TEXT NOT NULL , 
-	`Source`  VARCHAR(255) NULL,
-    `Type`  VARCHAR(255) NULL,
-    `DataSchema`  VARCHAR(255) NULL,
-    `Subject`  VARCHAR(255) NULL,
-    `TraceParent`  VARCHAR(255) NULL,
-    `TraceState`  VARCHAR(255) NULL,
-    `Baggage`  TEXT NULL,	
-    `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
-    `CreatedID` INT(11) NOT NULL AUTO_INCREMENT, 
-    UNIQUE(`CreatedID`),
-	PRIMARY KEY (`MessageId`)
-) ENGINE = InnoDB;";
+        const string TextOutboxDdl = 
+            """
+            CREATE TABLE {0} ( 
+                `MessageId`VARCHAR(255) NOT NULL , 
+                `Topic` VARCHAR(255) NOT NULL , 
+                `MessageType` VARCHAR(32) NOT NULL , 
+                `Timestamp` TIMESTAMP(3) NOT NULL , 
+                `CorrelationId`VARCHAR(255) NULL ,
+                `ReplyTo` VARCHAR(255) NULL ,
+                `ContentType` VARCHAR(128) NULL , 
+                `PartitionKey` VARCHAR(128) NULL , 
+                `Dispatched` TIMESTAMP(3) NULL , 
+                `HeaderBag` TEXT NOT NULL , 
+                `Body` TEXT NOT NULL , 
+                `Source`  VARCHAR(255) NULL,
+                `Type`  VARCHAR(255) NULL,
+                `DataSchema`  VARCHAR(255) NULL,
+                `Subject`  VARCHAR(255) NULL,
+                `TraceParent`  VARCHAR(255) NULL,
+                `TraceState`  VARCHAR(255) NULL,
+                `Baggage`  TEXT NULL,
+                `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
+                `CreatedID` INT(11) NOT NULL AUTO_INCREMENT, 
+                UNIQUE(`CreatedID`),
+                PRIMARY KEY (`MessageId`)
+            ) ENGINE = InnoDB;
+            """;
         
-        const string BinaryOutboxDdl = @"CREATE TABLE {0} ( 
-	`MessageId` VARCHAR(255) NOT NULL , 
-	`Topic` VARCHAR(255) NOT NULL , 
-	`MessageType` VARCHAR(32) NOT NULL , 
-	`Timestamp` TIMESTAMP(3) NOT NULL , 
-    `CorrelationId` VARCHAR(255) NULL ,
-    `ReplyTo` VARCHAR(255) NULL ,
-    `ContentType` VARCHAR(128) NULL ,  
-    `PartitionKey` VARCHAR(128) NULL ,
-    `Dispatched` TIMESTAMP(3) NULL , 
-	`HeaderBag` TEXT NOT NULL , 
-	`Body` BLOB NOT NULL , 
-	`Source`  VARCHAR(255) NULL,
-    `Type`  VARCHAR(255) NULL,
-    `DataSchema`  VARCHAR(255) NULL,
-    `Subject`  VARCHAR(255) NULL,
-    `TraceParent`  VARCHAR(255) NULL,
-    `TraceState`  VARCHAR(255) NULL,
-    `Baggage`  TEXT NULL,	
-    `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
-    `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
-    UNIQUE(`CreatedID`),
-	PRIMARY KEY (`MessageId`)
-) ENGINE = InnoDB;";
+        const string BinaryOutboxDdl = 
+            """
+            CREATE TABLE {0} ( 
+                `MessageId` VARCHAR(255) NOT NULL , 
+                `Topic` VARCHAR(255) NOT NULL , 
+                `MessageType` VARCHAR(32) NOT NULL , 
+                `Timestamp` TIMESTAMP(3) NOT NULL , 
+                `CorrelationId` VARCHAR(255) NULL ,
+                `ReplyTo` VARCHAR(255) NULL ,
+                `ContentType` VARCHAR(128) NULL ,  
+                `PartitionKey` VARCHAR(128) NULL ,
+                `Dispatched` TIMESTAMP(3) NULL , 
+                `HeaderBag` TEXT NOT NULL , 
+                `Body` BLOB NOT NULL , 
+                `Source`  VARCHAR(255) NULL,
+                `Type`  VARCHAR(255) NULL,
+                `DataSchema`  VARCHAR(255) NULL,
+                `Subject`  VARCHAR(255) NULL,
+                `TraceParent`  VARCHAR(255) NULL,
+                `TraceState`  VARCHAR(255) NULL,
+                `Baggage`  TEXT NULL,
+                `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
+                `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
+                UNIQUE(`CreatedID`),
+                PRIMARY KEY (`MessageId`)
+            ) ENGINE = InnoDB;
+            """;
 
         const string outboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{0}') AS TableExists;";
 

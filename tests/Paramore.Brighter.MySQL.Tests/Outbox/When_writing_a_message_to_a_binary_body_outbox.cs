@@ -3,7 +3,7 @@ using System.Net.Mime;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
-namespace Paramore.Brighter.MySQL.Tests
+namespace Paramore.Brighter.MySQL.Tests.Outbox
 {
     public class MySqlOutboxWritingBinaryMessageTests
     {
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MySQL.Tests
 
             _messageEarliest = new Message(
                 messageHeader, 
-                new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw )
+                new MessageBody([1, 2, 3, 4, 5], new ContentType(MediaTypeNames.Application.Octet), CharacterEncoding.Raw )
                 );
             _mySqlOutbox.Add(_messageEarliest, new RequestContext());
         }
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MySQL.Tests
             _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id, new RequestContext());
 
             //should read the message from the sql outbox
-            Assert.Equal(_messageEarliest.Body.Value, _storedMessage.Body.Value);
+            Assert.Equal(_messageEarliest.Body.Bytes, _storedMessage.Body.Bytes);
             
             //should read the header from the sql outbox
             Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
