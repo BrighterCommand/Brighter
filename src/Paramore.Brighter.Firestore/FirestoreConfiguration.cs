@@ -10,7 +10,7 @@ namespace Paramore.Brighter.Firestore;
 /// This class encapsulates common Firestore setup parameters like project ID, database,
 /// collection, and optional settings for credentials and client customization.
 /// </summary>
-public class FirestoreConfiguration(string projectId, string database, string collection)
+public class FirestoreConfiguration(string projectId, string database)
 {
     /// <summary>
     /// Gets the Google Cloud Project ID.
@@ -23,19 +23,24 @@ public class FirestoreConfiguration(string projectId, string database, string co
     public string Database { get; } = database;
     
     /// <summary>
-    /// Gets the default Firestore collection ID.
+    /// Gets the default inbox Firestore collection.
     /// </summary>
-    public string Collection { get; } = collection;
+    public string? Inbox { get; set; }
+    
+    /// <summary>
+    /// Gets the default outbox Firestore collection.
+    /// </summary>
+    public string? Outbox { get; set; }
+    
+    /// <summary>
+    /// Gets the default locking Firestore collection.
+    /// </summary>
+    public string? Locking { get; set; }
 
     /// <summary>
     /// Gets the full path to the Firestore database.
     /// </summary>
     public string DatabasePath => $"project/{ProjectId}/database/{Database}";
-    
-    /// <summary>
-    /// Gets the full path to the default Firestore collection.
-    /// </summary>
-    public string CollectionPath => $"{DatabasePath}/documents/{Collection}";
     
     /// <summary>
     /// Gets or sets the <see cref="TimeProvider"/> to use for timestamp generation.
@@ -60,18 +65,26 @@ public class FirestoreConfiguration(string projectId, string database, string co
     /// customization of the client.
     /// </summary>
     public Action<FirestoreClientBuilder>? Configure { get; set; }
+    
+    /// <summary>
+    /// Gets the full path to the default Firestore collection.
+    /// </summary>
+    /// <param name="collection">The collection name.</param>
+    public string GetCollectionPath(string collection) => $"{DatabasePath}/{collection}";
 
     /// <summary>
     /// Gets a document name by id
     /// </summary>
     /// <param name="id">The id.</param>
+    /// <param name="collection">The collection name.</param>
     /// <returns>returns the document name</returns>
-    public string GetDocumentName(Id id) => GetDocumentName(id.Value);
-    
+    public string GetDocumentName(string collection, Id id) => GetDocumentName(collection, id.Value);
+
     /// <summary>
     /// Gets a document name by id
     /// </summary>
+    /// <param name="collection">The collection name.</param>
     /// <param name="id">The id.</param>
     /// <returns>returns the document name</returns>
-    public string GetDocumentName(string id) => $"{CollectionPath}/{id}";
+    public string GetDocumentName(string collection, string id) => $"{GetCollectionPath(collection)}/{id}";
 }

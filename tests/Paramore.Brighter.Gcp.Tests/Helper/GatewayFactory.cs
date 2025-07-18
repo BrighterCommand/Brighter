@@ -6,14 +6,14 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 namespace Paramore.Brighter.Gcp.Tests.Helper;
 
-public class GatewayFactory
+public static class GatewayFactory
 {
     public static GcpMessagingGatewayConnection CreateFactory()
     {
         return new GcpMessagingGatewayConnection
         {
-            Credential = GoogleCredential.GetApplicationDefault(),
-            ProjectId = Environment.GetEnvironmentVariable("GCP_PROJECT_ID")!,
+            Credential = GetCredential(),
+            ProjectId = GetProjectId(),
             PublishConfiguration = cfg =>
             {
                 cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;

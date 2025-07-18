@@ -40,8 +40,4 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.Tranformers.Gcp\Paramore.Brighter.Tranformers.Gcp.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Firestore\" />
-  </ItemGroup>
-
 </Project>

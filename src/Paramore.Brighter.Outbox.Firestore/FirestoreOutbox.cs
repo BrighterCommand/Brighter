@@ -10,6 +10,7 @@ using Google.Api.Gax;
 using Google.Api.Gax.Grpc;
 using Google.Cloud.Firestore.V1;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Firestore;
@@ -34,8 +35,11 @@ namespace Paramore.Brighter.Outbox.Firestore;
 /// transaction, preventing data loss in case of application failures before
 /// message dispatch.
 /// </remarks>
-public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider, FirestoreConfiguration configuration) : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>
+public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>
 {
+    private readonly IAmAFirestoreConnectionProvider _connectionProvider;
+    private readonly FirestoreConfiguration _configuration;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="FirestoreOutbox"/> class with just
     /// the Firestore configuration. This constructor internally creates a default
@@ -46,10 +50,31 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
     public FirestoreOutbox(FirestoreConfiguration configuration)
         : this(new FirestoreConnectionProvider(configuration), configuration)
     {
-        
     }
-    
+
+    /// <summary>
+    /// Provides an implementation of the Brighter outbox pattern using Google Cloud Firestore.
+    /// This class allows for reliable message sending by persisting messages to Firestore
+    /// within a transaction before they are dispatched. It supports both synchronous
+    /// and asynchronous operations.
+    /// </summary>
+    /// <remarks>
+    /// This outbox ensures that messages are durably stored in Firestore as part of a
+    /// transaction, preventing data loss in case of application failures before
+    /// message dispatch.
+    /// </remarks>
+    public FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider, FirestoreConfiguration configuration)
+    {
+        _connectionProvider = connectionProvider;
+        _configuration = configuration;
+        if (string.IsNullOrEmpty(configuration.Outbox))
+        {
+            throw new ArgumentException("inbox collection can't be null or empty", nameof(configuration));
+        }
+    }
+
     private const string Dispatched = "Dispatched";
+    private const string Topic = "Topic";
     
     /// <inheritdoc />
     public IAmABrighterTracer? Tracer { get; set; }
@@ -65,12 +90,12 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, 
-                configuration.Database,
+                _configuration.Database,
                 BoxDbOperation.Add, 
-                configuration.Collection,
+                _configuration.Outbox!,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: configuration.Instrumentation);
+            options: _configuration.Instrumentation);
 
         try
         {
@@ -86,9 +111,9 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
                 transaction.Add(write);
             }
 
-            var commit = new CommitRequest { Database = configuration.Database, Writes = { write } };
+            var commit = new CommitRequest { Database = _configuration.Database, Writes = { write } };
 
-            var client = connectionProvider.GetFirestoreClient();
+            var client = _connectionProvider.GetFirestoreClient();
             client.Commit(commit);
         }
         finally
@@ -113,11 +138,11 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
                 };
 
                 return Tracer?.CreateDbSpan(
-                    new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Add,
-                        configuration.Collection,
+                    new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Add,
+                        _configuration.Outbox!,
                         dbAttributes: dbAttributes),
                         requestContext?.Span,
-                        options: configuration.Instrumentation);
+                        options: _configuration.Instrumentation);
             });
 
         try
@@ -134,10 +159,10 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
             }
             else
             {
-                var request = new CommitRequest { Database = configuration.DatabasePath };
+                var request = new CommitRequest { Database = _configuration.DatabasePath };
                 request.Writes.AddRange(writes);
 
-                var client = connectionProvider.GetFirestoreClient();
+                var client = _connectionProvider.GetFirestoreClient();
                 client.Commit(request, CallSettings.FromExpiration(ToExpiration(outBoxTimeout)));
             }
         }
@@ -160,24 +185,24 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
                 };
 
                 return Tracer?.CreateDbSpan(
-                    new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Delete,
-                        configuration.Collection,
+                    new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Delete,
+                        _configuration.Outbox!,
                         dbAttributes: dbAttributes),
                     requestContext?.Span,
-                    options: configuration.Instrumentation);
+                    options: _configuration.Instrumentation);
             });
 
         try
         {
             var writes = messageIds.Select(value => new Write
             {
-                Delete = configuration.GetDocumentName(value)
+                Delete = _configuration.GetDocumentName(_configuration.Outbox!, value)
             });   
         
-            var request = new CommitRequest { Database = configuration.DatabasePath };
+            var request = new CommitRequest { Database = _configuration.DatabasePath };
             request.Writes.AddRange(writes);
             
-            var client = connectionProvider.GetFirestoreClient();
+            var client = _connectionProvider.GetFirestoreClient();
             client.Commit(request);
         }
         finally
@@ -191,17 +216,17 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         int pageNumber = 1, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.DispatchedMessages, configuration.Collection),
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.DispatchedMessages, _configuration.Outbox!),
             requestContext?.Span,
-            options: configuration.Instrumentation);
+            options: _configuration.Instrumentation);
 
         try
         {
             var offset = (pageNumber - 1) * pageSize;
-            var timeStamp = configuration.TimeProvider.GetUtcNow() - dispatchedSince;
+            var timeStamp = _configuration.TimeProvider.GetUtcNow() - dispatchedSince;
             var query = new StructuredQuery
             {
-                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = configuration.Collection } },
+                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox! } },
                 Where = new StructuredQuery.Types.Filter
                 {
                     FieldFilter = new StructuredQuery.Types.FieldFilter
@@ -225,10 +250,10 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
 
             var request = new RunQueryRequest
             {
-                Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
+                Parent = $"{_configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = connectionProvider.GetFirestoreClient();
+            var client = _connectionProvider.GetFirestoreClient();
             return BrighterAsyncContext.Run(async () =>
             {
                 var messages = new List<Message>(pageSize);
@@ -257,14 +282,14 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         };
         
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Get, configuration.Collection, dbAttributes: dbAttributes),
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Get, _configuration.Outbox!, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: configuration.Instrumentation);
+            options: _configuration.Instrumentation);
 
         try
         {
-            var client = connectionProvider.GetFirestoreClient();
-            var document = client.GetDocument(new GetDocumentRequest { Name = configuration.GetDocumentName(messageId) },
+            var client = _connectionProvider.GetFirestoreClient();
+            var document = client.GetDocument(new GetDocumentRequest { Name = _configuration.GetDocumentName(_configuration.Outbox!, messageId) },
                 CallSettings.FromExpiration(ToExpiration(outBoxTimeout)));
 
             return ToMessage(document);
@@ -284,28 +309,28 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         };
         
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.MarkDispatched, configuration.Collection, dbAttributes: dbAttributes),
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.MarkDispatched, _configuration.Outbox!, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: configuration.Instrumentation);
+            options: _configuration.Instrumentation);
 
         try
         {
-            var client = connectionProvider.GetFirestoreClient();
+            var client = _connectionProvider.GetFirestoreClient();
             var document = new Document
             {
-                Name = configuration.GetDocumentName(id),
+                Name = _configuration.GetDocumentName(_configuration.Outbox!, id),
                 Fields =
                 {
                     [Dispatched] = new Value
                     {
                         TimestampValue =
-                            Timestamp.FromDateTimeOffset(configuration.TimeProvider.GetUtcNow())
+                            Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow())
                     }
                 }
             };
             client.Commit(new CommitRequest
             {
-                Database = configuration.DatabasePath,
+                Database = _configuration.DatabasePath,
                 Writes =
                 {
                     new Write
@@ -330,7 +355,7 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         var offset = (pageNumber - 1) * pageSize;
         var query = new StructuredQuery
         {
-            From = { new StructuredQuery.Types.CollectionSelector { CollectionId = configuration.Collection } },
+            From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox!  } },
             Where = new StructuredQuery.Types.Filter
             {
                 FieldFilter = new StructuredQuery.Types.FieldFilter
@@ -354,11 +379,11 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
 
         var request = new RunQueryRequest 
         {
-            Parent = $"{configuration.DatabasePath}/documents", 
+            Parent = $"{_configuration.DatabasePath}/documents", 
             StructuredQuery = query
         };
         
-        var client = connectionProvider.GetFirestoreClient();
+        var client = _connectionProvider.GetFirestoreClient();
         return BrighterAsyncContext.Run(async () =>
         {
             var messages = new List<Message>(pageSize);
@@ -371,6 +396,234 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
             
             return messages;
         });
+    }
+    
+    /// <summary>
+    /// Returns all messages in the store
+    /// </summary>
+    /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
+    /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+    /// <param name="args">Additional parameters required for search, if any</param>
+    /// <returns>A list of messages</returns>
+    public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null)
+    {
+       var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Get, _configuration.Outbox!),
+            null,
+            options: _configuration.Instrumentation);
+
+       try
+       {
+           var query = new StructuredQuery
+           {
+               From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox!  } },
+               Where = new StructuredQuery.Types.Filter
+               {
+                   FieldFilter = new StructuredQuery.Types.FieldFilter
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = Dispatched },
+                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                       Value = new Value { NullValue = NullValue.NullValue }
+                   }
+               },
+               OrderBy =  
+               {
+                   new StructuredQuery.Types.Order
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
+                       Direction = StructuredQuery.Types.Direction.Ascending
+                   }
+               },
+               Offset = pageSize * Math.Max(pageNumber - 1, 0),
+               Limit = pageSize
+           };
+
+           if (args != null && args.TryGetValue("Topic", out var topic))
+           {
+               query.Where = new StructuredQuery.Types.Filter
+               {
+                   FieldFilter = new StructuredQuery.Types.FieldFilter
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = Topic },
+                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                       Value = new Value { StringValue = topic.ToString() }
+                   }
+               };
+           }
+           
+           var request = new RunQueryRequest 
+           {
+               Parent = $"{_configuration.DatabasePath}/documents", 
+               StructuredQuery = query
+           };
+        
+           var client = _connectionProvider.GetFirestoreClient();
+           return BrighterAsyncContext.Run(async () =>
+           {
+               var messages = new List<Message>(pageSize);
+
+               using var response = client.RunQuery(request);
+               await foreach (var doc in response.GetResponseStream())
+               {
+                   messages.Add(ToMessage(doc.Document));
+               }
+            
+               return messages;
+           });
+       }
+       finally
+       {
+           Tracer?.EndSpan(span);
+       }
+    }
+    
+    /// <summary>
+    /// Returns messages specified by the Ids
+    /// </summary>
+    /// <param name="messageIds">The Ids of the messages</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
+    /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
+    /// <returns>A list of messages</returns>
+    public IList<Message> Get (IEnumerable<Id> messageIds, RequestContext? requestContext = null, int outBoxTimeout = -1)
+    {
+        var ids = messageIds.Select(id => id.Value).ToArray();
+        
+        var dbAttributes = new Dictionary<string, string>()
+        {
+            {"db.operation.parameter.message.ids", string.Join(",", ids)}
+        };
+        
+       var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Firestore, 
+                _configuration.Database,
+                BoxDbOperation.Get,
+                _configuration.Outbox!,
+                dbAttributes: dbAttributes),
+            requestContext?.Span,
+            options: _configuration.Instrumentation);
+
+       var arrayOfIds = new ArrayValue();
+       arrayOfIds.Values.AddRange(ids.Select(id => new Value { StringValue = id}));
+       try
+       {
+           var query = new StructuredQuery
+           {
+               From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox!  } },
+               Where = new StructuredQuery.Types.Filter
+               {
+                   FieldFilter = new StructuredQuery.Types.FieldFilter
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.MessageId) },
+                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.In,
+                       Value = new Value { ArrayValue = arrayOfIds }
+                   }
+               },
+               OrderBy =  
+               {
+                   new StructuredQuery.Types.Order
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
+                       Direction = StructuredQuery.Types.Direction.Ascending
+                   }
+               }
+           };
+
+           var request = new RunQueryRequest 
+           {
+               Parent = $"{_configuration.DatabasePath}/documents", 
+               StructuredQuery = query
+           };
+        
+           var client = _connectionProvider.GetFirestoreClient();
+           return BrighterAsyncContext.Run(async () =>
+           {
+               var messages = new List<Message>();
+
+               using var response = client.RunQuery(request);
+               await foreach (var doc in response.GetResponseStream())
+               {
+                   messages.Add(ToMessage(doc.Document));
+               }
+            
+               return messages;
+           });
+       }
+       finally
+       {
+           Tracer?.EndSpan(span);
+       }
+    }
+
+    /// <summary>
+    /// Get the number of messages in the Outbox that are not dispatched
+    /// </summary>
+    /// <returns></returns>
+    public long GetNumberOfOutstandingMessages()
+    {
+       var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Firestore, 
+                _configuration.Database,
+                BoxDbOperation.Get,
+                _configuration.Outbox!),
+            null,
+            options: _configuration.Instrumentation);
+
+       try
+       {
+           var structuredAggregationQuery = new StructuredAggregationQuery
+           {
+               StructuredQuery = new StructuredQuery
+               {
+                   From =
+                   {
+                       new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox! }
+                   },
+                   Where = new StructuredQuery.Types.Filter
+                   {
+                       FieldFilter = new StructuredQuery.Types.FieldFilter
+                       {
+                           Field = new StructuredQuery.Types.FieldReference { FieldPath = Dispatched },
+                           Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                           Value = new Value { NullValue = NullValue.NullValue }
+                       }
+                   }
+               },
+               Aggregations =
+               {
+                   new StructuredAggregationQuery.Types.Aggregation
+                   {
+                       Count = new StructuredAggregationQuery.Types.Aggregation.Types.Count(),
+                       Alias = "total_count" // Alias for the result in the response
+                   }
+               }
+           };
+           
+           var request = new RunAggregationQueryRequest
+           {
+               Parent = _configuration.DatabasePath + "/documents", // Path to all documents in the database
+               StructuredAggregationQuery = structuredAggregationQuery
+           };
+        
+           var client = _connectionProvider.GetFirestoreClient();
+           var response = client.RunAggregationQuery(request);
+           return BrighterAsyncContext.Run(async () =>
+           {
+               await foreach (var resp in response.GetResponseStream())
+               {
+                   if (resp.Result.AggregateFields.TryGetValue("total_count", out var value))
+                   {
+                       // The aggregated count is typically returned as an Int64Value in the Value proto
+                       return value.IntegerValue;
+                   }
+               }
+
+               return 0;
+           });
+       }
+       finally
+       {
+           Tracer?.EndSpan(span);
+       }
     }
     
     /// <inheritdoc />
@@ -386,9 +639,9 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         };
         
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Add, configuration.Collection, dbAttributes: dbAttributes),
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Add, _configuration.Outbox!, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: configuration.Instrumentation);
+            options: _configuration.Instrumentation);
 
         try
         {
@@ -408,9 +661,9 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
                 transaction.Add(write);
             }
 
-            var commit = new CommitRequest { Database = configuration.Database, Writes = { write } };
+            var commit = new CommitRequest { Database = _configuration.Database, Writes = { write } };
 
-            var client = await connectionProvider
+            var client = await _connectionProvider
                 .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
@@ -440,11 +693,11 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
                 };
 
                 return Tracer?.CreateDbSpan(
-                    new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Add,
-                        configuration.Collection,
+                    new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Add,
+                        _configuration.Outbox!,
                         dbAttributes: dbAttributes),
                     requestContext?.Span,
-                    options: configuration.Instrumentation);
+                    options: _configuration.Instrumentation);
             });
         
         try
@@ -464,10 +717,10 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
             }
             else
             {
-                var request = new CommitRequest { Database = configuration.DatabasePath };
+                var request = new CommitRequest { Database = _configuration.DatabasePath };
                 request.Writes.AddRange(writes);
 
-                var client = await connectionProvider
+                var client = await _connectionProvider
                     .GetFirestoreClientAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
                 
@@ -496,24 +749,24 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
                 };
 
                 return Tracer?.CreateDbSpan(
-                    new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Delete,
-                        configuration.Collection,
+                    new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Delete,
+                        _configuration.Outbox!,
                         dbAttributes: dbAttributes),
                     requestContext?.Span,
-                    options: configuration.Instrumentation);
+                    options: _configuration.Instrumentation);
             });
 
         try
         {
             var writes = messageIds.Select(message => new Write
             {
-                Delete = configuration.GetDocumentName(message),
+                Delete = _configuration.GetDocumentName(_configuration.Outbox!, message),
             });
 
-            var request = new CommitRequest { Database = configuration.DatabasePath };
+            var request = new CommitRequest { Database = _configuration.DatabasePath };
             request.Writes.AddRange(writes);
 
-            var client = await connectionProvider
+            var client = await _connectionProvider
                 .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
@@ -532,17 +785,17 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         int pageNumber = 1, int outboxTimeout = -1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.DispatchedMessages, configuration.Collection),
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.DispatchedMessages, _configuration.Outbox!),
             requestContext?.Span,
-            options: configuration.Instrumentation);
+            options: _configuration.Instrumentation);
 
         try
         {
             var offset = (pageNumber - 1) * pageSize;
-            var timeStamp = configuration.TimeProvider.GetUtcNow() - dispatchedSince;
+            var timeStamp = _configuration.TimeProvider.GetUtcNow() - dispatchedSince;
             var query = new StructuredQuery
             {
-                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = configuration.Collection } },
+                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox! } },
                 Where = new StructuredQuery.Types.Filter
                 {
                     FieldFilter = new StructuredQuery.Types.FieldFilter
@@ -566,10 +819,10 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
 
             var request = new RunQueryRequest
             {
-                Parent = $"{configuration.DatabasePath}/documents", StructuredQuery = query
+                Parent = $"{_configuration.DatabasePath}/documents", StructuredQuery = query
             };
 
-            var client = await connectionProvider
+            var client = await _connectionProvider
                 .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
@@ -599,19 +852,19 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         };
         
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.Get, configuration.Collection, dbAttributes: dbAttributes),
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Get, _configuration.Outbox!, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: configuration.Instrumentation);
+            options: _configuration.Instrumentation);
 
         try
         {
 
-            var client = await connectionProvider
+            var client = await _connectionProvider
                 .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             var document = await client
-                .GetDocumentAsync(new GetDocumentRequest { Name = configuration.GetDocumentName(messageId) }, CallSettings.FromCancellationToken(cancellationToken))
+                .GetDocumentAsync(new GetDocumentRequest { Name = _configuration.GetDocumentName(_configuration.Outbox!, messageId) }, CallSettings.FromCancellationToken(cancellationToken))
                 .ConfigureAwait(ContinueOnCapturedContext);
 
             return ToMessage(document);
@@ -632,33 +885,33 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         };
         
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.MarkDispatched, configuration.Collection, dbAttributes: dbAttributes),
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.MarkDispatched, _configuration.Outbox!, dbAttributes: dbAttributes),
             requestContext?.Span,
-            options: configuration.Instrumentation);
+            options: _configuration.Instrumentation);
 
         try
         {
             var document = new Document
             {
-                Name = configuration.GetDocumentName(id),
+                Name = _configuration.GetDocumentName(_configuration.Outbox!, id),
                 Fields =
                 {
                     [Dispatched] = new Value
                     {
                         TimestampValue =
-                            Timestamp.FromDateTimeOffset(configuration.TimeProvider.GetUtcNow())
+                            Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow())
                     }
                 }
             };
 
-            var client = await connectionProvider
+            var client = await _connectionProvider
                 .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
             await client
                 .CommitAsync(new CommitRequest
                 {
-                    Database = configuration.DatabasePath,
+                    Database = _configuration.DatabasePath,
                     Writes =
                     {
                         new Write
@@ -692,11 +945,11 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
                 };
 
                 return Tracer?.CreateDbSpan(
-                    new BoxSpanInfo(DbSystem.Firestore, configuration.Database, BoxDbOperation.MarkDispatched,
-                        configuration.Collection,
+                    new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.MarkDispatched,
+                        _configuration.Outbox!,
                         dbAttributes: dbAttributes),
                     requestContext?.Span,
-                    options: configuration.Instrumentation);
+                    options: _configuration.Instrumentation);
             });
 
         try
@@ -705,23 +958,23 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
             {
                 Update = new Document
                 {
-                    Name = configuration.GetDocumentName(id),
+                    Name = _configuration.GetDocumentName(_configuration.Outbox!, id),
                     Fields =
                     {
                         [Dispatched] = new Value
                         {
                             TimestampValue =
-                                Timestamp.FromDateTimeOffset(configuration.TimeProvider.GetUtcNow())
+                                Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow())
                         }
                     }
                 },
                 UpdateMask = new DocumentMask { FieldPaths = { Dispatched } }
             });
             
-            var request = new CommitRequest { Database = configuration.DatabasePath };
+            var request = new CommitRequest { Database = _configuration.DatabasePath };
             request.Writes.AddRange(writes);
             
-            var client = await connectionProvider
+            var client = await _connectionProvider
                 .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             
@@ -742,7 +995,7 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
        var offset = (pageNumber - 1) * pageSize;
         var query = new StructuredQuery
         {
-            From = { new StructuredQuery.Types.CollectionSelector { CollectionId = configuration.Collection } },
+            From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox! } },
             Where = new StructuredQuery.Types.Filter
             {
                 FieldFilter = new StructuredQuery.Types.FieldFilter
@@ -766,11 +1019,11 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
 
         var request = new RunQueryRequest 
         {
-            Parent = $"{configuration.DatabasePath}/documents", 
+            Parent = $"{_configuration.DatabasePath}/documents", 
             StructuredQuery = query
         };
         
-        var client = await connectionProvider
+        var client = await _connectionProvider
             .GetFirestoreClientAsync(cancellationToken)
             .ConfigureAwait(ContinueOnCapturedContext);
         
@@ -785,24 +1038,249 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         return messages;
     }
 
+    /// <summary>
+    /// Returns all messages in the store
+    /// </summary>
+    /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
+    /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+    /// <param name="args">Additional parameters required for search, if any</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>A list of messages</returns>
+    public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    {
+       var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Get, _configuration.Outbox!),
+            null,
+            options: _configuration.Instrumentation);
+
+       try
+       {
+           var query = new StructuredQuery
+           {
+               From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox!  } },
+               Where = new StructuredQuery.Types.Filter
+               {
+                   FieldFilter = new StructuredQuery.Types.FieldFilter
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = Dispatched },
+                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                       Value = new Value { NullValue = NullValue.NullValue }
+                   }
+               },
+               OrderBy =  
+               {
+                   new StructuredQuery.Types.Order
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
+                       Direction = StructuredQuery.Types.Direction.Ascending
+                   }
+               },
+               Offset = pageSize * Math.Max(pageNumber - 1, 0),
+               Limit = pageSize
+           };
+
+           if (args != null && args.TryGetValue("Topic", out var topic))
+           {
+               query.Where = new StructuredQuery.Types.Filter
+               {
+                   FieldFilter = new StructuredQuery.Types.FieldFilter
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = Topic },
+                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                       Value = new Value { StringValue = topic.ToString() }
+                   }
+               };
+           }
+           
+           var request = new RunQueryRequest 
+           {
+               Parent = $"{_configuration.DatabasePath}/documents", 
+               StructuredQuery = query
+           };
+        
+           var client = await _connectionProvider.GetFirestoreClientAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+           var messages = new List<Message>(pageSize);
+
+           using var response = client.RunQuery(request);
+           await foreach (var doc in response.GetResponseStream())
+           {
+               messages.Add(ToMessage(doc.Document));
+           }
+            
+           return messages;
+       }
+       finally
+       {
+           Tracer?.EndSpan(span);
+       }
+    }
+
+    /// <summary>
+    /// Returns messages specified by the Ids
+    /// </summary>
+    /// <param name="messageIds">The Ids of the messages</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
+    /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>A list of messages</returns>
+    public async Task<IList<Message>> GetAsync(IEnumerable<Id> messageIds, RequestContext? requestContext = null, int outBoxTimeout = -1, CancellationToken cancellationToken = default)
+    {
+        var ids = messageIds.Select(id => id.Value).ToArray();
+        
+        var dbAttributes = new Dictionary<string, string>
+        {
+            {"db.operation.parameter.message.ids", string.Join(",", ids)}
+        };
+        
+       var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Firestore, 
+                _configuration.Database,
+                BoxDbOperation.Get,
+                _configuration.Outbox!,
+                dbAttributes: dbAttributes),
+            requestContext?.Span,
+            options: _configuration.Instrumentation);
+
+       var arrayOfIds = new ArrayValue();
+       arrayOfIds.Values.AddRange(ids.Select(id => new Value { StringValue = id}));
+       try
+       {
+           var query = new StructuredQuery
+           {
+               From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox!  } },
+               Where = new StructuredQuery.Types.Filter
+               {
+                   FieldFilter = new StructuredQuery.Types.FieldFilter
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.MessageId) },
+                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.In,
+                       Value = new Value { ArrayValue = arrayOfIds }
+                   }
+               },
+               OrderBy =  
+               {
+                   new StructuredQuery.Types.Order
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
+                       Direction = StructuredQuery.Types.Direction.Ascending
+                   }
+               }
+           };
+
+           var request = new RunQueryRequest 
+           {
+               Parent = $"{_configuration.DatabasePath}/documents", 
+               StructuredQuery = query
+           };
+        
+           var client = await _connectionProvider.GetFirestoreClientAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+           var messages = new List<Message>();
+
+           using var response = client.RunQuery(request);
+           await foreach (var doc in response.GetResponseStream())
+           {
+               messages.Add(ToMessage(doc.Document));
+           }
+            
+           return messages;
+       }
+       finally
+       {
+           Tracer?.EndSpan(span);
+       }
+    }
+    
+    /// <summary>
+    /// Get the number of messages in the Outbox that are not dispatched
+    /// </summary>
+    /// <param name="cancellationToken">Cancel the async operation</param>
+    /// <returns></returns>
+    public async Task<long> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken = default)
+    {
+       var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Firestore, 
+                _configuration.Database,
+                BoxDbOperation.Get,
+                _configuration.Outbox!),
+            null,
+            options: _configuration.Instrumentation);
+
+       try
+       {
+           var structuredAggregationQuery = new StructuredAggregationQuery
+           {
+               StructuredQuery = new StructuredQuery
+               {
+                   From =
+                   {
+                       new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Outbox! }
+                   },
+                   Where = new StructuredQuery.Types.Filter
+                   {
+                       FieldFilter = new StructuredQuery.Types.FieldFilter
+                       {
+                           Field = new StructuredQuery.Types.FieldReference { FieldPath = Dispatched },
+                           Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                           Value = new Value { NullValue = NullValue.NullValue }
+                       }
+                   }
+               },
+               Aggregations =
+               {
+                   new StructuredAggregationQuery.Types.Aggregation
+                   {
+                       Count = new StructuredAggregationQuery.Types.Aggregation.Types.Count(),
+                       Alias = "total_count" // Alias for the result in the response
+                   }
+               }
+           };
+           
+           var request = new RunAggregationQueryRequest
+           {
+               Parent = _configuration.DatabasePath + "/documents", // Path to all documents in the database
+               StructuredAggregationQuery = structuredAggregationQuery
+           };
+        
+           var client = await _connectionProvider.GetFirestoreClientAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+           var response = client.RunAggregationQuery(request);
+           await foreach (var resp in response.GetResponseStream())
+           {
+               if (resp.Result.AggregateFields.TryGetValue("total_count", out var value))
+               {
+                   // The aggregated count is typically returned as an Int64Value in the Value proto
+                   return value.IntegerValue;
+               }
+           }
+
+           return 0;
+       }
+       finally
+       {
+           Tracer?.EndSpan(span);
+       }
+    }
+
     private static Expiration? ToExpiration(int outboxTimeout)
         => outboxTimeout == -1 ? null : Expiration.FromTimeout(TimeSpan.FromMilliseconds(outboxTimeout));
 
     private Document ToDocument(Message message)
     {
-        var doc = new Document { 
-            Name = $"{configuration.CollectionPath}/{message.Id}", 
+        var doc = new Document 
+        { 
+            Name = _configuration.GetDocumentName(_configuration.Outbox!, message.Id), 
             Fields = 
             { 
                 [Dispatched] = new Value { NullValue = NullValue.NullValue },
-                [nameof(MessageHeader.HandledCount)] = new Value { IntegerValue = message.Header.HandledCount }, [nameof(MessageHeader.MessageId)] = new Value { StringValue = message.Header.MessageId.ToString() },
+                [nameof(MessageHeader.HandledCount)] = new Value { IntegerValue = message.Header.HandledCount }, 
+                [nameof(MessageHeader.MessageId)] = new Value { StringValue = message.Header.MessageId.ToString() },
                 [nameof(MessageHeader.MessageType)] = new Value { StringValue = message.Header.MessageType.ToString() },
                 [nameof(MessageHeader.SpecVersion)] = new Value { StringValue = message.Header.SpecVersion },
                 [nameof(MessageHeader.Source)] = new Value { StringValue = message.Header.Source.ToString() },
                 [nameof(MessageHeader.Topic)] = new Value { StringValue = message.Header.Topic.Value },
                 [nameof(MessageHeader.TimeStamp)] = new Value { TimestampValue = Timestamp.FromDateTimeOffset(message.Header.TimeStamp) },
                 [nameof(MessageHeader.Type)] = new Value { StringValue = message.Header.Type },
-                [nameof(Message.Body)] = new Value { BytesValue = ByteString.CopyFrom(message.Body.Bytes) }
+                [nameof(Message.Body)] = new Value { BytesValue = ByteString.CopyFrom(message.Body.Bytes) },
+                [nameof(MessageHeader.ContentType)] = new Value { StringValue = message.Header.ContentType.ToString() }
             } 
         };
 
@@ -818,11 +1296,6 @@ public class FirestoreOutbox(IAmAFirestoreConnectionProvider connectionProvider,
         }
 
         doc.Fields[nameof(MessageHeader.Baggage)] = new Value{ MapValue = baggage };
-        
-        if(message.Header.ContentType != null)
-        {
-            doc.Fields[nameof(MessageHeader.ContentType)] = new Value { StringValue = message.Header.ContentType.ToString() };
-        }
 
         if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
         {

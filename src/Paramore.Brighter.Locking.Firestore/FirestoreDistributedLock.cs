@@ -13,8 +13,11 @@ namespace Paramore.Brighter.Locking.Firestore;
 /// the "AlreadyExists" status code to ensure only one client can create
 /// a lock document for a given resource at a time.
 /// </summary>
-public class FirestoreDistributedLock(IAmAFirestoreConnectionProvider connectionProvider, FirestoreConfiguration configuration) : IDistributedLock
+public class FirestoreDistributedLock : IDistributedLock
 {
+    private readonly IAmAFirestoreConnectionProvider _connectionProvider;
+    private readonly FirestoreConfiguration _configuration;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="FirestoreDistributedLock"/> class with just
     /// the Firestore configuration. This constructor internally creates a default
@@ -27,23 +30,43 @@ public class FirestoreDistributedLock(IAmAFirestoreConnectionProvider connection
     {
         
     }
-    
+
+    /// <summary>
+    /// Implements a distributed lock using Google Cloud Firestore.
+    /// This implementation relies on Firestore's atomic write operations and
+    /// the "AlreadyExists" status code to ensure only one client can create
+    /// a lock document for a given resource at a time.
+    /// </summary>
+    public FirestoreDistributedLock(IAmAFirestoreConnectionProvider connectionProvider, FirestoreConfiguration configuration)
+    {
+        _connectionProvider = connectionProvider;
+        _configuration = configuration;
+        if (string.IsNullOrEmpty(configuration.Locking))
+        {
+            throw new ArgumentException("locking collection can't be null or empty", nameof(configuration));
+        }
+    }
+
     /// <inheritdoc />
     public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
         try
         {
-            var client = await connectionProvider.GetFirestoreClientAsync(cancellationToken);
+            var lockId = resource
+                .Replace("/", "-")
+                .Replace(".", "-");
+            
+            var client = await _connectionProvider.GetFirestoreClientAsync(cancellationToken);
             await client.CommitAsync(new CommitRequest
             {
-                Database = configuration.Database,
+                Database = _configuration.Database,
                 Writes =
                 {
                     new Write
                     {
                         Update = new Document
                         {
-                            Name = resource,
+                            Name = _configuration.GetDocumentName(_configuration.Locking!, lockId),
                             Fields =
                             {
                                 ["Resource"] = new Value { StringValue = resource },
@@ -55,7 +78,7 @@ public class FirestoreDistributedLock(IAmAFirestoreConnectionProvider connection
                 }
             }, CallSettings.FromCancellationToken(cancellationToken));
 
-            return resource;
+            return lockId;
         }
         catch (RpcException e) when (e.StatusCode == StatusCode.AlreadyExists)
         {
@@ -68,9 +91,9 @@ public class FirestoreDistributedLock(IAmAFirestoreConnectionProvider connection
     {
         try
         {
-            var client = await connectionProvider.GetFirestoreClientAsync(cancellationToken);
+            var client = await _connectionProvider.GetFirestoreClientAsync(cancellationToken);
             await client.DeleteDocumentAsync(
-                new DeleteDocumentRequest { Name = configuration.GetDocumentName(lockId) },
+                new DeleteDocumentRequest { Name = _configuration.GetDocumentName(_configuration.Locking!, lockId) },
                 CallSettings.FromCancellationToken(cancellationToken));
         }
         catch (RpcException e) when (e.StatusCode == StatusCode.NotFound)

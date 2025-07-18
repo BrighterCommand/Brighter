@@ -52,7 +52,8 @@ internal sealed class SpannerTestHelper
         command.CommandText = createTableSql;
         command.ExecuteNonQuery();
     }
-    public void CreateInboxTable()
+
+    private void CreateInboxTable()
     {
         using var connection = new SpannerConnection(_spannerSqlSettings.TestsBrighterConnectionString);
         _tableName = $"command_{_tableName}";
@@ -79,7 +80,4 @@ internal sealed class SpannerSqlSettings
 {
     public string TestsBrighterConnectionString { get; set; }
         = "Host=localhost;Username=postgres;Password=password;Database=brightertests;Include Error Detail=true;";
-
-    public string TestsMasterConnectionString { get; set; }
-        = "Host=localhost;Username=postgres;Password=password;Include Error Detail=true;";
 }
