@@ -55,6 +55,7 @@ namespace Paramore.Brighter.ServiceActivator
         protected readonly InstrumentationOptions InstrumentationOptions;
         protected int UnacceptableMessageCount;
         protected readonly Dictionary<Type, MethodInfo> UnWrapPipelineFactoryCache = new();
+        protected readonly Dictionary<Type, MethodInfo> DispatchMethodCache = new();
         
         /// <summary>
         /// The delay to wait when the channel has failed

@@ -328,13 +328,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             try
             {
-                var requestType = request.GetType();
-                var dispatchMethod = typeof(Reactor)
-                    .GetMethod(nameof(DispatchRequest), BindingFlags.NonPublic | BindingFlags.Instance)
-                    ?.MakeGenericMethod(requestType);
-
-                if (dispatchMethod is null)
-                    throw new InvalidOperationException($"Could not find DispatchRequest method for type {requestType.FullName}");
+                MethodInfo dispatchMethod = MakeDispatchMethod(request);
 
                 dispatchMethod.Invoke(this, [message.Header, request, context]);
             }
@@ -343,7 +337,28 @@ namespace Paramore.Brighter.ServiceActivator
                 throw tie.InnerException ?? tie; // Unwrap the inner exception if it exists
             }
         }
-        
+
+        private MethodInfo MakeDispatchMethod(IRequest request)
+        {
+            var requestType = request.GetType();
+            MethodInfo? dispatchMethod;
+            if (DispatchMethodCache.TryGetValue(request.GetType(), out var cachedDispatchMethod))
+            {
+                dispatchMethod = cachedDispatchMethod;
+            }
+            else
+            {
+                dispatchMethod = typeof(Reactor)
+                    .GetMethod(nameof(DispatchRequest), BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?.MakeGenericMethod(requestType);
+                DispatchMethodCache[requestType] = dispatchMethod!;
+            }
+
+            if (dispatchMethod is null)
+                throw new InvalidOperationException($"Could not find DispatchRequest method for type {requestType.FullName}");
+            return dispatchMethod;
+        }
+
         private object? MakeUnwrapPipeline(Type requestType)
         {
             MethodInfo typedPipelineFactory;
