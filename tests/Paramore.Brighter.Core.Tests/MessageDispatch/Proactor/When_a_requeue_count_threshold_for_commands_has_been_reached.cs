@@ -42,6 +42,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             );
             _bus.Enqueue(message1);
             _bus.Enqueue(message2);
+            
         }
 
         [Fact]

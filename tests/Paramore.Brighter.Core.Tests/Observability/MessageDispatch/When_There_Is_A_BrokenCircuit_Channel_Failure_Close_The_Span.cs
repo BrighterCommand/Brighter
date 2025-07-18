@@ -97,6 +97,7 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
             
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
+            
     }
 
     [Fact]

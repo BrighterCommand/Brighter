@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             channel.Enqueue(message);
-
+            
             Performer performer = new(channel, messagePump);
             _performerTask = performer.Run();
             performer.Stop(_routingKey);

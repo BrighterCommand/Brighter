@@ -46,6 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 .WrapAsync(new MyEvent(), new RequestContext(), new Publication{Topic = _routingKey})
                 .Result;
             bus.Enqueue(msg);
+            
         }
 
         [Fact]

@@ -68,6 +68,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             );
 
             _channel.Enqueue(unacceptableMessage);
+            
         }
 
         [Fact]

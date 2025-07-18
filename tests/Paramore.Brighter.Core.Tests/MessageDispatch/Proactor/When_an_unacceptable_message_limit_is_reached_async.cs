@@ -76,6 +76,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             channel.Enqueue(unacceptableMessage2);
             channel.Enqueue(unacceptableMessage3);
             channel.Enqueue(unacceptableMessage4);
+            
         }
 
         [Fact]

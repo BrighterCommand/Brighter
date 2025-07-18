@@ -47,6 +47,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             Performer performer = new(channel, messagePump);
             _performerTask = performer.Run();
             performer.Stop(new RoutingKey(Topic));
+            
         }
         
 #pragma warning disable xUnit1031

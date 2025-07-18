@@ -49,6 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 new MessageBody("")
             );
             channel.Enqueue(quitMessage);
+            
         }
 
         [Fact]

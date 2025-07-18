@@ -67,6 +67,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
 
             _bus.Enqueue(unacceptableMessage);
+            
         }
 
         [Fact]

@@ -39,6 +39,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 );
 
             _bus.Enqueue(unmappableMessage);
+            
         }
 
         [Fact]

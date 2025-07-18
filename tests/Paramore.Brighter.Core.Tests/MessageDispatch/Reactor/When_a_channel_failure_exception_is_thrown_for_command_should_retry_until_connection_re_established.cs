@@ -56,6 +56,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             //end the pump
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
+            
         }
 
         [Fact]

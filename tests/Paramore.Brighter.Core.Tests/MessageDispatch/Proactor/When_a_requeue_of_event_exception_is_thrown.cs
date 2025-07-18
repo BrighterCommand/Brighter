@@ -50,6 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             channel.Enqueue(message2);
             var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
             channel.Enqueue(quitMessage);
+            
         }
 
         [Fact]

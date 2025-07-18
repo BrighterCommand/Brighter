@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -52,6 +54,7 @@ namespace Paramore.Brighter.ServiceActivator
         protected readonly IAmABrighterTracer? Tracer;
         protected readonly InstrumentationOptions InstrumentationOptions;
         protected int UnacceptableMessageCount;
+        protected readonly Dictionary<Type, MethodInfo> UnWrapPipelineFactoryCache = new();
         
         /// <summary>
         /// The delay to wait when the channel has failed

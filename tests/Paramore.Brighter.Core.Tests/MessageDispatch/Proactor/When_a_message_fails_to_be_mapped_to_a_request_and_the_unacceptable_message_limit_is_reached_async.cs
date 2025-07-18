@@ -66,6 +66,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             channel.Enqueue(unmappableMessage);
             channel.Enqueue(unmappableMessage);
             channel.Enqueue(unmappableMessage);
+            
         }
 
         [Fact]

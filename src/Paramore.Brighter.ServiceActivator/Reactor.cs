@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// <summary>
     /// Used when the message pump should block for I/O
     /// Will guarantee strict ordering of the messages on the queue
-    /// Predictable performance as only one thread, allows you to configure number of performers for number of threads to use
+    /// Predictable performance as only one thread, allows you to configure the number of performers for the number of threads to use
     /// Lower throughput than async
     /// See <a href="https://www.dre.vanderbilt.edu/~schmidt/PDF/reactor-siemens.pdf">Reactor Pattern</a> for more on this approach
     /// </summary>
@@ -50,7 +51,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessor">Provides a way to grab a command processor correctly scoped</param>
-        /// <param name="mapRequestType">Pass in a <see cref="Func[Message, Type]" />which we use to determine the type of message on the channel. For a datatype channel, always returns the same type, for cloud events uses the header type</param>
+        /// <param name="mapRequestType">Pass in a <see cref="Func{T,TResult}" />which we use to determine the type of message on the channel. For a datatype channel, always returns the same type, for cloud events uses the header type</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         /// <param name="requestContextFactory">A factory to create instances of request synchronizationHelper, used to add synchronizationHelper to a pipeline</param>
@@ -342,7 +343,28 @@ namespace Paramore.Brighter.ServiceActivator
                 throw tie.InnerException ?? tie; // Unwrap the inner exception if it exists
             }
         }
+        
+        private object? MakeUnwrapPipeline(Type requestType)
+        {
+            MethodInfo typedPipelineFactory;
+            if (UnWrapPipelineFactoryCache.TryGetValue(requestType, out var cachedPipelineFactory))
+            {
+                typedPipelineFactory = cachedPipelineFactory;
+            }
+            else
+            {
+                // Get the generic method definition
+                var pipelineFactory = typeof(TransformPipelineBuilder).GetMethod(nameof(TransformPipelineBuilder.BuildUnwrapPipeline), Type.EmptyTypes);
 
+                // Make the generic method with the runtime type
+                typedPipelineFactory = pipelineFactory!.MakeGenericMethod(requestType);
+                UnWrapPipelineFactoryCache[requestType] = typedPipelineFactory;
+            }
+
+            // Invoke the method to get the pipeline instance
+            var pipeline = typedPipelineFactory.Invoke(_transformPipelineBuilder, null);
+            return pipeline;
+        }
 
         private bool RequeueMessage(Message message)
         {
@@ -381,14 +403,7 @@ namespace Paramore.Brighter.ServiceActivator
             
             try
             {
-                // Get the generic method definition
-                var method = typeof(TransformPipelineBuilder).GetMethod(nameof(TransformPipelineBuilder.BuildUnwrapPipeline), Type.EmptyTypes);
-
-                // Make the generic method with the runtime type
-                var genericMethod = method!.MakeGenericMethod(requestType);
-
-                // Invoke the method to get the pipeline instance
-                var pipeline = genericMethod.Invoke(_transformPipelineBuilder, null);
+                object? pipeline = MakeUnwrapPipeline(requestType);
 
                 // Call Unwrap on the pipeline
                 var unwrapMethod = pipeline!.GetType().GetMethod("Unwrap");
