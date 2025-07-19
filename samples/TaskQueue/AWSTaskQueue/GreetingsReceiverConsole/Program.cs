@@ -90,7 +90,7 @@ namespace GreetingsReceiverConsole
                                 }
                             });
 
-                        services.AddServiceActivator(options =>
+                        services.AddConsumers(options =>
                             {
                                 options.Subscriptions = subscriptions;
                                 options.DefaultChannelFactory = new ChannelFactory(awsConnection);

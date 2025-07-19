@@ -142,7 +142,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="configure">A callback that allows you to configure <see cref="ExternalBusConfiguration"/> options</param>
         /// <param name="serviceLifetime">The lifetime of the transaction provider</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterBuilder UseExternalBus(
+        public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
             Action<ExternalBusConfiguration> configure,
             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)

@@ -39,7 +39,7 @@ namespace GreetingsSender
             ).Create();
             
             serviceCollection.AddBrighter()
-                .UseExternalBus((config) =>
+                .AddProducers((config) =>
                 {
                     config.ProducerRegistry = producerRegistry;
                 })
