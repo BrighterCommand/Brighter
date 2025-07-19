@@ -10,7 +10,7 @@ POST {{baseUri}}/People/new HTTP/1.1
 Content-Type: application/json
 
 {
-  "Name" : "Tyrion3"
+  "Name" : "Tyrion"
 }
 
 ### Now see that person
