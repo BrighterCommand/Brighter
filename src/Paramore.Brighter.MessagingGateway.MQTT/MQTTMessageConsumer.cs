@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 Log.MqttMessageConsumerReceivedMessage(s_logger, configuration.TopicPrefix);
                 var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.PayloadSegment.ToArray(), JsonSerialisationOptions.Options);
 
-                _messageQueue.Enqueue(message);
+                _messageQueue.Enqueue(message!);
                 return Task.CompletedTask;
             };
 
@@ -228,7 +228,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Trace, "MQTTMessageConsumer: Received message from queue {TopicPrefix}")]
-            public static partial void MqttMessageConsumerReceivedMessage(ILogger logger, object topicPrefix);
+            public static partial void MqttMessageConsumerReceivedMessage(ILogger logger, object? topicPrefix);
 
             [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}")]
             public static partial void MqttMessageConsumerTimedOutRetrievingMessages(ILogger logger, Exception ex, int queueLength);
