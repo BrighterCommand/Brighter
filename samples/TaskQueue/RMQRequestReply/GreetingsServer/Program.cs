@@ -83,12 +83,12 @@ namespace GreetingsServer
                             }
                         }).Create();
                     
-                    services.AddServiceActivator(options =>
+                    services.AddConsumers(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.DefaultChannelFactory = amAChannelFactory;
                     })
-                        .UseExternalBus((configure) =>
+                        .AddProducers((configure) =>
                         {
                             configure.ProducerRegistry = producerRegistry;
                         })    

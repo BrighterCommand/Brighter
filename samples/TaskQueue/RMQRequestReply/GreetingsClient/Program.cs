@@ -72,7 +72,7 @@ namespace GreetingsSender
             
             serviceCollection
                 .AddBrighter()
-                .UseExternalBus((configure) =>
+                .AddProducers((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;
                     configure.UseRpc = true;

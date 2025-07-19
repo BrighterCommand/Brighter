@@ -21,7 +21,7 @@ namespace Tests
         {
             _services = new ServiceCollection();
 
-            _services.AddServiceActivator(options => { options.CommandProcessorLifetime = ServiceLifetime.Scoped; })
+            _services.AddConsumers(options => { options.CommandProcessorLifetime = ServiceLifetime.Scoped; })
                 .AutoFromAssemblies();
 
             _provider = _services.BuildServiceProvider();

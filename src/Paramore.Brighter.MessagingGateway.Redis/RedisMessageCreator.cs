@@ -170,8 +170,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var traceState = ReadTraceState(headers);
             var baggage = ReadBaggage(headers);
             
-            if (!messageId.Success)
-                return MessageHeader.FailureMessageHeader(topic.Result, messageId.Result);
 
             var messageHeader = new MessageHeader(
                 messageId: messageId.Result,
@@ -306,14 +304,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
-        private static HeaderResult<string> ReadMessageId(IDictionary<string, string> headers)
+        private static HeaderResult<Id> ReadMessageId(IDictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string? header))
+            if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string? header) && !string.IsNullOrEmpty(header))
             {
-                    return new HeaderResult<string>(header, true);
+                return new HeaderResult<Id>(Id.Create(header), true);
             }
             
-            return new HeaderResult<string>(string.Empty, false);
+            return new HeaderResult<Id>(Id.Random, true);
         }
         
         private static HeaderResult<RoutingKey> ReadReplyTo(Dictionary<string, string> headers)
