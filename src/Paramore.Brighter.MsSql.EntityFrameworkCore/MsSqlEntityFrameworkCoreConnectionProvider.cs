@@ -81,15 +81,14 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
         public override DbTransaction GetTransaction()
         {
             var currentTransaction = _context.Database.CurrentTransaction;
-            if (currentTransaction == null)
+            if (currentTransaction is null)
             {
                 // If there is no current transaction, we create a new one
                 _context.Database.BeginTransaction();
                 currentTransaction = _context.Database.CurrentTransaction;
             }
-            
-            var trans = (SqlTransaction)currentTransaction!.GetDbTransaction();
-            return trans;
+
+            return currentTransaction!.GetDbTransaction();
         }
 
         /// <summary>

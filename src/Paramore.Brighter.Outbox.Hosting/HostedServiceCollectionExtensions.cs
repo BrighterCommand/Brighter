@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="timedOutboxSweeperOptionsAction">Configuration actions for the Timed outbox Sweeper <see cref="TimedOutboxSweeper"/></param>
         /// <returns>The Brighter Builder</returns>
         public static IBrighterBuilder UseOutboxSweeper(this IBrighterBuilder brighterBuilder,
-            Action<TimedOutboxSweeperOptions> timedOutboxSweeperOptionsAction = null)
+            Action<TimedOutboxSweeperOptions>? timedOutboxSweeperOptionsAction = null)
         {
             var options = new TimedOutboxSweeperOptions();
             timedOutboxSweeperOptionsAction?.Invoke(options);
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Outbox.Hosting
 
         public static IBrighterBuilder UseOutboxArchiver<TTransaction>(this IBrighterBuilder brighterBuilder,
             IAmAnArchiveProvider archiveProvider,
-            Action<TimedOutboxArchiverOptions> timedOutboxArchiverOptionsAction = null)
+            Action<TimedOutboxArchiverOptions>? timedOutboxArchiverOptionsAction = null)
         {
             var options = new TimedOutboxArchiverOptions();
             timedOutboxArchiverOptionsAction?.Invoke(options);

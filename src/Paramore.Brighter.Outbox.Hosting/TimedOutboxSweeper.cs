@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         private readonly IDistributedLock _distributedLock;
         private readonly TimedOutboxSweeperOptions _options;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
-        private Timer _timer;
+        private Timer? _timer;
         private const string LockingResourceName = "OutboxSweeper";
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             _timer?.Dispose();
         }
 
-        private async void Sweep(object state)
+        private async void Sweep(object? state)
         {
             var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None);
             if (lockId != null)
@@ -111,7 +111,7 @@ namespace Paramore.Brighter.Outbox.Hosting
                 var scope = _serviceScopeFactory.CreateScope();
                 try
                 {
-                    IAmAnOutboxProducerMediator outboxProducerMediator = scope.ServiceProvider.GetService<IAmAnOutboxProducerMediator>();
+                    IAmAnOutboxProducerMediator outboxProducerMediator = scope.ServiceProvider.GetRequiredService<IAmAnOutboxProducerMediator>();
 
                     var outBoxSweeper = new OutboxSweeper(
                         timeSinceSent: _options.MinimumMessageAge,
