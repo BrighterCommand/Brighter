@@ -70,8 +70,6 @@ namespace Paramore.Brighter.Inbox.Postgres
             {
                 if (ex.SqlState != PostgresErrorCodes.UniqueViolation) throw;
                 loggingAction?.Invoke();
-                return;
-
             }
         }
 
@@ -159,7 +157,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             return parameters;
         }
 
-        private NpgsqlParameter CreateNpgsqlParameter(string parameterName, object value)
+        private NpgsqlParameter CreateNpgsqlParameter(string parameterName, object? value)
         {
             if (value != null)
                 return new NpgsqlParameter(parameterName, value);
@@ -167,7 +165,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 return new NpgsqlParameter(parameterName, DBNull.Value);
         }
 
-        private NpgsqlParameter CreateNpgsqlParameter(string parameterName, NpgsqlDbType dbType, object value)
+        private NpgsqlParameter CreateNpgsqlParameter(string parameterName, NpgsqlDbType dbType, object? value)
         {
             if (value != null)
                 return new NpgsqlParameter(parameterName, dbType) { Value = value };
