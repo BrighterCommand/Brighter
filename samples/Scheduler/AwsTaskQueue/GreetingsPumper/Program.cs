@@ -71,7 +71,7 @@ static class Program
                         ).Create();
 
                         services.AddBrighter()
-                            .UseExternalBus(configure =>
+                            .AddProducers(configure =>
                             {
                                 configure.ProducerRegistry = producerRegistry;
                             })

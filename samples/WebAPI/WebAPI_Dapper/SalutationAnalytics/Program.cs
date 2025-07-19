@@ -105,7 +105,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
         OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
-    services.AddServiceActivator(options =>
+    services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport);
@@ -124,7 +124,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             //We don't strictly need this, but added as an example
             options.PropertyNameCaseInsensitive = true;
         })
-        .UseExternalBus(config =>
+        .AddProducers(config =>
         {
             config.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport);
             config.Outbox = makeOutbox.outbox;

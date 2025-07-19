@@ -26,7 +26,7 @@ var host = new HostBuilder()
         
         service
             .AddHostedService<ServiceActivatorHostedService>()
-            .AddServiceActivator(configure =>
+            .AddConsumers(configure =>
             {
                 configure.Subscriptions = [
                     new SqsSubscription<Greeting>(
@@ -37,7 +37,7 @@ var host = new HostBuilder()
 
                 configure.DefaultChannelFactory = new ChannelFactory(connection);
             })
-            .UseExternalBus(configure =>
+            .AddProducers(configure =>
             {
                 configure.ProducerRegistry = new SnsProducerRegistryFactory(connection, 
                         [

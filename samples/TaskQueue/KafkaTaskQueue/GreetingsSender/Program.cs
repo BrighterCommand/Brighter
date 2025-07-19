@@ -98,7 +98,7 @@ var host = Host.CreateDefaultBuilder(args)
             {
                 options.PolicyRegistry = policyRegistry;
             })
-            .UseExternalBus((configure) =>
+            .AddProducers((configure) =>
             {
                 configure.ProducerRegistry = producerRegistry;
             })

@@ -23,7 +23,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         /// <param name="configure">The configuration of the subscriptions</param>
         /// <returns>A brighter handler builder, used for chaining</returns>
         /// <exception cref="ArgumentNullException">Throws if no .NET IoC container provided</exception>
-        public static IBrighterBuilder AddServiceActivator(
+        public static IBrighterBuilder AddConsumers(
             this IServiceCollection services,
             Action<ServiceActivatorOptions> configure = null)
         {

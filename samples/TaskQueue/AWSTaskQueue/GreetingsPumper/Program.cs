@@ -41,8 +41,7 @@ namespace GreetingsPumper
 
                             var producerRegistry = new SnsProducerRegistryFactory(
                                 awsConnection,
-                                new SnsPublication[]
-                                {
+                                [
                                     new SnsPublication
                                     {
                                         Topic = new RoutingKey(typeof(GreetingEvent).FullName
@@ -54,11 +53,11 @@ namespace GreetingsPumper
                                             typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
                                         TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
                                     }
-                                }
+                                ]
                             ).Create();
 
                             services.AddBrighter()
-                                .UseExternalBus((configure) =>
+                                .AddProducers((configure) =>
                                 {
                                     configure.ProducerRegistry = producerRegistry;
                                 })
