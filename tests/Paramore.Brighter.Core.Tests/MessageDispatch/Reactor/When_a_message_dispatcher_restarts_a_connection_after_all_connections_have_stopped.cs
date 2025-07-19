@@ -71,6 +71,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             Task.Delay(1000).Wait();
             
             Assert.Empty(_dispatcher.Consumers);
+            
         }
 
         [Fact]

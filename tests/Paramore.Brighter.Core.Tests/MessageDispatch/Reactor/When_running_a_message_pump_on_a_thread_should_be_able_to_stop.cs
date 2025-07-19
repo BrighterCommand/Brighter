@@ -32,7 +32,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            var messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel);
+            var messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent), 
+                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel);
             messagePump.Channel = channel;
             messagePump.TimeOut = TimeSpan.FromMilliseconds(5000);
 
@@ -46,6 +47,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             Performer performer = new(channel, messagePump);
             _performerTask = performer.Run();
             performer.Stop(new RoutingKey(Topic));
+            
         }
         
 #pragma warning disable xUnit1031

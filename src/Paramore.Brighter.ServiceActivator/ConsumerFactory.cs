@@ -27,18 +27,19 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
 {
-    internal sealed class ConsumerFactory<TRequest> : IConsumerFactory where TRequest : class, IRequest
+    internal sealed class ConsumerFactory : IConsumerFactory
     {
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly IAmAMessageMapperRegistry? _messageMapperRegistry;
         private readonly Subscription _subscription;
         private readonly IAmAMessageTransformerFactory? _messageTransformerFactory;
         private readonly IAmARequestContextFactory _requestContextFactory;
-        private readonly IAmABrighterTracer _tracer;
+        private readonly IAmABrighterTracer? _tracer;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly ConsumerName _consumerName;
         private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync? _messageTransformerFactoryAsync;
+        private readonly Func<Message, Type> _mapRequestType;
 
         public ConsumerFactory(
             IAmACommandProcessor commandProcessor,
@@ -46,12 +47,13 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageTransformerFactory? messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmABrighterTracer tracer,
+            IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _commandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
             _subscription = subscription;
+            _mapRequestType = subscription.MapRequestType!;
             _messageTransformerFactory = messageTransformerFactory ?? new EmptyMessageTransformerFactory();
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
@@ -65,12 +67,13 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync,
             IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync,
             IAmARequestContextFactory requestContextFactory,
-            IAmABrighterTracer tracer,
+            IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _commandProcessor = commandProcessor;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _subscription = subscription;
+            _mapRequestType = subscription.MapRequestType;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync ?? new EmptyMessageTransformerFactoryAsync();
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
@@ -95,7 +98,7 @@ namespace Paramore.Brighter.ServiceActivator
                 throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
             
             var channel = _subscription.ChannelFactory.CreateSyncChannel(_subscription);
-            var messagePump = new Reactor<TRequest>(_commandProcessor, _messageMapperRegistry, 
+            var messagePump = new Reactor(_commandProcessor,  _mapRequestType, _messageMapperRegistry, 
                 _messageTransformerFactory, _requestContextFactory, channel, _tracer, _instrumentationOptions)
             {
                 Channel = channel,
@@ -117,7 +120,7 @@ namespace Paramore.Brighter.ServiceActivator
                 throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
             
             var channel = _subscription.ChannelFactory.CreateAsyncChannel(_subscription);
-            var messagePump = new Proactor<TRequest>(_commandProcessor, _messageMapperRegistryAsync, 
+            var messagePump = new Proactor(_commandProcessor, _mapRequestType, _messageMapperRegistryAsync, 
                 _messageTransformerFactoryAsync, _requestContextFactory, channel, _tracer, _instrumentationOptions)
             {
                 Channel = channel,

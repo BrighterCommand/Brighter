@@ -66,11 +66,8 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: groupId,
-                    numOfPartitions: 1,
-                    replicationFactor: 1,
                     messagePumpType: MessagePumpType.Proactor,
-                    makeChannels: OnMissingChannel.Create
-                ));
+                    numOfPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create));
     }
 
     //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]

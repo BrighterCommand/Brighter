@@ -58,7 +58,7 @@ namespace GreetingsSender
 
             var replySubscriptions = new[]
             {
-                new RmqSubscription(typeof(GreetingReply))
+                new RmqSubscription(null, null, null, typeof(GreetingReply))
             };
 
             var producerRegistry = new RmqProducerRegistryFactory(

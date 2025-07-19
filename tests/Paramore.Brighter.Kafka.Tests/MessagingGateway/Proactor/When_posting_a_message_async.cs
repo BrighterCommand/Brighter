@@ -56,11 +56,8 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: groupId,
-                    numOfPartitions: 1,
-                    replicationFactor: 1,
                     messagePumpType: MessagePumpType.Proactor,
-                    makeChannels: OnMissingChannel.Create
-                )
+                    numOfPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create)
             );
     }
 

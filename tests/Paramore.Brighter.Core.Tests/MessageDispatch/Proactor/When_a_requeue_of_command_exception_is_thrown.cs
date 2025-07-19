@@ -30,7 +30,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
              messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
              
-             _messagePump = new Proactor<MyCommand>(_commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel) 
+             _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) => typeof(MyCommand),
+                     messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = -1 };
 
             var message1 = new Message(
@@ -50,6 +51,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new MessageBody("")
             );
             channel.Enqueue(quitMessage);
+            
         }
 
         [Fact]

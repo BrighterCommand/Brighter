@@ -106,8 +106,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-        _messagePump = new Reactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry,
-            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
+        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand), 
+            messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };

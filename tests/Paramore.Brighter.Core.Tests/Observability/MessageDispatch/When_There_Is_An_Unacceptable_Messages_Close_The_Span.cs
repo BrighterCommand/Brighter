@@ -68,8 +68,8 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
-                new InMemoryRequestContextFactory(), _channel, tracer, instrumentationOptions)
+            _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent), 
+                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, tracer, instrumentationOptions)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
             };
