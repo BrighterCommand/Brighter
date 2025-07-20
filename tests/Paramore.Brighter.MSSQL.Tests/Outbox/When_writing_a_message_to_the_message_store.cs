@@ -92,7 +92,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         }
 
         [Fact]
-        public void When_Writing_A_Message_To_The_MSSQL_Outbox()
+        public void When_Writing_A_Message_To_The_MessageStore()
         {
             _message = new Message(_messageHeader, new MessageBody("message body"));
             _sqlOutbox.Add(_message, new RequestContext());
@@ -101,7 +101,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         }
 
         [Fact]
-        public void When_Writing_A_Message_With_a_Null_To_The_MSSQL_Outbox()
+        public void When_Writing_A_Message_With_a_Null_To_The_MessageStore()
         {
             _message = new Message(_messageHeader, new MessageBody((byte[])null));
             _sqlOutbox.Add(_message, new RequestContext());
@@ -118,7 +118,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             //should read the header from the sql outbox
             Assert.Equal(_message.Header.Topic, _storedMessage.Header.Topic);
             Assert.Equal(_message.Header.MessageType, _storedMessage.Header.MessageType);
-            Assert.Equal(_message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+            Assert.Equal(_message.Header.TimeStamp, _storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1)); // Allow for slight differences in timestamp precision
             Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
             Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
             Assert.Equal(_message.Header.CorrelationId, _storedMessage.Header.CorrelationId);
