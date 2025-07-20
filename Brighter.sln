@@ -167,8 +167,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.ServiceAc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.ServiceActivator.Control.Api", "src\Paramore.Brighter.ServiceActivator.Control.Api\Paramore.Brighter.ServiceActivator.Control.Api.csproj", "{397F8496-6916-43EF-AEB2-5D84048DE357}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Sqlite.Dapper", "src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj", "{3384FBF0-5DCB-452D-8288-FAD1D0023089}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Locking.Azure", "src\Paramore.Brighter.Locking.Azure\Paramore.Brighter.Locking.Azure.csproj", "{021F3B51-A640-4C0D-9B47-FB4E32DF6715}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Extensions.Diagnostics", "src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj", "{7FD4C263-74DA-4648-AD2A-7EB34FCBE18E}"
@@ -1079,18 +1077,6 @@ Global
 		{397F8496-6916-43EF-AEB2-5D84048DE357}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{397F8496-6916-43EF-AEB2-5D84048DE357}.Release|x86.ActiveCfg = Release|Any CPU
 		{397F8496-6916-43EF-AEB2-5D84048DE357}.Release|x86.Build.0 = Release|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Debug|x86.Build.0 = Debug|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|x86.ActiveCfg = Release|Any CPU
-		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|x86.Build.0 = Release|Any CPU
 		{021F3B51-A640-4C0D-9B47-FB4E32DF6715}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{021F3B51-A640-4C0D-9B47-FB4E32DF6715}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{021F3B51-A640-4C0D-9B47-FB4E32DF6715}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU

@@ -37,10 +37,10 @@ public static class BrighterTracerBuilderExtensions
     /// </code>
     /// </remarks>
     /// <param name="builder">The TracerProviderBuilder to configure</param>
-    /// <param name="sampler">Optional sampler instance. If null, will create new instance using default constructor</param>
+    /// <param name="sampler">Optional sampler instance. If null, will create a new instance using the default constructor</param>
     /// <typeparam name="TSampler">Type of sampler to use</typeparam>
     /// <returns>The TracerProviderBuilder for chaining</returns>
-    public static TracerProviderBuilder SetTailSampler<TSampler>(this TracerProviderBuilder builder, TSampler sampler = null)
+    public static TracerProviderBuilder SetTailSampler<TSampler>(this TracerProviderBuilder builder, TSampler? sampler = null)
         where TSampler : Sampler, new()
     {
         builder.AddProcessor(new TailSamplerProcessor(sampler ?? new TSampler()));
