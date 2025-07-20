@@ -41,7 +41,7 @@ public class RmqMessageProducerSendMessageTestsAsync : IDisposable, IAsyncDispos
 
     public RmqMessageProducerSendMessageTestsAsync()
     {
-        var messageId = Guid.NewGuid().ToString();
+        var messageId = Id.Random;
         var topic = new RoutingKey(Guid.NewGuid().ToString());
         var messageType = MessageType.MT_COMMAND;
         var source = new Uri("http://testing.example");
@@ -77,7 +77,7 @@ public class RmqMessageProducerSendMessageTestsAsync : IDisposable, IAsyncDispos
                 traceParent: traceParent,
                 traceState: traceState,
                 baggage: baggage),
-            new MessageBody("test content"));
+            new MessageBody("test content", contentType: contentType));
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {

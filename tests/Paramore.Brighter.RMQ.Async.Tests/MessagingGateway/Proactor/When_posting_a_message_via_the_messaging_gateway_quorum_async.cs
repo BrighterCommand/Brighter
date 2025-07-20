@@ -77,7 +77,7 @@ public class RmqMessageProducerSendMessageQuorumTestsAsync : IDisposable, IAsync
                 traceParent: traceParent,
                 traceState: traceState,
                 baggage: baggage),
-            new MessageBody("test content"));
+            new MessageBody("test content", contentType: contentType));
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {
