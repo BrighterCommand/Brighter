@@ -347,6 +347,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageSc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.MySql", "src\Paramore.Brighter.Locking.MySql\Paramore.Brighter.Locking.MySql.csproj", "{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessagingGateway.RocketMQ", "src\Paramore.Brighter.MessagingGateway.RocketMQ\Paramore.Brighter.MessagingGateway.RocketMQ.csproj", "{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.RocketMQ.Tests", "tests\Paramore.Brighter.RocketMQ.Tests\Paramore.Brighter.RocketMQ.Tests\Paramore.Brighter.RocketMQ.Tests.csproj", "{093D2329-3D21-454D-878A-AB65770C2776}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageScheduler.Hangfire", "src\Paramore.Brighter.MessageScheduler.Hangfire\Paramore.Brighter.MessageScheduler.Hangfire.csproj", "{022AD920-4E8D-4370-9C6D-CA4D8DA3DB6F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Hangfire.Tests", "tests\Paramore.Brighter.Hangfire.Tests\Paramore.Brighter.Hangfire.Tests.csproj", "{517D302F-46FC-4CDF-A190-D1E8A4F2E082}"
@@ -2469,6 +2473,30 @@ Global
 		{0E6A0B80-58B7-4AA2-9E40-EE0AA5D4719E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{0E6A0B80-58B7-4AA2-9E40-EE0AA5D4719E}.Release|x86.ActiveCfg = Release|Any CPU
 		{0E6A0B80-58B7-4AA2-9E40-EE0AA5D4719E}.Release|x86.Build.0 = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|x86.Build.0 = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|x86.ActiveCfg = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|x86.Build.0 = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|x86.Build.0 = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|Any CPU.Build.0 = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|x86.ActiveCfg = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2603,6 +2631,7 @@ Global
 		{C93915CB-A87F-43FF-A455-92F5B5353C8C} = {1C9AAB6E-CFDA-4F36-9BC3-22C783AEFC43}
 		{D5B65576-F375-46E9-8A00-CC3C32E8DBDE} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{0E6A0B80-58B7-4AA2-9E40-EE0AA5D4719E} = {1C9AAB6E-CFDA-4F36-9BC3-22C783AEFC43}
+		{093D2329-3D21-454D-878A-AB65770C2776} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
