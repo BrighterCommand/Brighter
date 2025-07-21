@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
@@ -27,7 +28,7 @@ public class RMQMessageConsumerRetryDLQTestsAsync : IDisposable
     public RMQMessageConsumerRetryDLQTestsAsync()
     {
         string correlationId = Guid.NewGuid().ToString();
-        var contentType = new ContentType(MediaTypeNames.Text.Plain);
+        var contentType = new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         var channelName = new ChannelName($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
         var routingKey = new RoutingKey($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
 
@@ -37,7 +38,7 @@ public class RMQMessageConsumerRetryDLQTestsAsync : IDisposable
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId, 
                 contentType: contentType
             ),
-            new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options), contentType: contentType)
         );
 
         var deadLetterQueueName = new ChannelName($"{Guid.NewGuid().ToString()}.DLQ");

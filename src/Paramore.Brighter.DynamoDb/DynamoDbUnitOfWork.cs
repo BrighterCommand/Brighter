@@ -34,7 +34,7 @@ namespace Paramore.Brighter.DynamoDb
 {
     public class DynamoDbUnitOfWork(IAmazonDynamoDB dynamoDb) : IAmADynamoDbTransactionProvider, IDisposable
     {
-        private TransactWriteItemsRequest _tx;
+        private TransactWriteItemsRequest? _tx;
         
         /// <summary>
         /// The AWS client for dynamoDb
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.DynamoDb
         /// <summary>
         /// The response for the last transaction commit
         /// </summary>
-        public TransactWriteItemsResponse LastResponse { get; set; }
+        public TransactWriteItemsResponse? LastResponse { get; set; }
 
         public void Close()
         {
@@ -90,19 +90,18 @@ namespace Paramore.Brighter.DynamoDb
         {
             if (HasOpenTransaction)
             {
-                return _tx;
+                return _tx!;
             }
 
-            _tx = new TransactWriteItemsRequest();
-            _tx.TransactItems = new List<TransactWriteItem>();
+            _tx = new TransactWriteItemsRequest { TransactItems = [] };
             return _tx;
         }
 
         public Task<TransactWriteItemsRequest> GetTransactionAsync(CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
+            var tcs = new TaskCompletionSource<TransactWriteItemsRequest?>();
             tcs.SetResult(GetTransaction());
-            return tcs.Task;
+            return tcs.Task!;
         }
 
         /// <summary>

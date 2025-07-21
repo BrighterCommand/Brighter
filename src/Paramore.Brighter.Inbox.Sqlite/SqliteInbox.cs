@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
         {
         }
 
-        protected override void WriteToStore(Func<DbConnection, DbCommand> commandFunc, Action loggingAction)
+        protected override void WriteToStore(Func<DbConnection, DbCommand> commandFunc, Action? loggingAction)
         {
             using var connection = GetOpenConnection(_connectionProvider);
             using var command = commandFunc.Invoke(connection);
@@ -79,18 +79,12 @@ namespace Paramore.Brighter.Inbox.Sqlite
             }
             catch (SqliteException ex)
             {
-                if (ex.SqliteErrorCode == SqliteDuplicateKeyError ||
-                   ex.SqliteErrorCode == SqliteUniqueKeyError)
-                {
-                    loggingAction.Invoke();
-                    return;
-                }
-
-                throw;
+                if (ex.SqliteErrorCode != SqliteDuplicateKeyError && ex.SqliteErrorCode != SqliteUniqueKeyError) throw;
+                loggingAction?.Invoke();
             }
         }
 
-        protected override async Task WriteToStoreAsync(Func<DbConnection, DbCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
+        protected override async Task WriteToStoreAsync(Func<DbConnection, DbCommand> commandFunc, Action? loggingAction, CancellationToken cancellationToken)
         {
             using var connection = await GetOpenConnectionAsync(_connectionProvider, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
@@ -101,14 +95,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
             }
             catch (SqliteException ex)
             {
-                if (ex.SqliteErrorCode == SqliteDuplicateKeyError ||
-                   ex.SqliteErrorCode == SqliteUniqueKeyError)
-                {
-                    loggingAction.Invoke();
-                    return;
-                }
-
-                throw;
+                if (ex.SqliteErrorCode != SqliteDuplicateKeyError && ex.SqliteErrorCode != SqliteUniqueKeyError) throw;
+                loggingAction?.Invoke();
             }
         }
 
@@ -191,7 +179,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 if (dr.Read())
                 {
                     var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
                 }
             }
             finally
@@ -202,15 +190,14 @@ namespace Paramore.Brighter.Inbox.Sqlite
             throw new RequestNotFoundException<T>(commandId);
         }
 
-        protected override async Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId,
-            CancellationToken cancellationToken)
+        protected override async Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId, CancellationToken cancellationToken)
         {
             try
             {
-                if (await dr.ReadAsync().ConfigureAwait(ContinueOnCapturedContext))
+                if (await dr.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                 {
                     var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options);
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
                 }
             }
             finally

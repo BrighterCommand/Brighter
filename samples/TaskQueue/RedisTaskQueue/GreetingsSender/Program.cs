@@ -102,7 +102,7 @@ namespace GreetingsSender
                     ).Create();
                     
                     collection.AddBrighter()
-                        .UseExternalBus((configure) =>
+                        .AddProducers((configure) =>
                         {
                             configure.ProducerRegistry = producerRegistry;
                         })

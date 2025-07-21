@@ -17,7 +17,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             var tableRequestFactory = new DynamoDbTableFactory();
             var gsiProjection = new DynamoGSIProjections
             (
-                projections: new Dictionary<string, Projection>
+                projections: new Dictionary<string, Projection?>
                 {
                     {"GlobalSecondaryIndex", new Projection{ ProjectionType = ProjectionType.KEYS_ONLY, NonKeyAttributes = new List<string>{"Id", "Version"}}}
                 }

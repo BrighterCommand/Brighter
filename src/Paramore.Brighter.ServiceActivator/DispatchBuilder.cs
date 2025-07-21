@@ -120,7 +120,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="tracer">An instance of <see cref="BrighterTracer"/> with which to instrument the Dispatcher</param>
         /// <param name="instrumentationOptions">An <see cref="InstrumentationOptions"/> defining how verbose the instrumentation should be</param>
         /// <returns>INeedAListOfSubcriptions</returns>
-        public IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+        public IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
              _tracer = tracer;
              _instrumentationOptions = instrumentationOptions;
@@ -248,7 +248,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// InstrumentationOptions.All - all of the above
         /// </param>
         /// <returns>IAmADispatchBuilder</returns>
-        IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
+        IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
        
         /// <summary>
         /// We do not need any instrumentation for the Dispatcher
