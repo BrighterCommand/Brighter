@@ -12,7 +12,7 @@ namespace Paramore.Brighter.PostgreSql
     /// </summary>
     public class PostgreSqlUnitOfWork : RelationalDbTransactionProvider
     {
-        private NpgsqlDataSource _dataSource;
+        private NpgsqlDataSource? _dataSource;
         private readonly string _connectionString;
 
         /// <summary>
@@ -24,7 +24,7 @@ namespace Paramore.Brighter.PostgreSql
         /// globally</param>
         public PostgreSqlUnitOfWork(
             IAmARelationalDatabaseConfiguration configuration,
-            NpgsqlDataSource dataSource = null)
+            NpgsqlDataSource? dataSource = null)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.PostgreSql
         public override void Close()
         {
             base.Close();
-            if (HasDataSource()) _dataSource.Dispose();
+            if (HasDataSource()) _dataSource!.Dispose();
             _dataSource = null;
         }
 
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.PostgreSql
         {
             if (HasOpenTransaction)
             {
-                ((NpgsqlTransaction)Transaction).CommitAsync(cancellationToken);
+                ((NpgsqlTransaction)Transaction!).CommitAsync(cancellationToken);
                 Transaction = null;
             }
             
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.PostgreSql
         /// <returns>A database connection</returns>
         public override DbConnection GetConnection()
         {
-            if (Connection == null && HasDataSource()) Connection = _dataSource.CreateConnection();
+            if (Connection == null && HasDataSource()) Connection = _dataSource!.CreateConnection();
             
             if (Connection == null) Connection = new NpgsqlConnection(_connectionString);
             if (Connection.State != ConnectionState.Open) Connection.Open();
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.PostgreSql
         /// <returns>A database connection</returns>
         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            if (Connection == null && HasDataSource()) Connection = _dataSource.CreateConnection();
+            if (Connection == null && HasDataSource()) Connection = _dataSource!.CreateConnection();
             
             if (Connection == null) Connection = new NpgsqlConnection(_connectionString);
             if (Connection.State != ConnectionState.Open) await Connection.OpenAsync(cancellationToken);
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.PostgreSql
             if (Connection == null) Connection = GetConnection();
             if (!HasOpenTransaction)
                 Transaction = ((NpgsqlConnection)Connection).BeginTransaction();
-            return Transaction;
+            return Transaction!;
         }
 
         /// <summary>
@@ -108,13 +108,13 @@ namespace Paramore.Brighter.PostgreSql
         {
             if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
             if (!HasOpenTransaction)
-                Transaction = ((NpgsqlConnection)Connection).BeginTransaction();
-            return Transaction;
+                Transaction = await ((NpgsqlConnection)Connection).BeginTransactionAsync(cancellationToken);
+            return Transaction!;
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (HasDataSource()) _dataSource.Dispose();
+            if (HasDataSource()) _dataSource!.Dispose();
             _dataSource = null;
             base.Dispose(disposing);
         }

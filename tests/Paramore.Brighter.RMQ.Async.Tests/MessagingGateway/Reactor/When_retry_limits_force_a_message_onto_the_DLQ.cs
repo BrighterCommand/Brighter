@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
@@ -28,7 +29,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
     public RMQMessageConsumerRetryDLQTests()
     {
         string correlationId = Guid.NewGuid().ToString();
-        var contentType = new ContentType(MediaTypeNames.Text.Plain);
+        var contentType = new ContentType(MediaTypeNames.Text.Plain){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         var channelName = new ChannelName($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
         var routingKey = new RoutingKey($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
 

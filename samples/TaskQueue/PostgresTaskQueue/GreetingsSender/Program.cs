@@ -68,7 +68,7 @@ public static class Program
             
         serviceCollection
             .AddBrighter()
-            .UseExternalBus((configure) =>
+            .AddProducers((configure) =>
             {
                 configure.ProducerRegistry = producerRegistry;
                 configure.MaxOutStandingMessages = 5;

@@ -123,11 +123,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// An external bus is the use of Message Oriented Middleware (MoM) to dispatch a message between a producer
-        /// and a consumer. The assumption is that this  is being used for inter-process communication, for example the
-        /// work queue pattern for distributing work, or between microservicves
+        ///We use AddProducers to register an external bus, which is a bus that is not the Brighter In-Memory Bus.
+        /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer
+        /// to a consumer. 
         /// Registers singletons with the service collection :-
-        /// - An Event Bus - used to send message externally and contains:
+        ///     -- An Outbox Producer Mediatory - used to send message externally via an Outbox:
         ///     -- Producer Registry - A list of producers we can send middleware messages with 
         ///     -- Outbox - stores messages so that they can be written in the same transaction as entity writes
         ///     -- Outbox Transaction Provider - used to provide a transaction that spans the Outbox write and
@@ -140,18 +140,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///     -- UseRpc - do we want to use RPC i.e. a command blocks waiting for a response, over middleware.
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
-        /// <param name="configure">A callback that allows you to configure <see cref="ExternalBusConfiguration"/> options</param>
+        /// <param name="configure">A callback that allows you to configure <see cref="ProducersConfiguration"/> options</param>
         /// <param name="serviceLifetime">The lifetime of the transaction provider</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterBuilder UseExternalBus(
+        public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
-            Action<ExternalBusConfiguration> configure,
+            Action<ProducersConfiguration> configure,
             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
             if (brighterBuilder is null)
                 throw new ArgumentNullException($"{nameof(brighterBuilder)} cannot be null.", nameof(brighterBuilder));
 
-            var busConfiguration = new ExternalBusConfiguration();
+            var busConfiguration = new ProducersConfiguration();
             configure?.Invoke(busConfiguration);
 
             if (busConfiguration.ProducerRegistry == null)
@@ -232,7 +232,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (busConfiguration.UseRpc)
                 brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions!));
             
-            brighterBuilder.Services.TryAddSingleton<IAmExternalBusConfiguration>(busConfiguration);
+            brighterBuilder.Services.TryAddSingleton<IAmProducersConfiguration>(busConfiguration);
            
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
                (serviceProvider) => BuildOutBoxProducerMediator(
@@ -377,9 +377,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var eventBus = provider.GetService<IAmAnOutboxProducerMediator>();
             var hasEventBus = eventBus != null;
             
-            var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
+            var eventBusConfiguration = provider.GetService<IAmProducersConfiguration>();
             var transactionProvider = provider.GetService<IAmABoxTransactionProvider>();
-            var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
+            var serviceActivatorOptions = provider.GetService<IAmConsumerOptions>();
 
             INeedInstrumentation? instrumentationBuilder = null;
             bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
@@ -461,7 +461,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .RequestSchedulerFactory(provider.GetRequiredService<IAmARequestSchedulerFactory>())
                 .Build();
             
-            var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
+            var eventBusConfiguration = provider.GetService<IAmProducersConfiguration>();
             var producerRegistry = provider.GetService<IAmAProducerRegistry>();
             var messageSchedulerFactory = eventBusConfiguration?.MessageSchedulerFactory ?? provider.GetRequiredService<IAmAMessageSchedulerFactory>();
             producerRegistry?.Producers
@@ -472,7 +472,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         
         private static IAmAnOutboxProducerMediator? BuildOutBoxProducerMediator(IServiceProvider serviceProvider,
             Type transactionType,
-            ExternalBusConfiguration busConfiguration,
+            ProducersConfiguration busConfiguration,
             IPolicyRegistry<string>? policyRegistry,
             IAmAnOutbox outbox) 
         {

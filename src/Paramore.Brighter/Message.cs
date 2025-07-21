@@ -232,7 +232,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator ==(Message left, Message right)
+        public static bool operator ==(Message? left, Message? right)
         {
             return Equals(left, right);
         }
@@ -243,7 +243,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator !=(Message left, Message right)
+        public static bool operator !=(Message? left, Message? right)
         {
             return !Equals(left, right);
         }

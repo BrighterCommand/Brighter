@@ -18,7 +18,7 @@ public class AssemblyResolutionMissingDependenciesTests
 
         var services = new ServiceCollection();
 
-        services.AddServiceActivator().AutoFromAssemblies();
+        services.AddConsumers().AutoFromAssemblies();
         
         //act
         var provider = factory.CreateServiceProvider(services);
