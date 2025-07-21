@@ -46,8 +46,8 @@ namespace Paramore.Brighter.MsSql.Azure
         /// <param name="configuration">The MS SQL configuration.</param>
         public MsSqlSharedTokenCacheConnectionProvider(RelationalDatabaseConfiguration configuration) : base(configuration)
         {
-            _azureUserName = Environment.GetEnvironmentVariable(_azureUserNameKey);
-            _azureTenantId = Environment.GetEnvironmentVariable(_azureTenantIdKey);
+            _azureUserName = Environment.GetEnvironmentVariable(_azureUserNameKey) ?? throw new InvalidOperationException("Azure username environment variable not set.");
+            _azureTenantId = Environment.GetEnvironmentVariable(_azureTenantIdKey) ?? throw new InvalidOperationException("Azure tenant ID environment variable not set.");
         }
 
         /// <summary>

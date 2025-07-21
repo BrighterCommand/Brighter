@@ -110,7 +110,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
         Exchange = new Exchange("paramore.brighter.exchange"),
     });
 
-    services.AddServiceActivator(options =>
+    services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
@@ -124,7 +124,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
                 InboxScope.Commands
             );
         })
-        .UseExternalBus((configure) =>
+        .AddProducers((configure) =>
         {
             configure.ProducerRegistry = producerRegistry;
             configure.Outbox = makeOutbox.outbox;

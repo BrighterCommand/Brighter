@@ -46,12 +46,12 @@ namespace Paramore.Brighter.DynamoDb
         //EnsureTablesGone. Deleting until cannot be found
         public async Task EnsureTablesDeleted(IEnumerable<string> tableNames, CancellationToken ct = default)
         {
-            Dictionary<string, bool> tableResults = null;
+            Dictionary<string, bool>? tableResults = null;
             do
             {
                 var tableQuery = new DynamoDbTableQuery();
                 tableResults = await tableQuery.HasTables(_client, tableNames, ct: ct);
-            } while (tableResults.Any(tr => tr.Value));
+            } while (tableResults != null && tableResults.Any(tr => tr.Value));
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace Paramore.Brighter.DynamoDb
             
             var tableCheck = tableNames.ToDictionary(tableName => tableName, tableName => false);
             
-            string lastEvaluatedTableName = null;
+            string? lastEvaluatedTableName = null;
             do
             {
                 var tablesResponse = await _client.ListTablesAsync(ct);
@@ -199,7 +199,7 @@ namespace Paramore.Brighter.DynamoDb
 
         private sealed class DynamoDbTableStatus
         { 
-            public string TableName { get; init; }
+            public string? TableName { get; init; }
             public bool IsReady { get; set; }
         }
    }

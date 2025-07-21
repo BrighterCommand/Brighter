@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MySql
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
-            _connectionString = configuration.ConnectionString;
+            _connectionString = configuration!.ConnectionString;
         }
         
         /// <summary>
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MySql
         {
             if (HasOpenTransaction)
             {
-                ((MySqlTransaction)Transaction).CommitAsync(cancellationToken);
+                ((MySqlTransaction)Transaction!).CommitAsync(cancellationToken);
                 Transaction = null;
             }
             
@@ -98,7 +98,7 @@ namespace Paramore.Brighter.MySql
             if (Connection == null) Connection = GetConnection();
             if (!HasOpenTransaction)
                 Transaction = ((MySqlConnection) Connection).BeginTransaction();
-            return Transaction;
+            return Transaction!;
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Paramore.Brighter.MySql
             if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
             if (!HasOpenTransaction)
                 Transaction = await ((MySqlConnection) Connection).BeginTransactionAsync(cancellationToken);
-            return Transaction;
+            return Transaction!;
         }
  
     }

@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         /// <summary>
         /// The policy registry to use for the command processor and the event bus
-        /// It needs to be here as we need to pass it between AddBrighter and UseExternalBus
+        /// It needs to be here as we need to pass it between AddBrighter and AddProducers
         /// </summary>
         IPolicyRegistry<string>? PolicyRegistry { get; set; }
 

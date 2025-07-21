@@ -69,7 +69,7 @@ public class Program
 
                 var connection = new PostgresMessagingGatewayConnection(new RelationalDatabaseConfiguration("Host=localhost;Username=postgres;Password=password;Database=brightertests;"));
 
-                services.AddServiceActivator(options =>
+                services.AddConsumers(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.DefaultChannelFactory = new PostgresChannelFactory(connection);

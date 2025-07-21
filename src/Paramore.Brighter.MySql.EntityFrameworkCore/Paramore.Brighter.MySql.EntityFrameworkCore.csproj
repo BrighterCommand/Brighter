@@ -2,9 +2,10 @@
 
   <PropertyGroup>
    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup>                                                                                 
     <ProjectReference Include="..\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj"/>
   </ItemGroup>
 

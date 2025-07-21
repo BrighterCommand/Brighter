@@ -29,7 +29,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
-    public interface IAmExternalBusConfiguration
+    public interface IAmProducersConfiguration
     {
         /// <summary>
         /// How big should the batch size be for archiving messages
@@ -146,7 +146,7 @@ namespace Paramore.Brighter
     /// <summary>
     /// Used to configure the Event Bus
     /// </summary>
-    public class ExternalBusConfiguration : IAmExternalBusConfiguration
+    public class ProducersConfiguration : IAmProducersConfiguration
     {
         /// <summary>
         /// How big should the batch size be for archiving messages
@@ -280,9 +280,9 @@ namespace Paramore.Brighter
         public bool UseRpc { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.
+        /// Initializes a new instance of the <see cref="ProducersConfiguration"/> class.
         /// </summary>
-        public ExternalBusConfiguration()
+        public ProducersConfiguration()
         {
            /*allows setting of properties one-by-one, we default the required values here*/
            ProducerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>());

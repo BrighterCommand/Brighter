@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Outbox.Hosting
     public partial class TimedOutboxArchiver<TMessage, TTransaction> : IHostedService, IDisposable where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
-        private Timer _timer;
+        private Timer? _timer;
         private readonly OutboxArchiver<TMessage, TTransaction> _archiver;
         private readonly TimeSpan _dispatchedSince;
         private readonly IDistributedLock _distributedLock;
@@ -99,10 +99,10 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// </summary>
         public void Dispose()
         {
-            _timer.Dispose();
+            _timer?.Dispose();
         }
 
-        private async Task Archive(object state, CancellationToken cancellationToken)
+        private async Task Archive(object? state, CancellationToken cancellationToken)
         {
             var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
             if (lockId != null)
