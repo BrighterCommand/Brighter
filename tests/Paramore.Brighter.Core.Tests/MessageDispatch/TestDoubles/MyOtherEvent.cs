@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,15 +23,15 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
-    internal sealed class MyEvent() : Event(Brighter.Id.Random), IEquatable<MyEvent>
+    internal sealed class MyOtherEvent() : Event(Brighter.Id.Random), IEquatable<MyOtherEvent>
     {
         public int Data { get; set; }
 
-        public bool Equals(MyEvent? other)
+        public bool Equals(MyOtherEvent?  other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -51,12 +51,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Data;
         }
 
-        public static bool operator ==(MyEvent left, MyEvent right)
+        public static bool operator ==(MyOtherEvent left, MyOtherEvent  right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(MyEvent left, MyEvent right)
+        public static bool operator !=(MyOtherEvent  left, MyOtherEvent   right)
         {
             return !Equals(left, right);
         }

@@ -56,7 +56,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
              
-            _messagePump = new Proactor<MyEvent>(commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel) 
+            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
+                    messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel) 
                 { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount };
 
             var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All)
@@ -64,6 +65,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 .WrapAsync(new MyEvent(),  new RequestContext(), new Publication{Topic = _routingKey})
                 .Result;
             _channel.Enqueue(msg);
+            
         }
 
 

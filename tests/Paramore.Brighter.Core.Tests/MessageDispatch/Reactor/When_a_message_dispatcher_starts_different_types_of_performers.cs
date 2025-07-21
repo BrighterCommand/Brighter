@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             var command = new MyCommand();
             var commandMessage = new MyCommandMessageMapper().MapToMessage(command, new Publication{Topic = _commandRoutingKey});
             _bus.Enqueue(commandMessage);
-
+            
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
