@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MySql
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
-            _connectionString = configuration.ConnectionString;
+            _connectionString = configuration!.ConnectionString;
         }
 
         /// <summary>

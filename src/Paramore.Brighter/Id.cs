@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Paramore.Brighter
 {
@@ -81,7 +82,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The <see cref="Id"/> to test.</param>
         /// <returns><c>true</c> if the <paramref name="id"/> is null or has an empty value; otherwise, <c>false</c>.</returns>
-        public static bool IsNullOrEmpty(Id? id)
+        public static bool IsNullOrEmpty([NotNullWhen(false)] Id? id)
         {
             return id == null || string.IsNullOrEmpty(id.Value);
         }

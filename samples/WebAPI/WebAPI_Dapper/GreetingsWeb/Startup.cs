@@ -108,7 +108,7 @@ public class Startup
                 options.MapperLifetime = ServiceLifetime.Singleton;
                 options.PolicyRegistry = new GreetingsPolicy();
             })
-            .UseExternalBus(configure =>
+            .AddProducers(configure =>
             {
                 configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
                 configure.Outbox = makeOutbox.outbox;
