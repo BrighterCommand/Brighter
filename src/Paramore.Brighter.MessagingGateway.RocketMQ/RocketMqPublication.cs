@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.MessagingGateway.RocketMQ;
+﻿using Paramore.Brighter.Observability;
+
+namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
 /// <summary>
 /// Represents a RocketMQ message publication configuration for Brighter integration.
@@ -11,6 +13,11 @@ public class RocketMqPublication : Publication
     /// Tags help categorize messages within the same topic for selective consumption.
     /// </summary>
     public string? Tag { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the <see cref="InstrumentationOptions"/>
+    /// </summary>
+    public InstrumentationOptions? Instrumentation { get; set; }
 }
 
 /// <summary>

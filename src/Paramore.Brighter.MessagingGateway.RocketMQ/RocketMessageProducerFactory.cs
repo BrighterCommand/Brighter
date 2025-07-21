@@ -37,7 +37,7 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
                 Log.CreateTopicIsNotSupported(s_logger, publication.Topic);
             }
             
-            producers[publication.Topic] = new RocketMqMessageProducer(connection, rocketProducer, publication);
+            producers[publication.Topic] = new RocketMqMessageProducer(connection, rocketProducer, publication,  publication.Instrumentation ?? connection.Instrumentation);
         }
         return producers;
     }

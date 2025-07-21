@@ -1,5 +1,6 @@
 using System;
 using Org.Apache.Rocketmq;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
@@ -32,4 +33,9 @@ public class RocketMessagingGatewayConnection(ClientConfig config) : IAmGatewayC
     /// Handles local transaction state checks during message recovery.
     /// </summary>
     public ITransactionChecker? Checker { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <see cref="InsufficientExecutionStackException"/>
+    /// </summary>
+    public InstrumentationOptions Instrumentation { get; set; } = InstrumentationOptions.All;
 }

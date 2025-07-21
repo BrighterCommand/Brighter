@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -16,7 +17,8 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 public class RocketMqMessageProducer(
     RocketMessagingGatewayConnection connection,
     Producer producer,
-    RocketMqPublication mqPublication)
+    RocketMqPublication mqPublication,
+    InstrumentationOptions instrumentation = InstrumentationOptions.All)
     : IAmAMessageProducerSync, IAmAMessageProducerAsync
 {
     /// <inheritdoc />
@@ -133,6 +135,7 @@ public class RocketMqMessageProducer(
         }
         
         await producer.Send(builder.Build());
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RocketMQ, message, instrumentation);
     }
     
     /// <inheritdoc />
