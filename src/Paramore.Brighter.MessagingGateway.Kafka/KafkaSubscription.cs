@@ -146,7 +146,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             SubscriptionName subscriptionName,
             ChannelName channelName,
             RoutingKey routingKey,
-            Type requestType,
+            Type? requestType = null,
             Func<Message, Type>? getRequestType = null,
             string? groupId = null,
             int bufferSize = 1,

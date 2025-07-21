@@ -95,7 +95,7 @@ public class SqsSubscription : Subscription
         ChannelName channelName,
         ChannelType channelType,
         RoutingKey routingKey,
-        Type requestType,
+        Type? requestType = null,
         Func<Message, Type>? getRequestType = null,
         int bufferSize = 1,
         int noOfPerformers = 1,

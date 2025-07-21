@@ -219,6 +219,57 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TaskQueue", "TaskQueue", "{9A06FC18-50E3-40AE-8631-8A262AF6FB21}"
 	ProjectSection(SolutionItems) = preProject
 		samples\TaskQueue\README.md = samples\TaskQueue\README.md
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\TaskReceiverConsole.csproj.nuget.g.props = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\TaskReceiverConsole.csproj.nuget.g.props
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\TaskReceiverConsole.csproj.nuget.dgspec.json = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\TaskReceiverConsole.csproj.nuget.dgspec.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\rider.project.restore.info = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\rider.project.restore.info
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\project.nuget.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\project.nuget.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\rider.project.model.nuget.info = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\rider.project.model.nuget.info
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\project.packagespec.json = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\project.packagespec.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\project.assets.json = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\project.assets.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\TaskReceiverConsole.csproj.nuget.g.targets = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\TaskReceiverConsole.csproj.nuget.g.targets
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.AssemblyInfoInputs.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.AssemblyInfoInputs.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.assets.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.assets.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\.NETCoreApp,Version=v9.0.AssemblyAttributes.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\.NETCoreApp,Version=v9.0.AssemblyAttributes.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.GeneratedMSBuildEditorConfig.editorconfig = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.GeneratedMSBuildEditorConfig.editorconfig
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.AssemblyInfo.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.AssemblyInfo.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.csproj.AssemblyReference.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.csproj.AssemblyReference.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.GlobalUsings.g.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\obj\Debug\net9.0\TaskReceiverConsole.GlobalUsings.g.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\TaskReceiverConsole.csproj = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\TaskReceiverConsole.csproj
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\appsettings.json = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\appsettings.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\Properties\launchSettings.json = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\Properties\launchSettings.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\appsettings.Development.json = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\appsettings.Development.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\Program.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\Program.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\rider.project.restore.info = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\rider.project.restore.info
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\project.nuget.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\project.nuget.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\rider.project.model.nuget.info = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\rider.project.model.nuget.info
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\TaskStatus.csproj.nuget.g.targets = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\TaskStatus.csproj.nuget.g.targets
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\project.packagespec.json = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\project.packagespec.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\project.assets.json = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\project.assets.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\TaskStatus.csproj.nuget.dgspec.json = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\TaskStatus.csproj.nuget.dgspec.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\ref\TaskStatus.dll = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\ref\TaskStatus.dll
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\refint\TaskStatus.dll = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\refint\TaskStatus.dll
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.GeneratedMSBuildEditorConfig.editorconfig = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.GeneratedMSBuildEditorConfig.editorconfig
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.csproj.AssemblyReference.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.csproj.AssemblyReference.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.sourcelink.json = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.sourcelink.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.csproj.Up2Date = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.csproj.Up2Date
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.pdb = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.pdb
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.csproj.CoreCompileInputs.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.csproj.CoreCompileInputs.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.csproj.FileListAbsolute.txt = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.csproj.FileListAbsolute.txt
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.assets.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.assets.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\.NETCoreApp,Version=v9.0.AssemblyAttributes.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\.NETCoreApp,Version=v9.0.AssemblyAttributes.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.AssemblyInfoInputs.cache = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.AssemblyInfoInputs.cache
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.AssemblyInfo.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.AssemblyInfo.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.GlobalUsings.g.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.GlobalUsings.g.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.dll = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\Debug\net9.0\TaskStatus.dll
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\TaskStatus.csproj.nuget.g.props = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\obj\TaskStatus.csproj.nuget.g.props
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\App\Task.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\App\Task.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\bin\Debug\net9.0\Paramore.Brighter.dll = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\bin\Debug\net9.0\Paramore.Brighter.dll
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\bin\Debug\net9.0\TaskStatus.pdb = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\bin\Debug\net9.0\TaskStatus.pdb
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\bin\Debug\net9.0\TaskStatus.dll = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\bin\Debug\net9.0\TaskStatus.dll
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\bin\Debug\net9.0\TaskStatus.deps.json = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\bin\Debug\net9.0\TaskStatus.deps.json
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\TaskStatus.csproj = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\TaskStatus.csproj
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\Driving Ports\TaskCreated.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\Driving Ports\TaskCreated.cs
+		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\Driving Ports\TaskUpdated.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\Driving Ports\TaskUpdated.cs
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CommandProcessor", "CommandProcessor", "{6494AB84-C125-4DDA-A2A0-06A6FD404A06}"
@@ -435,9 +486,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskStatusSender", "samples
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KafkaDynamicEventStreams", "KafkaDynamicEventStreams", "{9347BD22-1E8A-4A79-9D86-D76D076E566F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskStatusSender", "samples\TaskQueue\KafkaDynamicEventStream\TaskStatusSender\TaskStatusSender.csproj", "{F0D9D5D1-E9CA-4565-B875-4362643E858D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskStatus", "samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\TaskStatus.csproj", "{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskStatus", "TaskStatus\TaskStatus.csproj", "{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskReceiverConsole", "samples\TaskQueue\KafkaDynamicEventStream\TaskReceiverConsole\TaskReceiverConsole.csproj", "{43F23C67-6C9D-44BB-B3A8-9313E570879D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskStatusSender", "samples\TaskQueue\KafkaDynamicEventStream\TaskStatusSender\TaskStatusSender.csproj", "{24360989-A956-45E9-BF07-7FD9E7553C7D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -2491,30 +2544,42 @@ Global
 		{A8E13CC8-BD07-4FFF-BFDC-BA031C91EED2}.Release|x86.Build.0 = Release|Any CPU
 		{F00B137A-C187-4C33-A37B-22AD40B71600}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F00B137A-C187-4C33-A37B-22AD40B71600}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Debug|x86.Build.0 = Debug|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Release|x86.ActiveCfg = Release|Any CPU
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D}.Release|x86.Build.0 = Release|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Debug|x86.Build.0 = Debug|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Release|x86.ActiveCfg = Release|Any CPU
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577}.Release|x86.Build.0 = Release|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Debug|x86.Build.0 = Debug|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Release|x86.ActiveCfg = Release|Any CPU
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D}.Release|x86.Build.0 = Release|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Debug|x86.Build.0 = Debug|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Release|x86.ActiveCfg = Release|Any CPU
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D}.Release|x86.Build.0 = Release|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Debug|x86.Build.0 = Debug|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Release|x86.ActiveCfg = Release|Any CPU
+		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2650,8 +2715,9 @@ Global
 		{D5B65576-F375-46E9-8A00-CC3C32E8DBDE} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{0E6A0B80-58B7-4AA2-9E40-EE0AA5D4719E} = {1C9AAB6E-CFDA-4F36-9BC3-22C783AEFC43}
 		{9347BD22-1E8A-4A79-9D86-D76D076E566F} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
-		{F0D9D5D1-E9CA-4565-B875-4362643E858D} = {9347BD22-1E8A-4A79-9D86-D76D076E566F}
-		{C1C8E85D-3F1F-44C6-A7D7-AAB5A5873577} = {9347BD22-1E8A-4A79-9D86-D76D076E566F}
+		{79CA356E-B08C-4D88-88C9-653EC8D8BF4D} = {9347BD22-1E8A-4A79-9D86-D76D076E566F}
+		{43F23C67-6C9D-44BB-B3A8-9313E570879D} = {9347BD22-1E8A-4A79-9D86-D76D076E566F}
+		{24360989-A956-45E9-BF07-7FD9E7553C7D} = {9347BD22-1E8A-4A79-9D86-D76D076E566F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

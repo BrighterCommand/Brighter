@@ -62,7 +62,7 @@ public class AzureServiceBusSubscription : Subscription
         SubscriptionName subscriptionName,
         ChannelName channelName,
         RoutingKey routingKey,
-        Type requestType,
+        Type? requestType = null,
         Func<Message, Type>? getRequestType = null,
         int bufferSize = 1,
         int noOfPerformers = 1,

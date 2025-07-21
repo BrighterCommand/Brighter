@@ -36,7 +36,7 @@ public class PostgresSubscription : Subscription
     public PostgresSubscription(SubscriptionName subscriptionName,
         ChannelName channelName,
         RoutingKey routingKey,
-        Type dataType,
+        Type? dataType = null,
         Func<Message, Type>? getRequestType = null,
         int bufferSize = 1,
         int noOfPerformers = 1,
