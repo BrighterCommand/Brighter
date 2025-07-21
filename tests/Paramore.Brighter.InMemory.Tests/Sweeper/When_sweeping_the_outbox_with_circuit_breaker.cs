@@ -165,7 +165,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         }
 
         [Fact]
-        public async Task When_outstanding_in_outbox_and_one_trips_Then_nonTripped_are_cleared_on_second_sweep()
+        public async Task When_outstanding_in_outbox_and_one_topic_trips_Then_nonTripped_are_cleared_on_second_sweep()
         {
             // Arrange
             var context = new RequestContext();

@@ -1074,7 +1074,7 @@ namespace Paramore.Brighter
 
         private void TripTopic(Message message)
         {
-            if(RoutingKey.IsNullOrEmpty(message.Header.Topic))
+            if(!RoutingKey.IsNullOrEmpty(message.Header.Topic))
                 _outboxCircuitBreaker?.TripTopic(message.Header.Topic);
         }
         
