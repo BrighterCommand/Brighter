@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Driven Ports\" />
+    </ItemGroup>
+
+</Project>
