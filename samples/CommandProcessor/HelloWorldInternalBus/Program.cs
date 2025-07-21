@@ -25,7 +25,7 @@ var subscriptions = new[]
 var host = Host.CreateDefaultBuilder()
     .ConfigureServices((context, services) =>
     {
-        services.AddServiceActivator(options =>
+        services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
@@ -35,7 +35,7 @@ var host = Host.CreateDefaultBuilder()
             options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.InboxConfiguration = new InboxConfiguration(new InMemoryInbox(TimeProvider.System));
         })
-        .UseExternalBus((config) =>
+        .AddProducers((config) =>
         {
             config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications, InstrumentationOptions.All).Create(); 
             config.Outbox = new InMemoryOutbox(TimeProvider.System);

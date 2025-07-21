@@ -70,7 +70,7 @@ var host = Host.CreateDefaultBuilder(args)
         var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
         services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
-        services.AddServiceActivator(options =>
+        services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(

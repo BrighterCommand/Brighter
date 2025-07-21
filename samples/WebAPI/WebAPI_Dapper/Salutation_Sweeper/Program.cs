@@ -81,7 +81,7 @@ var rdbms = DbResolver.GetDatabaseType(dbType);
 builder.Services.AddBrighter(options =>
 {
     options.InstrumentationOptions = InstrumentationOptions.All;
-}).UseExternalBus(configure =>
+}).AddProducers(configure =>
 {
     configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport);
     configure.Outbox = makeOutbox.outbox;

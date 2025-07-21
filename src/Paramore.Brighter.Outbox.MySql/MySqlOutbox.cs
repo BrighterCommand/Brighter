@@ -77,9 +77,9 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction
+            Action? loggingAction
         )
         {
             var connection = GetOpenConnection(_connectionProvider, transactionProvider);
@@ -102,9 +102,9 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction,
+            Action? loggingAction,
             CancellationToken cancellationToken
         )
         {
@@ -215,7 +215,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return parameters;
         }
 
-        protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
+        protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
         {
             return new MySqlParameter { ParameterName = parameterName, Value = value };
         }
@@ -435,12 +435,10 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag =
-                JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
-            return dictionaryBag;
+            return JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options)!;
         }
 
-        private static ContentType GetContentType(IDataReader dr)
+        private static ContentType? GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null;
@@ -451,7 +449,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return new ContentType(contentType);
         }
 
-        private static Id GetCorrelationId(IDataReader dr)
+        private static Id? GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
@@ -471,16 +469,16 @@ namespace Paramore.Brighter.Outbox.MySql
             return new Id(id);
         }
 
-        private static string GetPartitionKey(IDataReader dr)
+        private static PartitionKey? GetPartitionKey(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
 
             var partitionKey = dr.GetString(ordinal);
-            return partitionKey;
+            return new PartitionKey(partitionKey);
         }
 
-        private static RoutingKey GetReplyTo(IDataReader dr)
+        private static RoutingKey? GetReplyTo(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
             if (dr.IsDBNull(ordinal)) return null;
@@ -505,37 +503,37 @@ namespace Paramore.Brighter.Outbox.MySql
             return timeStamp;
         }
 
-        private static Uri GetSource(IDataReader dr)
+        private static Uri? GetSource(IDataReader dr)
         {
             var ord = dr.GetOrdinal("Source");
             return dr.IsDBNull(ord) ? null : new Uri(dr.GetString(ord));
         }
 
-        private static string GetEventType(IDataReader dr)
+        private static string? GetEventType(IDataReader dr)
         {
             var ord = dr.GetOrdinal("Type");
             return dr.IsDBNull(ord) ? null : dr.GetString(ord);
         }
 
-        private static Uri GetDataSchema(IDataReader dr)
+        private static Uri? GetDataSchema(IDataReader dr)
         {
             var ord = dr.GetOrdinal("DataSchema");
             return dr.IsDBNull(ord) ? null : new Uri(dr.GetString(ord));
         }
 
-        private static string GetSubject(IDataReader dr)
+        private static string? GetSubject(IDataReader dr)
         {
             var ord = dr.GetOrdinal("Subject");
             return dr.IsDBNull(ord) ? null : dr.GetString(ord);
         }
 
-        private static TraceParent GetTraceParent(IDataReader dr)
+        private static TraceParent? GetTraceParent(IDataReader dr)
         {
             var ord = dr.GetOrdinal("TraceParent");
             return dr.IsDBNull(ord) ? null : new TraceParent(dr.GetString(ord));
         }
 
-        private static TraceState GetTraceState(IDataReader dr)
+        private static TraceState? GetTraceState(IDataReader dr)
         {
             var ord = dr.GetOrdinal("TraceState");
             return dr.IsDBNull(ord) ? null : new TraceState(dr.GetString(ord));

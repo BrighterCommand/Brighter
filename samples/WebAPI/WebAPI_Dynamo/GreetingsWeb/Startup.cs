@@ -99,7 +99,7 @@ namespace GreetingsWeb
                  options.MapperLifetime = ServiceLifetime.Singleton;
                  options.PolicyRegistry = new GreetingsPolicy();
              })
-             .UseExternalBus((configure) =>
+             .AddProducers((configure) =>
              {
                  configure.ProducerRegistry = producerRegistry;
                  configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration(), TimeProvider.System);

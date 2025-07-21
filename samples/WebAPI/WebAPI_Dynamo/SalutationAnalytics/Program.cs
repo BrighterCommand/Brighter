@@ -92,7 +92,7 @@ static void ConfigureBrighter(
             
     var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport); 
 
-    services.AddServiceActivator(options =>
+    services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
@@ -113,7 +113,7 @@ static void ConfigureBrighter(
             //We don't strictly need this, but added as an example
             options.PropertyNameCaseInsensitive = true;
         })
-        .UseExternalBus((configure) =>
+        .AddProducers((configure) =>
             {
                 configure.ProducerRegistry = producerRegistry;
                 configure.Outbox = ConfigureOutbox(dynamoDb);

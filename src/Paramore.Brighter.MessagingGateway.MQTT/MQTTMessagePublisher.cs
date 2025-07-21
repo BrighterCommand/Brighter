@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         ///     - Removed the user properties for Id, Type, Time, Source, DataContentType, SpecVersion, DataSchema, and Subject as user properties
         ///       are not supported in v3.1.1 of the MQTT protocol. Version 5.0 supports it, but we are not using it.
         /// </remarks>
-        public static MqttApplicationMessage CreateMqttMessage(Message message, object topicPrefix)
+        public static MqttApplicationMessage CreateMqttMessage(Message message, object? topicPrefix)
         {
             string payload = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options);
             var builder = new MqttApplicationMessageBuilder()
@@ -126,7 +126,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Information, "Connected to {Hostname}:{Port}")]
-            public static partial void ConnectedToHost(ILogger logger, string hostname, int port);
+            public static partial void ConnectedToHost(ILogger logger, string? hostname, int port);
 
             [LoggerMessage(LogLevel.Error, "Unable to connect to {Hostname}:{Port}")]
             public static partial void UnableToConnectToHost(ILogger logger, string hostname, int port);

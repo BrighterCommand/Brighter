@@ -44,7 +44,7 @@ namespace GreetingsReceiver
                     };
 
                     var redisConsumerFactory = new RedisMessageConsumerFactory(redisConnection);
-                    services.AddServiceActivator(options =>
+                    services.AddConsumers(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.DefaultChannelFactory = new ChannelFactory(redisConsumerFactory);

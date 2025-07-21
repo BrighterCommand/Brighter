@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Sqlite
         /// <param name="configuration">The configuration of the Sqlite database</param>
         public SqliteUnitOfWork(IAmARelationalDatabaseConfiguration configuration)
         {
-            if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
+            if (string.IsNullOrWhiteSpace(configuration.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString)); 
             _connectionString = configuration.ConnectionString;
         }
@@ -60,9 +60,9 @@ namespace Paramore.Brighter.Sqlite
             if (HasOpenTransaction)
             {
 #if NETSTANDARD2_0        
-                ((SqliteTransaction)Transaction).Commit();
+                ((SqliteTransaction)Transaction!).Commit();
 #else
-                await ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
+                await ((SqliteTransaction)Transaction!).CommitAsync(cancellationToken);
 #endif
                 Transaction = null;
             }
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Sqlite
             if (Connection == null) Connection = GetConnection();
             if (!HasOpenTransaction)
                 Transaction = Connection.BeginTransaction();
-            return Transaction;
+            return Transaction!;
         }
 
         /// <summary>
@@ -125,7 +125,7 @@ namespace Paramore.Brighter.Sqlite
                 Transaction = await Connection.BeginTransactionAsync(cancellationToken);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 #endif         
-            return Transaction;
+            return Transaction!;
         }
     }
 }
