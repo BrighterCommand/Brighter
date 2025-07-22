@@ -26,10 +26,12 @@ THE SOFTWARE. */
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Paramore.Brighter;
+using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using TaskStatus.Driving_Ports;
+using TaskStatus.Ports;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureHostConfiguration(configurationBuilder =>
@@ -80,7 +82,9 @@ var host = Host.CreateDefaultBuilder(args)
                         Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
                     }
                 ));
-        }).AutoFromAssemblies();
+        })
+        //We don't need to map CloudEventsJsonMessageMapper as it is the default, but we wanted to show how this works
+        .AutoFromAssemblies(defaultMessageMapper: typeof(CloudEventJsonMessageMapper<>), asyncDefaultMessageMapper: typeof(CloudEventJsonMessageMapper<>));
 
 
         services.AddHostedService<ServiceActivatorHostedService>();

@@ -37,6 +37,7 @@ using Polly.CircuitBreaker;
 using Polly.Registry;
 using Polly.Retry;
 using TaskStatus.Driving_Ports;
+using TaskStatus.Ports;
 using TaskStatusSender;
 
 var host = Host.CreateDefaultBuilder(args)

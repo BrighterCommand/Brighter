@@ -23,13 +23,31 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Text.Json;
 using Paramore.Brighter;
+using TaskStatus.Ports;
 
 namespace TaskStatus.Driving_Ports;
 
-public class TaskUpdated(string id, App.TaskStatus status,  DateTimeOffset dueAt, IEnumerable<DateTimeOffset> reminders) : Event(id)
+/// <summary>
+/// Handles <see cref="TaskUpdated"/> events.
+/// </summary>
+/// <remarks>
+/// Add domain logic for handling an updated task here.
+/// </remarks>
+public class TaskUpdatedHandler : RequestHandler<TaskUpdated>
 {
-        public App.TaskStatus Status { get; } = status;
-        public DateTimeOffset DueAt { get; } = dueAt;
-        public IEnumerable<DateTimeOffset> Reminders { get; } = reminders;
+    /// <summary>
+    /// Handles the <see cref="TaskUpdated"/> event.
+    /// </summary>
+    /// <param name="event">The <see cref="TaskUpdated"/> event to handle.</param>
+    /// <returns>The handled <see cref="TaskUpdated"/> event.</returns>
+    public override TaskUpdated Handle(TaskUpdated @event)
+    {
+        //Instead of domain logic, just write out to console
+        Console.WriteLine(JsonSerializer.Serialize(@event));
+        
+        return base.Handle(@event);
+    }
 }
+

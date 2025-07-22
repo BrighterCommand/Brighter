@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter;
 
-namespace TaskStatus.Driving_Ports;
+namespace TaskStatus.Ports;
 
 public class TaskCreated(string id, DateTimeOffset createdAt, DateTimeOffset dueAt, IEnumerable<DateTimeOffset> reminders)
     : Event(id)
