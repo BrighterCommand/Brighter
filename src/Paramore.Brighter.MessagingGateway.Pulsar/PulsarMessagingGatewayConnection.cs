@@ -45,9 +45,9 @@ public class PulsarMessagingGatewayConnection
     /// </value>
     public InstrumentationOptions Instrumentation { get; set; } = InstrumentationOptions.All;
     
-    
     private IPulsarClient? _pulsarClient;
-    internal IPulsarClient Create()
+    
+    public IPulsarClient Create()
     {
         if (_pulsarClient != null)
         {

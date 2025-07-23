@@ -16,7 +16,7 @@ public class PulsarMessageConsumerFactory(PulsarMessagingGatewayConnection conne
     public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         => CreatePulsarConsumer(subscription);
 
-    private PulsarConsumer CreatePulsarConsumer(Subscription subscription)
+    private PulsarMessageConsumer CreatePulsarConsumer(Subscription subscription)
     {
         if (subscription is not PulsarSubscription pulsarSubscription)
         {
@@ -37,6 +37,6 @@ public class PulsarMessageConsumerFactory(PulsarMessagingGatewayConnection conne
         pulsarSubscription.Configuration?.Invoke(builder);
 
         var consumer = builder.Create();
-        return new PulsarConsumer(consumer);
+        return new PulsarMessageConsumer(consumer);
     }
 }

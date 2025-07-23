@@ -8,6 +8,7 @@ using DotPulsar;
 using DotPulsar.Abstractions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Pulsar;
@@ -23,9 +24,9 @@ namespace Paramore.Brighter.MessagingGateway.Pulsar;
 /// - Manages message lifecycle operations (Ack/Nack/Requeue)
 /// - Implements proper resource disposal patterns
 /// </remarks>
-public partial class PulsarConsumer(IConsumer<ReadOnlySequence<byte>> consumer) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> consumer) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PulsarConsumer>();
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PulsarMessageConsumer>();
     
     /// <inheritdoc />
     public void Acknowledge(Message message) 
@@ -148,6 +149,7 @@ public partial class PulsarConsumer(IConsumer<ReadOnlySequence<byte>> consumer) 
                 replyTo: GetReplyTo(pulsarMessage.Properties),
                 subject: GetSubject(pulsarMessage.Properties),
                 dataSchema: GetDataSchema(pulsarMessage.Properties),
+                baggage: GetBaggage(pulsarMessage.Properties),
                 traceParent: GetTraceParent(pulsarMessage.Properties),
                 traceState: GetTraceState(pulsarMessage.Properties))
             {
@@ -199,7 +201,7 @@ public partial class PulsarConsumer(IConsumer<ReadOnlySequence<byte>> consumer) 
 
         static ContentType GetContentType(IReadOnlyDictionary<string, string> properties)
         {
-            if (!properties.TryGetValue(HeaderNames.Topic, out var contentType) || string.IsNullOrEmpty(contentType))
+            if (!properties.TryGetValue(HeaderNames.ContentType, out var contentType) || string.IsNullOrEmpty(contentType))
             {
                 return new ContentType(MediaTypeNames.Text.Plain);
             }
@@ -270,12 +272,22 @@ public partial class PulsarConsumer(IConsumer<ReadOnlySequence<byte>> consumer) 
 
         static Uri? GetDataSchema(IReadOnlyDictionary<string, string> properties)
         {
-            if (!properties.TryGetValue(HeaderNames.Source, out var source) || !Uri.TryCreate(source, UriKind.RelativeOrAbsolute, out var sourceUri))
+            if (!properties.TryGetValue(HeaderNames.DataSchema, out var source) || !Uri.TryCreate(source, UriKind.RelativeOrAbsolute, out var sourceUri))
             {
                 return null;
             }
 
             return sourceUri;   
+        }
+
+        static Baggage GetBaggage(IReadOnlyDictionary<string, string> properties)
+        {
+            if (!properties.TryGetValue(HeaderNames.Baggage, out var baggage) || string.IsNullOrEmpty(baggage))
+            {
+                return new Baggage();
+            }
+
+            return Baggage.FromString(baggage);
         }
 
         static TraceParent? GetTraceParent(IReadOnlyDictionary<string, string> properties)

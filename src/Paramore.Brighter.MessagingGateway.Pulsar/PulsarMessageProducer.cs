@@ -7,6 +7,7 @@ using DotPulsar;
 using DotPulsar.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Pulsar;
 
@@ -28,7 +29,7 @@ namespace Paramore.Brighter.MessagingGateway.Pulsar;
 public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer, 
     PulsarPublication publication,
     TimeProvider time,
-    InstrumentationOptions instrumentation) : IAmAMessageProducerAsync
+    InstrumentationOptions instrumentation) : IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
     /// <inheritdoc />
     public async ValueTask DisposeAsync() => await producer.DisposeAsync();
@@ -43,8 +44,16 @@ public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer,
     public IAmAMessageScheduler? Scheduler { get; set; }
     
     /// <inheritdoc />
+    public void Send(Message message) 
+        => BrighterAsyncContext.Run(async() => await SendAsync(message));
+
+    /// <inheritdoc />
     public Task SendAsync(Message message, CancellationToken cancellationToken = default) 
         => SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
+    
+    /// <inheritdoc />
+    public void SendWithDelay(Message message, TimeSpan? delay)
+        => BrighterAsyncContext.Run(async() => await SendWithDelayAsync(message, delay));
 
     /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
@@ -79,6 +88,7 @@ public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer,
         metadata[HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339();
         metadata[HeaderNames.Topic] = message.Header.Topic;
         metadata[HeaderNames.Source] = message.Header.Source.ToString();
+        metadata[HeaderNames.Baggage] = message.Header.Baggage.ToString();
         
         if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
         {
@@ -94,7 +104,7 @@ public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer,
         {
             metadata[HeaderNames.DataSchema] = message.Header.DataSchema.ToString();
         }
-
+        
         if (!TraceParent.IsNullOrEmpty(message.Header.TraceParent))
         {
             metadata[HeaderNames.TraceParent] = message.Header.TraceParent;
@@ -112,4 +122,7 @@ public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer,
 
         return metadata;
     }
+
+    /// <inheritdoc />
+    public void Dispose() => DisposeAsync().GetAwaiter().GetResult();
 }
