@@ -38,18 +38,25 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
 {
     private static readonly ConcurrentDictionary<Type, RoutingKey?> s_typeRoutingKeyCache = new();
     
-    /// <inheritdoc cref="IAmAPublicationFinder"/>
-    public virtual Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext context) where TRequest : class, IRequest
+    /// <summary>
+    /// Finds the <see cref="Publication"/> configuration for the specified request type.
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the request (command or event).</typeparam>
+    /// <param name="registry">The <see cref="IAmAProducerRegistry"/> containing registered producers and their publications.</param>
+    /// <param name="requestContext">The <see cref="RequestContext"/>.</param>
+    /// <returns>The <see cref="Publication"/> configuration for the request type, or <c>null</c> if no matching publication is found.</returns>
+    public virtual Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext requestContext) where TRequest : class, IRequest
     {
-        if (context.Topic != null)
+        if (requestContext.Topic != null)
         {
-            var producer = registry.Producers.FirstOrDefault(x => context.Topic == x.Publication.Topic!);
+            var producer = registry.Producers.FirstOrDefault(x => requestContext.Topic == x.Publication.Topic!);
             if (producer != null)
             {
                 return producer.Publication;
             }
         }
         
+        //Do we have a topic attribute for the routing key? If so cache and use it!
         var routingKey = s_typeRoutingKeyCache.GetOrAdd(typeof(TRequest), GetRoutingKey);
         if (routingKey != null)
         {
@@ -60,6 +67,7 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
             }
         }
         
+        //If not attribute based, then find the publication by matching this requesttype and the publication request type
         var publications = registry.Producers.Select( x=> x.Publication)
             .Where(x=> x.RequestType == typeof(TRequest))
             .ToArray();

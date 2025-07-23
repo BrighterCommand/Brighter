@@ -59,7 +59,7 @@ public class TimedStatusSender(IAmACommandProcessor processor, ILogger<TimedStat
         return Task.CompletedTask;
     }
         
-    private async void DoWork(object state)
+    private async void DoWork(object? state)
     {
         _iteration++;
 

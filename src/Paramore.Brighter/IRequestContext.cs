@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         Activity? Span { get; set; }
         
         /// <summary>
-        /// The destiny topic
+        /// The destination topic
         /// </summary>
         RoutingKey? Topic { get; set; }
         

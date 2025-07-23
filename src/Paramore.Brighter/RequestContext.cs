@@ -48,7 +48,9 @@ namespace Paramore.Brighter
             Bag = bag;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// The destination topic can be used to override the topic that the request is posted to.
+        /// </summary>
         public RoutingKey? Topic { get; set; }
 
         /// <summary>
