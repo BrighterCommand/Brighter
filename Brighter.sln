@@ -217,9 +217,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationApp", "samples\WebAPI\WebAPI_EFCore\SalutationApp\SalutationApp.csproj", "{F93DC497-CA32-45E6-8748-C674CF00C953}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TaskQueue", "TaskQueue", "{9A06FC18-50E3-40AE-8631-8A262AF6FB21}"
-	ProjectSection(SolutionItems) = preProject
-		samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\Driving Ports\TaskUpdated.cs = samples\TaskQueue\KafkaDynamicEventStream\TaskStatus\Driving Ports\TaskUpdated.cs
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CommandProcessor", "CommandProcessor", "{6494AB84-C125-4DDA-A2A0-06A6FD404A06}"
 EndProject
@@ -430,8 +427,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Transforms.Adaptors.Tests", "tests\Paramore.Brighter.Transforms.Adaptors.Tests\Paramore.Brighter.Transforms.Adaptors.Tests.csproj", "{D5B65576-F375-46E9-8A00-CC3C32E8DBDE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MBrigtherSide", "samples\Transforms\MassTransit\MBrigtherSide\MBrigtherSide.csproj", "{0E6A0B80-58B7-4AA2-9E40-EE0AA5D4719E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskStatusSender", "samples\TaskQueue\KafkaDynamicEventStream\TaskStatusSender\TaskStatusSender.csproj", "{A8E13CC8-BD07-4FFF-BFDC-BA031C91EED2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KafkaDynamicEventStreams", "KafkaDynamicEventStreams", "{9347BD22-1E8A-4A79-9D86-D76D076E566F}"
 EndProject
