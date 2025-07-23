@@ -2,6 +2,10 @@
 
 namespace Paramore.Brighter.MessagingGateway.Pulsar;
 
+/// <summary>
+/// Factory for creating Pulsar message consumers (synchronous and asynchronous) for Brighter's message processing pipeline.
+/// </summary>
+/// <param name="connection">The connection gateway to Apache Pulsar used for creating consumers.</param>
 public class PulsarMessageConsumerFactory(PulsarMessagingGatewayConnection connection) : IAmAMessageConsumerFactory
 {
     /// <inheritdoc />

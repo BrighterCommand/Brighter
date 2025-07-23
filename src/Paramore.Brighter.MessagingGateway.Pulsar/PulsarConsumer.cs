@@ -12,6 +12,17 @@ using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Pulsar;
 
+/// <summary>
+/// Implements both synchronous and asynchronous message consumers for Apache Pulsar within the Brighter message processing framework.
+/// Handles message acknowledgment, rejection, requeuing, and queue purging operations.
+/// </summary>
+/// <param name="consumer">The underlying Apache Pulsar consumer instance</param>
+/// <remarks>
+/// This class bridges Pulsar's messaging semantics with Brighter's message processing model:
+/// - Converts Pulsar messages to Brighter's <see cref="Message"/> format
+/// - Manages message lifecycle operations (Ack/Nack/Requeue)
+/// - Implements proper resource disposal patterns
+/// </remarks>
 public partial class PulsarConsumer(IConsumer<ReadOnlySequence<byte>> consumer) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PulsarConsumer>();

@@ -10,7 +10,22 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Pulsar;
 
-public class PulsarProducer(IProducer<ReadOnlySequence<byte>> producer, 
+/// <summary>
+/// Implements a message producer for Apache Pulsar within the Brighter message processing framework.
+/// Handles message publication with optional delay and metadata management.
+/// </summary>
+/// <param name="producer">The underlying Pulsar producer instance</param>
+/// <param name="publication">Configuration for Pulsar message publication</param>
+/// <param name="time">Time provider for delayed message scheduling</param>
+/// <param name="instrumentation">Options controlling instrumentation behavior</param>
+/// <remarks>
+/// This producer bridges Brighter's message publication model with Pulsar's producer API:
+/// - Converts Brighter <see cref="Message"/> to Pulsar's message format
+/// - Supports delayed message delivery
+/// - Manages cloud events metadata and standard headers
+/// - Implements proper resource disposal patterns
+/// </remarks>
+public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer, 
     PulsarPublication publication,
     TimeProvider time,
     InstrumentationOptions instrumentation) : IAmAMessageProducerAsync
