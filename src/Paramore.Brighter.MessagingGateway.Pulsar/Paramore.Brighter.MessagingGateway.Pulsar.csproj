@@ -1,16 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using Apache Pulsar</Description>
+    <PackageTags>Apache Pulsar;Pub/Sub;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <Authors>Rafael Andrade</Authors>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="DotPulsar" />
-    </ItemGroup>
-
+  <ItemGroup>
+    <PackageReference Include="DotPulsar" />
+  </ItemGroup>
 </Project>
