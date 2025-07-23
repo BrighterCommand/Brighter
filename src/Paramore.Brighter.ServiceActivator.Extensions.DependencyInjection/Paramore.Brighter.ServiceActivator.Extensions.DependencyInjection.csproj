@@ -4,6 +4,7 @@
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <Description>Service Activator Microsoft.Extensions.DependencyInjection support</Description>
     <Authors>Toby Henderson</Authors>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

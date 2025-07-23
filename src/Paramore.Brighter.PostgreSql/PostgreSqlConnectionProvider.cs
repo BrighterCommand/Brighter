@@ -11,7 +11,7 @@ namespace Paramore.Brighter.PostgreSql
     /// </summary>
     public class PostgreSqlConnectionProvider : RelationalDbConnectionProvider
     {
-        private NpgsqlDataSource _dataSource;
+        private NpgsqlDataSource? _dataSource;
         private readonly string _connectionString;
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.PostgreSql
         /// globally</param>
         public PostgreSqlConnectionProvider(
             IAmARelationalDatabaseConfiguration configuration,
-            NpgsqlDataSource dataSource = null)
+            NpgsqlDataSource? dataSource = null)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.PostgreSql
         /// </summary>
         public override void Close()
         {
-            if (HasDataSource()) _dataSource.Dispose();
+            if (HasDataSource()) _dataSource?.Dispose();
             _dataSource = null;
             base.Close();
         }
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.PostgreSql
         {
             if (HasDataSource())
             {
-                return _dataSource.OpenConnection();
+                return _dataSource!.OpenConnection();
             }
             
             var connection = new NpgsqlConnection(_connectionString);
@@ -67,14 +67,14 @@ namespace Paramore.Brighter.PostgreSql
         /// <returns>A database connection</returns>
          public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            var connection = HasDataSource() ? _dataSource.CreateConnection() : new NpgsqlConnection(_connectionString);
+            var connection = HasDataSource() ? _dataSource!.CreateConnection() : new NpgsqlConnection(_connectionString);
             if (connection.State != System.Data.ConnectionState.Open) await connection.OpenAsync(cancellationToken);
             return connection;
         }
         
         protected override void Dispose(bool disposing)
         {
-            if (HasDataSource()) _dataSource.Dispose();
+            if (HasDataSource()) _dataSource!.Dispose();
             _dataSource = null; 
             base.Dispose(disposing);
         }

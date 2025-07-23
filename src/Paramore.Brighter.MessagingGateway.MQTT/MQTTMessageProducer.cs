@@ -9,23 +9,25 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
     /// <summary>
-    /// Class ClientRequestHandler .
+    /// C
     /// The <see cref="MqttMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles subscription establishment, request sending and error handling
     /// </summary>
-    public partial class MqttMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, IAmAMessageProducerSync
+    public partial class MqttMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageProducer>();
 
-        private MqttMessagePublisher _mqttMessagePublisher;
+        private readonly MqttMessagePublisher _mqttMessagePublisher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttMessageProducer" /> class.
         /// </summary>
         /// <param name="mqttMessagePublisher">The publisher used to send messages</param>
-        public MqttMessageProducer(MqttMessagePublisher mqttMessagePublisher)
+        /// <param name="publication">The <see cref="Publication"/> for this producer</param>
+        public MqttMessageProducer(MqttMessagePublisher mqttMessagePublisher, Publication publication)
         {
             _mqttMessagePublisher = mqttMessagePublisher;
+            Publication = publication;
         }
 
         /// <summary>
@@ -58,10 +60,10 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public Publication Publication { get; set; }
 
         /// <inheritdoc />
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         /// <inheritdoc />
-        public IAmAMessageScheduler Scheduler { get; set; }
+        public IAmAMessageScheduler? Scheduler { get; set; }
 
         /// <summary>
         /// Disposes of the producer

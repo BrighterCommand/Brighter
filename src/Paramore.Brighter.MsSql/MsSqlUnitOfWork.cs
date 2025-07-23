@@ -21,7 +21,7 @@ namespace Paramore.Brighter.MsSql
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
-            _connectionString = configuration.ConnectionString;
+            _connectionString = configuration!.ConnectionString!;
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MsSql
             if (Connection == null) Connection = GetConnection();
             if (!HasOpenTransaction)
                 Transaction = ((SqlConnection) Connection).BeginTransaction();
-            return Transaction;
+            return Transaction!;
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.MsSql
             if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
             if (!HasOpenTransaction)
                 Transaction = ((SqlConnection) Connection).BeginTransaction();
-            return Transaction;
+            return Transaction!;
         }
     }
 }

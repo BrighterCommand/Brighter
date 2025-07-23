@@ -9,7 +9,7 @@ namespace Paramore.Brighter.DynamoDb
 {
     public class DynamoDbTableQuery
     {
-        public async Task<Dictionary<string, bool>> HasTables(
+        public async Task<Dictionary<string, bool>?> HasTables(
             IAmazonDynamoDB client,
             IEnumerable<string> tableNames,
             int pageSize = 10,
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.DynamoDb
         {
             var results = tableNames.ToDictionary(tableName => tableName, tableName => false);
 
-            string startTableName = null;
+            string? startTableName = null;
             do
             {
                 var response = await client.ListTablesAsync(
