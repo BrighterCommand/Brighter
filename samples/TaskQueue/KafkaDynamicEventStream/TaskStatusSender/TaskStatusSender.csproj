@@ -20,7 +20,6 @@
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-      <ProjectReference Include="..\..\..\..\TaskStatus\TaskStatus.csproj" />
       <ProjectReference Include="..\TaskStatus\TaskStatus.csproj" />
     </ItemGroup>
 
