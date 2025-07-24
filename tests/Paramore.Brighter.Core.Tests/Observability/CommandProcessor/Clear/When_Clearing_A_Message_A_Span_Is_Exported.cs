@@ -214,7 +214,7 @@ public class CommandProcessorClearObservabilityTests
                 Source = publicationSource,
                 RequestType = typeof(MyEvent),
                 Topic = _routingKey,
-                Type = publicationType,
+                Type = new CloudEventsType("io.goparamore.brighter.myevent"),
             }
         };
         

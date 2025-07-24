@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) =>
                     message switch
                         {
-                            { Header.Type: "io.brighter.paramore.myevent" } => typeof(MyEvent),
-                            { Header.Type: "io.brighter.paramore.myotherevent" } => typeof(MyOtherEvent),
+                            var m when m.Header.Type == new CloudEventsType("io.brighter.paramore.myevent") => typeof(MyEvent),
+                            var m when m.Header.Type == new CloudEventsType("io.brighter.paramore.myotherevent") => typeof(MyOtherEvent),
                             _ => throw new ArgumentException($"No type mapping found for message with type {message.Header.Type}", nameof(message)),
                        }, 
                     messagerMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel) 
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             var @event = new MyEvent(); //although we send a MyEvent, we will map it dynamically to a MyOtherEvent   
 
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, type: "io.brighter.paramore.myotherevent" ), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("io.brighter.paramore.myotherevent") ), 
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             var @event = new MyEvent(); //we send a MyEvent, we will map it dynamically to a MyEvent   
 
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, type: "io.brighter.paramore.myevent" ), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("io.brighter.paramore.myevent") ), 
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             

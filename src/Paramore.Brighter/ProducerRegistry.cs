@@ -4,25 +4,72 @@ using System.Linq;
 
 namespace Paramore.Brighter
 {
-    public class ProducerRegistry(Dictionary<RoutingKey, IAmAMessageProducer>? messageProducers) 
-        : IAmAProducerRegistry
+    public class ProducerRegistry : IAmAProducerRegistry
     {
-        private readonly bool _hasProducers = messageProducers != null && messageProducers.Any();
+        private readonly bool _hasProducers;
+        private readonly Dictionary<ProducerKey, IAmAMessageProducer> _messageProducers = new();
+
+        /// <summary>
+        /// Constructs a <see cref="ProducerRegistry"/> from a dictionary of <see cref="RoutingKey"/> and <see cref="IAmAMessageProducer"/> pairs.
+        /// For each producer, it checks that the producer has a valid <see cref="Publication"/> and that the <see cref="Publication.Topic"/> is set.
+        /// It creates a <see cref="ProducerKey"/> using the topic and an empty <see cref="CloudEventsType"/>, and adds the producer to the registry.
+        /// </summary>
+        /// <param name="messageProducers">The list of <see cref="IAmAMessageProducer"/> and their <see cref="RoutingKey"/>s</param>
+        /// <exception cref="ConfigurationException">The producer is missing information</exception>
+        public ProducerRegistry(Dictionary<RoutingKey, IAmAMessageProducer>? messageProducers)
+        {
+            foreach (var producer in messageProducers?.Values ?? Enumerable.Empty<IAmAMessageProducer>())
+            {
+                if (producer.Publication is null)
+                    throw new ConfigurationException($"Producer {producer.GetType().Name} does not have a Publication set");
+                
+                if (producer.Publication.Topic is null)
+                    throw new ConfigurationException($"Producer {producer.GetType().Name} does not have a Topic set in its Publication");
+                
+                _messageProducers.Add(new ProducerKey(producer.Publication.Topic, CloudEventsType.Empty), producer);
+            }
+            _hasProducers = _messageProducers.Any();
+        }
         
+        /// <summary>
+        /// Constructs a <see cref="ProducerRegistry"/> from a dictionary of <see cref="ProducerKey"/> and <see cref="IAmAMessageProducer"/> pairs.
+        /// For each producer, it checks that the producer has a valid <see cref="Publication"/> and that the <see cref="Publication.Topic"/> is set.
+        /// It adds the producer to the registry using the provided <see cref="ProducerKey"/>.
+        /// </summary>
+        /// <param name="messageProducers">The list of <see cref="IAmAMessageProducer"/> and their <see cref="ProducerKey"/>s</param>
+        /// <exception cref="ConfigurationException"></exception>
+        public ProducerRegistry(Dictionary<ProducerKey, IAmAMessageProducer> messageProducers)
+        {
+            if (messageProducers is null || !messageProducers.Any())
+                throw new ConfigurationException("No producers found in the registry");
+
+            foreach (var producer in messageProducers.Values)
+            {
+                if (producer.Publication is null)
+                    throw new ConfigurationException($"Producer {producer.GetType().Name} does not have a Publication set");
+                
+                if (producer.Publication.Topic is null)
+                    throw new ConfigurationException($"Producer {producer.GetType().Name} does not have a Topic set in its Publication");
+                
+                _messageProducers.Add(new ProducerKey(producer.Publication.Topic, CloudEventsType.Empty), producer);
+            }
+            _hasProducers = _messageProducers.Any();
+        }
+
         /// <summary>
         /// An iterable list of all the producers in the registry
         /// </summary>
-        public IEnumerable<IAmAMessageProducer> Producers { get { return messageProducers is not null ? messageProducers.Values : Array.Empty<IAmAMessageProducer>(); } }
-        
-        /// <summary>
-        /// An iterable list of all the sync producers in the registry
-        /// </summary>
-        public IEnumerable<IAmAMessageProducerSync> ProducersSync => messageProducers is not null ? messageProducers.Values.Cast<IAmAMessageProducerSync>() : Array.Empty<IAmAMessageProducerSync>(); 
+        public IEnumerable<IAmAMessageProducer> Producers => _messageProducers.Values; 
 
         /// <summary>
         /// An iterable list of all the sync producers in the registry
         /// </summary>
-        public IEnumerable<IAmAMessageProducerAsync> ProducersAsync => messageProducers is not null ? messageProducers.Values.Cast<IAmAMessageProducerAsync>() : Array.Empty<IAmAMessageProducerAsync>(); 
+        public IEnumerable<IAmAMessageProducerSync> ProducersSync => _messageProducers.Values.Cast<IAmAMessageProducerSync>();
+
+        /// <summary>
+        /// An iterable list of all the sync producers in the registry
+        /// </summary>
+        public IEnumerable<IAmAMessageProducerAsync> ProducersAsync => _messageProducers.Values.Cast<IAmAMessageProducerAsync>();
 
 
         /// <summary>
@@ -44,16 +91,13 @@ namespace Paramore.Brighter
          /// </summary>
          public void CloseAll()
          {
-             if (messageProducers is not null)
+             foreach (var producer in _messageProducers)
              {
-                 foreach (var producer in messageProducers)
-                 {
-                     if (producer.Value is IDisposable disposable)
-                         disposable.Dispose();
-                 }
-
-                 messageProducers.Clear();
+                 if (producer.Value is IDisposable disposable)
+                     disposable.Dispose();
              }
+
+             _messageProducers.Clear();
          }
 
 
@@ -61,21 +105,37 @@ namespace Paramore.Brighter
         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
         /// </summary>
         /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
+        /// <param name="requestType">The <see cref="CloudEventsType"/> of the expected message, may be null</param>
         /// <returns>A producer</returns>
-        public IAmAMessageProducer LookupBy(RoutingKey topic)
+        public IAmAMessageProducer LookupBy(RoutingKey topic, CloudEventsType? requestType = null)
         {
             if (!_hasProducers)
                 throw new ConfigurationException("No producers found in the registry");
             
-            return messageProducers![topic];
+            if (topic is null)
+                throw new ArgumentNullException(nameof(topic), "Topic cannot be null");
+
+            if (requestType is not null && requestType != CloudEventsType.Empty)
+            {
+                var key = new ProducerKey(topic, requestType);
+                if (_messageProducers.TryGetValue(key, out var producer))
+                    return producer;
+            }
+
+            if (_messageProducers.TryGetValue(new ProducerKey(topic, CloudEventsType.Empty), out var messageProducer))
+                return messageProducer;
+
+            // If we reach here, we have no producers for the topic
+            throw new ConfigurationException("No matching producers found in the registry");
         }
 
         /// <summary>
         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
         /// </summary>
         /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
+        /// <param name="requestType">The <see cref="CloudEventsType"/> of the expected message, may be null</param>
         /// <returns>A producer</returns>
-        public IAmAMessageProducerAsync LookupAsyncBy(RoutingKey topic)
+        public IAmAMessageProducerAsync LookupAsyncBy(RoutingKey topic, CloudEventsType? requestType = null)
         {
             return (IAmAMessageProducerAsync)LookupBy(topic);
         }
@@ -85,7 +145,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
         /// <returns>A producer</returns>
-        public IAmAMessageProducerSync LookupSyncBy(RoutingKey topic)
+        public IAmAMessageProducerSync LookupSyncBy(RoutingKey topic, CloudEventsType? requestType = null)
         {
             return (IAmAMessageProducerSync)LookupBy(topic);
         }
@@ -98,7 +158,7 @@ namespace Paramore.Brighter
         /// <exception cref="ConfigurationException">Thrown if we have too many publications or none at all</exception>
         public Publication? LookupPublication<TRequest>() where TRequest : class, IRequest
         {
-            var publications = messageProducers?.Values
+            var publications = _messageProducers?.Values
                 .Where(producer => producer.Publication.RequestType == typeof(TRequest))
                 .Select(producer => producer.Publication)
                 .ToArray() ?? [];

@@ -526,13 +526,13 @@ namespace Paramore.Brighter.Outbox.MsSql
             return string.IsNullOrEmpty(source) ? TraceState.Empty : new TraceState(source);
         }
         
-        private static string? GetType(DbDataReader dr)
+        private static CloudEventsType GetType(DbDataReader dr)
         {
             var (ordinal, err) = TryGetOrdinal(dr, "Type");
-            if (dr.IsDBNull(ordinal)) return null;
+            if (dr.IsDBNull(ordinal)) return CloudEventsType.Empty;
             
             var source = dr.GetString(ordinal);
-            return string.IsNullOrEmpty(source) ? null : source;
+            return string.IsNullOrEmpty(source) ? CloudEventsType.Empty : new CloudEventsType(source);
         } 
         
         private static (int, bool) TryGetOrdinal(DbDataReader dr, string columnName)

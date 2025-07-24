@@ -68,7 +68,7 @@ var host = Host.CreateDefaultBuilder(args)
                             {
                                 //the same topic for both TaskCreated and TaskUpdated, but different cloud events types
                                 Topic = new RoutingKey("task.update"),
-                                Type = "io.goparamore.task.created",
+                                Type = new CloudEventsType("io.goparamore.task.created"),
                                 NumPartitions = 3,
                                 MessageSendMaxRetries = 3,
                                 MessageTimeoutMs = 1000,
@@ -77,7 +77,7 @@ var host = Host.CreateDefaultBuilder(args)
                             new KafkaPublication<TaskUpdated>()
                             {
                                 Topic = new RoutingKey("task.update"),
-                                Type = "io.goparamore.task.updated",
+                                Type = new CloudEventsType("io.goparamore.task.updated"),
                                 NumPartitions = 3,
                                 MessageSendMaxRetries = 3,
                                 MessageTimeoutMs = 1000,

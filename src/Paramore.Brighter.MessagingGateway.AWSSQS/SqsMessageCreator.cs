@@ -203,14 +203,14 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<DateTimeOffset?>(null, false);
     }
     
-    private static HeaderResult<string?> ReadCloudEventType(Dictionary<string, string> cloudEventHeaders)
+    private static HeaderResult<CloudEventsType?> ReadCloudEventType(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.Type, out var value))
         {
-            return new HeaderResult<string?>(value, true);
+            return new HeaderResult<CloudEventsType?>(new CloudEventsType(value), true);
         }
 
-        return new HeaderResult<string?>(null, false);
+        return new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, false);
     }
 
 

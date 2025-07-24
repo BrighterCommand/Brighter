@@ -67,7 +67,7 @@ public class AsyncCommandProcessorClearObservabilityTests
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = _topic,
-                Type = nameof(MyEvent),
+                Type = new CloudEventsType("io.goparamore.brighter.myevent"),
             }
         };
 

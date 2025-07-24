@@ -67,7 +67,7 @@ public class MessageDispatchPropogateContextTests
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = _routingKey,
-                Type = nameof(MyEvent),
+                Type = new CloudEventsType("io.goparamore.brighter.myevent"),
             }
         };
 

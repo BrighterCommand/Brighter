@@ -668,16 +668,16 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 : new TraceState(dr.GetString(ordinal));
         }
         
-        private static string GetType(IDataReader dr)
+        private static CloudEventsType GetType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Type");
-            if (dr.IsDBNull(ordinal)) return string.Empty;
+            if (dr.IsDBNull(ordinal)) return CloudEventsType.Empty;
 
 
             var type = dr.GetString(ordinal);
             if (string.IsNullOrEmpty(type))
-                return string.Empty;
-            return type;
+                return CloudEventsType.Empty;
+            return new CloudEventsType(type);
         }
 
 

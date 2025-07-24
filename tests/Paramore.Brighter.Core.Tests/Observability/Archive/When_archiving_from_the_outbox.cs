@@ -48,7 +48,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             Source = new Uri("http://localhost"),
             RequestType = typeof(MyEvent),
             Topic = _routingKey,
-            Type = nameof(MyEvent),
+            Type = new CloudEventsType("io.goparamore.brighter.myevent"),
         };
 
         var producer = new InMemoryMessageProducer(internalBus, _timeProvider, InstrumentationOptions.All)

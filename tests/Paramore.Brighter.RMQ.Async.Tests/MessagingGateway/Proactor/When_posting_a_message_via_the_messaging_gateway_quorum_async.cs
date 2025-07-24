@@ -66,7 +66,7 @@ public class RmqMessageProducerSendMessageQuorumTestsAsync : IDisposable, IAsync
                 topic: topic,
                 messageType: messageType,
                 source: source,
-                type: type,
+                type: new CloudEventsType(type),
                 timeStamp: timestamp,
                 correlationId: correlationId,
                 replyTo: replyTo,

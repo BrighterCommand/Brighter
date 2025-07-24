@@ -55,8 +55,8 @@ var host = Host.CreateDefaultBuilder(args)
                 routingKey:new RoutingKey("task.update"),
                 getRequestType: message => message switch
                 {
-                    { Header.Type:"io.goparamore.task.created" } => typeof(TaskCreated),
-                    { Header.Type: "io.goparamore.task.updated" } => typeof(TaskUpdated),
+                    var m when m.Header.Type == new CloudEventsType("io.goparamore.task.created") => typeof(TaskCreated),
+                     var m when m.Header.Type == new CloudEventsType("io.goparamore.task.updated") => typeof(TaskUpdated),
                     _ => throw new ArgumentException($"No type mapping found for message with type {message.Header.Type}", nameof(message)),
                 },
                 groupId: "kafka-TaskReceiverConsole-Sample",

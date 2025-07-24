@@ -68,7 +68,7 @@ public class CommandProcessorMultipleClearObservabilityTests
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = routingKey,
-                Type = nameof(MyEvent),
+                Type = new CloudEventsType("io.goparamore.brighter.myevent"),
             }
         };
 

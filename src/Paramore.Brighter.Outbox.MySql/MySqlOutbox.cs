@@ -509,10 +509,10 @@ namespace Paramore.Brighter.Outbox.MySql
             return dr.IsDBNull(ord) ? null : new Uri(dr.GetString(ord));
         }
 
-        private static string? GetEventType(IDataReader dr)
+        private static CloudEventsType GetEventType(IDataReader dr)
         {
             var ord = dr.GetOrdinal("Type");
-            return dr.IsDBNull(ord) ? null : dr.GetString(ord);
+            return dr.IsDBNull(ord) ? CloudEventsType.Empty : new CloudEventsType(dr.GetString(ord));
         }
 
         private static Uri? GetDataSchema(IDataReader dr)

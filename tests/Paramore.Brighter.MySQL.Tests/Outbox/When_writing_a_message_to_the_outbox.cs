@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
                 topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
                 source: _source,
-                type: _type,
+                type: new CloudEventsType(_type),
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 correlationId: Id.Random,
                 replyTo: new RoutingKey("ReplyTo"),

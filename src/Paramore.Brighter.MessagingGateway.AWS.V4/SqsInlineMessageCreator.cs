@@ -202,14 +202,14 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new HeaderResult<string?>(MessageHeader.DefaultSpecVersion, true);
     }
 
-    private HeaderResult<string?> ReadType()
+    private HeaderResult<CloudEventsType?> ReadType()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.Type, out var specVersion))
         {
-            return new HeaderResult<string?>(specVersion.GetValueInString(), true);
+            return new HeaderResult<CloudEventsType?>(new CloudEventsType(specVersion.GetValueInString() ?? string.Empty), true);
         }
 
-        return new HeaderResult<string?>(MessageHeader.DefaultType, true);
+        return new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, true);
     }
     
     private HeaderResult<Uri> ReadSource()

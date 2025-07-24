@@ -556,16 +556,16 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return string.IsNullOrEmpty(dataSchema) ? null : new Uri(dataSchema);
         }
         
-        private static RoutingKey GetEventType(DbDataReader dr)
+        private static CloudEventsType GetEventType(DbDataReader dr)
         {
             var (ordinal, err) = TryGetOrdinal(dr, "Type");
-            if (err || dr.IsDBNull(ordinal)) return RoutingKey.Empty;
+            if (err || dr.IsDBNull(ordinal)) return CloudEventsType.Empty;
             
             var type = dr.GetString(ordinal);
             if (string.IsNullOrEmpty(type))
-                return RoutingKey.Empty;
+                return CloudEventsType.Empty;
             
-            return new RoutingKey(type);
+            return new CloudEventsType(type);
         }
 
         private static RoutingKey GetTopic(DbDataReader dr)

@@ -13,8 +13,7 @@ public class CloudEventsTransformerTests
 {
     private readonly CloudEventsTransformer _transformer = new();
     private readonly Uri _source = new("http://goparamore.io/CloudEventsTransformerTests");
-    private readonly string _type = typeof(MyCommand).FullName ?? "MyCommand";
-    private readonly ContentType _dataContentType = new(MediaTypeNames.Application.Json);
+    private readonly CloudEventsType _type = new(typeof(MyCommand).FullName ?? "MyCommand");
     private readonly Uri _dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerTests/schema");
     private readonly string _subject = "CloudEventsTransformerTests";
     private Message _message;
@@ -23,7 +22,7 @@ public class CloudEventsTransformerTests
     {
         _message = new(
             new MessageHeader(Id.Random, new RoutingKey("Test Topic"), MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Text.Plain), 
-                source: _source, subject: _subject, type: _type, dataSchema: _dataSchema), new MessageBody("test content")
+                source: _source, subject: _subject, type: _type, dataSchema: _dataSchema), new MessageBody("test content", contentType: new ContentType(MediaTypeNames.Text.Plain))
             );
     }
 
