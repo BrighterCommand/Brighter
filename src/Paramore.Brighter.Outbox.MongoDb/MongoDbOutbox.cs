@@ -461,7 +461,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         TimeSpan dispatchedSince,
         RequestContext? requestContext,
         int pageSize = 100,
-        int pageNumber = 1, Dictionary<string, object>? args = null,
+        int pageNumber = 1,
+        IEnumerable<RoutingKey>? trippedTopics = null,
+        Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
@@ -831,7 +833,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc />
     public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext,
         int pageSize = 100,
-        int pageNumber = 1, Dictionary<string, object>? args = null)
+        int pageNumber = 1,
+        IEnumerable<RoutingKey>? trippedTopics = null,
+        Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -107,6 +107,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">Number of items on the page, default is 100</param>
         /// <param name="pageNumber">Page number of results to return, default is first</param>
+        /// <param name="trippedTopics">Collection of tripped topics</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         IEnumerable<Message> OutstandingMessages(
@@ -114,6 +115,7 @@ namespace Paramore.Brighter
             RequestContext? requestContext,
             int pageSize = 100, 
             int pageNumber = 1,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null);
     }
 }

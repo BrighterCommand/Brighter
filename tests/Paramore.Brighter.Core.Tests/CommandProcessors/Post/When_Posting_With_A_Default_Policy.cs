@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
@@ -55,6 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
                 tracer: tracer,
                 publicationFinder: new FindPublicationByPublicationTopicOrRequestType(),
+                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
                 outbox: _outbox
             );  
             
