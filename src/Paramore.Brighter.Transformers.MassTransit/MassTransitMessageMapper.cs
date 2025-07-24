@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transformers.MassTransit;
 
@@ -50,6 +51,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     public IRequestContext? Context { get; set; }
 
     /// <inheritdoc />
+    [CloudEvents(0)]
     public Task<Message> MapToMessageAsync(TMessage request, Publication publication,
         CancellationToken cancellationToken = default)
     {
@@ -63,20 +65,10 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     }
 
     /// <inheritdoc />
+    [CloudEvents(0)]
     public virtual Message MapToMessage(TMessage request, Publication publication)
     {
         var timestamp = DateTimeOffset.UtcNow;
-        var bag = new Dictionary<string, object>();
-        if (Context is { Bag.Count: > 0 })
-        {
-            foreach (var pair in Context.Bag)
-            {
-                if (!pair.Key.StartsWith(MassTransitHeaderNames.HeaderPrefix))
-                {
-                    bag[pair.Key] = pair.Value;
-                }
-            }
-        }
 
         var envelop = new MassTransitMessageEnvelop<TMessage>
         {
@@ -85,7 +77,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
             DestinationAddress = GetDestinationAddress(),
             ExpirationTime = GetExpirationTime(),
             FaultAddress = GetFaultAddress(),
-            Headers = null,
+            Headers = Context?.Headers!,
             Host = s_hostInfo,
             InitiatorId = GetInitiatorId(),
             Message = request,
@@ -109,9 +101,13 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
                     _ => MessageType.MT_DOCUMENT
                 },
                 timeStamp: timestamp,
-                topic: publication.Topic!)
+                topic: publication.Topic!,
+                partitionKey: Context?.PartitionKey,
+                traceParent: Context?.TraceParent,
+                traceState: Context?.TraceState,
+                baggage: Context?.Baggage)
             {
-                Bag = bag
+                Bag = Context?.Headers ?? []
             },
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(envelop, JsonSerialisationOptions.Options),
                 MassTransitContentType)

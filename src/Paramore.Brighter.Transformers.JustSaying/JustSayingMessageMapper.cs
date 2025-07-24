@@ -80,7 +80,14 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 messageType: messageType,
                 subject: GetSubject(publication),
                 timeStamp: justSaying.TimeStamp,
-                topic: publication.Topic!),
+                topic: publication.Topic!,
+                partitionKey: Context?.PartitionKey,
+                traceParent: Context?.TraceParent,
+                traceState: Context?.TraceState,
+                baggage: Context?.Baggage)
+            {
+                Bag = Context?.Headers ?? []
+            },
             new MessageBody(
                 JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options),
                 s_justSaying));
@@ -110,7 +117,14 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 messageType: messageType,
                 subject: GetSubject(publication),
                 timeStamp: timestamp,
-                topic: publication.Topic!),
+                topic: publication.Topic!,
+                partitionKey: Context?.PartitionKey,
+                traceParent: Context?.TraceParent,
+                traceState: Context?.TraceState,
+                baggage: Context?.Baggage)
+            {
+                Bag = Context?.Headers ?? []
+            },
             new MessageBody(
                 doc.ToJsonString(JsonSerialisationOptions.Options),
                 s_justSaying));
