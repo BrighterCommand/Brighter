@@ -451,7 +451,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var pollyBuilder = handlerBuilder.Handlers(handlerConfiguration);
 
             options.ResiliencePipelineRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
-            var messagingBuilder = pollyBuilder.Polly(options.ResiliencePipelineRegistry, options.PolicyRegistry);
+            var messagingBuilder = pollyBuilder.Resilience(options.ResiliencePipelineRegistry, options.PolicyRegistry);
 
             
             var command = AddEventBus(provider, messagingBuilder, useRequestResponse)

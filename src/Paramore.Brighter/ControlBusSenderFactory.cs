@@ -69,7 +69,7 @@ namespace Paramore.Brighter
             return new ControlBusSender(
                 CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration())
-                .DefaultPolly()
+                .DefaultResilience()
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)   
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())

@@ -83,7 +83,7 @@ namespace Paramore.Brighter
     /// </list> 
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers,
-        INeedPolly,
+        INeedResilience,
         INeedMessaging,
         INeedInstrumentation,
         INeedARequestContext,
@@ -109,7 +109,7 @@ namespace Paramore.Brighter
 
         private CommandProcessorBuilder()
         {
-            DefaultPolly();
+            DefaultResilience();
         }
 
         /// <summary>
@@ -126,7 +126,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="handlerConfiguration">The handler configuration.</param>
         /// <returns>INeedPolicy.</returns>
-        public INeedPolly Handlers(HandlerConfiguration handlerConfiguration)
+        public INeedResilience Handlers(HandlerConfiguration handlerConfiguration)
         {
             _registry = handlerConfiguration.SubscriberRegistry;
             _handlerFactory = handlerConfiguration.HandlerFactory;
@@ -145,7 +145,7 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public INeedMessaging Polly(ResiliencePipelineRegistry<string> resiliencePipelineRegistry, IPolicyRegistry<string>? policyRegistry = null)
+        public INeedMessaging Resilience(ResiliencePipelineRegistry<string> resiliencePipelineRegistry, IPolicyRegistry<string>? policyRegistry = null)
         {
             if (!resiliencePipelineRegistry.TryGetPipeline(CommandProcessor.OutboxProducer, out _))
             {
@@ -169,7 +169,7 @@ namespace Paramore.Brighter
 
         
         /// <inheritdoc />
-        public INeedMessaging DefaultPolly()
+        public INeedMessaging DefaultResilience()
         {
             _policyRegistry = new DefaultPolicy();
             _resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
@@ -365,7 +365,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="theRegistry">The registry.</param>
         /// <returns>INeedPolicy.</returns>
-        INeedPolly Handlers(HandlerConfiguration theRegistry);
+        INeedResilience Handlers(HandlerConfiguration theRegistry);
 
         /// <summary>
         /// Configure Feature Switches for the Handlers
@@ -377,7 +377,7 @@ namespace Paramore.Brighter
     /// <summary>
     /// Defines an interface for configuring Polly resilience pipelines within Brighter.
     /// </summary>
-    public interface INeedPolly
+    public interface INeedResilience
     {
         /// <summary>
         /// Configures the Brighter messaging pipeline with a custom Polly <see cref="ResiliencePipelineRegistry{TKey}"/>.
@@ -385,14 +385,14 @@ namespace Paramore.Brighter
         /// <param name="resiliencePipelineRegistry">The Polly resilience pipeline registry to use for resilience policies.</param>
         /// <param name="policyRegistry">An optional legacy Polly <see cref="IPolicyRegistry{TKey}"/> for backward compatibility. If not provided, only the new <see cref="ResiliencePipelineRegistry{TKey}"/> will be used.</param>
         /// <returns>An <see cref="INeedMessaging"/> interface to continue configuring the messaging pipeline.</returns>
-        INeedMessaging Polly(ResiliencePipelineRegistry<string> resiliencePipelineRegistry, IPolicyRegistry<string>? policyRegistry = null);
+        INeedMessaging Resilience(ResiliencePipelineRegistry<string> resiliencePipelineRegistry, IPolicyRegistry<string>? policyRegistry = null);
 
         /// <summary>
         /// Configures the Brighter messaging pipeline with default Polly resilience policies.
         /// This method typically sets up a basic retry and circuit breaker policy.
         /// </summary>
         /// <returns>An <see cref="INeedMessaging"/> interface to continue configuring the messaging pipeline.</returns>
-        INeedMessaging DefaultPolly();
+        INeedMessaging DefaultResilience();
     }
     
     /// <summary>
