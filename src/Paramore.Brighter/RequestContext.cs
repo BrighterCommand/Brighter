@@ -77,7 +77,9 @@ namespace Paramore.Brighter
             => new RequestContext(Bag)
             {
                 Span = Span,
+#pragma warning disable CS0618 // Type or member is obsolete
                 Policies = Policies,
+#pragma warning restore CS0618 // Type or member is obsolete
                 ResiliencePipeline = ResiliencePipeline,
                 FeatureSwitches = FeatureSwitches,
                 OriginatingMessage = OriginatingMessage
@@ -97,6 +99,7 @@ namespace Paramore.Brighter
         /// Gets the policies.
         /// </summary>
         /// <value>The policies.</value>
+        [Obsolete("Migrate to ResiliencePipeline")]
         public IPolicyRegistry<string>? Policies { get; set; }
 
         /// <summary>

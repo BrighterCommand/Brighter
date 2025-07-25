@@ -1,7 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-
-namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+﻿namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
 /// <summary>
 /// Base class for transforms

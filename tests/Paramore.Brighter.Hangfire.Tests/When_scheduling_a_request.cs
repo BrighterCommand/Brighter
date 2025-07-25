@@ -64,7 +64,7 @@ public class HangfireSchedulerRequestTests : IDisposable
 
         var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -110,7 +110,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var id = scheduler.Schedule(req, RequestSchedulerType.Send,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
@@ -142,7 +142,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Send, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
@@ -175,7 +175,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var id = scheduler.Schedule(req, RequestSchedulerType.Publish,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
@@ -207,7 +207,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Publish, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
@@ -240,7 +240,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var id = scheduler.Schedule(req, RequestSchedulerType.Post,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
@@ -258,7 +258,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Post, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
@@ -282,7 +282,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         Assert.True(scheduler.ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5))));
 
@@ -320,7 +320,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
         Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         Assert.True(scheduler.ReScheduler(id, TimeSpan.FromSeconds(5)));
@@ -363,7 +363,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var id = scheduler.Schedule(req, type,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
@@ -400,7 +400,7 @@ public class HangfireSchedulerRequestTests : IDisposable
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
         Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         scheduler.Cancel(id);

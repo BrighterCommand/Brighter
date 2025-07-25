@@ -1,6 +1,5 @@
 ﻿using System.Collections.Specialized;
 using System.Transactions;
-using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
@@ -74,7 +73,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),

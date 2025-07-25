@@ -29,24 +29,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyResponseHandler());
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
             var replySubs = new List<Subscription>
             {
                 new Subscription<MyResponse>()
             };
 
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy},
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
 
             var timeProvider = new FakeTimeProvider();
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
@@ -57,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var tracer = new BrighterTracer(timeProvider);
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                policyRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -71,8 +60,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
-                new ResiliencePipelineRegistry<string>(),
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 replySubscriptions:replySubs,
                 responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System),

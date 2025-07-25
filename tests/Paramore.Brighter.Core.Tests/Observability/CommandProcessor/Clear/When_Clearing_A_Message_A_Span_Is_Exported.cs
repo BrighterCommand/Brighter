@@ -245,7 +245,7 @@ public class CommandProcessorClearObservabilityTests
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
-            policyRegistry, 
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
             messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
@@ -78,7 +77,7 @@ public class AsyncCommandProcessorClearObservabilityTests
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
-            policyRegistry, 
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
             messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),

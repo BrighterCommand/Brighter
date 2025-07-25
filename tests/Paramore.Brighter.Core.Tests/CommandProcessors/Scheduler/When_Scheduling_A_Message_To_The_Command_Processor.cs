@@ -34,7 +34,6 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
-using Polly;
 using Polly.Registry;
 using Xunit;
 
@@ -76,29 +75,8 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             Publication = { Topic = routingKey, RequestType = typeof(MyCommand) }
         };
 
-        var policyRegistry = new PolicyRegistry
-        {
-            {
-                CommandProcessor.RETRYPOLICY, Policy
-                    .Handle<Exception>()
-                    .Retry()
-            },
-            {
-                CommandProcessor.CIRCUITBREAKER, Policy
-                    .Handle<Exception>()
-                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(1))
-            },
-            {
-                CommandProcessor.RETRYPOLICYASYNC, Policy
-                    .Handle<Exception>()
-                    .RetryAsync()
-            },
-            {
-                CommandProcessor.CIRCUITBREAKERASYNC, Policy
-                    .Handle<Exception>()
-                    .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1))
-            }
-        };
+        var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+            .AddBrighterDefault();
 
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
@@ -108,7 +86,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
 
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -121,8 +99,8 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
         _commandProcessor = new CommandProcessor(registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry,
-            new ResiliencePipelineRegistry<string>(),
+            new DefaultPolicy(),
+            resiliencePipelineRegistry,
             bus,
             new InMemorySchedulerFactory { TimeProvider = _timeProvider });
         PipelineBuilder<MyCommand>.ClearPipelineCache();

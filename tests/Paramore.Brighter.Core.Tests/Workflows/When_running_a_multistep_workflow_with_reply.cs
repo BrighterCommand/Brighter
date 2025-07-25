@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;

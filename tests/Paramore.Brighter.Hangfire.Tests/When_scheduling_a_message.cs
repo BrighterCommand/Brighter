@@ -63,7 +63,7 @@ public class HangfireSchedulerMessageTests : IDisposable
 
         var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -113,9 +113,9 @@ public class HangfireSchedulerMessageTests : IDisposable
         var id = scheduler.Schedule(message,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
@@ -136,9 +136,9 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
@@ -159,14 +159,14 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.NotEqual(0, id.Length);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         Assert.True(scheduler
             .ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5))));
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         Thread.Sleep(TimeSpan.FromSeconds(6));
 
@@ -186,7 +186,7 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromHours(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
         Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         Assert.True(scheduler.ReScheduler(id, TimeSpan.FromSeconds(5)));
@@ -212,7 +212,7 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         scheduler.Cancel(id);
 
@@ -248,7 +248,7 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         scheduler.Cancel(id);
 

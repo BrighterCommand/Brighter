@@ -169,7 +169,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
-                policyRegistry: new DefaultPolicy(),
+                resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry: outgoingMessageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 

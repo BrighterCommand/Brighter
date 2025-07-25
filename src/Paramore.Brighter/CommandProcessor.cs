@@ -71,6 +71,8 @@ namespace Paramore.Brighter
         private readonly IAmAChannelFactory? _responseChannelFactory;
         private readonly InstrumentationOptions _instrumentationOptions;
 
+        public const string OutboxProducer = "Paramore.Brighter.CommandProcessor.Outbox.Producer";
+        
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
         /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
@@ -1516,7 +1518,9 @@ namespace Paramore.Brighter
         {
             var context = requestContext ?? _requestContextFactory.Create();
             context.Span = span;
+#pragma warning disable CS0618 // Type or member is obsolete
             context.Policies = _policyRegistry;
+#pragma warning restore CS0618 // Type or member is obsolete
             context.ResiliencePipeline = _resiliencePipelineRegistry;
             context.FeatureSwitches = _featureSwitchRegistry;
             return context;

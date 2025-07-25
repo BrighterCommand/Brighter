@@ -53,7 +53,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                new DefaultPolicy(),
+                new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                new DefaultPolicy(),
+                new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -210,7 +210,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                new DefaultPolicy(),
+                new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -297,7 +297,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                new DefaultPolicy(),
+                new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),

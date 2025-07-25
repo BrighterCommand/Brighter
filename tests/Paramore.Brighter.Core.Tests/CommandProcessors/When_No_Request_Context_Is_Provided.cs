@@ -15,6 +15,7 @@ public class RequestContextFromFactoryTests : IDisposable
 {
     private readonly SpyContextFactory _requestContextFactory;
     private readonly IPolicyRegistry<string> _policyRegistry;
+    private readonly ResiliencePipelineRegistry<string>  _resiliencePipelineRegistry;
 
     public RequestContextFromFactoryTests()
     {
@@ -24,9 +25,8 @@ public class RequestContextFromFactoryTests : IDisposable
         MyContextAwareEventHandlerAsync.TestString = null;
 
         _policyRegistry = new DefaultPolicy();
-        _requestContextFactory = new SpyContextFactory();
-        _requestContextFactory.Context = null;
-        _requestContextFactory.CreateWasCalled = false;
+        _resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+        _requestContextFactory = new SpyContextFactory { Context = null, CreateWasCalled = false };
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
        //assert
        Assert.True(_requestContextFactory.CreateWasCalled);
-       Assert.Equal(_requestContextFactory.Context.Bag["TestString"].ToString(), MyContextAwareCommandHandler.TestString);
+       Assert.Equal(_requestContextFactory.Context!.Bag["TestString"].ToString(), MyContextAwareCommandHandler.TestString);
        Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareCommandHandler"]);
     }
 
@@ -65,7 +65,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         //assert
         Assert.True(_requestContextFactory.CreateWasCalled);
-        Assert.Equal(_requestContextFactory.Context.Bag["TestString"].ToString(), MyContextAwareCommandHandlerAsync.TestString);
+        Assert.Equal(_requestContextFactory.Context!.Bag["TestString"].ToString(), MyContextAwareCommandHandlerAsync.TestString);
         Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareCommandHandler"]);
     }
 
@@ -134,7 +134,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            _policyRegistry,
+            _resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -183,7 +183,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            _policyRegistry,
+            _resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -233,7 +233,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            _policyRegistry,
+            _resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -287,7 +287,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            _policyRegistry,
+            _resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),

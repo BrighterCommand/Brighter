@@ -39,6 +39,7 @@ namespace Paramore.Brighter.Policies.Attributes
     /// dependency of the <see cref="CommandProcessor" /> using the <see cref="CommandProcessorBuilder" />
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
+    [Obsolete("Migrate to UseResiliencePipelineAsync")]
     public class UsePolicyAsyncAttribute : RequestHandlerAttribute
     {
         private readonly List<string> _policies = new List<string>();
