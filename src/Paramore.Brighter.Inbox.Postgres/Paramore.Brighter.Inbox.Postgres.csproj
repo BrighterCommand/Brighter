@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>This is an implementation of the inbox used for decoupled invocation of commands by Paramore.Brighter, using PostgreSql</Description>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
-    <PackageTags>MySql;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageTags>Postgres;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
