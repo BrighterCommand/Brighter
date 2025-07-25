@@ -73,7 +73,7 @@ var host = Host.CreateDefaultBuilder(args)
             }
         );
 
-        services.AddServiceActivator(options =>
+        services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(consumerFactory);

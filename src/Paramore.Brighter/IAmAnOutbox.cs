@@ -15,6 +15,6 @@ namespace Paramore.Brighter
         /// We inject this so that we can use the same tracer as the calling application
         /// You do not need to set this property as we will set it when setting up the External Service Bus
         /// </summary>
-        IAmABrighterTracer Tracer { set; }    
+        IAmABrighterTracer? Tracer { set; }
     }
 }

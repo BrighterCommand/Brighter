@@ -59,7 +59,7 @@ namespace Tests
 
             serviceCollection
                 .AddBrighter()
-                .UseExternalBus(config =>
+                .AddProducers(config =>
                 {
                     config.ProducerRegistry = producerRegistry;
                     config.MessageMapperRegistry = messageMapperRegistry;

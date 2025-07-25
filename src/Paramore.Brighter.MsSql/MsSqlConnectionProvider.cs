@@ -21,7 +21,7 @@ namespace Paramore.Brighter.MsSql
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
-            _connectionString = configuration.ConnectionString;
+            _connectionString = configuration!.ConnectionString!;
         }
 
         /// <summary>
