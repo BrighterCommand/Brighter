@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
@@ -64,6 +65,14 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
 
     private Message JustSayingToMessage(TMessage request, MessageType messageType, Publication publication)
     {
+        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
+        var headers = new Dictionary<string, object>(defaultHeaders);
+
+        foreach (var value in Context?.Headers ?? [])
+        {
+            headers[value.Key!] = value.Value!;
+        }
+        
         var justSaying = (IJustSayingRequest)request;
         justSaying.Id = GetId(justSaying.Id);
         justSaying.Conversation = GetCorrelationId(justSaying.Conversation);
@@ -86,7 +95,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 traceState: Context?.TraceState,
                 baggage: Context?.Baggage)
             {
-                Bag = Context?.Headers ?? []
+                Bag = headers 
             },
             new MessageBody(
                 JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options),
@@ -97,6 +106,14 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
 
     private Message GenericToMessage(TMessage request, MessageType messageType, Publication publication)
     {
+        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
+        var headers = new Dictionary<string, object>(defaultHeaders);
+
+        foreach (var value in Context?.Headers ?? [])
+        {
+            headers[value.Key!] = value.Value!;
+        }
+        
         var doc = JsonSerializer.SerializeToNode(request, JsonSerialisationOptions.Options)!;
         var messageId = GetId(doc.GetId(nameof(IJustSayingRequest.Id)));
         var correlationId = GetCorrelationId(doc.GetId(nameof(IJustSayingRequest.Conversation))); 
@@ -123,7 +140,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 traceState: Context?.TraceState,
                 baggage: Context?.Baggage)
             {
-                Bag = Context?.Headers ?? []
+                Bag = headers
             },
             new MessageBody(
                 doc.ToJsonString(JsonSerialisationOptions.Options),

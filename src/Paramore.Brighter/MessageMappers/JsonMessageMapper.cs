@@ -43,6 +43,14 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
 
         if(publication.Topic is null)
             throw new ArgumentException($"No Topic Defined for {publication}");
+        
+        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
+        var headers = new Dictionary<string, object>(defaultHeaders);
+
+        foreach (var value in Context?.Headers ?? [])
+        {
+            headers[value.Key!] = value.Value!;
+        }
 
         var header = new MessageHeader(
             messageId: request.Id,
@@ -59,7 +67,7 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
 #endif
         )
         {
-            Bag = Context?.Headers ?? new Dictionary<string, object>()
+            Bag = headers 
         };
 
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));

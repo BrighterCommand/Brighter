@@ -63,12 +63,13 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
         };
         
 #if NETSTANDARD2_0
-        var bodyContentType = new ContentType("application/json");   
+        var bodyContentType = new ContentType("application/json");
  #else           
         var bodyContentType = new ContentType(MediaTypeNames.Application.Json);
 #endif
 
-        var headers = new Dictionary<string, object>(publication.CloudEventsAdditionalProperties ?? []);
+        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
+        var headers = new Dictionary<string, object>(defaultHeaders);
 
         foreach (var value in Context?.Headers ?? [])
         {

@@ -69,6 +69,14 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     public virtual Message MapToMessage(TMessage request, Publication publication)
     {
         var timestamp = DateTimeOffset.UtcNow;
+        
+        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
+        var headers = new Dictionary<string, object?>(defaultHeaders!);
+
+        foreach (var value in Context?.Headers ?? [])
+        {
+            headers[value.Key!] = value.Value!;
+        }
 
         var envelop = new MassTransitMessageEnvelop<TMessage>
         {
@@ -77,7 +85,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
             DestinationAddress = GetDestinationAddress(),
             ExpirationTime = GetExpirationTime(),
             FaultAddress = GetFaultAddress(),
-            Headers = Context?.Headers!,
+            Headers = headers,
             Host = s_hostInfo,
             InitiatorId = GetInitiatorId(),
             Message = request,
