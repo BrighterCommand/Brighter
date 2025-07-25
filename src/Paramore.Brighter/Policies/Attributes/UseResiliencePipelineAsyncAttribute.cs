@@ -30,7 +30,7 @@ using Polly.Registry;
 namespace Paramore.Brighter.Policies.Attributes;
 
 /// <summary>
-/// This attribute supports the use of <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to provide quality of service around exceptions
+/// This attribute supports the use of <a href="https://github.com/App-vNext/Polly">Polly</a> to provide quality of service around exceptions
 /// thrown from subsequent steps in the handler pipeline. A Polly Resilience Policy can be used to support a Retry or Circuit Breaker approach to exception handling
 /// Policies used by the attribute are identified by a string based key, which is used as a lookup into an <see cref="ResiliencePipelineRegistry{TKey}"/> and it is 
 /// assumed that you have registered required policies with a Resilience Pipeline Registry such as <see cref="ResiliencePipelineRegistry{TKey}"/> and configured that as a 
