@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             var externalBus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
-                resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
+                resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry: messageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),     

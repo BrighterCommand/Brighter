@@ -379,7 +379,8 @@ namespace Paramore.Brighter
                         BackoffType = DelayBackoffType.Linear,
                         Delay = TimeSpan.FromMilliseconds(50)
                     })
-            });
+            })
+            .AddBrighterDefault();
             
             return this;
         }
