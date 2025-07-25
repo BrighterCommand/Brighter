@@ -144,6 +144,9 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
                 { CommandProcessor.RETRYPOLICY, retryPolicy }
             };
+
+            var resiliencePipeline = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
@@ -184,8 +187,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
-                .Policies(policyRegistry)
-                .DefaultResilencePipeline()
+                .Polly(resiliencePipeline, policyRegistry)
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())

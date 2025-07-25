@@ -448,15 +448,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (featureSwitchRegistry != null)
                 handlerBuilder = handlerBuilder.ConfigureFeatureSwitches(featureSwitchRegistry);
             
-            var policyBuilder = handlerBuilder.Handlers(handlerConfiguration);
+            var pollyBuilder = handlerBuilder.Handlers(handlerConfiguration);
 
-            var resiliencePipelineBuilder = options.PolicyRegistry == null
-                ? policyBuilder.DefaultPolicy()
-                : policyBuilder.Policies(options.PolicyRegistry);
+            options.ResiliencePipelineRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+            var messagingBuilder = pollyBuilder.Polly(options.ResiliencePipelineRegistry, options.PolicyRegistry);
 
-            var messagingBuilder = options.ResiliencePipelineRegistry == null
-                ? resiliencePipelineBuilder.DefaultResilencePipeline()
-                : resiliencePipelineBuilder.ResilencePipeline(options.ResiliencePipelineRegistry);
             
             var command = AddEventBus(provider, messagingBuilder, useRequestResponse)
                 .ConfigureInstrumentation(provider.GetService<IAmABrighterTracer>(), options.InstrumentationOptions)

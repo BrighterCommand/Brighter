@@ -48,8 +48,7 @@ public class DispatchBuilderWithNamedGateway : IDisposable
             
         var commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
-            .Policies(policyRegistry)
-            .DefaultResilencePipeline()
+            .DefaultPolly()
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
