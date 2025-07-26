@@ -190,7 +190,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var transforms =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
-                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
+                where ti is { IsClass: true, IsAbstract: false, IsInterface: false }
                 from i in ti.GetInterfaces()
                 where typeof(IAmAMessageTransformAsync).IsAssignableFrom(i) || typeof(IAmAMessageTransform).IsAssignableFrom(i)
                 select new { TransformType = ti };
@@ -208,7 +208,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             assemblies = assemblies.Concat([assembly]);
             var subscribers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
-                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
+                where ti is { IsClass: true, IsAbstract: false, IsInterface: false }
                 from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
@@ -226,7 +226,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var mappers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
-                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
+                where ti is { IsClass: true, IsAbstract: false, IsInterface: false }
                 from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
@@ -241,7 +241,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var mappers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
-                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
+                where ti is { IsClass: true, IsAbstract: false, IsInterface: false }
                 from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapperAsync<>)
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
