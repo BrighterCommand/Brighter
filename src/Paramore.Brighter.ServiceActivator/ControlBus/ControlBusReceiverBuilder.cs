@@ -141,8 +141,10 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             var policyRegistry = new PolicyRegistry
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
                 { CommandProcessor.RETRYPOLICY, retryPolicy }
+#pragma warning restore CS0618 // Type or member is obsolete
             };
 
             var resiliencePipeline = new ResiliencePipelineRegistry<string>()

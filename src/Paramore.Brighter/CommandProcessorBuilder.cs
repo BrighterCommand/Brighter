@@ -153,6 +153,7 @@ namespace Paramore.Brighter
             }
             
             policyRegistry ??= new DefaultPolicy();
+#pragma warning disable CS0618 // Type or member is obsolete
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
             {
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
@@ -162,6 +163,7 @@ namespace Paramore.Brighter
             {
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
             }
+#pragma warning restore CS0618 // Type or member is obsolete
             
             _policyRegistry = policyRegistry;
             return this;

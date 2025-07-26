@@ -39,9 +39,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         public ServiceLifetime MapperLifetime { get; set; } = ServiceLifetime.Singleton;
 
-        /// <summary>
-        /// Configures the polly policy registry.
-        /// </summary>
+        /// <inheritdoc />
         [Obsolete("Migrate to ResiliencePipeline")]
         public IPolicyRegistry<string>? PolicyRegistry { get; set; } = new DefaultPolicy();
 
@@ -95,13 +93,28 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ServiceLifetime MapperLifetime { get; set; }
 
         /// <summary>
-        ///  Configures the polly policy registry.
+        /// [Obsolete] Configure the legacy policy registry.
         /// </summary>
+        /// <value>
+        /// The policy registry containing resilience policies. Returns <c>null</c> if no policies are configured.
+        /// </value>
+        /// <remarks>
+        /// This property is obsolete and will be removed in a future version. 
+        /// Migrate to <see cref="ResiliencePipelineRegistry"/> for new resilience implementations.
+        /// </remarks>
+        [Obsolete("Migrate to ResiliencePipeline", error: false)]
         IPolicyRegistry<string>? PolicyRegistry { get; set; }
         
         /// <summary>
-        /// Configure the polly resilience pipeline registry
+        /// Configure the registry of resilience pipelines.
         /// </summary>
+        /// <value>
+        /// The registry containing named resilience pipeline instances. Returns <c>null</c> if no pipelines are configured.
+        /// </value>
+        /// <remarks>
+        /// Use this registry to retrieve pre-configured resilience pipelines by name. 
+        /// This replaces the obsolete <see cref="PolicyRegistry"/> property for modern resilience implementations.
+        /// </remarks>
         ResiliencePipelineRegistry<string>? ResiliencePipelineRegistry { get; set; }
 
         /// <summary>

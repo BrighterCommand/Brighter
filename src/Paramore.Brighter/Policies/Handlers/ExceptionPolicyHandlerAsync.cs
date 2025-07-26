@@ -45,8 +45,9 @@ namespace Paramore.Brighter.Policies.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
-         private bool _initialized = false;
-        private List<AsyncPolicy> _policies = new List<AsyncPolicy>();
+        private bool _initialized = false;
+        private readonly List<AsyncPolicy> _policies = new();
+        
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry" /> from the <see cref="IRequestContext" /> and query it for the
         /// policy identified in <see cref="UsePolicyAttribute" />

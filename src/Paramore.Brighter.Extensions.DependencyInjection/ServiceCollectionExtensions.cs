@@ -102,10 +102,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 services.TryAddSingleton(options.FeatureSwitchRegistry);
 
             //Add the policy registry
-            IPolicyRegistry<string>? policyRegistry;
 #pragma warning disable CS0618 // Type or member is obsolete
-            if (options.PolicyRegistry == null) policyRegistry = new DefaultPolicy();
-            else policyRegistry = AddDefaults(options.PolicyRegistry);
+            var policyRegistry = options.PolicyRegistry == null ? new DefaultPolicy() : AddDefaults(options.PolicyRegistry);
 #pragma warning restore CS0618 // Type or member is obsolete
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
@@ -418,6 +416,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (policyRegistry == null)
                 throw new ConfigurationException("You must add a policy registry, to which defaults can be added");
             
+#pragma warning disable CS0618 // Type or member is obsolete
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException(
                     "The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
@@ -425,6 +424,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (!policyRegistry.ContainsKey(CommandProcessor.CIRCUITBREAKER))
                 throw new ConfigurationException(
                     "The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
+#pragma warning restore CS0618 // Type or member is obsolete
 
             return policyRegistry;
         }
@@ -454,7 +454,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var pollyBuilder = handlerBuilder.Handlers(handlerConfiguration);
 
             options.ResiliencePipelineRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+#pragma warning disable CS0618 // Type or member is obsolete
             var messagingBuilder = pollyBuilder.Resilience(options.ResiliencePipelineRegistry, options.PolicyRegistry);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             
             var command = AddEventBus(provider, messagingBuilder, useRequestResponse)
