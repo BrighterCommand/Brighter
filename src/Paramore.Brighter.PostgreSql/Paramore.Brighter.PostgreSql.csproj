@@ -5,6 +5,7 @@
     <Description>Common components required to connect to PostgreSql for inbox and outbox.</Description>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

@@ -28,8 +28,7 @@ using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
-using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MessagingGateway.RMQ.Sync;
+using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
@@ -79,7 +78,7 @@ namespace GreetingsReceiverConsole
 
                     var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
-                    services.AddServiceActivator(options =>
+                    services.AddConsumers(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);

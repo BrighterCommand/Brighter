@@ -5,9 +5,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoGSIProjections
     {
-        public Dictionary<string, Projection> Projections { get; set; }
+        public Dictionary<string, Projection?> Projections { get; set; }
 
-        public DynamoGSIProjections(Dictionary<string, Projection> projections)
+        public DynamoGSIProjections(Dictionary<string, Projection?> projections)
         {
             Projections = projections;
         }

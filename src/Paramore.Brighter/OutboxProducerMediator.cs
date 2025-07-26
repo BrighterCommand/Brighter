@@ -80,7 +80,7 @@ namespace Paramore.Brighter
         private readonly int _maxOutStandingMessages;
         private readonly TimeSpan _maxOutStandingCheckInterval;
         private readonly Dictionary<string, object> _outBoxBag;
-        private readonly IAmABrighterTracer _tracer;
+        private readonly IAmABrighterTracer? _tracer;
         private readonly TimeProvider _timeProvider;
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            IAmABrighterTracer tracer, 
+            IAmABrighterTracer? tracer, 
             IAmAPublicationFinder publicationFinder,
             IAmAnOutbox? outbox = null,
             IAmARequestContextFactory? requestContextFactory = null,
@@ -603,7 +603,7 @@ namespace Paramore.Brighter
                 await s_clearSemaphoreToken.WaitAsync(cancellationToken);
                 
                 var parentSpan = requestContext.Span;
-                var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
                 try
                 {
@@ -640,7 +640,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }

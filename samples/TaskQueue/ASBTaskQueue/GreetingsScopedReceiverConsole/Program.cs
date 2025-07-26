@@ -54,7 +54,7 @@ namespace GreetingsScopedReceiverConsole
                     var asbClientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
                     var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbClientProvider);
                     services
-                        .AddServiceActivator(options =>
+                        .AddConsumers(options =>
                         {
                             options.Subscriptions = subscriptions;
                             options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);

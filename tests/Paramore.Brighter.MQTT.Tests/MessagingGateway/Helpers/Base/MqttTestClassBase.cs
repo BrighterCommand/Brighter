@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
             };
 
             MqttMessagePublisher mqttMessagePublisher = new(mqttProducerConfig);
-            MessageProducerAsync = new MqttMessageProducer(mqttMessagePublisher);
+            MessageProducerAsync = new MqttMessageProducer(mqttMessagePublisher, new Publication());
 
             MqttMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
             {

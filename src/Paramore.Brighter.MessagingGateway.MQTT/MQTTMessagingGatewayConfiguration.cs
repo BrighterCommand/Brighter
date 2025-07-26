@@ -5,17 +5,17 @@
         /// <summary>
         /// Sets the MQTT ClientID.
         /// </summary>
-        public string ClientID { get; set; }
+        public string? ClientID { get; set; }
         
         /// <summary>
         /// Sets the MQTT Username
         /// </summary>
-        public string Username { get; set; }
+        public string? Username { get; set; }
 
         /// <summary>
         /// Sets the MQTT Password
         /// </summary>
-        public string Password { get; set; }
+        public string? Password { get; set; }
 
         /// <summary>
         /// Sets the CleanSession flag
@@ -25,7 +25,7 @@
         /// <summary>
         /// Sets the Server Hostname
         /// </summary>
-        public string Hostname { get; set; }
+        public string? Hostname { get; set; }
         
         /// <summary>
         /// Gets or sets the port number used to connect to the MQTT broker.
@@ -38,7 +38,7 @@
         /// <summary>
         /// Sets the Topic Prefix
         /// </summary>
-        public object TopicPrefix { get; set; }
+        public object? TopicPrefix { get; set; }
 
         /// <summary>
         /// Sets the Connection Attempts

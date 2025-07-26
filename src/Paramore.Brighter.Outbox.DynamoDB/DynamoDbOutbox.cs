@@ -703,9 +703,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return queryResult.Messages.Select(msg => msg.ConvertToMessage());
         }
 
-        private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
+        private Task<TransactWriteItemsRequest?> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
         {
-            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
+            var tcs = new TaskCompletionSource<TransactWriteItemsRequest?>();
             var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
             
             var transaction = dynamoDbUnitOfWork.GetTransaction();

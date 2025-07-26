@@ -91,7 +91,7 @@ var host = Host.CreateDefaultBuilder(args)
         
         var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
-        services.AddServiceActivator(options =>
+        services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new CombinedChannelFactory([
