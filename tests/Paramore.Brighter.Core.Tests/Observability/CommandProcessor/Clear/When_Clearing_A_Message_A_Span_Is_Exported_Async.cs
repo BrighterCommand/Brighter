@@ -60,16 +60,14 @@ public class AsyncCommandProcessorClearObservabilityTests
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-        _messageProducer = new InMemoryMessageProducer(_internalBus, timeProvider, InstrumentationOptions.All)
-        {
-            Publication =
+        _messageProducer = new InMemoryMessageProducer(_internalBus, timeProvider,
+            new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = _topic,
                 Type = new CloudEventsType("io.goparamore.brighter.myevent"),
-            }
-        };
+            });
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {

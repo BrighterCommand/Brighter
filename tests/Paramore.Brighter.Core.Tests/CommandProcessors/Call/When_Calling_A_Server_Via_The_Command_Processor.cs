@@ -27,10 +27,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer messageProducer = new(_bus, timeProvider, InstrumentationOptions.All);
+            InMemoryMessageProducer messageProducer = new(_bus, timeProvider, new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)});
             _routingKey = new RoutingKey("MyRequest");
-            
-            messageProducer.Publication = new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)};
             
             _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {

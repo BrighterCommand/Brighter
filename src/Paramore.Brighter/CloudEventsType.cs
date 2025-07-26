@@ -45,12 +45,7 @@ public sealed class CloudEventsType : IEquatable<CloudEventsType>
     /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> is empty or whitespace.</exception>
     public CloudEventsType(string value)
     {
-        if (value is null)
-            throw new ArgumentNullException(nameof(value));
-        if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException("CloudEventsType cannot be empty or whitespace.", nameof(value));
-
-        this.value = value;
+        this.value = value ?? throw new ArgumentNullException(nameof(value));
     }
     
     /// <summary>

@@ -51,10 +51,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             Type = new CloudEventsType("io.goparamore.brighter.myevent"),
         };
 
-        var producer = new InMemoryMessageProducer(internalBus, _timeProvider, InstrumentationOptions.All)
-        {
-            Publication = _publication
-        };
+        var producer = new InMemoryMessageProducer(internalBus, _timeProvider, _publication);
 
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, producer } });
