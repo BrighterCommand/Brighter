@@ -567,8 +567,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// </summary>
     public override void Dispose()
     {
-        // A wait here, will die in the Brighter synchronization context
-        // CancelConsumerAsync(CancellationToken.None).GetAwaiter().GetResult();
+        BrighterAsyncContext.Run(async () => await CancelConsumerAsync(CancellationToken.None));
         Dispose(true);
         GC.SuppressFinalize(this);
     }
