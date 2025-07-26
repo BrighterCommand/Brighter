@@ -27,6 +27,7 @@ using System.Transactions;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
 using Paramore.Brighter.Observability;
+using Polly.Registry;
 
 namespace Paramore.Brighter
 {
@@ -57,7 +58,7 @@ namespace Paramore.Brighter
 
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
-                policyRegistry: new DefaultPolicy(),
+                resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry: mapper,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
@@ -68,7 +69,7 @@ namespace Paramore.Brighter
             return new ControlBusSender(
                 CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
+                .DefaultResilience()
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)   
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())

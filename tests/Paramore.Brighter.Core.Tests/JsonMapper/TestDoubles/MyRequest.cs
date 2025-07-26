@@ -22,8 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace Paramore.Brighter.Core.Tests.JsonMapper.TestDoubles;
 
 public class MyRequest : IRequest

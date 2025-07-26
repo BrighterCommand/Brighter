@@ -7,6 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var externalBus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
-                policyRegistry: new DefaultPolicy(),
+                resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry: messageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
@@ -60,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             _commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
-                .DefaultPolicy()
+                .DefaultResilience()
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
                 .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
@@ -89,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
             {
-                return null;
+                return null!;
             }
 
             public void Release(IHandleRequests handler, IAmALifetime lifetime) {}

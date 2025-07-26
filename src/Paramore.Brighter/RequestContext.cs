@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
+using Polly;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -56,7 +57,22 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The bag.</value>
         public ConcurrentDictionary<string, object> Bag { get; } = new();
-        
+
+        /// <summary>
+        /// Gets or sets the registry of resilience pipelines.
+        /// </summary>
+        /// <value>
+        /// The registry containing named resilience pipeline instances. Returns <c>null</c> if no pipelines are configured.
+        /// </value>
+        /// <remarks>
+        /// Use this registry to retrieve pre-configured resilience pipelines by name. 
+        /// This replaces the obsolete <see cref="Policies"/> property for modern resilience implementations.
+        /// </remarks> 
+        public ResiliencePipelineRegistry<string>? ResiliencePipeline { get; set; }
+
+        /// <inheritdoc />
+        public ResilienceContext? ResilienceContext { get; set; }
+
         /// <summary>
         /// Gets the Feature Switches
         /// </summary>
@@ -70,7 +86,10 @@ namespace Paramore.Brighter
             => new RequestContext(Bag)
             {
                 Span = Span,
+#pragma warning disable CS0618 // Type or member is obsolete
                 Policies = Policies,
+#pragma warning restore CS0618 // Type or member is obsolete
+                ResiliencePipeline = ResiliencePipeline,
                 FeatureSwitches = FeatureSwitches,
                 OriginatingMessage = OriginatingMessage
             };
@@ -86,9 +105,16 @@ namespace Paramore.Brighter
         public Message? OriginatingMessage { get; set; }
 
         /// <summary>
-        /// Gets the policies.
+        /// [Obsolete] Gets or sets the legacy policy registry.
         /// </summary>
-        /// <value>The policies.</value>
+        /// <value>
+        /// The policy registry containing resilience policies. Returns <c>null</c> if no policies are configured.
+        /// </value>
+        /// <remarks>
+        /// This property is obsolete and will be removed in a future version. 
+        /// Migrate to <see cref="ResiliencePipeline"/> for new resilience implementations.
+        /// </remarks>  
+        [Obsolete("Migrate to ResiliencePipeline")]
         public IPolicyRegistry<string>? Policies { get; set; }
 
         /// <summary>

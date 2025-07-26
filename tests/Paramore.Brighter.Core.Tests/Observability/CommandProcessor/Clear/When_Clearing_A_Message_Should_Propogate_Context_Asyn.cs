@@ -78,7 +78,7 @@ public class AsyncMessageDispatchPropogateContextTests
         
          _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
-            policyRegistry, 
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
             messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
@@ -93,6 +93,7 @@ public class AsyncMessageDispatchPropogateContextTests
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
+            new ResiliencePipelineRegistry<string>(),
             _mediator,
             new InMemorySchedulerFactory(),
             tracer: tracer, 

@@ -176,6 +176,7 @@ public class CommandProcessorSendObservabilityTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: instrumentationOptions

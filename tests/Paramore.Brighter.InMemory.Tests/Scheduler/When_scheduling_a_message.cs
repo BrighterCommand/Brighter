@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
@@ -74,7 +72,7 @@ public class InMemorySchedulerMessageTests
 
         var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -89,6 +87,7 @@ public class InMemorySchedulerMessageTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             outboxBus,
             _scheduler
         );
@@ -107,9 +106,9 @@ public class InMemorySchedulerMessageTests
         var id = scheduler.Schedule(message,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True(id.Any());
+        Assert.NotEqual(0, id.Length);
 
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
@@ -143,9 +142,9 @@ public class InMemorySchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.True(id.Any());
+        Assert.NotEqual(0, id.Length);
 
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
@@ -168,7 +167,7 @@ public class InMemorySchedulerMessageTests
     }
 
     [Fact]
-    public async Task When_reschedule_a_message_with_a_datetimeoffset()
+    public void When_reschedule_a_message_with_a_datetimeoffset()
     {
         var req = new MyEvent();
         var message =
@@ -179,13 +178,13 @@ public class InMemorySchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.NotEqual(0, id.Length);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         scheduler.ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromHours(1)));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         _timeProvider.Advance(TimeSpan.FromHours(2));
 
@@ -219,13 +218,13 @@ public class InMemorySchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromHours(1));
 
-        Assert.True((id)?.Any());
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.NotEqual(0, id.Length);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         scheduler.ReScheduler(id, TimeSpan.FromHours(1));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         _timeProvider.Advance(TimeSpan.FromHours(2));
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
@@ -251,7 +250,7 @@ public class InMemorySchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True(id.Any());
+        Assert.NotEqual(0, id.Length);
 
         scheduler.Cancel(id);
 
@@ -280,7 +279,7 @@ public class InMemorySchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromHours(1));
 
-        Assert.True(id.Any());
+        Assert.NotEqual(0, id.Length);
 
         scheduler.Cancel(id);
 

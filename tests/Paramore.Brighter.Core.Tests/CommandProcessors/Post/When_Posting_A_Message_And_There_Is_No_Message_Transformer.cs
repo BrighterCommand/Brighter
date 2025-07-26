@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
-using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
-using Polly;
-using Polly.CircuitBreaker;
 using Polly.Registry;
-using Polly.Retry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
@@ -18,13 +13,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class CommandProcessorPostMissingMessageTransformerTests : IDisposable
     {
-        private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
+        private readonly MyCommand _myCommand = new();
         private readonly InMemoryOutbox _outbox;
-        private Exception _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly ProducerRegistry _producerRegistry;
-        private readonly PolicyRegistry _policyRegistry;
         private readonly IAmABrighterTracer _tracer;
 
         public CommandProcessorPostMissingMessageTransformerTests()
@@ -37,24 +29,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var routingKey = new RoutingKey("MyTopic");
             
-            _message = new Message(
-                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-                );
-
             _messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
             _messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            RetryPolicy retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            CircuitBreakerPolicy circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-            
             _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
@@ -64,28 +43,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                     }
                 },
             });
-
-            _policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
          }
 
         [Fact]
         public void When_Creating_A_Command_Processor_Without_Message_Transformer()
         {                                             
-            _exception = Catch.Exception(() => new OutboxProducerMediator<Message, CommittableTransaction>(
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
+            
+            var exception = Catch.Exception(() => new OutboxProducerMediator<Message, CommittableTransaction>(
                 _producerRegistry, 
-                _policyRegistry,
+                resiliencePipelineRegistry,
                 _messageMapperRegistry,
-                 null,
+                 null!,
                 new EmptyMessageTransformerFactoryAsync(),
                 _tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
                 _outbox)
             );               
 
-            Assert.IsType<ConfigurationException>(_exception); 
+            Assert.IsType<ConfigurationException>(exception); 
         }
 
         public void Dispose()

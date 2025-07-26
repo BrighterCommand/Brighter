@@ -54,6 +54,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new ResiliencePipelineRegistry<string>(),
                 new InMemorySchedulerFactory(),
                 inboxConfiguration: inboxConfiguration
             );

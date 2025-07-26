@@ -15,6 +15,7 @@ public class RequestContextPresentTests : IDisposable
 {
     private readonly SpyContextFactory _requestContextFactory;
     private readonly IPolicyRegistry<string> _policyRegistry;
+    private readonly ResiliencePipelineRegistry<string>  _resiliencePipelineRegistry;
 
     public RequestContextPresentTests()
     {
@@ -24,8 +25,8 @@ public class RequestContextPresentTests : IDisposable
        MyContextAwareEventHandlerAsync.TestString = null;
 
         _policyRegistry = new DefaultPolicy();
-        _requestContextFactory = new SpyContextFactory();
-        _requestContextFactory.CreateWasCalled = false;
+        _resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+        _requestContextFactory = new SpyContextFactory { CreateWasCalled = false };
     }
 
     [Fact]
@@ -43,6 +44,7 @@ public class RequestContextPresentTests : IDisposable
             handlerFactory,
             spyRequestContextFactory,
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()
         );
 
@@ -74,6 +76,7 @@ public class RequestContextPresentTests : IDisposable
             handlerFactory,
             spyRequestContextFactory,
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()
         );
 
@@ -103,6 +106,7 @@ public class RequestContextPresentTests : IDisposable
             handlerFactory,
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()
         );
 
@@ -132,6 +136,7 @@ public class RequestContextPresentTests : IDisposable
             handlerFactory,
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()
         );
 
@@ -175,7 +180,7 @@ public class RequestContextPresentTests : IDisposable
 
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            _policyRegistry,
+            _resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -187,6 +192,7 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory()
         );
@@ -227,7 +233,7 @@ public class RequestContextPresentTests : IDisposable
 
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            _policyRegistry,
+            _resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -239,6 +245,7 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory()
         );
@@ -279,7 +286,7 @@ public class RequestContextPresentTests : IDisposable
 
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            _policyRegistry,
+            _resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -291,6 +298,7 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory()
         );
@@ -335,7 +343,7 @@ public class RequestContextPresentTests : IDisposable
 
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            _policyRegistry,
+            _resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -347,6 +355,7 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory()
         );
@@ -359,7 +368,7 @@ public class RequestContextPresentTests : IDisposable
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
         context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue) ;
-        await commandProcessor.ClearOutboxAsync(new []{myCommand.Id}, context);
+        await commandProcessor.ClearOutboxAsync([myCommand.Id], context);
 
         //assert
         Assert.False(_requestContextFactory.CreateWasCalled);

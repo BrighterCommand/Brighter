@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             
             MyFailsWithFallbackMultipleHandlers.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
         [Fact]

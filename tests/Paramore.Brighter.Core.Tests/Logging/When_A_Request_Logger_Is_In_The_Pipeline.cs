@@ -42,7 +42,8 @@ namespace Paramore.Brighter.Core.Tests.Logging
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             var commandProcessor = new  CommandProcessor(registry, handlerFactory: handlerFactory, 
-                new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
+                new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), 
+                new InMemorySchedulerFactory());
 
 
             commandProcessor.Send(myCommand);

@@ -23,6 +23,7 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
             null,
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()));
 
         Assert.IsType<ArgumentException>(_exception);
@@ -43,6 +44,7 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
             new DummyHandlerFactory(),
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory()));
 
         //_should_fail_because_no_handler_factories_have_been_set
