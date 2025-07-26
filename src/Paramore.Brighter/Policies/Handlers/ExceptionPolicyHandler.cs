@@ -60,7 +60,9 @@ namespace Paramore.Brighter.Policies.Handlers
             
             //we expect the first and only parameter to be a string
             var policies = (List<string>?)initializerList[0] ?? [];
+#pragma warning disable CS0618 // Type or member is obsolete
             policies.Each(p => _policies.Add(Context!.Policies!.Get<Policy>(p)));
+#pragma warning restore CS0618 // Type or member is obsolete
             _initialized = true;
         }
 

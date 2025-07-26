@@ -103,8 +103,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             //Add the policy registry
             IPolicyRegistry<string>? policyRegistry;
+#pragma warning disable CS0618 // Type or member is obsolete
             if (options.PolicyRegistry == null) policyRegistry = new DefaultPolicy();
             else policyRegistry = AddDefaults(options.PolicyRegistry);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
 
@@ -232,10 +234,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions!));
             
             brighterBuilder.Services.TryAddSingleton<IAmProducersConfiguration>(busConfiguration);
+            brighterBuilder.ResiliencePolicyRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
            
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
                (serviceProvider) => BuildOutBoxProducerMediator(
-                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
+                   serviceProvider, transactionType, busConfiguration, brighterBuilder.ResiliencePolicyRegistry, outbox
                ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator; are you missing a registration?"),
                ServiceLifetime.Singleton));
 
@@ -472,7 +475,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private static IAmAnOutboxProducerMediator? BuildOutBoxProducerMediator(IServiceProvider serviceProvider,
             Type transactionType,
             ProducersConfiguration busConfiguration,
-            IPolicyRegistry<string>? policyRegistry,
+            ResiliencePipelineRegistry<string>? resiliencePipelineRegistry,
             IAmAnOutbox outbox) 
         {
             //Because the bus has specialized types as members, we need to create the bus type dynamically
@@ -482,7 +485,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return (IAmAnOutboxProducerMediator?)Activator.CreateInstance(
                 busType,
                 busConfiguration.ProducerRegistry,
-                policyRegistry,
+                resiliencePipelineRegistry,
                 MessageMapperRegistry(serviceProvider),
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),

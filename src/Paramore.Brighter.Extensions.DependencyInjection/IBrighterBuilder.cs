@@ -98,7 +98,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// The policy registry to use for the command processor and the event bus
         /// It needs to be here as we need to pass it between AddBrighter and AddProducers
         /// </summary>
+        [Obsolete("Migrate to ResiliencePolicyRegistry")]
         IPolicyRegistry<string>? PolicyRegistry { get; set; }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        ResiliencePipelineRegistry<string>? ResiliencePolicyRegistry { get; set; }
 
         /// <summary>
         /// The IoC container to populate

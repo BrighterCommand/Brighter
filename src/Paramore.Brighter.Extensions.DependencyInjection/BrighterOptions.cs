@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -41,6 +42,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Configures the polly policy registry.
         /// </summary>
+        [Obsolete("Migrate to ResiliencePipeline")]
         public IPolicyRegistry<string>? PolicyRegistry { get; set; } = new DefaultPolicy();
 
         /// <inheritdoc />

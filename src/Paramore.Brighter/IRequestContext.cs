@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -58,6 +59,7 @@ namespace Paramore.Brighter
         /// Gets the policies.
         /// </summary>
         /// <value>The policies.</value>
+        [Obsolete("Migrate to ResiliencePipeline")]
         IPolicyRegistry<string>?  Policies { get; }
         
         /// <summary>
