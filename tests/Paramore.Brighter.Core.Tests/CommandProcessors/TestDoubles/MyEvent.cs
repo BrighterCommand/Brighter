@@ -27,7 +27,7 @@ using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal sealed class MyEvent() : Event(Brighter.Id.Random), IEquatable<MyEvent>
+    internal sealed class MyEvent() : Event(Id.Random()), IEquatable<MyEvent>
     {
         public int Data { get; set; }
 

@@ -300,10 +300,10 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         if (_messageAttributes.TryGetValue(HeaderNames.Id, out var messageId))
         {
             var value = messageId.GetValueInString();
-            return new HeaderResult<Id?>(string.IsNullOrEmpty(value) ? Id.Random : Id.Create(value), true);
+            return new HeaderResult<Id?>(string.IsNullOrEmpty(value) ? Id.Random() : Id.Create(value), true);
         }
 
-        return new HeaderResult<Id?>(Id.Random, true);
+        return new HeaderResult<Id?>(Id.Random(), true);
     }
 
     private HeaderResult<RoutingKey> ReadTopic()

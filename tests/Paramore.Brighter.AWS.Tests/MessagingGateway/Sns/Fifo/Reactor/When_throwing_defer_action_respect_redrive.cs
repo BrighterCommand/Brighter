@@ -33,7 +33,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         const string replyTo = "http:\\queueUrl";
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var correlationId = Id.Random;
+        var correlationId = Id.Random();
         var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";

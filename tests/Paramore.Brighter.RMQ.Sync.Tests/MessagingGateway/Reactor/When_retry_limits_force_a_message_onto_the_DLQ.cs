@@ -28,7 +28,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
 
     public RMQMessageConsumerRetryDLQTests()
     {
-        var correlationId = Id.Random;
+        var correlationId = Id.Random();
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = new ChannelName($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
         var routingKey = new RoutingKey($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");

@@ -42,7 +42,7 @@ public class RmqMessageProducerSendMessageTestsAsync : IDisposable, IAsyncDispos
 
     public RmqMessageProducerSendMessageTestsAsync()
     {
-        var messageId = Id.Random;
+        var messageId = Id.Random();
         var topic = new RoutingKey(Guid.NewGuid().ToString());
         var messageType = MessageType.MT_COMMAND;
         var source = new Uri("http://testing.example");

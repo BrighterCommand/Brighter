@@ -293,7 +293,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private static HeaderResult<Id?> ReadMessageId(Headers headers)
         {
             var id = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_ID, true)
-                .Map(messageId => new HeaderResult<Id?>(string.IsNullOrEmpty(messageId) ? Id.Random : Id.Create(messageId), true));
+                .Map(messageId => new HeaderResult<Id?>(string.IsNullOrEmpty(messageId) ? Id.Random() : Id.Create(messageId), true));
             
             if (id.Success)
             {
@@ -307,7 +307,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (string.IsNullOrEmpty(messageId))
                     {
                         Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
-                        return new HeaderResult<Id?>(Id.Random, true);
+                        return new HeaderResult<Id?>(Id.Random(), true);
                     }
 
                     return new HeaderResult<Id?>(new Id(messageId!), true);

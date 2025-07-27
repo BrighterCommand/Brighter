@@ -27,7 +27,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
-    internal sealed class MyOtherEvent() : Event(Brighter.Id.Random), IEquatable<MyOtherEvent>
+    internal sealed class MyOtherEvent() : Event(Brighter.Id.Random()), IEquatable<MyOtherEvent>
     {
         public int Data { get; set; }
 

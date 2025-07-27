@@ -26,7 +26,7 @@ public class CommandProcessorClearObservabilityTests
     private readonly RoutingKey _routingKey;
 
     private readonly Uri publicationSource = new Uri("http://localhost");
-    private const string publicationType = nameof(MyEvent);
+    private CloudEventsType? _publicationType;
 
     public CommandProcessorClearObservabilityTests()
     {
@@ -175,7 +175,7 @@ public class CommandProcessorClearObservabilityTests
             Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeSource && (Uri)t.Value == publicationSource);
             Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeVersion && (string)t.Value == "1.0");
             Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == null);
-            Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == publicationType);
+            Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == _publicationType);
         }
 
         //there should be an event in the producer for producing the message
@@ -211,7 +211,7 @@ public class CommandProcessorClearObservabilityTests
             Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeSource && (Uri)t.Value == publicationSource);
             Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeVersion && (string)t.Value == "1.0");
             Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == null);
-            Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == publicationType);
+            Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == _publicationType);
         }
 
         if (options.HasFlag(InstrumentationOptions.DatabaseInformation))
@@ -229,12 +229,14 @@ public class CommandProcessorClearObservabilityTests
 
     private Brighter.CommandProcessor CreateCommandProcessor(InstrumentationOptions instrumentationOptions)
     {
+        _publicationType = new CloudEventsType("io.goparamore.brighter.myevent");
+        
         var messageProducer = new InMemoryMessageProducer(
             _internalBus,
             _timeProvider,
             new Publication
             {
-                Source = publicationSource, RequestType = typeof(MyEvent), Topic = _routingKey, Type = new CloudEventsType("io.goparamore.brighter.myevent"),
+                Source = publicationSource, RequestType = typeof(MyEvent), Topic = _routingKey, Type = _publicationType,
             },
             instrumentationOptions
         );

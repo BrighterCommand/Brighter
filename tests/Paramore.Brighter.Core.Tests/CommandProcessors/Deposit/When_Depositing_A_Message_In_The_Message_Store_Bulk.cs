@@ -32,6 +32,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         public CommandProcessorBulkDepositPostTests()
         {
             _myCommand.Value = "Hello World";
+            _myCommandTwo.Value = "Hello World Two";
+            _myEvent.Data = 3;
 
             var timeProvider = new FakeTimeProvider();
             InMemoryMessageProducer commandMessageProducer = new(_bus, timeProvider, new Publication 
@@ -129,8 +131,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //assert
             
             //message should not be posted
-            Assert.False(_bus.Stream(new RoutingKey(_commandTopic)).Any());
-            Assert.False(_bus.Stream(new RoutingKey(_eventTopic)).Any());
+            Assert.False(_bus.Stream(_commandTopic).Any());
+            Assert.False(_bus.Stream(_eventTopic).Any());
 
             //message should correspond to the command
             var depositedPost = _outbox.Get(_message.Id, context);

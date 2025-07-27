@@ -63,7 +63,7 @@ public class TimedStatusSender(IAmACommandProcessor processor, ILogger<TimedStat
     {
         _iteration++;
 
-        var id = Id.Random;
+        var id = Id.Random();
         var dueAt = DateTimeOffset.UtcNow.AddDays(1);
         
         var taskCreated = new TaskCreated(id, DateTimeOffset.UtcNow, dueAt, [DateTimeOffset.UtcNow.AddMinutes(5), DateTimeOffset.UtcNow.AddMinutes(10)]);

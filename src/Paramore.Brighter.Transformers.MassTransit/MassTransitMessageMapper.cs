@@ -118,7 +118,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
         );
     }
 
-    private Id GetCorrelationId() => Context.GetIdFromBag(nameof(MessageHeader.CorrelationId), Id.Random)!;
+    private Id GetCorrelationId() => Context.GetIdFromBag(nameof(MessageHeader.CorrelationId), Id.Random())!;
 
     private Id? GetConversationId() => Context.GetIdFromBag(MassTransitHeaderNames.ConversationId);
     

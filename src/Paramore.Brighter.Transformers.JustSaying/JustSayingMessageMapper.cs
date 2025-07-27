@@ -155,7 +155,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     
     private Id GetId(Id? id)
     {
-        return Guid.TryParse(id?.Value, out _) ? id! : Id.Random;
+        return Guid.TryParse(id?.Value, out _) ? id! : Id.Random();
     }
     
     private Id GetCorrelationId(Id? currentValue)
@@ -165,7 +165,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
             return currentValue;
         }
 
-        return Context.GetIdFromBag(JustSayingAttributesName.Conversation, Id.Random)!;
+        return Context.GetIdFromBag(JustSayingAttributesName.Conversation, Id.Random())!;
     }
     
     private Tenant? GetTenant(Tenant? currentValue)

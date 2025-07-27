@@ -595,7 +595,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private static Id GetMessageId(DbDataReader dr)
         {
             var (ordinal, err) = TryGetOrdinal(dr, "MessageId");
-            if (err || dr.IsDBNull(ordinal)) return Id.Random;
+            if (err || dr.IsDBNull(ordinal)) return Id.Random();
  
             var id = dr.GetString(ordinal);
             return new Id(id);

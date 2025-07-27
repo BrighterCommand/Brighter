@@ -311,7 +311,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 return new HeaderResult<Id>(Id.Create(header), true);
             }
             
-            return new HeaderResult<Id>(Id.Random, true);
+            return new HeaderResult<Id>(Id.Random(), true);
         }
         
         private static HeaderResult<RoutingKey> ReadReplyTo(Dictionary<string, string> headers)

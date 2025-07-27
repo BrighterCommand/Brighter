@@ -327,10 +327,10 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Id, out MessageAttributeValue? messageId))
         {
             var value = messageId.StringValue;
-            return new HeaderResult<Id?>(string.IsNullOrEmpty(value) ? Id.Random : Id.Create(value), true);
+            return new HeaderResult<Id?>(string.IsNullOrEmpty(value) ? Id.Random() : Id.Create(value), true);
         }
 
-        return new HeaderResult<Id?>(Id.Random, true);
+        return new HeaderResult<Id?>(Id.Random(), true);
     }
 
     private static HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)

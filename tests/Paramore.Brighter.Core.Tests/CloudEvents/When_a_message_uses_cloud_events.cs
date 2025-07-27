@@ -21,7 +21,7 @@ public class CloudEventsTransformerTests
     public CloudEventsTransformerTests()
     {
         _message = new(
-            new MessageHeader(Id.Random, new RoutingKey("Test Topic"), MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Text.Plain), 
+            new MessageHeader(Id.Random(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Text.Plain), 
                 source: _source, subject: _subject, type: _type, dataSchema: _dataSchema), new MessageBody("test content", contentType: new ContentType(MediaTypeNames.Text.Plain))
             );
     }

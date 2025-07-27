@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class MyCommand() : Command(Id.Random)
+    public class MyCommand() : Command(Id.Random())
     {
         public string? Value { get; set; }
         public bool WasCancelled { get; set; }
