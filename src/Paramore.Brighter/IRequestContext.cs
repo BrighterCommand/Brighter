@@ -43,9 +43,9 @@ namespace Paramore.Brighter
         Activity? Span { get; set; }
         
         /// <summary>
-        /// The destination topic
+        /// The destination topic and cloud event type can be used to override the topic and cloud event type that the request is posted to.
         /// </summary>
-        RoutingKey? Topic { get; set; }
+        ProducerKey? Destination { get; set; }
         
         /// <summary>
         /// Gets the bag.

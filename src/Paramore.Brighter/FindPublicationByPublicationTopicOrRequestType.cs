@@ -36,7 +36,7 @@ namespace Paramore.Brighter;
 /// </remarks>
 public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFinder 
 {
-    private static readonly ConcurrentDictionary<Type, RoutingKey?> s_typeRoutingKeyCache = new();
+    private static readonly ConcurrentDictionary<Type, ProducerKey?> s_typeProducerKeyCache = new();
     
     /// <summary>
     /// Finds the <see cref="Publication"/> configuration for the specified request type.
@@ -47,27 +47,31 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
     /// <returns>The <see cref="Publication"/> configuration for the request type, or <c>null</c> if no matching publication is found.</returns>
     public virtual Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext requestContext) where TRequest : class, IRequest
     {
-        if (requestContext.Topic != null)
+        if (requestContext.Destination != null)
         {
-            var producer = registry.Producers.FirstOrDefault(x => requestContext.Topic == x.Publication.Topic!);
-            if (producer != null)
+            var producers = registry.Producers.Where(x => requestContext.Destination.RoutingKey== x.Publication.Topic!).ToArray();
+            
+            if (producers.Length == 1)
+                return producers.First().Publication;
+            
+            if (producers.Length > 1)
             {
-                return producer.Publication;
+                var producer = producers.FirstOrDefault(x => x.Publication.Type == requestContext.Destination.Type);
+                if (producer != null)
+                    return producer.Publication;
             }
         }
         
         //Do we have a topic attribute for the routing key? If so cache and use it!
-        var routingKey = s_typeRoutingKeyCache.GetOrAdd(typeof(TRequest), GetRoutingKey);
-        if (routingKey != null)
+        var producerKey = s_typeProducerKeyCache.GetOrAdd(typeof(TRequest), GetDestinationKey);
+        if (producerKey != null)
         {
-            var producer = registry.Producers.FirstOrDefault(x => routingKey == x.Publication.Topic!);
+            var producer = registry.Producers.FirstOrDefault(x => x.Publication.Topic! == producerKey.RoutingKey && x.Publication.Type == producerKey.Type);
             if (producer != null)
-            {
                 return producer.Publication;
-            }
         }
         
-        //If not attribute based, then find the publication by matching this requesttype and the publication request type
+        //If not attribute-based, then find the publication by matching this requesttype and the publication request type
         var publications = registry.Producers.Select( x=> x.Publication)
             .Where(x=> x.RequestType == typeof(TRequest))
             .ToArray();
@@ -81,9 +85,9 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
     }
     
 
-    private static RoutingKey? GetRoutingKey(Type requestType)
+    private static ProducerKey? GetDestinationKey(Type requestType)
     {
         var attribute = requestType.GetCustomAttribute<PublicationTopicAttribute>();
-        return attribute == null ? null : new RoutingKey(attribute.Topic);
+        return attribute?.Destination;
     }
 }

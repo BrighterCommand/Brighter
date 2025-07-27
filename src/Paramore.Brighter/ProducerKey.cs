@@ -29,30 +29,39 @@ namespace Paramore.Brighter;
 /// <summary>
 /// A producer key is used to identify a producer in the <see cref="ProducerRegistry"/>.
 /// </summary>
-public class ProducerKey(RoutingKey routingKey, CloudEventsType requestType)
+public class ProducerKey
 {
+    /// <summary>
+    /// A producer key is used to identify a producer in the <see cref="ProducerRegistry"/>.
+    /// </summary>
+    public ProducerKey(RoutingKey routingKey, CloudEventsType? type = null)
+    {
+        RoutingKey = routingKey;
+        Type = type ?? CloudEventsType.Empty;
+    }
+
     /// <summary>
     /// Gets the routing key for the producer.
     /// </summary>
     /// <value>The routing key as a <see cref="RoutingKey"/>.</value>
-    public RoutingKey RoutingKey { get; } = routingKey;
+    public RoutingKey RoutingKey { get; }
 
     /// <summary>
     /// Gets the request type for the producer.
     /// </summary>
     /// <value>The request type as a <see cref="CloudEventsType"/>.</value>
-    public CloudEventsType RequestType { get; } = requestType;
+    public CloudEventsType Type { get; }
 
-    public override string ToString() => $"{RoutingKey}:{RequestType}";
+    public override string ToString() => $"{RoutingKey}:{Type}";
 
     public override bool Equals(object? obj)
     {
         if (obj is ProducerKey other)
         {
-            return RoutingKey.Equals(other.RoutingKey) && RequestType.Equals(other.RequestType);
+            return RoutingKey.Equals(other.RoutingKey) && Type.Equals(other.Type);
         }
         return false;
     }
 
-    public override int GetHashCode() => HashCode.Combine(RoutingKey, RequestType);
+    public override int GetHashCode() => HashCode.Combine(RoutingKey, Type);
 }
