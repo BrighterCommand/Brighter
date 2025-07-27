@@ -51,7 +51,7 @@ namespace Paramore.Brighter
                 if (producer.Publication.Topic is null)
                     throw new ConfigurationException($"Producer {producer.GetType().Name} does not have a Topic set in its Publication");
                 
-                _messageProducers.Add(new ProducerKey(producer.Publication.Topic, CloudEventsType.Empty), producer);
+                _messageProducers.Add(new ProducerKey(producer.Publication.Topic, producer.Publication.Type), producer);
             }
             _hasProducers = _messageProducers.Any();
         }
@@ -101,13 +101,14 @@ namespace Paramore.Brighter
          }
 
 
-        /// <summary>
-        /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
-        /// </summary>
-        /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
-        /// <param name="requestType">The <see cref="CloudEventsType"/> of the expected message, may be null</param>
-        /// <returns>A producer</returns>
-        public IAmAMessageProducer LookupBy(RoutingKey topic, CloudEventsType? requestType = null)
+         /// <summary>
+         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
+         /// </summary>
+         /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
+         /// <param name="requestType">The <see cref="CloudEventsType"/> of the expected message, may be null</param>
+         /// <param name="requestContext">The <see cref="RequestContext"/> whose Destination property can override routing</param>
+         /// <returns>A producer</returns>
+         public IAmAMessageProducer LookupBy(RoutingKey topic, CloudEventsType? requestType = null, RequestContext? requestContext = null)
         {
             if (!_hasProducers)
                 throw new ConfigurationException("No producers found in the registry");
@@ -115,14 +116,16 @@ namespace Paramore.Brighter
             if (topic is null)
                 throw new ArgumentNullException(nameof(topic), "Topic cannot be null");
 
-            if (requestType is not null && requestType != CloudEventsType.Empty)
-            {
-                var key = new ProducerKey(topic, requestType);
-                if (_messageProducers.TryGetValue(key, out var producer))
-                    return producer;
-            }
+            ProducerKey? producerKey = null;
+            // If the request context has a destination, we use that to override the topic
+            if (requestContext?.Destination != null)
+                producerKey = requestContext.Destination;
+            else if (requestType != null)
+                producerKey = new ProducerKey(topic, requestType);
+            else
+                producerKey = new ProducerKey(topic, CloudEventsType.Empty);
 
-            if (_messageProducers.TryGetValue(new ProducerKey(topic, CloudEventsType.Empty), out var messageProducer))
+            if (_messageProducers.TryGetValue(producerKey, out var messageProducer))
                 return messageProducer;
 
             // If we reach here, we have no producers for the topic

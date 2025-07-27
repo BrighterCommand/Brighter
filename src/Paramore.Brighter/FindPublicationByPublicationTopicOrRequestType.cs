@@ -62,7 +62,7 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
             }
         }
         
-        //Do we have a topic attribute for the routing key? If so cache and use it!
+        //Do we have a publication topic attribute for the routing key? If so cache and use it!
         var producerKey = s_typeProducerKeyCache.GetOrAdd(typeof(TRequest), GetDestinationKey);
         if (producerKey != null)
         {
@@ -80,7 +80,7 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
         {
             0 => throw new ConfigurationException("No producer found for request type. Have you set the request type on the Publication?"),
             1 => publications[0],
-            _ => throw new ConfigurationException("Only one producer per request type is supported. Have you added the request type to multiple Publications?")
+            _ => throw new ConfigurationException("Only one producer per request type  is supported. Have you added the request type to multiple Publications?")
         };
     }
     

@@ -760,9 +760,7 @@ namespace Paramore.Brighter
             return false;
         }
 
-        private void Dispatch(IEnumerable<Message> posts, 
-            RequestContext requestContext,
-            Dictionary<string, object>? args = null)
+        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
@@ -773,7 +771,7 @@ namespace Paramore.Brighter
                 {
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
-                    var producer = _producerRegistry.LookupBy(message.Header.Topic);
+                    var producer = _producerRegistry.LookupBy(message.Header.Topic, message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
                         _instrumentationOptions);
                     producer.Span = span;

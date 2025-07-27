@@ -26,13 +26,13 @@ using System.Text.Json;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 
-namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal sealed class MyCommandMessageMapper : IAmAMessageMapper<MyCommand>
+    internal sealed class MyOtherCommandMessageMapper : IAmAMessageMapper<MyOtherCommand>
     {
         public IRequestContext Context { get; set; }
 
-        public Message MapToMessage(MyCommand request, Publication publication)
+        public Message MapToMessage(MyOtherCommand request, Publication publication)
         {
             var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), type: publication.Type);
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
@@ -40,10 +40,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return message;
         }
 
-        public MyCommand MapToRequest(Message message)
+        public MyOtherCommand MapToRequest(Message message)
         {
-            var command = JsonSerializer.Deserialize<MyCommand>(message.Body.Value, JsonSerialisationOptions.Options);
-            return command;
+            return JsonSerializer.Deserialize<MyOtherCommand>(message.Body.Value, JsonSerialisationOptions.Options);
         }
     }
 }
