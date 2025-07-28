@@ -25,7 +25,7 @@ public class FirestoreConfiguration(string projectId, string database)
     /// <summary>
     /// Gets the default inbox Firestore collection.
     /// </summary>
-    public string? Inbox { get; set; }
+    public FirestoreCollection? Inbox { get; set; }
     
     /// <summary>
     /// Gets the default outbox Firestore collection.
@@ -36,11 +36,11 @@ public class FirestoreConfiguration(string projectId, string database)
     /// Gets the default locking Firestore collection.
     /// </summary>
     public string? Locking { get; set; }
-
+    
     /// <summary>
     /// Gets the full path to the Firestore database.
     /// </summary>
-    public string DatabasePath => $"project/{ProjectId}/database/{Database}";
+    public string DatabasePath => $"projects/{ProjectId}/databases/{Database}";
     
     /// <summary>
     /// Gets or sets the <see cref="TimeProvider"/> to use for timestamp generation.
@@ -70,7 +70,7 @@ public class FirestoreConfiguration(string projectId, string database)
     /// Gets the full path to the default Firestore collection.
     /// </summary>
     /// <param name="collection">The collection name.</param>
-    public string GetCollectionPath(string collection) => $"{DatabasePath}/{collection}";
+    public string GetCollectionPath(string collection) => $"{DatabasePath}/documents/{collection}";
 
     /// <summary>
     /// Gets a document name by id

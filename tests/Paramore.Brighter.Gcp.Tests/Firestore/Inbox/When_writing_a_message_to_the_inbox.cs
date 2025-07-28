@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 
-using System;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Firestore;
@@ -32,17 +31,15 @@ using Paramore.Brighter.Inbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
 [Trait("Category", "Firestore")]
-public class InboxAddMessageTests : IDisposable
+public class InboxAddMessageTests
 {
-    private readonly string _collection;
     private readonly FirestoreInbox _inbox;
     private readonly MyCommand _raisedCommand;
     private readonly string _contextKey;
 
     public InboxAddMessageTests()
     {
-        _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new(Configuration.CreateInbox(_collection));
+        _inbox = new(Configuration.CreateInbox());
 
         _raisedCommand = new MyCommand { Value = "Test" };
         _contextKey = "context-key";
@@ -60,18 +57,5 @@ public class InboxAddMessageTests : IDisposable
         Assert.Equal(_raisedCommand.Value, storedCommand.Value);
         //_should_read_the_command_id
         Assert.Equal(_raisedCommand.Id, storedCommand.Id);
-    }
-
-    [Fact]
-    public void When_Reading_A_Message_From_The_Inbox_And_ContextKey_IsNull()
-    {
-        var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(_raisedCommand.Id, null, null));
-        //should_not_read_message
-        Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

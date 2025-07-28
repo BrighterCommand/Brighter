@@ -42,7 +42,7 @@ public class InboxDuplicateMessageAsyncTests : IDisposable
     public InboxDuplicateMessageAsyncTests()
     {
         _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new(Configuration.CreateInbox(_collection));
+        _inbox = new(Configuration.CreateInbox());
         _raisedCommand = new MyCommand { Value = "Test" };
         _contextKey = "test-context";
     }

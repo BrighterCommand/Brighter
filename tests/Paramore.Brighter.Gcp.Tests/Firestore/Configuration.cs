@@ -1,3 +1,4 @@
+using System;
 using Paramore.Brighter.Firestore;
 using Paramore.Brighter.Gcp.Tests.Helper;
 
@@ -5,12 +6,16 @@ namespace Paramore.Brighter.Gcp.Tests.Firestore;
 
 public static class Configuration
 {
-    public static FirestoreConfiguration CreateInbox(string collection)
+    public static FirestoreConfiguration CreateInbox()
     {
-        return new FirestoreConfiguration (GatewayFactory.GetProjectId(), DatabaseName)
+        return new FirestoreConfiguration(GatewayFactory.GetProjectId(), DatabaseName)
         {
             Credential = GatewayFactory.GetCredential(),
-            Inbox = collection
+            Inbox = new FirestoreCollection
+            {
+                Name = InboxCollection,
+                Ttl = TimeSpan.FromMinutes(5)
+            }
         };
     }
     
@@ -39,4 +44,6 @@ public static class Configuration
     }
 
     public const string DatabaseName = "brighter-firestore-database";
+    public const string InboxCollection = "inbox";
+    public const string OutboxCollection = "outbox";
 }

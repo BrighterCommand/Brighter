@@ -7,6 +7,7 @@ using Google.Api.Gax.Grpc;
 using Google.Cloud.Firestore.V1;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Paramore.Brighter.Firestore;
 using Paramore.Brighter.Firestore.Extensions;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -31,6 +32,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
 {
     private readonly IAmAFirestoreConnectionProvider _connectionProvider;
     private readonly FirestoreConfiguration _configuration;
+    private readonly FirestoreCollection _inboxCollection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FirestoreInbox"/> class with just
@@ -58,10 +60,12 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
         _connectionProvider = connectionProvider;
         _configuration = configuration;
 
-        if (string.IsNullOrEmpty(configuration.Inbox))
+        if (configuration.Inbox == null || string.IsNullOrEmpty(configuration.Inbox.Name))
         {
             throw new ArgumentException("inbox collection can't be null or empty", nameof(configuration));
         }
+
+        _inboxCollection = configuration.Inbox;
     }
 
     /// <inheritdoc />
@@ -80,7 +84,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             new BoxSpanInfo(DbSystem.Firestore,
                 _configuration.Database,
                 BoxDbOperation.Add,
-                _configuration.Inbox!,
+                _inboxCollection.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: _configuration.Instrumentation);
@@ -89,7 +93,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
         {
             var request = new CommitRequest
             {
-                Database = _configuration.Database,
+                Database = _configuration.DatabasePath,
                 Writes =
                 {
                     new Write
@@ -102,6 +106,10 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
 
             var client = _connectionProvider.GetFirestoreClient();
             client.Commit(request, CallSettings.FromExpiration(timeoutInMilliseconds.ToExpiration()));
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.AlreadyExists)
+        {
+            // Ignoring duplicated
         }
         finally
         {
@@ -122,7 +130,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             new BoxSpanInfo(DbSystem.Firestore,
                 _configuration.Database,
                 BoxDbOperation.Get,
-                _configuration.Inbox!,
+                _inboxCollection.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: _configuration.Instrumentation);
@@ -131,7 +139,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
         {
             var query = new StructuredQuery
             {
-                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Inbox! } },
+                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _inboxCollection.Name } },
                 Where = new StructuredQuery.Types.Filter
                 {
                     CompositeFilter = new StructuredQuery.Types.CompositeFilter
@@ -153,8 +161,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
                             {
                                 FieldFilter = new StructuredQuery.Types.FieldFilter
                                 {
-                                    Field =
-                                        new StructuredQuery.Types.FieldReference { FieldPath = "ContextKey" },
+                                    Field = new StructuredQuery.Types.FieldReference { FieldPath = "ContextKey" },
                                     Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
                                     Value = new Value { StringValue = contextKey }
                                 }
@@ -176,13 +183,14 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
 
             return BrighterAsyncContext.Run(async () =>
             {
-                if (!await stream.MoveNextAsync())
+                if (await stream.MoveNextAsync() 
+                    && stream.Current is { Document: not null })
                 {
-                    throw new RequestNotFoundException<T>(id);
+                    var document = stream.Current.Document;
+                    return ToRequest<T>(document);
                 }
                 
-                var document = stream.Current.Document;
-                return ToRequest<T>(document);
+                throw new RequestNotFoundException<T>(id);
             });
         }
         finally
@@ -204,7 +212,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             new BoxSpanInfo(DbSystem.Firestore,
                 _configuration.Database,
                 BoxDbOperation.Exists,
-                _configuration.Inbox!,
+                _inboxCollection.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: _configuration.Instrumentation);
@@ -213,7 +221,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
         {
             var query = new StructuredQuery
             {
-                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Inbox! } },
+                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _inboxCollection.Name } },
                 Where = new StructuredQuery.Types.Filter
                 {
                     CompositeFilter = new StructuredQuery.Types.CompositeFilter
@@ -255,7 +263,11 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             var client = _connectionProvider.GetFirestoreClient();
             using var response = client.RunQuery(request);
             var stream = response.GetResponseStream();
-            return BrighterAsyncContext.Run(async () => await stream.MoveNextAsync());
+            return BrighterAsyncContext.Run(async () =>
+            {
+                var move = await stream.MoveNextAsync();
+                return move && stream.Current is { Document: not null };
+            });
         }
         finally
         {
@@ -277,7 +289,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             new BoxSpanInfo(DbSystem.Firestore,
                 _configuration.Database,
                 BoxDbOperation.Add,
-                _configuration.Inbox!,
+                _inboxCollection.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: _configuration.Instrumentation);
@@ -286,7 +298,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
         {
             var request = new CommitRequest
             {
-                Database = _configuration.Database,
+                Database = _configuration.DatabasePath,
                 Writes =
                 {
                     new Write
@@ -300,10 +312,14 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             var client = await _connectionProvider
                 .GetFirestoreClientAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
-            
+
             await client
                 .CommitAsync(request, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
+        }
+        catch (RpcException ex) when(ex.StatusCode == StatusCode.AlreadyExists)
+        {
+            // Ignoring duplicated
         }
         finally
         {
@@ -315,7 +331,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
     public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
-          var dbAttributes = new Dictionary<string, string>
+        var dbAttributes = new Dictionary<string, string>
         {
             ["db.operation.parameter.command.id"] = id,
             ["db.operation.parameter.command.context_key"] = contextKey,
@@ -325,7 +341,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             new BoxSpanInfo(DbSystem.Firestore,
                 _configuration.Database,
                 BoxDbOperation.Get,
-                _configuration.Inbox!,
+                _inboxCollection.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: _configuration.Instrumentation);
@@ -334,7 +350,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
         {
             var query = new StructuredQuery
             {
-                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Inbox! } },
+                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _inboxCollection.Name } },
                 Where = new StructuredQuery.Types.Filter
                 {
                     CompositeFilter = new StructuredQuery.Types.CompositeFilter
@@ -379,7 +395,8 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             
             using var response = client.RunQuery(request);
             var stream = response.GetResponseStream();
-            if (!await stream.MoveNextAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+            if (await stream.MoveNextAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext) 
+                && stream.Current is { Document: not null })
             {
                 var document = stream.Current.Document;
                 return ToRequest<T>(document);
@@ -407,7 +424,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             new BoxSpanInfo(DbSystem.Firestore,
                 _configuration.Database,
                 BoxDbOperation.Exists,
-                _configuration.Inbox!,
+                _inboxCollection.Name,
                 dbAttributes: dbAttributes),
             requestContext?.Span,
             options: _configuration.Instrumentation);
@@ -416,7 +433,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
         {
             var query = new StructuredQuery
             {
-                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _configuration.Inbox! } },
+                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _inboxCollection.Name } },
                 Where = new StructuredQuery.Types.Filter
                 {
                     CompositeFilter = new StructuredQuery.Types.CompositeFilter
@@ -461,9 +478,11 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
             
             using var response = client.RunQuery(request);
             var stream = response.GetResponseStream();
-            return await stream
+            var move = await stream
                 .MoveNextAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
+            
+            return move &&  stream.Current is { Document: not null };
         }
         finally
         {
@@ -477,16 +496,27 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
     private Document ToDocument<T>(string contextKey, T request)
         where T : class, IRequest
     {
+        Value ttl;
+        if (_inboxCollection.Ttl.HasValue && _inboxCollection.Ttl != TimeSpan.Zero)
+        {
+            ttl = new Value { TimestampValue = Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow() + _inboxCollection.Ttl.Value) };
+        }
+        else
+        {
+            ttl = new Value { NullValue = NullValue.NullValue };
+        }
+        
         return new Document 
         { 
-            Name = _configuration.GetDocumentName(_configuration.Inbox!, request.Id),
+            Name = _configuration.GetDocumentName(_inboxCollection.Name, request.Id),
             Fields =
             {
                 ["Id"] = new Value { StringValue = request.Id },
                 ["Body"] = new Value { BytesValue = ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options)) },
                 ["ContextKey"] = new Value { StringValue = contextKey },
                 ["Timestamp"] = new Value { TimestampValue = Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow()) },
-                ["Type"] = new Value { StringValue = typeof(T).FullName }
+                ["Type"] = new Value { StringValue = typeof(T).FullName },
+                ["Ttl"] = ttl
             }
         };
     }

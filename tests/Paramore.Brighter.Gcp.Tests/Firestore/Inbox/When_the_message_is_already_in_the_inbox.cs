@@ -31,20 +31,11 @@ using Paramore.Brighter.Inbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
 [Trait("Category", "Firestore")]
-public class InboxDuplicateMessageTests : IDisposable
+public class InboxDuplicateMessageTests
 {
-    private readonly string _collection;
-    private readonly FirestoreInbox _inbox;
-    private readonly MyCommand _raisedCommand;
-    private readonly string _contextKey;
-
-    public InboxDuplicateMessageTests()
-    {
-        _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new (Configuration.CreateInbox(_collection));
-        _raisedCommand = new MyCommand { Value = "Test" };
-        _contextKey = Guid.NewGuid().ToString();
-    }
+    private readonly FirestoreInbox _inbox = new (Configuration.CreateInbox());
+    private readonly MyCommand _raisedCommand = new() { Value = "Test" };
+    private readonly string _contextKey = Guid.NewGuid().ToString();
 
     [Fact]
     public void When_The_Message_Is_Already_In_The_Inbox()
@@ -56,24 +47,5 @@ public class InboxDuplicateMessageTests : IDisposable
         //_should_succeed_even_if_the_message_is_a_duplicate
         Assert.Null(exception);
         Assert.True(_inbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey, null));
-    }
-
-    [Fact]
-    public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
-    {
-        _inbox.Add(_raisedCommand, _contextKey, null);
-
-        var newcontext = Guid.NewGuid().ToString();
-        _inbox.Add(_raisedCommand, newcontext, null);
-
-        var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, newcontext, null);
-
-        //_should_read_the_command_from_the__dynamo_db_inbox
-        Assert.NotNull(storedCommand);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

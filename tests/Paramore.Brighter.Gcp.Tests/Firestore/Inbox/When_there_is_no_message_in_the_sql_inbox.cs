@@ -41,7 +41,7 @@ public class InboxEmptyWhenSearchedTests : IDisposable
     public InboxEmptyWhenSearchedTests()
     {
         _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new(Configuration.CreateInbox(_collection));
+        _inbox = new(Configuration.CreateInbox());
         _contextKey = "context-key";
     }
 
