@@ -6,13 +6,13 @@
     <PackageTags>MySql;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj"/>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>
+  
   <ItemGroup>
     <PackageReference Include="MySqlConnector" />
-    
-
   </ItemGroup>
 </Project>

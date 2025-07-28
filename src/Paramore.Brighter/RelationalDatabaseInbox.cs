@@ -28,22 +28,29 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
     public abstract class RelationalDatabaseInbox(
         DbSystem dbSystem,
-        string databaseName,
-        string inboxTableName,
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmARelationalDbConnectionProvider connectionProvider,
         IRelationalDatabaseInboxQueries queries,
         ILogger logger,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         : IAmAnInboxSync, IAmAnInboxAsync
     {
+        protected IAmARelationalDatabaseConfiguration DatabaseConfiguration { get; } = configuration;
+
+        protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
+
         /// <inheritdoc/>
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -56,12 +63,13 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.command.id", command.Id},
-                {"db.operation.name", ExtractSqlOperationName(queries.AddCommand)},
-                {"db.query.text", queries.AddCommand}
+                { "db.operation.parameter.command.id", command.Id },
+                { "db.operation.name", ExtractSqlOperationName(queries.AddCommand) },
+                { "db.query.text", queries.AddCommand }
             };
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Add, inboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Add,
+                    DatabaseConfiguration.InBoxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -72,7 +80,8 @@ namespace Paramore.Brighter
                     connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
                     () =>
                     {
-                        logger.LogWarning("Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
+                        logger.LogWarning(
+                            "Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
                             command.Id);
                     });
             }
@@ -86,14 +95,15 @@ namespace Paramore.Brighter
         public T Get<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
             where T : class, IRequest
         {
-            var dbAttributes = new Dictionary<string, string>()
+            var dbAttributes = new Dictionary<string, string>
             {
-                {"db.operation.parameter.command.id", id},
-                {"db.operation.name", ExtractSqlOperationName(queries.GetCommand)},
-                {"db.query.text", queries.GetCommand}
+                { "db.operation.parameter.command.id", id },
+                { "db.operation.name", ExtractSqlOperationName(queries.GetCommand) },
+                { "db.query.text", queries.GetCommand }
             };
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, inboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Get,
+                    DatabaseConfiguration.InBoxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -115,14 +125,15 @@ namespace Paramore.Brighter
         public bool Exists<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds)
             where T : class, IRequest
         {
-            var dbAttributes = new Dictionary<string, string>()
+            var dbAttributes = new Dictionary<string, string>
             {
-                {"db.operation.parameter.command.id", id},
-                {"db.operation.name", ExtractSqlOperationName(queries.ExistsCommand)},
-                {"db.query.text", queries.ExistsCommand}
+                { "db.operation.parameter.command.id", id },
+                { "db.operation.name", ExtractSqlOperationName(queries.ExistsCommand) },
+                { "db.query.text", queries.ExistsCommand }
             };
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Exists, inboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Exists,
+                    DatabaseConfiguration.InBoxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -141,17 +152,19 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc/>
-        public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
+        public async Task AddAsync<T>(T command, string contextKey, RequestContext? requestContext,
+            int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
-            var dbAttributes = new Dictionary<string, string>()
+            var dbAttributes = new Dictionary<string, string>
             {
-                {"db.operation.parameter.command.id", command.Id},
-                {"db.operation.name", ExtractSqlOperationName(queries.AddCommand)},
-                {"db.query.text", queries.AddCommand}
+                { "db.operation.parameter.command.id", command.Id },
+                { "db.operation.name", ExtractSqlOperationName(queries.AddCommand) },
+                { "db.query.text", queries.AddCommand }
             };
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Add, inboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Add,
+                    DatabaseConfiguration.InBoxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -162,7 +175,8 @@ namespace Paramore.Brighter
                     connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
                     () =>
                     {
-                        logger.LogWarning("Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
+                        logger.LogWarning(
+                            "Inbox: A duplicate command with the ID {Id} was inserted into the Inbox, ignoring and continuing",
                             command.Id);
                     },
                     cancellationToken);
@@ -174,17 +188,19 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc/>
-        public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
+        public async Task<T> GetAsync<T>(string id, string contextKey, RequestContext? requestContext,
+            int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.command.id", id},
-                {"db.operation.name", ExtractSqlOperationName(queries.GetCommand)},
-                {"db.query.text", queries.GetCommand}
+                { "db.operation.parameter.command.id", id },
+                { "db.operation.name", ExtractSqlOperationName(queries.GetCommand) },
+                { "db.query.text", queries.GetCommand }
             };
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Get, inboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Get,
+                    DatabaseConfiguration.InBoxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -204,17 +220,19 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc/>
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds, CancellationToken cancellationToken)
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, RequestContext? requestContext,
+            int timeoutInMilliseconds, CancellationToken cancellationToken)
             where T : class, IRequest
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.command.id", id},
-                {"db.operation.name", ExtractSqlOperationName(queries.ExistsCommand)},
-                {"db.query.text", queries.ExistsCommand}
+                { "db.operation.parameter.command.id", id },
+                { "db.operation.name", ExtractSqlOperationName(queries.ExistsCommand) },
+                { "db.query.text", queries.ExistsCommand }
             };
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(dbSystem, databaseName, BoxDbOperation.Exists, inboxTableName, dbAttributes: dbAttributes),
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Exists,
+                    DatabaseConfiguration.InBoxTableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -233,41 +251,134 @@ namespace Paramore.Brighter
             }
         }
 
-        protected abstract void WriteToStore(
-            Func<DbConnection, DbCommand> commandFunc,
-            Action? loggingAction
-        );
+        protected abstract bool IsExceptionUniqueOrDuplicateIssue(Exception ex);
 
-        protected abstract Task WriteToStoreAsync(
+        protected virtual void WriteToStore(Func<DbConnection, DbCommand> commandFunc, Action? loggingAction)
+        {
+            var connection = GetOpenConnection(ConnectionProvider);
+
+            using var command = commandFunc.Invoke(connection);
+            try
+            {
+                command.ExecuteNonQuery();
+            }
+            catch (DbException exception)
+            {
+                if (!IsExceptionUniqueOrDuplicateIssue(exception))
+                {
+                    throw;
+                }
+
+                loggingAction?.Invoke();
+            }
+            finally
+            {
+                FinishWrite(connection);
+            }
+        }
+
+        protected virtual async Task WriteToStoreAsync(
             Func<DbConnection, DbCommand> commandFunc,
             Action? loggingAction,
             CancellationToken cancellationToken
-        );
+        )
+        {
+            var connection = await GetOpenConnectionAsync(ConnectionProvider, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
 
-        protected abstract T ReadFromStore<T>(
+#if NETSTANDARD
+            using var command = commandFunc.Invoke(connection);
+#else
+            await using var command = commandFunc.Invoke(connection);
+#endif
+
+            try
+            {
+                await command
+                    .ExecuteNonQueryAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (DbException exception)
+            {
+                if (!IsExceptionUniqueOrDuplicateIssue(exception))
+                {
+                    throw;
+                }
+
+                loggingAction?.Invoke();
+            }
+            finally
+            {
+                FinishWrite(connection);
+            }
+        }
+
+        protected virtual T ReadFromStore<T>(
             Func<DbConnection, DbCommand> commandFunc,
             Func<DbDataReader, string, T> resultFunc,
             string commandId
-        );
+        )
+        {
+            var connection = GetOpenConnection(ConnectionProvider);
+            using var command = commandFunc.Invoke(connection);
+            try
+            {
+                return resultFunc.Invoke(command.ExecuteReader(), commandId);
+            }
+            finally
+            {
+                connection.Close();
+            }
+        }
 
-        protected abstract Task<T> ReadFromStoreAsync<T>(
+        protected virtual async Task<T> ReadFromStoreAsync<T>(
             Func<DbConnection, DbCommand> commandFunc,
             Func<DbDataReader, string, CancellationToken, Task<T>> resultFunc,
             string commandId,
             CancellationToken cancellationToken
-        );
+        )
+        {
+            var connection = await GetOpenConnectionAsync(ConnectionProvider, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
 
-        protected DbConnection GetOpenConnection(IAmARelationalDbConnectionProvider connectionProvider)
+#if NETSTANDARD
+            using var command = commandFunc.Invoke(connection);
+#else
+            await using var command = commandFunc.Invoke(connection);
+#endif
+            try
+            {
+                var dr = await command.ExecuteReaderAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+
+                return await resultFunc.Invoke(dr, commandId, cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+            }
+            finally
+            {
+#if NETSTANDARD
+                connection.Close();
+#else
+                await connection
+                    .CloseAsync()
+                    .ConfigureAwait(ContinueOnCapturedContext);
+#endif
+            }
+        }
+
+        protected static DbConnection GetOpenConnection(IAmARelationalDbConnectionProvider connectionProvider)
         {
             var connection = connectionProvider.GetConnection();
 
             if (connection.State != ConnectionState.Open)
+            {
                 connection.Open();
+            }
 
             return connection;
         }
 
-        protected async Task<DbConnection> GetOpenConnectionAsync(
+        protected static async Task<DbConnection> GetOpenConnectionAsync(
             IAmARelationalDbConnectionProvider connectionProvider, CancellationToken cancellationToken)
         {
             var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
@@ -278,7 +389,7 @@ namespace Paramore.Brighter
             return connection;
         }
 
-        protected void FinishWrite(DbConnection connection)
+        protected static void FinishWrite(DbConnection connection)
         {
             connection.Close();
         }
@@ -293,24 +404,138 @@ namespace Paramore.Brighter
             => CreateCommand(connection, GenerateSqlText(queries.GetCommand), inboxTimeout, parameters);
 
         private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
-            => string.Format(sqlFormat, orderedParams.Prepend(inboxTableName).ToArray());
+            => string.Format(sqlFormat, orderedParams.Prepend(DatabaseConfiguration.InBoxTableName).ToArray());
 
-        protected abstract DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
-            params IDbDataParameter[] parameters);
+        protected virtual DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
+            params IDbDataParameter[] parameters)
+        {
 
-        protected abstract IDbDataParameter[] CreateAddParameters<T>(T command, string contextKey) where T : class, IRequest;
+            var command = connection.CreateCommand();
 
-        protected abstract IDbDataParameter[] CreateExistsParameters(string commandId, string contextKey);
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
+            command.CommandText = sqlText;
+            command.Parameters.AddRange(parameters);
 
-        protected abstract IDbDataParameter[] CreateGetParameters(string commandId, string contextKey);
+            return command;
+        }
 
-        protected abstract T MapFunction<T>(DbDataReader dr, string commandId) where T : class, IRequest;
+        protected abstract IDbDataParameter CreateSqlParameter(string parameterName, object? value);
 
-        protected abstract Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId, CancellationToken cancellationToken) where T : class, IRequest;
+        protected virtual IDbDataParameter[] CreateAddParameters<T>(T command, string contextKey)
+            where T : class, IRequest
+        {
+            var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+            return
+            [
+                CreateSqlParameter("@CommandID", command.Id.Value),
+                CreateSqlParameter("@CommandType", typeof(T).Name),
+                CreateSqlParameter("@CommandBody", commandJson),
+                CreateSqlParameter("@Timestamp", DateTime.UtcNow),
+                CreateSqlParameter("@ContextKey", contextKey)
+            ];
+        }
 
-        protected abstract bool MapBoolFunction(DbDataReader dr, string commandId);
+        protected virtual IDbDataParameter[] CreateExistsParameters(string commandId, string contextKey)
+        {
+            return
+            [
+                CreateSqlParameter("@CommandID", commandId),
+                CreateSqlParameter("@ContextKey", contextKey)
+            ];
+        }
 
-        protected abstract Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId, CancellationToken cancellationToken);
+        protected virtual IDbDataParameter[] CreateGetParameters(string commandId, string contextKey)
+        {
+            return
+            [
+                CreateSqlParameter("@CommandID", commandId),
+                CreateSqlParameter("@ContextKey", contextKey)
+            ];
+        }
+
+        protected virtual string CommandBodyColumnName => "CommandBody"; 
+        protected virtual T MapFunction<T>(DbDataReader dr, string commandId) where T : class, IRequest
+        {
+            try
+            {
+                if (dr.Read())
+                {
+                    var body = dr.GetString(dr.GetOrdinal(CommandBodyColumnName));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                }
+            }
+            finally
+            {
+                dr.Close();
+            }
+
+            throw new RequestNotFoundException<T>(commandId);
+        }
+
+        protected virtual async Task<T> MapFunctionAsync<T>(DbDataReader dr, string commandId,
+            CancellationToken cancellationToken) where T : class, IRequest
+        {
+            try
+            {
+                if (await dr.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                {
+                    var body = dr.GetString(dr.GetOrdinal(CommandBodyColumnName));
+                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                }
+            }
+            finally
+            {
+                
+#if NETSTANDARD
+                dr.Close();
+#else
+                await dr 
+                    .CloseAsync()
+                    .ConfigureAwait(ContinueOnCapturedContext);
+#endif
+            }
+
+            throw new RequestNotFoundException<T>(commandId);
+        }
+
+        protected virtual bool MapBoolFunction(DbDataReader dr, string commandId)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                dr.Close();
+            } 
+        }
+
+#if  NETSTANDARD
+        protected virtual Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Task.FromResult(dr.HasRows);
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+#else
+        protected virtual async Task<bool> MapBoolFunctionAsync(DbDataReader dr, string commandId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+            }
+        }
+#endif
 
         private static string ExtractSqlOperationName(string queryText)
         {
