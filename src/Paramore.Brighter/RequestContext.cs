@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -45,7 +46,7 @@ namespace Paramore.Brighter
         
         private RequestContext(ConcurrentDictionary<string, object> bag)
         {
-            Bag = bag;
+            Bag = new ConcurrentDictionary<string, object>(bag);
         }
 
         /// <inheritdoc />
@@ -72,7 +73,7 @@ namespace Paramore.Brighter
                 Span = Span,
                 Policies = Policies,
                 FeatureSwitches = FeatureSwitches,
-                OriginatingMessage = OriginatingMessage
+                OriginatingMessage = OriginatingMessage,
             };
 
         /// <summary>
