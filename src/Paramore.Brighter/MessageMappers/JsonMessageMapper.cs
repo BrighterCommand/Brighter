@@ -4,6 +4,7 @@ using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
 
@@ -44,22 +45,12 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
         if(publication.Topic is null)
             throw new ArgumentException($"No Topic Defined for {publication}");
         
-        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
-        var headers = new Dictionary<string, object>(defaultHeaders);
-
-        foreach (var value in Context?.Headers ?? [])
-        {
-            headers[value.Key!] = value.Value!;
-        }
-
+        var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
         var header = new MessageHeader(
             messageId: request.Id,
             topic: publication.Topic,
             messageType: messageType,
-            partitionKey: Context?.PartitionKey,
-            traceParent: Context?.TraceParent,
-            traceState: Context?.TraceState,
-            baggage: Context?.Baggage,
+            partitionKey: Context.GetPartitionKey(),
 #if NETSTANDARD2_0
             contentType: new ContentType("application/json")
 #else
@@ -67,7 +58,7 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
 #endif
         )
         {
-            Bag = headers 
+            Bag = defaultHeaders.Merge(Context.GetHeaders())
         };
 
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));

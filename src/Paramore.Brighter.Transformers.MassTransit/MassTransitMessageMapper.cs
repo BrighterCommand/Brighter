@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
 
@@ -70,14 +71,9 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     {
         var timestamp = DateTimeOffset.UtcNow;
         
-        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
-        var headers = new Dictionary<string, object?>(defaultHeaders!);
-
-        foreach (var value in Context?.Headers ?? [])
-        {
-            headers[value.Key!] = value.Value!;
-        }
-
+        var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
+        var headers = defaultHeaders.Merge(Context.GetHeaders());
+        
         var envelop = new MassTransitMessageEnvelop<TMessage>
         {
             ConversationId = GetConversationId(),
@@ -85,7 +81,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
             DestinationAddress = GetDestinationAddress(),
             ExpirationTime = GetExpirationTime(),
             FaultAddress = GetFaultAddress(),
-            Headers = headers,
+            Headers = headers!,
             Host = s_hostInfo,
             InitiatorId = GetInitiatorId(),
             Message = request,
@@ -110,12 +106,9 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
                 },
                 timeStamp: timestamp,
                 topic: publication.Topic!,
-                partitionKey: Context?.PartitionKey,
-                traceParent: Context?.TraceParent,
-                traceState: Context?.TraceState,
-                baggage: Context?.Baggage)
+                partitionKey: Context.GetPartitionKey())
             {
-                Bag = Context?.Headers ?? []
+                Bag = headers 
             },
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(envelop, JsonSerialisationOptions.Options),
                 MassTransitContentType)

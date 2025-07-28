@@ -4,9 +4,11 @@ using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transformers.JustSaying.Extensions;
 using Paramore.Brighter.Transformers.JustSaying.JsonConverters;
+using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
 
@@ -39,6 +41,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     public IRequestContext? Context { get; set; }
 
     /// <inheritdoc />
+    [CloudEvents(0)]
     public Task<Message> MapToMessageAsync(TMessage request, Publication publication, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(MapToMessage(request, publication));
@@ -51,6 +54,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     }
 
     /// <inheritdoc />
+    [CloudEvents(0)]
     public Message MapToMessage(TMessage request, Publication publication)
     {
         var messageType = request switch
@@ -65,14 +69,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
 
     private Message JustSayingToMessage(TMessage request, MessageType messageType, Publication publication)
     {
-        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
-        var headers = new Dictionary<string, object>(defaultHeaders);
-
-        foreach (var value in Context?.Headers ?? [])
-        {
-            headers[value.Key!] = value.Value!;
-        }
-        
+        var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
         var justSaying = (IJustSayingRequest)request;
         justSaying.Id = GetId(justSaying.Id);
         justSaying.Conversation = GetCorrelationId(justSaying.Conversation);
@@ -90,30 +87,18 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 subject: GetSubject(publication),
                 timeStamp: justSaying.TimeStamp,
                 topic: publication.Topic!,
-                partitionKey: Context?.PartitionKey,
-                traceParent: Context?.TraceParent,
-                traceState: Context?.TraceState,
-                baggage: Context?.Baggage)
+                partitionKey: Context.GetPartitionKey())
             {
-                Bag = headers 
+                Bag = defaultHeaders.Merge(Context.GetHeaders())
             },
             new MessageBody(
                 JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options),
                 s_justSaying));
-
-        
     }
 
     private Message GenericToMessage(TMessage request, MessageType messageType, Publication publication)
     {
-        var defaultHeaders = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
-        var headers = new Dictionary<string, object>(defaultHeaders);
-
-        foreach (var value in Context?.Headers ?? [])
-        {
-            headers[value.Key!] = value.Value!;
-        }
-        
+        var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
         var doc = JsonSerializer.SerializeToNode(request, JsonSerialisationOptions.Options)!;
         var messageId = GetId(doc.GetId(nameof(IJustSayingRequest.Id)));
         var correlationId = GetCorrelationId(doc.GetId(nameof(IJustSayingRequest.Conversation))); 
@@ -135,12 +120,9 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 subject: GetSubject(publication),
                 timeStamp: timestamp,
                 topic: publication.Topic!,
-                partitionKey: Context?.PartitionKey,
-                traceParent: Context?.TraceParent,
-                traceState: Context?.TraceState,
-                baggage: Context?.Baggage)
+                partitionKey: Context.GetPartitionKey())
             {
-                Bag = headers
+                Bag = defaultHeaders.Merge(Context.GetHeaders())
             },
             new MessageBody(
                 doc.ToJsonString(JsonSerialisationOptions.Options),

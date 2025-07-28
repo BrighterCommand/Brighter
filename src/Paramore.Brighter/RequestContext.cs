@@ -46,7 +46,7 @@ namespace Paramore.Brighter
         
         private RequestContext(ConcurrentDictionary<string, object> bag)
         {
-            Bag = bag;
+            Bag = new ConcurrentDictionary<string, object>(bag);
         }
 
         /// <inheritdoc />
@@ -63,21 +63,6 @@ namespace Paramore.Brighter
         /// </summary>
         public IAmAFeatureSwitchRegistry? FeatureSwitches { get; set; }
 
-        /// <inheritdoc />
-        public PartitionKey PartitionKey { get; set; } = PartitionKey.Empty;
-        
-        /// <inheritdoc />
-        public Dictionary<string, object>? Headers { get; set; }
-
-        /// <inheritdoc />
-        public TraceParent? TraceParent { get; set; }
-        
-        /// <inheritdoc />
-        public TraceState? TraceState { get; set; }
-        
-        /// <inheritdoc />
-        public Baggage? Baggage { get; set; }
-
         /// <summary>
         /// Create a new instance of the Request Context
         /// </summary>
@@ -89,11 +74,6 @@ namespace Paramore.Brighter
                 Policies = Policies,
                 FeatureSwitches = FeatureSwitches,
                 OriginatingMessage = OriginatingMessage,
-                PartitionKey = PartitionKey,
-                Headers = Headers,
-                TraceParent = TraceParent,
-                TraceState = TraceState,
-                Baggage = Baggage
             };
 
         /// <summary>

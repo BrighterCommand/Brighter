@@ -23,10 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
-using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -65,48 +63,6 @@ namespace Paramore.Brighter
         /// </summary>
         IAmAFeatureSwitchRegistry? FeatureSwitches { get; }
         
-        /// <summary>
-        /// Gets the partition key
-        /// </summary>
-        /// <remarks>
-        /// It's used by default mapper to flow partitonn key during message serializer
-        /// </remarks>
-        PartitionKey PartitionKey { get; }
-        
-        /// <summary>
-        /// Gets the header
-        /// </summary>
-        /// <remarks>
-        /// It's used by default mapper to flow header during message serializer
-        /// </remarks>
-        Dictionary<string, object>? Headers { get; }
-        
-        /// <summary>
-        /// Gets the <see cref="Paramore.Brighter.TraceParent"/>
-        /// </summary>
-        /// <remarks>
-        /// It's used by default mapper to flow trace parent during message serializer
-        /// </remarks>
-        TraceParent? TraceParent { get; }
-        
-        /// <summary>
-        /// Gets the <see cref="Paramore.Brighter.TraceState"/>
-        /// </summary>
-        /// <remarks>
-        /// It's used by default mapper to flow trace state during message serializer
-        /// </remarks>
-        TraceState? TraceState { get; }
-        
-        
-        /// <summary>
-        /// Gets the <see cref="Paramore.Brighter.Observability.Baggage"/>
-        /// </summary>
-        /// <remarks>
-        /// It's used by default mapper to flow bagage state during message serializer
-        /// </remarks>
-        Baggage? Baggage { get; } 
-        
-
         /// <summary>
         /// Create a new copy of the Request Context
         /// </summary>
