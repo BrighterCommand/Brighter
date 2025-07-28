@@ -60,20 +60,21 @@ public class CommandProcessorMultipleClearObservabilityTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        
+
+        var cloudEventsType = new CloudEventsType("io.goparamore.brighter.myevent");
         InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, 
             new Publication 
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = routingKey,
-                Type = new CloudEventsType("io.goparamore.brighter.myevent"),
+                Type = cloudEventsType,
             }
         );
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer>
         {
-            {routingKey, messageProducer}
+            {new ProducerKey(routingKey, cloudEventsType), messageProducer}
         });
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
