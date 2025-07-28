@@ -37,7 +37,7 @@ namespace Paramore.Brighter
         /// <returns>Message.</returns>
         public static Message CreateQuitMessage(RoutingKey routingKey)
         {
-            return new Message(new MessageHeader(Guid.Empty.ToString(), routingKey, MessageType.MT_QUIT), new MessageBody(string.Empty));
+            return new Message(new MessageHeader(Id.Empty, routingKey, MessageType.MT_QUIT), new MessageBody(string.Empty));
         }
         
         /// <summary>
@@ -46,7 +46,7 @@ namespace Paramore.Brighter
         /// <returns>An Empty message</returns>
         public static Message CreateEmptyMessage(RoutingKey routingKey)
         {
-            return new Message(new MessageHeader(Guid.Empty.ToString(), routingKey, MessageType.MT_NONE), new MessageBody(string.Empty));
+            return new Message(new MessageHeader(Id.Empty, routingKey, MessageType.MT_NONE), new MessageBody(string.Empty));
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -72,7 +73,7 @@ public class CloudEventsTransformerTests
         Assert.Equal(_subject, cloudEvents.Header.Subject);
         Assert.NotEqual(body.Bytes, cloudEvents.Body.Bytes);
 
-        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes);
+        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes, JsonSerialisationOptions.Options);
         Assert.NotNull(json);
         Assert.Equal(_source, json.Source);
         Assert.Equal(_type, json.Type);
@@ -108,7 +109,7 @@ public class CloudEventsTransformerTests
         Assert.Equal(_subject, cloudEvents.Header.Subject);
         Assert.NotEqual(body.Bytes, cloudEvents.Body.Bytes);
 
-        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes);
+        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes, JsonSerialisationOptions.Options);
         Assert.NotNull(json);
         Assert.Equal(_source, json.Source);
         Assert.Equal(_type, json.Type);
@@ -234,7 +235,7 @@ public class CloudEventsTransformerTests
         Assert.Equal(subject, cloudEvents.Header.Subject);
         Assert.NotEqual(body.Bytes, cloudEvents.Body.Bytes);
         
-        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes);
+        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes, JsonSerialisationOptions.Options);
         Assert.NotNull(json);
         Assert.Equal(source, json.Source.ToString());
         Assert.Equal(type, json.Type);

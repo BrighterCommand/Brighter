@@ -56,7 +56,10 @@ namespace Paramore.Brighter
         /// Creates a new Id with a randomly assigned UUID as the key
         /// </summary>
         /// <value>An <see cref="Id"/> with a GUID value.</value>
-        public static Id Random { get; } = new(Guid.NewGuid().ToString()); 
+        public static Id Random 
+        {
+            get => new(Uuid.NewAsString());
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Id"/> class.
@@ -74,7 +77,7 @@ namespace Paramore.Brighter
         /// <returns>A new <see cref="Id"/> instance with the provided value or a random GUID if value is null or empty.</returns>
         public static Id Create(string? value)
         {
-            return new Id(value ?? Guid.NewGuid().ToString());
+            return new Id(value ?? Uuid.NewAsString());
         }
        
         /// <summary>

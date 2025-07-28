@@ -3,13 +3,8 @@ using Paramore.Brighter;
 
 namespace SalutationApp.Requests
 {
-    public class SalutationReceived : Event
+    public class SalutationReceived(DateTimeOffset receivedAt) : Event(Id.Random)
     {
-        public DateTimeOffset ReceivedAt { get; }
-
-        public SalutationReceived(DateTimeOffset receivedAt) : base(Guid.NewGuid().ToString())
-        {
-            ReceivedAt = receivedAt;
-        }
+        public DateTimeOffset ReceivedAt { get; } = receivedAt;
     }
 }

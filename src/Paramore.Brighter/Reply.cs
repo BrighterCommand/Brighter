@@ -95,7 +95,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="sendersAddress">The <see cref="ReplyAddress"/> representing the sender's address for the reply.</param>
         public Reply(ReplyAddress sendersAddress)
-            : this(Guid.NewGuid(), sendersAddress)
+            : this(Uuid.New(), sendersAddress)
         {
         }
 

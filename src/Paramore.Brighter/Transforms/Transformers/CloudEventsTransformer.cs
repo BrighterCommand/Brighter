@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Transforms.Attributes;
@@ -98,6 +99,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// <inheritdoc cref="IAmAMessageTransform.InitializeUnwrapFromAttributeParams" />
     public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
     {
+        if (initializerList[0] is CloudEventFormat format)
+        {
+            _format = format;
+        } 
     }
 
     /// <inheritdoc />
@@ -115,7 +120,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     public Message Wrap(Message message, Publication publication)
     {
         var msg =  WritePublicationHeaders(message,  publication);
-        return _format == CloudEventFormat.Binary ? msg : WriteJsonMessage(msg);
+        return _format == CloudEventFormat.Binary ? msg : WriteJsonMessage(msg, publication);
     }
 
 
@@ -123,7 +128,9 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     public Message Unwrap(Message message)
     {
         if (_format == CloudEventFormat.Binary)
+        {
             return message;
+        }
 
         return ReadCloudEventJsonMessage(message);
     }
@@ -202,24 +209,16 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         message.Header.DataSchema = _dataSchema ?? publication.DataSchema;
         message.Header.Subject = _subject ?? publication.Subject;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
-
-        foreach (var additional in publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>())
-        {
-            if (!message.Header.Bag.ContainsKey(additional.Key))
-            {
-                message.Header.Bag[additional.Key] = additional.Value;
-            }
-        }
         return message;
     }
     
-    private static Message WriteJsonMessage(Message message)
+    private Message WriteJsonMessage(Message message, Publication publication)
     {
         try
         {
             JsonElement? data = null;
             string? dataBase64 = null;
-            var contentType = message.Header.ContentType?.ToString()?? string.Empty;
+            var contentType = message.Header.ContentType.ToString()?? string.Empty;
             if (message.Body.Value.Length > 0)
             {
                 if (contentType.Contains("application/json") || contentType.Contains("text/json"))
@@ -238,6 +237,8 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                     data = JsonDocument.Parse($"\"{encoded.ToString()}\"").RootElement;
                 }
             }
+            
+            var defaultCloudEventsAdditionalProperties = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
 
             var cloudEvent = new JsonEvent
             {
@@ -249,7 +250,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 DataSchema = message.Header.DataSchema,
                 Subject = message.Header.Subject,
                 Time = message.Header.TimeStamp,
-                AdditionalProperties = message.Header.Bag,
+                AdditionalProperties = defaultCloudEventsAdditionalProperties.Merge(Context.GetCloudEventAdditionalProperties()),
                 Data = data,
                 DataBase64 = dataBase64 // Add this property to CloudEventMessage
             };
@@ -280,7 +281,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         /// </summary>
         [JsonRequired]
         [JsonPropertyName("id")]
-        public string Id { get; set; } = string.Empty;
+        public Id Id { get; set; } = Id.Empty;
 
         /// <summary>
         /// Gets or sets the specification version of the CloudEvents specification which the event uses.

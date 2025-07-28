@@ -66,7 +66,7 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        var id = Guid.NewGuid().ToString();
+        var id = Id.Random;
         var seq = await sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
             {
@@ -209,7 +209,7 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        var id = Guid.NewGuid().ToString();
+        var id = Id.Random;
         var seq = BrighterAsyncContext.Run(async () => await sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
             {

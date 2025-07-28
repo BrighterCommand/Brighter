@@ -45,7 +45,7 @@ namespace GreetingsSender
         {
             _iteration++;
 
-            var greetingEvent = new GreetingEvent{ Id = Guid.NewGuid().ToString(), Greeting = $"Hello # {_iteration}"};
+            var greetingEvent = new GreetingEvent{ Id = Id.Random, Greeting = $"Hello # {_iteration}"};
             
             await _processor.PostAsync(greetingEvent);
 

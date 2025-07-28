@@ -1,11 +1,9 @@
-﻿using System;
-
-namespace Paramore.Brighter.Scheduler.Events;
+﻿namespace Paramore.Brighter.Scheduler.Events;
 
 /// <summary>
 /// A command to fire a scheduler message
 /// </summary>
-public class FireSchedulerMessage() : Command(Guid.NewGuid().ToString())
+public class FireSchedulerMessage() : Command(Id.Random)
 {
     /// <summary>
     /// The message that will be fire
