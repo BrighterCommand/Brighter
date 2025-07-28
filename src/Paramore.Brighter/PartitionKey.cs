@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -55,9 +57,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="partitionKey">The partition key</param>
         /// <returns></returns>
-        public static bool IsNullOrEmpty(PartitionKey? partitionKey)
+        public static bool IsNullOrEmpty([NotNullWhen(false)]PartitionKey? partitionKey)
         {
-            return (partitionKey == null || partitionKey.Value == string.Empty);    
+            return partitionKey == null || string.IsNullOrEmpty(partitionKey.Value);    
         }
     }
 }

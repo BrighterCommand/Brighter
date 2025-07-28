@@ -6,7 +6,7 @@ namespace Paramore.Brighter.MessageScheduler.Aws;
 /// <summary>
 /// The command to fire scheduler (message and request) on AWS scheduler.
 /// </summary>
-public class FireAwsScheduler() : Command(Guid.NewGuid())
+public class FireAwsScheduler() : Command(Id.Random)
 {
     /// <summary>
     /// The <see cref="RequestSchedulerType"/>
