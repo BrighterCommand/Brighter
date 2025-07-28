@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -49,26 +50,38 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
 
         /// <summary>
-        /// Creates a dictionary of Redis message producers.
+        /// Creates a dictionary of message producers.
         /// </summary>
-        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/>.</returns>
-        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+        /// <exception cref="ConfigurationException">Thrown when a publication does not have a topic</exception>
+        public Dictionary<ProducerKey, IAmAMessageProducer> Create()
         {
-            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+            var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
 
             foreach (var publication in _publications)
             {
-                producers[publication.Topic!] = new RedisMessageProducer(_redisConfiguration, publication);
+                if (publication.Topic is null)
+                    throw new ConfigurationException("RmqMessageProducerFactory.Create => An RmqPublication must have a topic/routing key");    
+
+                var messageProducer = new RedisMessageProducer(_redisConfiguration, publication);
+                messageProducer.Publication = publication;
+                
+                var producerKey = new ProducerKey(publication.Topic, publication.Type);
+                if (producers.ContainsKey(producerKey))
+                    throw new ArgumentException($"A publication with the topic {publication.Topic}  and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
+                producers[producerKey] = messageProducer;
+
             }
 
             return producers;
         }
 
         /// <summary>
-        /// Asynchronously creates a dictionary of Redis message producers.
+        /// Creates a dictionary of in-memory message producers.
         /// </summary>
-        /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/>.</returns>
-        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+        /// <exception cref="ConfigurationException">Thrown when a publication does not have a topic</exception>
+        public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
         {
             return Task.FromResult(Create());
         }
