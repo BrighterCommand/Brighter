@@ -96,6 +96,41 @@ namespace Paramore.Brighter
         public string Type { get; set; } = "goparamore.io.Paramore.Brighter.Message";
         
         /// <summary>
+        /// Gets or sets the default headers to be included in published messages when using default message mappers.
+        /// </summary>
+        /// <remarks>
+        /// These headers will be automatically added to all messages published through Brighter's message producers.
+        /// <para>
+        /// Default message mappers will use these headers when constructing the outgoing message envelope.
+        /// </para>
+        /// <para>
+        /// Headers should be structured as key-value pairs where:
+        /// <list type="bullet">
+        /// <item><description>Key: Header name (string)</description></item>
+        /// <item><description>Value: Header value (object)</description></item>
+        /// </list>
+        /// </para>
+        /// <example>
+        /// Setting default headers:
+        /// <code>
+        /// publication.DefaultHeaders = new Dictionary&lt;string, object&gt;
+        /// {
+        ///     ["x-correlation-id"] = Guid.NewGuid(),
+        ///     ["x-message-type"] = typeof(MyEvent).FullName
+        /// };
+        /// </code>
+        /// </example>
+        /// <para>
+        /// If no default headers are required, this property can be left as <c>null</c>.
+        /// </para>
+        /// <para>
+        /// Note: These headers are only applied when using Brighter's default message mapping pipeline. 
+        /// Custom mappers may ignore this property.
+        /// </para>
+        /// </remarks>
+        public IDictionary<string, object>? DefaultHeaders { get; set; }
+        
+        /// <summary>
         /// Gets or sets a dictionary of additional properties related to CloudEvents.
         /// This property enables the inclusion of custom or vendor-specific metadata beyond the standard CloudEvents attributes.
         /// These properties are serialized alongside the core CloudEvents attributes when mapping to a CloudEvent message.
@@ -109,10 +144,15 @@ namespace Paramore.Brighter
         /// During serialization to a CloudEvent JSON structure, the key-value pairs within this dictionary are added as top-level properties in the resulting JSON.
         /// This mechanism facilitates forward compatibility and allows for seamless extensibility in accordance with the CloudEvents specification and its extensions.
         /// <para>
-        /// This property is utilized by the <see cref="Paramore.Brighter.MessageMappers.CloudEventJsonMessageMapper{T}"/> for mapping and by the <see cref="Paramore.Brighter.Transforms.Transformers.CloudEventsTransformer"/> for transforming messages into CloudEvents.
+        /// This property is utilized by the <see cref="Paramore.Brighter.MessageMappers.CloudEventJsonMessageMapper{T}"/>
+        /// for mapping and by the <see cref="Paramore.Brighter.Transforms.Transformers.CloudEventsTransformer"/> for
+        /// transforming messages into CloudEvents.
         /// </para>
         /// <para>
-        /// **Important:** If any key in this dictionary conflicts with the name of a standard CloudEvents JSON property (e.g., "id", "source", "type"), the serializer (<c>System.Text.Json</c>) will prioritize the value present in this <c>CloudEventsAdditionalProperties</c> dictionary, effectively overriding the standard property's value during serialization. Exercise caution to avoid unintended overwrites of core CloudEvents attributes.
+        /// **Important:** If any key in this dictionary conflicts with the name of a standard CloudEvents JSON property (e.g., "id", "source", "type"),
+        /// the serializer (<c>System.Text.Json</c>) will prioritize the value present in this <c>CloudEventsAdditionalProperties</c> dictionary,
+        /// effectively overriding the standard property's value during serialization. Exercise caution to avoid unintended
+        /// overwrites of core CloudEvents attributes.
         /// </para>
         /// </remarks> 
         public IDictionary<string, object>? CloudEventsAdditionalProperties { get; set; }
