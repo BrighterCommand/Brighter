@@ -38,5 +38,5 @@ public static class Configuration
         // config.Client.GetDatabase(config.DatabaseName).DropCollection(collection);
     }
 
-    public const string DatabaseName = "brighter";
+    public const string DatabaseName = "brighter-firestore-database";
 }

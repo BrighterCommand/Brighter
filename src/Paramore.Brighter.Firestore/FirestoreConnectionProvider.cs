@@ -16,7 +16,6 @@ public class FirestoreConnectionProvider(FirestoreConfiguration configuration) :
             return _firestoreClient;
         }
         
-        _firestoreClient = GetFirestoreClient();
         var builder = new FirestoreClientBuilder { Credential = configuration.Credential };
         configuration.Configure?.Invoke(builder);
         return _firestoreClient = builder.Build();
@@ -30,7 +29,6 @@ public class FirestoreConnectionProvider(FirestoreConfiguration configuration) :
             return _firestoreClient;
         }
         
-        _firestoreClient = GetFirestoreClient();
         var builder = new FirestoreClientBuilder { Credential = configuration.Credential };
         configuration.Configure?.Invoke(builder);
         return _firestoreClient = await builder.BuildAsync(cancellationToken);
