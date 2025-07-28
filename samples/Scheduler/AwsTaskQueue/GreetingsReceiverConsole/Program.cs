@@ -108,12 +108,12 @@ public class Program
                             }
                         });
 
-                    services.AddServiceActivator(options =>
+                    services.AddConsumers(options =>
                         {
                             options.Subscriptions = subscriptions;
                             options.DefaultChannelFactory = new ChannelFactory(awsConnection);
                         })
-                        .UseExternalBus(configure =>
+                        .AddProducers(configure =>
                         {
                             configure.ProducerRegistry = new SnsProducerRegistryFactory(
                                 awsConnection,

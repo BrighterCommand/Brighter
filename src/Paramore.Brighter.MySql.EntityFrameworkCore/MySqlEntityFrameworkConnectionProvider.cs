@@ -79,7 +79,13 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// <returns>The Sqlite Transaction</returns>
         public override DbTransaction GetTransaction()
         {
-            return _context.Database.CurrentTransaction?.GetDbTransaction();
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction == null)
+            {
+                // If there is no current transaction, we create a new one
+                currentTransaction = _context.Database.BeginTransaction();
+            }
+            return currentTransaction.GetDbTransaction();
         }
         
         /// <summary>

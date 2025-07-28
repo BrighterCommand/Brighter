@@ -44,6 +44,11 @@
     <PackageVersion Include="Grpc.Core.Api" Version="2.71.0" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.20" />
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
+    <PackageVersion Include="JustSaying" Version="7.3.0" />
+    <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="7.3.0" />
+    <PackageVersion Include="MassTransit" Version="8.4.1" />
+    <PackageVersion Include="MassTransit.AmazonSQS" Version="8.4.1" />
+    <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
     <PackageVersion Include="MessagePack" Version="3.1.3" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.5" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.0.2" />
@@ -97,6 +102,7 @@
     <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="3.14.0" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.14.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.1.2" />
+    <PackageVersion Include="RocketMQ.Client" Version="5.1.0" />
     <PackageVersion Include="Serilog" Version="4.3.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.2" />

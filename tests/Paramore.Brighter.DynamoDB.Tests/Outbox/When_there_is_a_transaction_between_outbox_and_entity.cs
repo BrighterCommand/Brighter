@@ -73,7 +73,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
     public void When_There_Is_A_Transaction_Between_Outbox_And_Entity()
     {
         var uow = new DynamoDbUnitOfWork(Client);
-        TransactWriteItemsResponse response;
+        TransactWriteItemsResponse? response;
         try
         {
             _dynamoDbOutbox.Add(_message, new RequestContext(), transactionProvider: uow);
@@ -101,7 +101,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
     public async Task When_There_Is_A_Transaction_Between_Outbox_And_Entity_Async()
     {
         var uow = new DynamoDbUnitOfWork(Client);
-        TransactWriteItemsResponse response;
+        TransactWriteItemsResponse? response;
         try
         {
             await _dynamoDbOutbox.AddAsync(_message, new RequestContext(), transactionProvider: uow);

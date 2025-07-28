@@ -40,7 +40,7 @@ namespace CompetingReceiverConsole
                         queueStoreTable: "QueueData");
                     var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 
-                    services.AddServiceActivator(options =>
+                    services.AddConsumers(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.DefaultChannelFactory = new ChannelFactory(messageConsumerFactory);

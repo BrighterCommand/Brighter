@@ -70,7 +70,7 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
 var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
 
 var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
-builder.Services.AddServiceActivator(options =>
+builder.Services.AddConsumers(options =>
     {
         options.Subscriptions = subscriptions;
         options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);

@@ -98,6 +98,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// <inheritdoc cref="IAmAMessageTransform.InitializeUnwrapFromAttributeParams" />
     public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
     {
+        if (initializerList[0] is CloudEventFormat format)
+        {
+            _format = format;
+        } 
     }
 
     /// <inheritdoc />

@@ -28,7 +28,7 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
     /// <param name="resource">The name of the resource to Lock</param>
     /// <param name="cancellationToken">The Cancellation Token</param>
     /// <returns>The id of the lock that has been acquired or null if no lock was able to be acquired</returns>
-    public async Task<string> ObtainLockAsync(string resource, CancellationToken cancellationToken)
+    public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
         if (_connections.ContainsKey(resource))
         {

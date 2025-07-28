@@ -23,17 +23,17 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         /// <param name="configure">The configuration of the subscriptions</param>
         /// <returns>A brighter handler builder, used for chaining</returns>
         /// <exception cref="ArgumentNullException">Throws if no .NET IoC container provided</exception>
-        public static IBrighterBuilder AddServiceActivator(
+        public static IBrighterBuilder AddConsumers(
             this IServiceCollection services,
-            Action<ServiceActivatorOptions> configure = null)
+            Action<ConsumersOptions>? configure = null)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
             
-            var options = new ServiceActivatorOptions();
+            var options = new ConsumersOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
-            services.TryAddSingleton<IServiceActivatorOptions>(options);
+            services.TryAddSingleton<IAmConsumerOptions>(options);
             
             services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
                 BuildDispatcher,
@@ -64,11 +64,11 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             if (loggerFactory != null)
                 ApplicationLogging.LoggerFactory = loggerFactory;
         
-            var options = serviceProvider.GetService<IServiceActivatorOptions>();
+            var options = serviceProvider.GetRequiredService<IAmConsumerOptions>();
+            
+            var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
         
-            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-        
-            var requestContextFactory = serviceProvider.GetService<IAmARequestContextFactory>();
+            var requestContextFactory = serviceProvider.GetService<IAmARequestContextFactory>() ?? new InMemoryRequestContextFactory();
             
             var dispatcherBuilder = DispatchBuilder
                 .StartNew()
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
-                .ChannelFactory(options.DefaultChannelFactory)
+                .ChannelFactory(options.DefaultChannelFactory ?? new InMemoryChannelFactory(new InternalBus(), TimeProvider.System) )
                 .Subscriptions(options.Subscriptions)
                 .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
                 .Build();
@@ -98,7 +98,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 inboxConfig.Inbox.Tracer = tracer;
             }
 
-            return inboxConfig.Inbox as T;
+            return (inboxConfig.Inbox as T)!;
         }
     }
 }

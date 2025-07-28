@@ -71,7 +71,7 @@ namespace GreetingsReceiverConsole
                     {
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                        services.AddServiceActivator(options =>
+                        services.AddConsumers(options =>
                         {
                             options.Subscriptions = subscriptions;
                             options.DefaultChannelFactory = new ChannelFactory(awsConnection);
