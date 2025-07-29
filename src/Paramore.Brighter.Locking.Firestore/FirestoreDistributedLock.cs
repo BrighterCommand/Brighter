@@ -17,6 +17,7 @@ public class FirestoreDistributedLock : IDistributedLock
 {
     private readonly IAmAFirestoreConnectionProvider _connectionProvider;
     private readonly FirestoreConfiguration _configuration;
+    private readonly FirestoreCollection _collection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FirestoreDistributedLock"/> class with just
@@ -41,10 +42,12 @@ public class FirestoreDistributedLock : IDistributedLock
     {
         _connectionProvider = connectionProvider;
         _configuration = configuration;
-        if (string.IsNullOrEmpty(configuration.Locking))
+        if (configuration.Locking == null || string.IsNullOrEmpty(configuration.Locking.Name))
         {
             throw new ArgumentException("locking collection can't be null or empty", nameof(configuration));
         }
+        
+        _collection = configuration.Locking;
     }
 
     /// <inheritdoc />
@@ -52,6 +55,16 @@ public class FirestoreDistributedLock : IDistributedLock
     {
         try
         {
+            Value ttl;
+            if (_collection.Ttl.HasValue && _collection.Ttl != TimeSpan.Zero)
+            {
+                ttl = new Value { TimestampValue = Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow() + _collection.Ttl.Value) };
+            }
+            else
+            {
+                ttl = new Value { NullValue = NullValue.NullValue };
+            }
+            
             var lockId = resource
                 .Replace("/", "-")
                 .Replace(".", "-");
@@ -66,11 +79,12 @@ public class FirestoreDistributedLock : IDistributedLock
                     {
                         Update = new Document
                         {
-                            Name = _configuration.GetDocumentName(_configuration.Locking!, lockId),
+                            Name = _configuration.GetDocumentName(_collection.Name, lockId),
                             Fields =
                             {
                                 ["Resource"] = new Value { StringValue = resource },
                                 ["CreatedAt"] = new Value { TimestampValue = Timestamp.FromDateTimeOffset(DateTimeOffset.UtcNow) },
+                                ["Ttl"] = ttl
                             }
                         },
                         CurrentDocument = new Precondition{ Exists = false }
@@ -93,7 +107,7 @@ public class FirestoreDistributedLock : IDistributedLock
         {
             var client = await _connectionProvider.GetFirestoreClientAsync(cancellationToken);
             await client.DeleteDocumentAsync(
-                new DeleteDocumentRequest { Name = _configuration.GetDocumentName(_configuration.Locking!, lockId) },
+                new DeleteDocumentRequest { Name = _configuration.GetDocumentName(_collection.Name, lockId) },
                 CallSettings.FromCancellationToken(cancellationToken));
         }
         catch (RpcException e) when (e.StatusCode == StatusCode.NotFound)

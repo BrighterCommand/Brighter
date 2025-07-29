@@ -37,7 +37,11 @@ public static class Configuration
         return new FirestoreConfiguration(GatewayFactory.GetProjectId(), DatabaseName)
         {
             Credential = GatewayFactory.GetCredential(),
-            Locking = collection
+            Locking = new FirestoreCollection
+            {
+                Name = LockingCollection,
+                Ttl = TimeSpan.FromMinutes(5)
+            } 
         };
     }
 
@@ -50,4 +54,5 @@ public static class Configuration
     public const string DatabaseName = "brighter-firestore-database";
     public const string InboxCollection = "inbox";
     public const string OutboxCollection = "outbox";
+    public const string LockingCollection = "locking";
 }

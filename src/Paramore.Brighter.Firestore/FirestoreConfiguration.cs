@@ -35,7 +35,7 @@ public class FirestoreConfiguration(string projectId, string database)
     /// <summary>
     /// Gets the default locking Firestore collection.
     /// </summary>
-    public string? Locking { get; set; }
+    public FirestoreCollection? Locking { get; set; }
     
     /// <summary>
     /// Gets the full path to the Firestore database.
