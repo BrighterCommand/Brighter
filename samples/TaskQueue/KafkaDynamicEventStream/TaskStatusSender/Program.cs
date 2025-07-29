@@ -88,7 +88,7 @@ var host = Host.CreateDefaultBuilder(args)
                     .Create();
             })
             //This is the default mapper type, but we are  explicit  for the sample anyway
-            .AutoFromAssemblies(defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
+            .AutoFromAssemblies([typeof(TaskCreated).Assembly], defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
 
 
         services.AddHostedService<TimedStatusSender>();
