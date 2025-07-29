@@ -889,7 +889,7 @@ namespace Paramore.Brighter
                 {
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
-                    var producer = _producerRegistry.LookupBy(message.Header.Topic);
+                    var producer = _producerRegistry.LookupBy(message.Header.Topic, message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
                         _instrumentationOptions);
                     producer.Span = span;

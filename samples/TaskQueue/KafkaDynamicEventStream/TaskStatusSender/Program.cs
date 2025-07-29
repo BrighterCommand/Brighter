@@ -31,6 +31,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Polly;
 using Polly.CircuitBreaker;
@@ -86,7 +87,9 @@ var host = Host.CreateDefaultBuilder(args)
                         ])
                     .Create();
             })
-            .MapperRegistryFromAssemblies([typeof(TaskCreated).Assembly]);
+            //This is the default mapper type, but we are  explicit  for the sample anyway
+            .AutoFromAssemblies(defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
+
 
         services.AddHostedService<TimedStatusSender>();
     })

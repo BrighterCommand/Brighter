@@ -22,34 +22,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 
-namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal sealed class MyCommandMessageMapperAsync : IAmAMessageMapperAsync<MyCommand>
+    internal sealed class MyOtherCommandMessageMapperAsync : IAmAMessageMapperAsync<MyOtherCommand>
     {
         public IRequestContext Context { get; set; }
 
-        public async Task<Message> MapToMessageAsync(MyCommand request, Publication publication, CancellationToken cancellationToken = default)
+        public Task<Message> MapToMessageAsync(MyOtherCommand request, Publication publication, CancellationToken cancellationToken = default)
         {
-            using MemoryStream stream = new MemoryStream();
-            await JsonSerializer.SerializeAsync(stream, request, JsonSerialisationOptions.Options, cancellationToken);
+            var tcs = new TaskCompletionSource<Message>();
             var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), type: publication.Type);
-            var body = new MessageBody(stream.ToArray());
-            return new Message(header, body);
+            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
+            var message = new Message(header, body);
+            tcs.SetResult(message); ;
+            return tcs.Task;
         }
 
-        public async Task<MyCommand> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
+        public Task<MyOtherCommand> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
         {
-            using var stream = new MemoryStream(message.Body.Bytes);
-            stream.Position = 0;
-            var command = await JsonSerializer.DeserializeAsync<MyCommand>(stream, JsonSerialisationOptions.Options, cancellationToken);
-            return command;
+            var tcs = new TaskCompletionSource<MyOtherCommand>();
+            var myOtherCommand = JsonSerializer.Deserialize<MyOtherCommand>(message.Body.Value, JsonSerialisationOptions.Options);
+            tcs.SetResult(myOtherCommand!);
+            return tcs.Task;
         }
     }
 }

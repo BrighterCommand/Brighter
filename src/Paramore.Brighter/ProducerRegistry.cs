@@ -140,7 +140,7 @@ namespace Paramore.Brighter
         /// <returns>A producer</returns>
         public IAmAMessageProducerAsync LookupAsyncBy(RoutingKey topic, CloudEventsType? requestType = null)
         {
-            return (IAmAMessageProducerAsync)LookupBy(topic);
+            return (IAmAMessageProducerAsync)LookupBy(topic, requestType);
         }
         
         /// <summary>
@@ -150,7 +150,7 @@ namespace Paramore.Brighter
         /// <returns>A producer</returns>
         public IAmAMessageProducerSync LookupSyncBy(RoutingKey topic, CloudEventsType? requestType = null)
         {
-            return (IAmAMessageProducerSync)LookupBy(topic);
+            return (IAmAMessageProducerSync)LookupBy(topic, requestType);
         }
 
         /// <summary>

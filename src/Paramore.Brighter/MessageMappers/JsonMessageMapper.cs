@@ -44,9 +44,11 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
             throw new ArgumentException($"No Topic Defined for {publication}");
 
  #if NETSTANDARD2_0
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType("application/json"));
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType("application/json"),
+            source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo ?? RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject);
  #else       
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType(MediaTypeNames.Application.Json));
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType(MediaTypeNames.Application.Json),
+            source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo ?? RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject);
 #endif
 
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));

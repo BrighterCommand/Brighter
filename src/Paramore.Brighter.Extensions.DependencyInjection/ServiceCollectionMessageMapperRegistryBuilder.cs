@@ -46,9 +46,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public class ServiceCollectionMessageMapperRegistryBuilder(IServiceCollection serviceCollection, ServiceLifetime lifetime = ServiceLifetime.Singleton) 
     {
         public Dictionary<Type, Type> Mappers { get; } = new Dictionary<Type, Type>();
-        public Type DefaultMessageMapper { get; private set; } = typeof(CloudEventJsonMessageMapper<>);
+        public Type DefaultMessageMapper { get; private set; } = typeof(JsonMessageMapper<>);
         public Dictionary<Type, Type> AsyncMappers { get; } = new Dictionary<Type, Type>();
-        public Type DefaultMessageMapperAsync { get; private set; } = typeof(CloudEventJsonMessageMapper<>);
+        public Type DefaultMessageMapperAsync { get; private set; } = typeof(JsonMessageMapper<>);
 
         /// <summary>
         /// Register a mapper with the collection (generic version)

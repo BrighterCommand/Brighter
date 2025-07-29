@@ -83,8 +83,8 @@ var host = Host.CreateDefaultBuilder(args)
                     }
                 ));
         })
-        //We don't need to map CloudEventsJsonMessageMapper as it is the default, but we wanted to show how this works
-        .AutoFromAssemblies(defaultMessageMapper: typeof(CloudEventJsonMessageMapper<>), asyncDefaultMessageMapper: typeof(CloudEventJsonMessageMapper<>));
+        //This is the default mapper type, but we are  explicit  for the sample anyway
+        .AutoFromAssemblies(defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
 
 
         services.AddHostedService<ServiceActivatorHostedService>();
