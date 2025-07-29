@@ -38,7 +38,7 @@ public class Waker<TData>
 {
     private readonly TimeSpan _jobAge;
     private readonly Scheduler<TData> _scheduler;
-    private readonly string _wakerName = Guid.NewGuid().ToString("N");
+    private readonly string _wakerName = Uuid.New().ToString("N");
     
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Waker<TData>>();
 

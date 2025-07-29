@@ -149,7 +149,7 @@ public class FileSystemStorageProvider : IAmAStorageProvider, IAmAStorageProvide
     /// <inheritdoc />
     public async Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default)
     {
-        var claimCheck = Guid.NewGuid().ToString();
+        var claimCheck = Uuid.NewAsString();
         
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, _options.Path, claimCheck, _spanAttributes, stream.Length));
         try
@@ -244,7 +244,7 @@ public class FileSystemStorageProvider : IAmAStorageProvider, IAmAStorageProvide
     /// <inheritdoc />
     public string Store(Stream stream)
     {
-        var claimCheck = Guid.NewGuid().ToString();
+        var claimCheck = Uuid.NewAsString();
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, _options.Path, claimCheck, _spanAttributes, stream.Length));
         try
         {

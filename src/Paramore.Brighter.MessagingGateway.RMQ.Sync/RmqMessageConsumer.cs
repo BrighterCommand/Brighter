@@ -130,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             _highAvailability = highAvailability;
             _batchSize = Convert.ToUInt16(batchSize);
             _makeChannels = makeChannels;
-            _consumerTag = Connection.Name + Guid.NewGuid();
+            _consumerTag = Connection.Name + Uuid.New(); 
             _deadLetterQueueName = deadLetterQueueName;
             _deadLetterRoutingKey = deadLetterRoutingKey;
             //NOTE: Weird because netstandard20 can't understand that isnullor empty checks for null

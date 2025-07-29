@@ -27,6 +27,7 @@ using Greetings.Ports.Commands;
 using Paramore.Brighter;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
+using Paramore.Brighter.Transforms.Transformers;
 
 namespace Greetings.Ports.Mappers
 {
@@ -34,7 +35,7 @@ namespace Greetings.Ports.Mappers
     {
         public IRequestContext Context { get; set; }
         
-        [CloudEvents(0, DataSchema = "/test", Source = "com.brighter", Subject = "cloud-events", Type = "some-type")]
+        [CloudEvents(0, DataSchema = "/test", Source = "com.brighter", Subject = "cloud-events", Type = "some-type", Format = CloudEventFormat.Json)]
         public Message MapToMessage(GreetingEvent request, Publication publication)
         {
             var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: MessageType.MT_EVENT);
@@ -43,11 +44,10 @@ namespace Greetings.Ports.Mappers
             return message;
         }
 
+        [ReadFromCloudEvents(0)]
         public GreetingEvent MapToRequest(Message message)
         {
-            var greetingCommand = JsonSerializer.Deserialize<GreetingEvent>(message.Body.Value, JsonSerialisationOptions.Options);
-            
-            return greetingCommand;
+            return JsonSerializer.Deserialize<GreetingEvent>(message.Body.Value, JsonSerialisationOptions.Options)!;
         }
     }
 }

@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
 using Polly;
@@ -89,7 +88,7 @@ namespace Paramore.Brighter
         /// Gets the Feature Switches
         /// </summary>
         IAmAFeatureSwitchRegistry? FeatureSwitches { get; }
-
+        
         /// <summary>
         /// Create a new copy of the Request Context
         /// </summary>

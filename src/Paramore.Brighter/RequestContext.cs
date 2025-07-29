@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
 using Polly;
@@ -46,7 +45,7 @@ namespace Paramore.Brighter
         
         private RequestContext(ConcurrentDictionary<string, object> bag)
         {
-            Bag = bag;
+            Bag = new ConcurrentDictionary<string, object>(bag);
         }
 
         /// <inheritdoc />

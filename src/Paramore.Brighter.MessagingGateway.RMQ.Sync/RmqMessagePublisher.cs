@@ -113,7 +113,7 @@ internal sealed partial class RmqMessagePublisher
         /// <param name="timeOut">Delay. Set to TimeSpan.Zero for not delay</param>
         public void RequeueMessage(Message message, ChannelName queueName, TimeSpan timeOut)
         {
-            var messageId = Guid.NewGuid().ToString() ;
+            var messageId = Uuid.NewAsString();
             const string deliveryTag = "1";
 
             Log.RequeueMessageInformation(s_logger, message.Id, deliveryTag, messageId, 1);

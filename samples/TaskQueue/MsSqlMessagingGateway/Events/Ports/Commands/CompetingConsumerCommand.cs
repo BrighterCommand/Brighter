@@ -3,13 +3,8 @@ using Paramore.Brighter;
 
 namespace Events.Ports.Commands
 {
-    public class CompetingConsumerCommand : Command
+    public class CompetingConsumerCommand(int commandNumber) : Command(Id.Random)
     {
-        public CompetingConsumerCommand(int commandNumber) : base(Guid.NewGuid())
-        {
-            CommandNumber = commandNumber;
-        }
-
-        public int CommandNumber { get; }
+        public int CommandNumber { get; } = commandNumber;
     }
 }

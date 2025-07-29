@@ -3,14 +3,8 @@ using Paramore.Brighter;
 
 namespace GreetingsApp.Requests
 {
-    public class DeletePerson : Command
+    public class DeletePerson(string name) : Command(Id.Random)
     {
-        public string Name { get; }
-
-        public DeletePerson(string name) 
-            : base(Guid.NewGuid())
-        {
-            Name = name;
-        }
+        public string Name { get; } = name;
     }
 }

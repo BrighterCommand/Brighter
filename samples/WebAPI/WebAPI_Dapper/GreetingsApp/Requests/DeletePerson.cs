@@ -6,7 +6,7 @@ namespace GreetingsApp.Requests;
 public class DeletePerson : Command
 {
     public DeletePerson(string name)
-        : base(Guid.NewGuid())
+        : base(Id.Random)
     {
         Name = name;
     }

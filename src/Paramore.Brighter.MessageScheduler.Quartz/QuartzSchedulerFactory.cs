@@ -23,7 +23,7 @@ public class QuartzSchedulerFactory(IScheduler scheduler) : IAmAMessageScheduler
     /// <remarks>
     /// The default approach is generate a Guid 
     /// </remarks>
-    public Func<Message, string> GetOrCreateSchedulerId { get; set; } = _ => Guid.NewGuid().ToString();
+    public Func<Message, string> GetOrCreateSchedulerId { get; set; } = _ => Uuid.NewAsString();
     
     /// <summary>
     /// Get or create scheduler
@@ -31,7 +31,7 @@ public class QuartzSchedulerFactory(IScheduler scheduler) : IAmAMessageScheduler
     /// <remarks>
     /// The default approach is generate a Guid 
     /// </remarks>
-    public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Guid.NewGuid().ToString();
+    public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Uuid.NewAsString();
     
     /// <inheritdoc />
     public IAmAMessageScheduler Create(IAmACommandProcessor processor) 
