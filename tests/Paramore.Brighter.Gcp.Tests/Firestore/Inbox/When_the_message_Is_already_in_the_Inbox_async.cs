@@ -35,18 +35,18 @@ public class InboxDuplicateMessageAsyncTests
 {
     private readonly FirestoreInbox _inbox = new(Configuration.CreateInbox());
     private readonly MyCommand _raisedCommand = new() { Value = "Test" };
-    private readonly string _contextKey = "test-context";
+    private const string ContextKey = "test-context";
 
     [Fact]
     public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
     {
-        await _inbox.AddAsync(_raisedCommand, _contextKey, null);
+        await _inbox.AddAsync(_raisedCommand, ContextKey, null);
 
-        var exception = await Catch.ExceptionAsync(() => _inbox.AddAsync(_raisedCommand, _contextKey, null));
+        var exception = await Catch.ExceptionAsync(() => _inbox.AddAsync(_raisedCommand, ContextKey, null));
 
         //_should_succeed_even_if_the_message_is_a_duplicate
         Assert.Null(exception);
-        var exists = await _inbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
+        var exists = await _inbox.ExistsAsync<MyCommand>(_raisedCommand.Id, ContextKey, null);
         Assert.True(exists);
     }
 

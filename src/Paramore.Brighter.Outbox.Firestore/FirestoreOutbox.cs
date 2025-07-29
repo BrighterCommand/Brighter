@@ -251,7 +251,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                     new StructuredQuery.Types.Order
                     {
                         Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
-                        Direction = StructuredQuery.Types.Direction.Ascending
+                        Direction = StructuredQuery.Types.Direction.Descending
                     }
                 },
                 Offset = offset,
@@ -856,7 +856,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                     new StructuredQuery.Types.Order
                     {
                         Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
-                        Direction = StructuredQuery.Types.Direction.Ascending
+                        Direction = StructuredQuery.Types.Direction.Descending
                     }
                 },
                 Offset = offset,

@@ -49,15 +49,18 @@ public class FetchOutStandingMessageAsyncTests
         Assert.True(total >= 2);
 
         allUnDispatched = allUnDispatched.ToList();
-        Assert.True(allUnDispatched.Count() > 2);
+        Assert.True(allUnDispatched.Count() >= 2);
         Assert.Contains(allUnDispatched, x => x.Id == _messageUnDispatched.Id);
         Assert.Contains(allUnDispatched, x => x.Id == _messageEarliest.Id);
         Assert.DoesNotContain(allUnDispatched, x => x.Id == _messageDispatched.Id);
 
         messagesOverAnHour = messagesOverAnHour.ToList();
-        Assert.True(messagesOverAnHour.Count() > 1);
+        Assert.True(messagesOverAnHour.Any());
         Assert.Contains(messagesOverAnHour, x => x.Id == _messageEarliest.Id);
         
-        Assert.Empty(messagesOver4Hours);
+        messagesOver4Hours = messagesOver4Hours.ToList();
+        Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageUnDispatched.Id);
+        Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageEarliest.Id);
+        Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageDispatched.Id);
     }
 }

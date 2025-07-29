@@ -40,7 +40,7 @@ public class InboxEmptyWhenSearchedAsyncTests
     [Fact]
     public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Get_Async()
     {
-        string commandId = Guid.NewGuid().ToString();
+        string commandId = Id.Random;
         var exception = await Catch.ExceptionAsync(() => _inbox.GetAsync<MyCommand>(commandId, "some-key", null));
         Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
@@ -48,7 +48,7 @@ public class InboxEmptyWhenSearchedAsyncTests
     [Fact]
     public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Check_Exists_Async()
     {
-        string commandId = Guid.NewGuid().ToString();
+        string commandId = Id.Random;
         bool exists = await _inbox.ExistsAsync<MyCommand>(commandId, "some-key", null);
         Assert.False(exists);
     }

@@ -35,7 +35,7 @@ public class InboxDuplicateMessageTests
 {
     private readonly FirestoreInbox _inbox = new (Configuration.CreateInbox());
     private readonly MyCommand _raisedCommand = new() { Value = "Test" };
-    private readonly string _contextKey = Guid.NewGuid().ToString();
+    private readonly string _contextKey = Id.Random;
 
     [Fact]
     public void When_The_Message_Is_Already_In_The_Inbox()

@@ -35,14 +35,14 @@ public class InboxAddMessageAsyncTests
 {
     private readonly FirestoreInbox _inbox = new(Configuration.CreateInbox());
     private readonly MyCommand _raisedCommand = new() { Value = "Test" };
-    private readonly string _contextKey = "context-key";
+    private const string ContextKey = "context-key";
 
     [Fact]
     public async Task When_Writing_A_Message_To_The_Inbox_Async()
     {
-        await _inbox.AddAsync(_raisedCommand, _contextKey, null);
+        await _inbox.AddAsync(_raisedCommand, ContextKey, null);
 
-        var storedCommand = await _inbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey, null);
+        var storedCommand = await _inbox.GetAsync<MyCommand>(_raisedCommand.Id, ContextKey, null);
 
         //_should_read_the_command_from_the__sql_inbox
         Assert.NotNull(storedCommand);

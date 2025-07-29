@@ -35,13 +35,13 @@ namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 public class InboxEmptyWhenSearchedTests
 {
     private readonly FirestoreInbox _inbox = new(Configuration.CreateInbox());
-    private readonly string _contextKey = "context-key";
+    private const string ContextKey = "context-key";
 
     [Fact]
     public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Get()
     {
-        string commandId = Guid.NewGuid().ToString();
-        var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(commandId, _contextKey, null));
+        string commandId = Id.Random;
+        var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(commandId, ContextKey, null));
 
         Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
@@ -49,7 +49,7 @@ public class InboxEmptyWhenSearchedTests
     [Fact]
     public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Exists()
     {
-        string commandId = Guid.NewGuid().ToString();
-        Assert.False(_inbox.Exists<MyCommand>(commandId, _contextKey, null));
+        string commandId = Id.Random;
+        Assert.False(_inbox.Exists<MyCommand>(commandId, ContextKey, null));
     }
 }
