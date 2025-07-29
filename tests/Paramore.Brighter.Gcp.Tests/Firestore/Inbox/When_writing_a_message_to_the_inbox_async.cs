@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 
-using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.Firestore;
@@ -32,21 +31,11 @@ using Paramore.Brighter.Inbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
 [Trait("Category", "Firestore")]
-public class InboxAddMessageAsyncTests : IDisposable
+public class InboxAddMessageAsyncTests 
 {
-    private readonly string _collection;
-    private readonly FirestoreInbox _inbox;
-    private readonly MyCommand _raisedCommand;
-    private readonly string _contextKey;
-
-    public InboxAddMessageAsyncTests()
-    {
-        _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new(Configuration.CreateInbox());
-
-        _raisedCommand = new MyCommand { Value = "Test" };
-        _contextKey = "context-key";
-    }
+    private readonly FirestoreInbox _inbox = new(Configuration.CreateInbox());
+    private readonly MyCommand _raisedCommand = new() { Value = "Test" };
+    private readonly string _contextKey = "context-key";
 
     [Fact]
     public async Task When_Writing_A_Message_To_The_Inbox_Async()
@@ -61,10 +50,5 @@ public class InboxAddMessageAsyncTests : IDisposable
         Assert.Equal(_raisedCommand.Value, storedCommand.Value);
         //_should_read_the_command_id
         Assert.Equal(_raisedCommand.Id, storedCommand.Id);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

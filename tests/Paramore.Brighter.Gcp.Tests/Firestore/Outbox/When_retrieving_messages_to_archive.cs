@@ -5,9 +5,8 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class ArchiveFetchTests : IDisposable
+public class ArchiveFetchTests
 {
-    private readonly string _collection;
     private readonly Message _messageEarliest;
     private readonly Message _messageDispatched;
     private readonly Message _messageUnDispatched;
@@ -15,18 +14,17 @@ public class ArchiveFetchTests : IDisposable
 
     public ArchiveFetchTests()
     {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new(Configuration.CreateOutbox(_collection));
+        _outbox = new(Configuration.CreateOutbox());
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageDispatched = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageUnDispatched = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
     }
 
@@ -43,13 +41,12 @@ public class ArchiveFetchTests : IDisposable
         var messagesOver4Hours = _outbox.DispatchedMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        Assert.Equal(2, allDispatched.Count());
+        allDispatched = allDispatched.ToList();
+        Assert.True(allDispatched.Count() > 2);
+        Assert.Contains(allDispatched, x => x.Id == _messageEarliest.Id);
+        Assert.Contains(allDispatched, x => x.Id == _messageDispatched.Id);
+        Assert.DoesNotContain(allDispatched, x => x.Id == _messageUnDispatched.Id);
         Assert.Empty(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours);
-    }
-    
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

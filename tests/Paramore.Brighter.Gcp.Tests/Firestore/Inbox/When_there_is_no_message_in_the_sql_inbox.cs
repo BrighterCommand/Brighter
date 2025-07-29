@@ -32,18 +32,10 @@ using Paramore.Brighter.Inbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
 [Trait("Category", "Firestore")]
-public class InboxEmptyWhenSearchedTests : IDisposable
+public class InboxEmptyWhenSearchedTests
 {
-    private readonly string _collection;
-    private readonly FirestoreInbox _inbox;
-    private readonly string _contextKey;
-
-    public InboxEmptyWhenSearchedTests()
-    {
-        _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new(Configuration.CreateInbox());
-        _contextKey = "context-key";
-    }
+    private readonly FirestoreInbox _inbox = new(Configuration.CreateInbox());
+    private readonly string _contextKey = "context-key";
 
     [Fact]
     public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Get()
@@ -59,10 +51,5 @@ public class InboxEmptyWhenSearchedTests : IDisposable
     {
         string commandId = Guid.NewGuid().ToString();
         Assert.False(_inbox.Exists<MyCommand>(commandId, _contextKey, null));
-    }
-    
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

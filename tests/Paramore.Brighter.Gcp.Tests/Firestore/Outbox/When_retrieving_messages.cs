@@ -4,9 +4,8 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class FetchMessageTests : IDisposable
+public class FetchMessageTests
 {
-    private readonly string _collection;
     private readonly Message _messageEarliest;
     private readonly Message _messageDispatched;
     private readonly Message _messageUnDispatched;
@@ -14,18 +13,17 @@ public class FetchMessageTests : IDisposable
 
     public FetchMessageTests()
     {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new(Configuration.CreateOutbox(_collection));
+        _outbox = new(Configuration.CreateOutbox());
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageDispatched = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageUnDispatched = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
     }
 
@@ -37,10 +35,13 @@ public class FetchMessageTests : IDisposable
         _outbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
         _outbox.MarkDispatched(_messageDispatched.Id, context);
 
-        var messages = _outbox.Get();
+        var messages = _outbox.Get(pageSize: 1_000);
 
         //Assert
-        Assert.Equal(3, messages.Count);
+        Assert.True(messages.Count >= 3);
+        Assert.Contains(messages, message => message.Id == _messageEarliest.Id);
+        Assert.Contains(messages, message => message.Id == _messageDispatched.Id);
+        Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);
     }
 
     [Fact]
@@ -76,10 +77,5 @@ public class FetchMessageTests : IDisposable
 
         //Assert
         Assert.Equal(_messageDispatched.Id, messages.Id);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

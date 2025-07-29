@@ -257,7 +257,8 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
 
             var request = new RunQueryRequest
             {
-                Parent = $"{_configuration.DatabasePath}/documents", StructuredQuery = query
+                Parent = $"{_configuration.DatabasePath}/documents", 
+                StructuredQuery = query
             };
 
             var client = _connectionProvider.GetFirestoreClient();

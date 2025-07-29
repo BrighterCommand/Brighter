@@ -5,9 +5,8 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class FetchOutStandingMessageTests : IDisposable
+public class FetchOutStandingMessageTests
 {
-    private readonly string _collection;
     private readonly Message _messageEarliest;
     private readonly Message _messageDispatched;
     private readonly Message _messageUnDispatched;
@@ -15,21 +14,20 @@ public class FetchOutStandingMessageTests : IDisposable
 
     public FetchOutStandingMessageTests()
     {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new(Configuration.CreateOutbox(_collection));
+        _outbox = new(Configuration.CreateOutbox());
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT)
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT)
             {
                 TimeStamp = DateTimeOffset.UtcNow.AddHours(-3)
             },
             new MessageBody("message body"));
         _messageDispatched = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageUnDispatched = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
     }
 
@@ -47,14 +45,18 @@ public class FetchOutStandingMessageTests : IDisposable
         var messagesOver4Hours = _outbox.OutstandingMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        Assert.Equal(2, total);
-        Assert.Equal(2, allUnDispatched.Count());
-        Assert.Single(messagesOverAnHour);
+       Assert.True(total >= 2);
+
+        allUnDispatched = allUnDispatched.ToList();
+        Assert.True(allUnDispatched.Count() > 2);
+        Assert.Contains(allUnDispatched, x => x.Id == _messageUnDispatched.Id);
+        Assert.Contains(allUnDispatched, x => x.Id == _messageEarliest.Id);
+        Assert.DoesNotContain(allUnDispatched, x => x.Id == _messageDispatched.Id);
+
+        messagesOverAnHour = messagesOverAnHour.ToList();
+        Assert.True(messagesOverAnHour.Count() > 1);
+        Assert.Contains(messagesOverAnHour, x => x.Id == _messageUnDispatched.Id);
+        
         Assert.Empty(messagesOver4Hours);
-    }
-    
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

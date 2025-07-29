@@ -30,32 +30,21 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class OutboxDeletingMessagesTests : IDisposable
+public class OutboxDeletingMessagesTests
 {
-    private readonly string _collection;
-    private readonly Message _firstMessage;
-    private readonly Message _secondMessage;
-    private readonly Message _thirdMessage;
-    private readonly FirestoreOutbox _outbox;
-
-    public OutboxDeletingMessagesTests()
-    {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new(Configuration.CreateOutbox(_collection));
-
-        _firstMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test"),
-                MessageType.MT_COMMAND,
-                timeStamp: DateTime.UtcNow.AddHours(-3)), new MessageBody("Body")
-        );
-        _secondMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test2"),
-                MessageType.MT_COMMAND,
-                timeStamp: DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2")
-        );
-        _thirdMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test3"),
-                MessageType.MT_COMMAND,
-                timeStamp: DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3")
-        );
-    }
+    private readonly Message _firstMessage = new(new MessageHeader(Id.Random, new RoutingKey("Test"),
+            MessageType.MT_COMMAND,
+            timeStamp: DateTime.UtcNow.AddHours(-3)), new MessageBody("Body")
+    );
+    private readonly Message _secondMessage = new(new MessageHeader(Id.Random, new RoutingKey("Test2"),
+            MessageType.MT_COMMAND,
+            timeStamp: DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2")
+    );
+    private readonly Message _thirdMessage = new(new MessageHeader(Id.Random, new RoutingKey("Test3"),
+            MessageType.MT_COMMAND,
+            timeStamp: DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3")
+    );
+    private readonly FirestoreOutbox _outbox = new(Configuration.CreateOutbox());
 
     [Fact]
     public void When_Removing_Messages_From_The_Outbox()
@@ -74,7 +63,7 @@ public class OutboxDeletingMessagesTests : IDisposable
         var remainingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
 
         var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
-        Assert.Equal(2, (msgs)?.Count());
+        Assert.Equal(2, msgs.Length);
         Assert.Contains(_secondMessage, msgs);
         Assert.Contains(_thirdMessage, msgs);
 
@@ -82,11 +71,6 @@ public class OutboxDeletingMessagesTests : IDisposable
 
         var messages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
 
-        Assert.Empty(messages ?? []);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
+        Assert.Empty(messages);
     }
 }

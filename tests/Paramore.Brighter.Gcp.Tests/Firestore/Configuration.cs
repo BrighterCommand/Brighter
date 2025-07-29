@@ -19,12 +19,16 @@ public static class Configuration
         };
     }
     
-    public static FirestoreConfiguration CreateOutbox(string collection)
+    public static FirestoreConfiguration CreateOutbox()
     {
         return new FirestoreConfiguration(GatewayFactory.GetProjectId(), DatabaseName)
         {
             Credential = GatewayFactory.GetCredential(),
-            Outbox =  collection
+            Outbox = new FirestoreCollection
+            {
+                Name = OutboxCollection,
+                Ttl = TimeSpan.FromMinutes(5)
+            } 
         };
     }
     

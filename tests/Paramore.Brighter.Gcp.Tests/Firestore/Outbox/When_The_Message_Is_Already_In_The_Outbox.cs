@@ -29,18 +29,16 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class OutboxMessageAlreadyExistsTests : IDisposable
+public class OutboxMessageAlreadyExistsTests 
 {
-    private readonly string _collection;
     private readonly Message _messageEarliest;
     private readonly FirestoreOutbox  _outbox;
 
     public OutboxMessageAlreadyExistsTests()
     {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new (Configuration.CreateOutbox(_collection));
+        _outbox = new (Configuration.CreateOutbox());
         _messageEarliest = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
+            new MessageHeader(Id.Random, new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
             new MessageBody("message body")
         );
         _outbox.Add(_messageEarliest, new RequestContext());
@@ -53,10 +51,5 @@ public class OutboxMessageAlreadyExistsTests : IDisposable
 
         //should ignore the duplicate key and still succeed
         Assert.Null(exception);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

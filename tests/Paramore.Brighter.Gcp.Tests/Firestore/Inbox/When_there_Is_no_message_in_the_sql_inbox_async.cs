@@ -33,16 +33,9 @@ using Paramore.Brighter.Inbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
 [Trait("Category", "Firestore")]
-public class InboxEmptyWhenSearchedAsyncTests : IDisposable
+public class InboxEmptyWhenSearchedAsyncTests
 {
-    private readonly string _collection;
-    private readonly FirestoreInbox _inbox;
-
-    public InboxEmptyWhenSearchedAsyncTests()
-    {
-        _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new (Configuration.CreateInbox());
-    }
+    private readonly FirestoreInbox _inbox = new (Configuration.CreateInbox());
 
     [Fact]
     public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Get_Async()
@@ -58,10 +51,5 @@ public class InboxEmptyWhenSearchedAsyncTests : IDisposable
         string commandId = Guid.NewGuid().ToString();
         bool exists = await _inbox.ExistsAsync<MyCommand>(commandId, "some-key", null);
         Assert.False(exists);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

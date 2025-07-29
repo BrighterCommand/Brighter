@@ -29,33 +29,20 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class OutboxEmptyStoreTests : IDisposable
+public class OutboxEmptyStoreTests
 {
-    private readonly string _collection;
-    private readonly Message _messageEarliest;
-    private readonly FirestoreOutbox _outbox;
-
-    public OutboxEmptyStoreTests()
-    {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new (Configuration.CreateOutbox(_collection));
-        _messageEarliest = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
-            new MessageBody("message body")
-        );
-    }
+    private readonly Message _messageEarliest = new(
+        new MessageHeader(Id.Random, new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
+        new MessageBody("message body")
+    );
+    private readonly FirestoreOutbox _outbox = new (Configuration.CreateOutbox());
 
     [Fact]
-    public void When_There_Is_No_Message_In_The_MongoDb_Outbox()
+    public void When_There_Is_No_Message_In_The_Outbox()
     {
         var storedMessage = _outbox.Get(_messageEarliest.Id, new RequestContext());
 
         //should return a empty message
         Assert.Equal(MessageType.MT_NONE, storedMessage.Header.MessageType);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

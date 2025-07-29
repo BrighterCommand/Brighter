@@ -31,9 +31,8 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class OutboxWritingMessageTests : IDisposable
+public class OutboxWritingMessageTests
 {
-    private readonly string _collection;
     private const string Key1 = "name1";
     private const string Key2 = "name2";
     private const string Key3 = "name3";
@@ -50,19 +49,18 @@ public class OutboxWritingMessageTests : IDisposable
 
     public OutboxWritingMessageTests()
     {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new(Configuration.CreateOutbox(_collection));
+        _outbox = new(Configuration.CreateOutbox());
         var messageHeader = new MessageHeader(
-            messageId:       Guid.NewGuid().ToString(),
+            messageId:       Id.Random,
             topic:           new RoutingKey("test_topic"),
             messageType:     MessageType.MT_DOCUMENT,
             source:          new Uri("https://source.example.com"),
             type:            "unit.test.type",
             timeStamp:       DateTime.UtcNow.AddDays(-1),
-            correlationId:   Guid.NewGuid().ToString(),
+            correlationId:   Id.Random,
             replyTo:         new RoutingKey("ReplyTo"),
             contentType:     new ContentType(MediaTypeNames.Text.Plain),
-            partitionKey:    Guid.NewGuid().ToString(),
+            partitionKey:    Guid.CreateVersion7().ToString(),
             dataSchema:      new Uri("https://schema.example.com"),
             subject:         "TestSubject",
             handledCount:    5,
@@ -84,7 +82,7 @@ public class OutboxWritingMessageTests : IDisposable
     }
 
     [Fact]
-    public void When_Writing_A_Message_To_The_MongoDb_Outbox()
+    public void When_Writing_A_Message_To_The_Outbox()
     {
         var storedMessage = _outbox.Get(_messageEarliest.Id, _context);
 
@@ -119,10 +117,5 @@ public class OutboxWritingMessageTests : IDisposable
         Assert.Equal(_value4, storedMessage.Header.Bag[Key4]);
         Assert.True(storedMessage.Header.Bag.ContainsKey(Key5));
         Assert.Equal(_value5, storedMessage.Header.Bag[Key5]);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

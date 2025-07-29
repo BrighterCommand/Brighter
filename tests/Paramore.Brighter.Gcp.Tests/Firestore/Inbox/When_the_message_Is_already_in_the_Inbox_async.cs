@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 
-using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.Firestore;
@@ -32,20 +31,11 @@ using Paramore.Brighter.Inbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
 [Trait("Category", "Firestore")]
-public class InboxDuplicateMessageAsyncTests : IDisposable
+public class InboxDuplicateMessageAsyncTests
 {
-    private readonly string _collection;
-    private readonly FirestoreInbox _inbox;
-    private readonly MyCommand _raisedCommand;
-    private readonly string _contextKey;
-
-    public InboxDuplicateMessageAsyncTests()
-    {
-        _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new(Configuration.CreateInbox());
-        _raisedCommand = new MyCommand { Value = "Test" };
-        _contextKey = "test-context";
-    }
+    private readonly FirestoreInbox _inbox = new(Configuration.CreateInbox());
+    private readonly MyCommand _raisedCommand = new() { Value = "Test" };
+    private readonly string _contextKey = "test-context";
 
     [Fact]
     public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
@@ -69,10 +59,5 @@ public class InboxDuplicateMessageAsyncTests : IDisposable
 
         //_should_read_the_command_from_the__dynamo_db_inbox
         Assert.NotNull(storedCommand);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

@@ -30,7 +30,7 @@ public class FirestoreConfiguration(string projectId, string database)
     /// <summary>
     /// Gets the default outbox Firestore collection.
     /// </summary>
-    public string? Outbox { get; set; }
+    public FirestoreCollection? Outbox { get; set; }
     
     /// <summary>
     /// Gets the default locking Firestore collection.

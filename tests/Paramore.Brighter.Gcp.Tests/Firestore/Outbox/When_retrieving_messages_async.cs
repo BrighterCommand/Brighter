@@ -5,28 +5,26 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class MongoDbFetchMessageAsyncTests : IDisposable
+public class FetchMessageAsyncTests
 {
-    private readonly string _collection;
     private readonly Message _messageEarliest;
     private readonly Message _messageDispatched;
     private readonly Message _messageUnDispatched;
     private readonly FirestoreOutbox _outbox;
 
-    public MongoDbFetchMessageAsyncTests()
+    public FetchMessageAsyncTests()
     {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new(Configuration.CreateOutbox(_collection));
+        _outbox = new(Configuration.CreateOutbox());
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageDispatched = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageUnDispatched = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
     }
 
@@ -37,11 +35,14 @@ public class MongoDbFetchMessageAsyncTests : IDisposable
         await _outbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
         await _outbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
         await _outbox.MarkDispatchedAsync(_messageDispatched.Id, context);
-
-        var messages = await _outbox.GetAsync();
+        
+        var messages = await _outbox.GetAsync(pageSize: 1_000);
 
         //Assert
-        Assert.Equal(3, messages.Count);
+        Assert.True(messages.Count >= 3);
+        Assert.Contains(messages, message => message.Id == _messageEarliest.Id);
+        Assert.Contains(messages, message => message.Id == _messageDispatched.Id);
+        Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);
     }
 
     [Fact]
@@ -77,10 +78,5 @@ public class MongoDbFetchMessageAsyncTests : IDisposable
 
         //Assert
         Assert.Equal(_messageDispatched.Id, messages.Id);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }

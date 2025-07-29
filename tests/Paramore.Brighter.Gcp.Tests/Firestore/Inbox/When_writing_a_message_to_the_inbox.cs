@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
-using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Firestore;
 
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;

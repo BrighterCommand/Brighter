@@ -5,9 +5,8 @@ using Paramore.Brighter.Outbox.Firestore;
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
 [Trait("Category", "Firestore")]
-public class BinaryOutboxWritingMessageTests : IDisposable
+public class BinaryOutboxWritingMessageTests
 {
-    private readonly string _collection;
     private const string Key1 = "name1";
     private const string Key2 = "name2";
     private const string Key3 = "name3";
@@ -24,19 +23,18 @@ public class BinaryOutboxWritingMessageTests : IDisposable
 
     public BinaryOutboxWritingMessageTests()
     {
-        _collection = $"outbox-{Guid.NewGuid():N}";
-        _outbox = new(Configuration.CreateOutbox(_collection));
+        _outbox = new(Configuration.CreateOutbox());
         var messageHeader = new MessageHeader(
-            messageId: Guid.NewGuid().ToString(),
+            messageId: Id.Random,
             topic: new RoutingKey("test_topic"),
             messageType: MessageType.MT_DOCUMENT,
             timeStamp: DateTime.UtcNow.AddDays(-1),
             handledCount: 5,
             delayed: TimeSpan.FromMilliseconds(5),
-            correlationId: Guid.NewGuid().ToString(),
+            correlationId: Id.Random,
             replyTo: new RoutingKey("ReplyTo"),
             contentType: new ContentType(MediaTypeNames.Text.Plain),
-            partitionKey: Guid.NewGuid().ToString());
+            partitionKey: Guid.CreateVersion7().ToString());
         messageHeader.Bag.Add(Key1, Value1);
         messageHeader.Bag.Add(Key2, Value2);
         messageHeader.Bag.Add(Key3, Value3);
@@ -78,10 +76,5 @@ public class BinaryOutboxWritingMessageTests : IDisposable
         Assert.Equal(_value4, storedMessage.Header.Bag[Key4]);
         Assert.True(storedMessage.Header.Bag.ContainsKey(Key5));
         Assert.Equal(_value5, storedMessage.Header.Bag[Key5]);
-    }
-
-    public void Dispose()
-    {
-        Configuration.Cleanup(_collection);
     }
 }
