@@ -13,7 +13,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// debugging
         /// </summary>
-        public Guid Instance = Guid.NewGuid();
+        public Guid Instance = Uuid.New();
 
         /// <summary>
         /// Does not retain shared connections or transactions, so nothing to commit

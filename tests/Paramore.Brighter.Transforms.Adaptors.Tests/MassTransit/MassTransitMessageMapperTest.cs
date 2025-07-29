@@ -137,7 +137,10 @@ public class MassTransitMessageMapperTests
         var expectedId = Id.Random;
         var envelope = new MassTransitMessageEnvelop<TestOtherRequest>
         {
-            Message = new TestOtherRequest()
+            Message = new TestOtherRequest
+            {
+                Id = expectedId
+            }
         };
 
         var bodyBytes = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonSerialisationOptions.Options);

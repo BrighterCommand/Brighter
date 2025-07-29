@@ -111,7 +111,7 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
     /// <inheritdoc />
     public async Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default)
     {
-        var claimCheck = Guid.NewGuid().ToString();
+        var claimCheck = Uuid.NewAsString();
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, BucketName, claimCheck, null, stream.Length));
         try
         {
@@ -205,7 +205,7 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
     /// <returns>A claim check for the luggage stored</returns>
     public string Store(Stream stream)
     {
-        var claimCheck = Guid.NewGuid().ToString();
+        var claimCheck = Uuid.NewAsString();
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, BucketName, claimCheck, null, stream.Length));
         try
         {

@@ -192,7 +192,7 @@ public class AzureBlobLuggageStore : IAmAStorageProvider, IAmAStorageProviderAsy
     /// <returns>A claim check for the luggage stored</returns>
     public async Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken)
     {
-        var claimCheck = Guid.NewGuid().ToString();
+        var claimCheck = Uuid.NewAsString();
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(
             ClaimCheckOperation.Store,
             ClaimCheckProvider,
@@ -326,7 +326,7 @@ public class AzureBlobLuggageStore : IAmAStorageProvider, IAmAStorageProviderAsy
     /// <returns>A claim check for the luggage stored</returns>
     public string Store(Stream stream)
     {
-        var claimCheck = Guid.NewGuid().ToString();
+        var claimCheck = Uuid.NewAsString();
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(
             ClaimCheckOperation.Store,
             ClaimCheckProvider,

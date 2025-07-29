@@ -7,7 +7,9 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transformers.MassTransit;
 
@@ -50,6 +52,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     public IRequestContext? Context { get; set; }
 
     /// <inheritdoc />
+    [CloudEvents(0)]
     public Task<Message> MapToMessageAsync(TMessage request, Publication publication,
         CancellationToken cancellationToken = default)
     {
@@ -63,21 +66,14 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     }
 
     /// <inheritdoc />
+    [CloudEvents(0)]
     public virtual Message MapToMessage(TMessage request, Publication publication)
     {
         var timestamp = DateTimeOffset.UtcNow;
-        var bag = new Dictionary<string, object>();
-        if (Context is { Bag.Count: > 0 })
-        {
-            foreach (var pair in Context.Bag)
-            {
-                if (!pair.Key.StartsWith(MassTransitHeaderNames.HeaderPrefix))
-                {
-                    bag[pair.Key] = pair.Value;
-                }
-            }
-        }
-
+        
+        var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
+        var headers = defaultHeaders.Merge(Context.GetHeaders());
+        
         var envelop = new MassTransitMessageEnvelop<TMessage>
         {
             ConversationId = GetConversationId(),
@@ -85,7 +81,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
             DestinationAddress = GetDestinationAddress(),
             ExpirationTime = GetExpirationTime(),
             FaultAddress = GetFaultAddress(),
-            Headers = null,
+            Headers = headers!,
             Host = s_hostInfo,
             InitiatorId = GetInitiatorId(),
             Message = request,
@@ -109,9 +105,10 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
                     _ => MessageType.MT_DOCUMENT
                 },
                 timeStamp: timestamp,
-                topic: publication.Topic!)
+                topic: publication.Topic!,
+                partitionKey: Context.GetPartitionKey())
             {
-                Bag = bag
+                Bag = headers 
             },
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(envelop, JsonSerialisationOptions.Options),
                 MassTransitContentType)

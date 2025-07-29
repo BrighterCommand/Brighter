@@ -41,7 +41,7 @@ public class Runner<TData>
     private readonly IAmAStateStoreAsync _stateStore;
     private readonly IAmACommandProcessor _commandProcessor;
     private readonly Scheduler<TData> _scheduler;
-    private readonly string _runnerName = Guid.NewGuid().ToString("N");
+    private readonly string _runnerName = Uuid.New().ToString("N");
 
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Runner<TData>>();
 

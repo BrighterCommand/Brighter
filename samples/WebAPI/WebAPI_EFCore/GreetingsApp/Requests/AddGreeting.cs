@@ -3,16 +3,9 @@ using Paramore.Brighter;
 
 namespace GreetingsApp.Requests
 {
-    public class AddGreeting : Command
+    public class AddGreeting(string name, string greeting) : Command(Id.Random)
     {
-        public string Name { get; }
-        public string Greeting { get; }
-
-        public AddGreeting(string name, string greeting) 
-            : base(Guid.NewGuid())
-        {
-            Name = name;
-            Greeting = greeting;
-        }
+        public string Name { get; } = name;
+        public string Greeting { get; } = greeting;
     }
 }

@@ -324,7 +324,7 @@ public class AwsScheduler(
     {
         if (Id.IsNullOrEmpty(message.Header.CorrelationId))
         {
-            message.Header.CorrelationId = Guid.NewGuid().ToString();
+            message.Header.CorrelationId = Id.Random;
         }
 
         var messageAttributes = new Dictionary<string, object>

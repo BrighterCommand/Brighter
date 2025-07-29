@@ -18,7 +18,7 @@ public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequest
     /// <remarks>
     /// The default approach is generate a Guid 
     /// </remarks>
-    public Func<Message, string> GetOrCreateMessageSchedulerId { get; set; } = _ => Guid.NewGuid().ToString();
+    public Func<Message, string> GetOrCreateMessageSchedulerId { get; set; } = _ => Id.Random.Value;
 
     /// <summary>
     /// Get or create  a scheduler id to a request
@@ -26,7 +26,7 @@ public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequest
     /// <remarks>
     /// The default approach is generate a Guid 
     /// </remarks>
-    public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Guid.NewGuid().ToString();
+    public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Id.Random.Value;
 
     /// <summary>
     /// The action be executed on conflict during scheduler message
