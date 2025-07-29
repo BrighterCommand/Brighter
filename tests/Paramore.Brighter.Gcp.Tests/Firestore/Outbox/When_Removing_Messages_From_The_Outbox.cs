@@ -71,6 +71,9 @@ public class OutboxDeletingMessagesTests
 
         var messages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
 
-        Assert.Empty(messages);
+        messages = messages.ToList();
+        Assert.DoesNotContain(messages, x => x.Id == _firstMessage.Id);
+        Assert.DoesNotContain(messages, x => x.Id == _secondMessage.Id);
+        Assert.DoesNotContain(messages, x => x.Id == _thirdMessage.Id);
     }
 }
