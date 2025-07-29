@@ -5,8 +5,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.MessageMappers;
 
@@ -22,7 +22,6 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
     public IRequestContext? Context { get; set; }
 
     /// <inheritdoc />
-    [CloudEvents(0)]
     public Task<Message> MapToMessageAsync(TRequest request, Publication publication,
         CancellationToken cancellationToken = default)
         => Task.FromResult(MapToMessage(request, publication));
@@ -32,10 +31,9 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
         => Task.FromResult(MapToRequest(message));
 
     /// <inheritdoc />
-    [CloudEvents(0)]
     public Message MapToMessage(TRequest request, Publication publication)
     {
-        MessageType messageType = request switch
+        var messageType = request switch
         {
             ICommand => MessageType.MT_COMMAND,
             IEvent => MessageType.MT_EVENT,
@@ -46,24 +44,40 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
         {
             throw new ArgumentException($"No Topic Defined for {publication}");
         }
-
+        
+        var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
         var headerContentType = new ContentType("application/cloudevents+json");
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: headerContentType);
+        var header = new MessageHeader(
+            messageId: request.Id,
+            topic: publication.Topic,
+            messageType: messageType,
+            contentType: headerContentType,
+            partitionKey: Context.GetPartitionKey(),
+            source: publication.Source,
+            type: publication.Type,
+            dataSchema: publication.DataSchema,
+            subject: publication.Subject
+        )
+        {
+            Bag = defaultHeaders.Merge(Context.GetHeaders()),
+        };
+        
 #if NETSTANDARD2_0
-        var bodyContentType = new ContentType("application/json");   
+        var bodyContentType = new ContentType("application/json");
  #else           
         var bodyContentType = new ContentType(MediaTypeNames.Application.Json);
-#endif            
+#endif
         
+        var defaultCloudEventsAdditionalProperties = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
         var body = new MessageBody(JsonSerializer.Serialize(new CloudEventMessage
         {
             Id = request.Id,
             Source = publication.Source,
             Type = publication.Type,
-            DataContentType = bodyContentType!.ToString(),
+            DataContentType = bodyContentType.ToString(),
             Subject = publication.Subject,
             DataSchema = publication.DataSchema,
-            AdditionalProperties = publication.CloudEventsAdditionalProperties,
+            AdditionalProperties = defaultCloudEventsAdditionalProperties.Merge(Context.GetCloudEventAdditionalProperties()),
             Time = DateTimeOffset.UtcNow,
             Data = request
         }, JsonSerialisationOptions.Options));

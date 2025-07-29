@@ -5,7 +5,7 @@ namespace SalutationApp.Requests;
 
 public class SalutationReceived : Event
 {
-    public SalutationReceived(DateTimeOffset receivedAt) : base(Guid.NewGuid().ToString())
+    public SalutationReceived(DateTimeOffset receivedAt) : base(Id.Random)
     {
         ReceivedAt = receivedAt;
     }

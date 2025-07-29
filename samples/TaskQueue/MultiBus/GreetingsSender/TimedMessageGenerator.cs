@@ -39,7 +39,7 @@ namespace GreetingsSender
             if (_iteration % 2 == 0)
             {
                 var greetingEvent =
-                    new GreetingEvent { Id = Guid.NewGuid().ToString(), Greeting = $"Hello # {_iteration}" };
+                    new GreetingEvent { Id = Id.Random, Greeting = $"Hello # {_iteration}" };
 
                 processor.PostAsync(greetingEvent).GetAwaiter().GetResult();
 
@@ -49,7 +49,7 @@ namespace GreetingsSender
             else
             {
                 var greetingEvent =
-                    new AnotherGreetingEvent { Id = Guid.NewGuid().ToString(), Greeting = $"Hello # {_iteration}" };
+                    new AnotherGreetingEvent { Id = Id.Random, Greeting = $"Hello # {_iteration}" };
 
                 processor.PostAsync(greetingEvent).GetAwaiter().GetResult();
 

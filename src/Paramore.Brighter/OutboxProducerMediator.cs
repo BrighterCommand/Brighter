@@ -510,7 +510,7 @@ namespace Paramore.Brighter
         /// <returns>The ID of the new batch</returns>
         public string StartBatchAddToOutbox()
         {
-            var batchId = Guid.NewGuid().ToString();
+            var batchId = Uuid.NewAsString();
             _outboxBatches.Add(batchId, new List<TMessage>());
             return batchId;
         }

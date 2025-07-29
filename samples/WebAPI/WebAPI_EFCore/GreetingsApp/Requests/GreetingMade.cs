@@ -3,13 +3,8 @@ using Paramore.Brighter;
 
 namespace GreetingsApp.Requests
 {
-    public class GreetingMade : Event
+    public class GreetingMade(string greeting) : Event(Id.Random)
     {
-        public string Greeting { get; set; }
-        
-        public GreetingMade(string greeting) : base(Guid.NewGuid().ToString())
-        {
-            Greeting = greeting;
-        }
+        public string Greeting { get; set; } = greeting;
     }
 }

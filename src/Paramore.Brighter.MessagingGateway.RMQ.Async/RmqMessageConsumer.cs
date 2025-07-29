@@ -134,7 +134,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         _highAvailability = highAvailability;
         _batchSize = Convert.ToUInt16(batchSize);
         _makeChannels = makeChannels;
-        _consumerTag = Connection.Name + Guid.NewGuid();
+        _consumerTag = Connection.Name + Uuid.NewAsString();
         _deadLetterQueueName = deadLetterQueueName;
         _deadLetterRoutingKey = deadLetterRoutingKey;
         _hasDlq = !string.IsNullOrEmpty(deadLetterQueueName!) && !string.IsNullOrEmpty(_deadLetterRoutingKey!);

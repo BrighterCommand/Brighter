@@ -250,7 +250,8 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
     /// <inheritdoc />
     public async Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default)
     {
-        var claimCheck = $"{_luggagePrefix}/luggage_store/{Guid.NewGuid().ToString()}";
+        var claimCheck = $"{_luggagePrefix}/luggage_store/{Uuid.NewAsString()}";
+
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, _bucketName, claimCheck, _spanAttributes, stream.Length));
         try
         {
