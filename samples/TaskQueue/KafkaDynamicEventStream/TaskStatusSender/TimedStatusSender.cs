@@ -43,7 +43,7 @@ public class TimedStatusSender(IAmACommandProcessor processor, ILogger<TimedStat
     {
         logger.LogInformation("Kafka Message Generator is starting.");
 
-        _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
+        _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(3));
             
         DoWork(null);
 
@@ -59,31 +59,30 @@ public class TimedStatusSender(IAmACommandProcessor processor, ILogger<TimedStat
         return Task.CompletedTask;
     }
         
-    private async void DoWork(object? state)
+    private void DoWork(object? state)
     {
         _iteration++;
 
-        var id = Id.Random();
+        var correlationId = Id.Random();
         var dueAt = DateTimeOffset.UtcNow.AddDays(1);
         
-        var taskCreated = new TaskCreated(id, DateTimeOffset.UtcNow, dueAt, [DateTimeOffset.UtcNow.AddMinutes(5), DateTimeOffset.UtcNow.AddMinutes(10)]);
+        var taskCreated = new TaskCreated(Id.Random(), DateTimeOffset.UtcNow, dueAt, [DateTimeOffset.UtcNow.AddMinutes(5), DateTimeOffset.UtcNow.AddMinutes(10)]);
+        taskCreated.CorrelationId = correlationId;
         
-        logger.LogInformation("{Iteration} Sending task created with id {Id} and dueAt {DueAt}", _iteration, taskCreated.Id, taskCreated.DueAt);
-        await processor.PostAsync(taskCreated);
+        Console.WriteLine("{0} Sending task created with id {1} and dueAt {2} with correlationId {3}", _iteration, taskCreated.Id, taskCreated.DueAt, taskCreated.CorrelationId);
+        processor.Post(taskCreated);
         
-        await Task.Delay(1000); // Simulate some processing delay
+        var taskUpdated = new TaskUpdated(Id.Random(), TaskStatus.App.TaskStatus.InProgress, dueAt,[DateTimeOffset.UtcNow.AddMinutes(5)]);
+        taskUpdated.CorrelationId = correlationId;
         
-        var taskUpdated = new TaskUpdated(id, TaskStatus.App.TaskStatus.InProgress, dueAt,[DateTimeOffset.UtcNow.AddMinutes(5)]);
+        Console.WriteLine("{0} Sending task updated with id {1} and status {2} with correlationId {3}", _iteration, taskUpdated.Id, taskUpdated.Status, taskUpdated.CorrelationId);
+        processor.Post(taskUpdated);
         
-        logger.LogInformation("{Iteration} Sending task updated with id {Id} and status {Status}", _iteration, taskUpdated.Id, taskUpdated.Status);
-        await processor.PostAsync(taskUpdated);
+        var taskCompleted = new TaskUpdated(Id.Random(), TaskStatus.App.TaskStatus.Completed, dueAt, []);
+        taskCompleted.CorrelationId = correlationId;
         
-        await Task.Delay(1000); // Simulate some processing delay
-
-        var taskCompleted = new TaskUpdated(id, TaskStatus.App.TaskStatus.Completed, dueAt, []);
-        
-        logger.LogInformation("{Iteration} Sending task completed with id {Id} and status {Status}", _iteration, taskCompleted.Id, taskCompleted.Status);
-        await processor.PostAsync(taskCompleted);
+        Console.WriteLine("{0} Sending task completed with id {1} and status {2} and correlationId {3}", _iteration, taskCompleted.Id, taskCompleted.Status, taskCompleted.CorrelationId);
+        processor.Post(taskCompleted);
 
     }
 
