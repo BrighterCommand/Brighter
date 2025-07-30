@@ -6,7 +6,7 @@ namespace Paramore.Brighter.MessageScheduler.Azure;
 /// <summary>
 /// The command to fire scheduler (message and request) on Azure service bus.
 /// </summary>
-public class FireAzureScheduler() : Command(Guid.NewGuid())
+public class FireAzureScheduler() : Command(Id.Random)
 {
     /// <summary>
     /// The <see cref="RequestSchedulerType"/>

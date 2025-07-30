@@ -58,7 +58,7 @@ namespace Paramore.Brighter.ServiceActivator
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
-            _consumerName = new ConsumerName($"{_subscription.Name}-{Guid.NewGuid()}");
+            _consumerName = new ConsumerName($"{_subscription.Name}-{Uuid.NewAsString()}");
         }
         
         public ConsumerFactory(
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.ServiceActivator
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
-            _consumerName = new ConsumerName($"{_subscription.Name}-{Guid.NewGuid()}");
+            _consumerName = new ConsumerName($"{_subscription.Name}-{Uuid.NewAsString()}");
         }
 
         public Consumer Create()

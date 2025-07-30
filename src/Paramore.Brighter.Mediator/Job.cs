@@ -52,7 +52,7 @@ public abstract class Job
     public DateTimeOffset? DueTime { get; set; }
 
     /// <summary> The id of the workflow, used to save-retrieve it from storage </summary>
-    public string Id { get; private set; } = Guid.NewGuid().ToString();
+    public string Id { get; private set; } = Uuid.NewAsString();
     
     /// <summary> Is the job scheduled to run?</summary>
     public bool IsScheduled => DueTime.HasValue;

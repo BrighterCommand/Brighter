@@ -167,7 +167,7 @@ public class MongoDbLuggageStore : IAmAStorageProvider, IAmAStorageProviderAsync
     /// <inheritdoc />
     public async Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default)
     {
-        var claimCheck = Guid.NewGuid().ToString();
+        var claimCheck = Uuid.NewAsString();
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(
             ClaimCheckOperation.Store,
             ClaimCheckProvider,
@@ -296,7 +296,7 @@ public class MongoDbLuggageStore : IAmAStorageProvider, IAmAStorageProviderAsync
     /// <inheritdoc />
     public string Store(Stream stream)
     {
-        var claimCheck = Guid.NewGuid().ToString();
+        var claimCheck = Uuid.NewAsString();
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(
             ClaimCheckOperation.Store,
             ClaimCheckProvider,

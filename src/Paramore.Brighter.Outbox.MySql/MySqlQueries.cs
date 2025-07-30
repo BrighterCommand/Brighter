@@ -4,7 +4,8 @@
     { 
         public string PagedDispatchedCommand { get; } = "SELECT * FROM {0} WHERE `Dispatched` IS NOT NULL AND `Dispatched` < @DispatchedSince ORDER BY `Timestamp` DESC LIMIT @Take OFFSET @Skip";
         public string PagedReadCommand { get; } = "SELECT * FROM {0} ORDER BY `Timestamp` ASC LIMIT @Take OFFSET @Skip";
-        public string PagedOutstandingCommand { get; } = "SELECT * FROM {0} WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince ORDER BY Timestamp DESC LIMIT @Take OFFSET @Skip";
+        public string PagedOutstandingCommand { get; } = "SELECT * FROM {0} WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince {1} ORDER BY Timestamp DESC LIMIT @Take OFFSET @Skip";
+        public string PagedOutstandingCommandInStatement { get; } = "AND `Topic` NOT IN ( {0} )";
         public string AddCommand { get; } =
             "INSERT INTO {0} (`MessageId`, `MessageType`, `Topic`, `Timestamp`, `CorrelationId`, `ReplyTo`, `ContentType`, `PartitionKey`, `HeaderBag`, `Body`, `Source`, `Type`, `DataSchema`, `Subject`, `TraceParent`, `TraceState`, `Baggage`) " +
             "VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @PartitionKey, @HeaderBag, @Body, @Source, @Type, @DataSchema, @Subject, @TraceParent, @TraceState, @Baggage)";

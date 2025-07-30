@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Monitoring.Events
         DateTime eventTime,
         int timeElapsedMs,
         Exception? exception = null)
-        : Event(Guid.NewGuid().ToString())
+        : Event(Id.Random)
     {
         /// <summary>
         /// Any exception that was thrown when processing the handler pipeline
@@ -84,19 +84,18 @@ namespace Paramore.Brighter.Monitoring.Events
         /// </summary>
         public DateTime EventTime { get; private set; } = eventTime;
 
-
         /// <summary>
         /// When was the duration in milliseconds?
         /// </summary>
         public int TimeElapsedMs { get; set; } = timeElapsedMs;
 
         /// <summary>
-        //What was the handler that we raised this event for? 
+        /// What was the handler that we raised this event for? 
         /// </summary>
         public string? HandlerName { get; private set; } = handlerName;
 
         /// <summary>
-        //What was the handler that we raised this event for, include full assembly path
+        /// What was the handler that we raised this event for, include full assembly path
         /// </summary>
         public string? HandlerFullAssemblyName { get; set; } = handlerFullAssemblyName;
 

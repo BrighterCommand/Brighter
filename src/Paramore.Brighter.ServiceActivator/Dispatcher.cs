@@ -81,7 +81,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Used when communicating with this instance via the Control Bus
         /// </summary>
         /// <value>The name of the host.</value>
-        public HostName HostName { get; set; } = new($"Brighter{Guid.NewGuid()}");
+        public HostName HostName { get; set; } = new($"Brighter{Uuid.NewAsString()}");
 
         /// <summary>
         /// Gets the state of the <see cref="Dispatcher"/>
