@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
@@ -55,7 +53,7 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
             source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo ?? RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject,  partitionKey: Context.GetPartitionKey());
 #endif
         var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
-        header. Bag = defaultHeaders.Merge(Context.GetHeaders())
+        header.Bag = defaultHeaders.Merge(Context.GetHeaders());
 
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);
