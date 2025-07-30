@@ -63,19 +63,20 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
 
         var routingKey = new RoutingKey(_topic);
 
+        var type = new CloudEventsType("io.goparamore.brighter.myevent");
         InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
             new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = routingKey,
-                Type = new CloudEventsType("io.goparamore.brighter.myevent"),
+                Type = type,
             }
         );
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer>
         {
-            {routingKey, messageProducer}
+            {new ProducerKey(routingKey, type), messageProducer}
         });
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
