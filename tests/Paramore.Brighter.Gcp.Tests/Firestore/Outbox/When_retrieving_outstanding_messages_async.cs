@@ -5,7 +5,7 @@ using Paramore.Brighter.Outbox.Firestore;
 
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 
-[Trait("Category", "MongoDb")]
+[Trait("Category", "Firestore")]
 public class FetchOutStandingMessageAsyncTests
 {
     private readonly Message _messageEarliest;
@@ -62,5 +62,29 @@ public class FetchOutStandingMessageAsyncTests
         Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageUnDispatched.Id);
         Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageEarliest.Id);
         Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageDispatched.Id);
+    }
+    
+    
+    [Fact]
+    public async Task When_Retrieving_Not_Dispatched_Messages_With_TrippedTopics()
+    {
+        var context = new RequestContext();
+        await _outbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        await _outbox.MarkDispatchedAsync(_messageDispatched.Id, context);
+        
+        var noMessages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context, trippedTopics: [new RoutingKey("test_topic")]);
+        var allUnDispatched = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context, trippedTopics: [new RoutingKey("not_exists")]);
+
+        //Assert
+        allUnDispatched = allUnDispatched.ToList();
+        Assert.Contains(allUnDispatched, x => x.Id == _messageUnDispatched.Id);
+        Assert.Contains(allUnDispatched, x => x.Id == _messageEarliest.Id);
+        Assert.DoesNotContain(allUnDispatched, x => x.Id == _messageDispatched.Id);
+        
+
+        noMessages = noMessages.ToList();
+        Assert.DoesNotContain(noMessages, x => x.Id == _messageUnDispatched.Id);
+        Assert.DoesNotContain(noMessages, x => x.Id == _messageEarliest.Id);
+        Assert.DoesNotContain(noMessages, x => x.Id == _messageDispatched.Id);
     }
 }

@@ -10,7 +10,10 @@ public class SpannerQueries : IRelationDatabaseOutboxQueries
     
     /// <inheritdoc />
     public string PagedOutstandingCommand => "SELECT * FROM `{0}` WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince ORDER BY `Timestamp` DESC LIMIT @Take OFFSET @Skip";
-    
+
+    /// <inheritdoc />
+    public string PagedOutstandingCommandInStatement => "AND `Topic` NOT IN ( {0} )";
+
     /// <inheritdoc />
     public string AddCommand => 
         "INSERT INTO `{0}` " +

@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Gcp.Tests.TestDoubles;
 
-internal sealed class MyCommand() : Command(Guid.NewGuid())
+internal sealed class MyCommand() : Command(Id.Random)
 {
     public string Value { get; set; } = string.Empty;
 }

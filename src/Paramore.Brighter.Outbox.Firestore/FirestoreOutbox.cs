@@ -372,7 +372,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
 
     /// <inheritdoc />
     public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize = 100,
-        int pageNumber = 1, Dictionary<string, object>? args = null)
+        int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null)
     {
         var offset = (pageNumber - 1) * pageSize;
         var timeStamp = _configuration.TimeProvider.GetUtcNow() - dispatchedSince;
@@ -418,6 +418,22 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
             Offset = offset,
             Limit = pageSize
         };
+
+
+        if (trippedTopics != null)
+        {
+            var arrayValue = new ArrayValue();
+            arrayValue.Values.AddRange(trippedTopics.Select(topic => new Value { StringValue = topic.Value }));
+            query.Where.CompositeFilter.Filters.Add(new StructuredQuery.Types.Filter
+            {
+                FieldFilter = new StructuredQuery.Types.FieldFilter
+                {
+                    Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.Topic) },
+                    Op = StructuredQuery.Types.FieldFilter.Types.Operator.NotIn,
+                    Value = new Value { ArrayValue = arrayValue }
+                }
+            });
+        }
 
         var request = new RunQueryRequest 
         {
@@ -1045,10 +1061,10 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
             Tracer?.EndSpans(new ConcurrentDictionary<string, Activity>(spans.Where(x => x.Value != null)!));
         }
     }
-    
+
     /// <inheritdoc />
     public async Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince, RequestContext requestContext, int pageSize = 100,
-        int pageNumber = 1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     { 
         var offset = (pageNumber - 1) * pageSize;
         var timeStamp = _configuration.TimeProvider.GetUtcNow() - dispatchedSince;
@@ -1094,6 +1110,21 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
             Offset = offset,
             Limit = pageSize
         };
+        
+        if (trippedTopics != null)
+        {
+            var arrayValue = new ArrayValue();
+            arrayValue.Values.AddRange(trippedTopics.Select(topic => new Value { StringValue = topic.Value }));
+            query.Where.CompositeFilter.Filters.Add(new StructuredQuery.Types.Filter
+            {
+                FieldFilter = new StructuredQuery.Types.FieldFilter
+                {
+                    Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.Topic) },
+                    Op = StructuredQuery.Types.FieldFilter.Types.Operator.NotIn,
+                    Value = new Value { ArrayValue = arrayValue }
+                }
+            });
+        }
 
         var request = new RunQueryRequest 
         {
