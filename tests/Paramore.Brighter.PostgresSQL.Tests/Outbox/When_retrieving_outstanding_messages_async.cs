@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -13,6 +14,7 @@ public class PostgresSqlFetchOutStandingMessageAsyncTests : IDisposable
     private readonly Message _messageEarliest;
     private readonly Message _messageDispatched;
     private readonly Message _messageUnDispatched;
+    private readonly Message _messageUnDispatchedWithTrippedTopic;
     private readonly PostgreSqlOutbox  _sqlOutbox;
 
     public PostgresSqlFetchOutStandingMessageAsyncTests()
@@ -22,6 +24,7 @@ public class PostgresSqlFetchOutStandingMessageAsyncTests : IDisposable
 
         _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
         var routingKey = new RoutingKey("test_topic");
+        var trippedTopicRoutingKey = new RoutingKey("tripped_topic");
 
         _messageEarliest = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT)
@@ -34,6 +37,9 @@ public class PostgresSqlFetchOutStandingMessageAsyncTests : IDisposable
             new MessageBody("message body"));
         _messageUnDispatched = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageBody("message body"));
+        _messageUnDispatchedWithTrippedTopic = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), trippedTopicRoutingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
     }
 
@@ -55,6 +61,26 @@ public class PostgresSqlFetchOutStandingMessageAsyncTests : IDisposable
         Assert.Equal(2, allUnDispatched.Count());
         Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours);
+    }
+
+    [Fact]
+    public void When_Retrieving_Not_Dispatched_Messages_With_Tripped_Topics()
+    {
+        var circuitBreaker = new InMemoryOutboxCircuitBreaker();
+        circuitBreaker.TripTopic(_messageUnDispatchedWithTrippedTopic.Header.Topic.Value);
+        var context = new RequestContext();
+        _sqlOutbox.Add([_messageUnDispatched, _messageUnDispatchedWithTrippedTopic], context);
+
+        var total = _sqlOutbox.GetNumberOfOutstandingMessages(null);
+
+        var allUnDispatched = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
+        var unDispatchedMessageFromOutbox = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context, trippedTopics: circuitBreaker.TrippedTopics).Single();
+
+        //Assert
+        Assert.Equal(2, total);
+        Assert.Equal(2, allUnDispatched.Count());
+        Assert.Equal(unDispatchedMessageFromOutbox.Id, _messageUnDispatched.Id);
+        Assert.Equal(unDispatchedMessageFromOutbox.Header.Topic.Value, _messageUnDispatched.Header.Topic.Value);
     }
 
     public void Dispose()

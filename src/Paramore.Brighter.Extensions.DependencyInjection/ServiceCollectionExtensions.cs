@@ -32,6 +32,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
@@ -494,6 +495,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 Tracer(serviceProvider),
                 PublicationFinder(serviceProvider),
                 outbox,
+                OutboxCircuitBreaker(serviceProvider),
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
@@ -633,6 +635,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private static IAmABrighterTracer? Tracer(IServiceProvider serviceProvider)
         {
             return serviceProvider.GetService<BrighterTracer>();
+        }
+        private static IAmAnOutboxCircuitBreaker? OutboxCircuitBreaker(IServiceProvider serviceProvider)
+        {
+            return serviceProvider.GetService<IAmAnOutboxCircuitBreaker>();
         }
 
         /// <summary>                                                            x

@@ -102,12 +102,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.CompletedTask;
         }
 
-        public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null)
+        public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize = 100, int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null)
         {
             return Messages.Where(m => !m.Dispatched).Select(m => m.Message);
         }
 
-        public Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince, RequestContext requestContext, int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince, RequestContext requestContext, 
+            int pageSize = 100, int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(OutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber));
         }
