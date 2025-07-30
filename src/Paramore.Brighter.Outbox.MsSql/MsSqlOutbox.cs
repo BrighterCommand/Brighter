@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
@@ -80,13 +81,15 @@ public class MsSqlOutbox : RelationDatabaseOutbox
         return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value, DbType = dbType };
     }
     
-   protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize, int pageNumber)
+   protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize, 
+       int pageNumber, IDbDataParameter[] inParams)
    {
        var parameters = new IDbDataParameter[3];
        parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
        parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
        parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(since));
-       return parameters;
+       
+       return parameters.Concat(inParams).ToArray();
     }
    
     protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize, int pageNumber)
