@@ -545,8 +545,37 @@ jobs:
         run: dotnet restore
       - name: Azure Tests
         run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+  
+  pulsar-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to fetch the Git tags
+          filter: tree:0
+          show-progress: false
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            Linux-nuget
+            
+      - name: Set up Apache Pulsar
+        uses: reugn/github-action-pulsar@v1
         
-# MongoDB tool too long time to run
+      - name: Pulsar Tests
+        run: dotnet test ./tests/Paramore.Brighter.Pulsar.Tests/Paramore.Brighter.Pulsar.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+        
+        # MongoDB tool too long time to run
 #  mongodb-ci:
 #    runs-on: ubuntu-latest
 #    timeout-minutes: 5
