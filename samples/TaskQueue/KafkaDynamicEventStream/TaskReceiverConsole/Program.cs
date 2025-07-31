@@ -67,11 +67,6 @@ var host = Host.CreateDefaultBuilder(args)
                 messagePumpType: MessagePumpType.Reactor)
         };
 
-        //We take a direct dependency on the schema registry in the message mapper
-        var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
-        var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
-        services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
-
         services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
