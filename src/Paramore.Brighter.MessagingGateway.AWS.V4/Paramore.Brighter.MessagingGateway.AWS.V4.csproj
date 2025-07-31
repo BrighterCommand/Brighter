@@ -11,9 +11,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Polly.Contrib.WaitAndRetry" />
-    <PackageReference Include="AWSSDK.SecurityToken" VersionOverride="4.0.1.2" />
-    <PackageReference Include="AWSSDK.SimpleNotificationService" VersionOverride="4.0.0.11" />
-    <PackageReference Include="AWSSDK.SQS" VersionOverride="4.0.0.12" />
+    <PackageReference Include="AWSSDK.SecurityToken" VersionOverride="4.0.1.6" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" VersionOverride="4.0.0.15" />
+    <PackageReference Include="AWSSDK.SQS" VersionOverride="4.0.0.17" />
   </ItemGroup>
 </Project>
 
