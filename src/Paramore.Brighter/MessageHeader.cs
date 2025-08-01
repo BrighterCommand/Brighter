@@ -395,7 +395,26 @@ namespace Paramore.Brighter
         public bool Equals(MessageHeader? other)
         {
             if (ReferenceEquals(null, other)) return false;
-            return MessageId == other.MessageId && Topic == other.Topic && MessageType == other.MessageType;
+            return
+                MessageId == other.MessageId &&
+                Topic == other.Topic &&
+                MessageType == other.MessageType &&
+                Source == other.Source &&
+                Type == other.Type &&
+                CorrelationId == other.CorrelationId &&
+                ReplyTo == other.ReplyTo &&
+                ContentType.Equals(other.ContentType); //&&
+            /*
+            PartitionKey.Equals(other.PartitionKey) &&
+            DataSchema == other.DataSchema &&
+            Subject == other.Subject &&
+            SpecVersion == other.SpecVersion &&
+            HandledCount == other.HandledCount &&
+            Delayed.Equals(other.Delayed) &&
+            TraceParent == other.TraceParent &&
+            TraceState == other.TraceState &&
+            Baggage.ToString() == other.Baggage.ToString();
+            */
         }
 
         /// <summary>
