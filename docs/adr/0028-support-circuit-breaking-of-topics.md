@@ -94,6 +94,37 @@ ORDER BY [Timestamp] DESC
 ```
 
 On failure to publish a message the topic will be tripped and the `CoolDownCount` set to what has been configured for that topic.
+
+#### Bulk dispatch implementation
+
+Currently only `AzureServiceBusMessageProducer` and `InMemoryProduce` implement `IAmABulkMessageProducerAsync`. 
+
+The current behaviour batches messages per topic and batch size then publishes the batch. If one batch fails an exception is raised and successful batches are not recorded. This therefore renders the `MarkDispatchedAsync` on successful messages useless.
+
+Proposal is to bring the Bulk dispatch inline with the single dispatch implementation so that it can be wrapped in a retry and make use of `IAmAnOutboxCircuitBreaker`. A further benefit is individual batches can be retried as opposed to the entire list of messages and better control over implementation specific batching, asb can be quite funny.
+
+Changes to IAmABulkMessageProducerAsync interface as follows. 
+
+```c#
+    public interface IAmABulkMessageProducerAsync : IAmAMessageProducer
+    {
+        /// <summary>
+        /// Creates batches from messages
+        /// </summary>
+        /// <param name="messages">The messages to batch</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        IEnumerable<MessageBatch> CreateBatch(IEnumerable<Message> messages, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Sends a batch of messages.
+        /// </summary>
+        /// <param name="batch">A batch of messages to send</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        Task SendAsync(MessageBatch batch, CancellationToken cancellationToken);
+    }
+
+```
+
 ---
 
 ## Consequences

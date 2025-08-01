@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,21 +31,20 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmABulkMessageProducerAsync
-    /// Abstracts away the Application Layer used to push messages with async/await support onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
-    /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannelSync"/> derived class.
-    /// We provide the following default gateway applications
-    /// <list type="bullet">
-    /// <item>AMQP</item>
-    /// <item>RESTML</item>
-    /// </list>
     /// </summary>
     public interface IAmABulkMessageProducerAsync : IAmAMessageProducer
     {
         /// <summary>
-        /// Sends the specified message.
+        /// Creates message batches
         /// </summary>
-        /// <param name="messages">The messages.</param>
+        /// <param name="messages">A collection of messages to create batches for</param>
+        IEnumerable<IAmAMessageBatch> CreateBatches(IEnumerable<Message> messages);
+
+        /// <summary>
+        /// Sends a batch of messages.
+        /// </summary>
+        /// <param name="batch">A batch of messages to send</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
-        IAsyncEnumerable<Id[]> SendAsync(IEnumerable<Message> messages, CancellationToken cancellationToken);
+        Task SendAsync(IAmAMessageBatch batch, CancellationToken cancellationToken);
     }
 }
