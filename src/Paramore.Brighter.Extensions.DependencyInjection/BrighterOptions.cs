@@ -35,9 +35,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public InstrumentationOptions InstrumentationOptions { get; set; }
 
         /// <summary>
-        /// Configures the lifetime of mappers. Defaults to Singleton
+        /// Configures the lifetime of mappers. Defaults to transit 
         /// </summary>
-        public ServiceLifetime MapperLifetime { get; set; } = ServiceLifetime.Singleton;
+        public ServiceLifetime MapperLifetime { get; set; } = ServiceLifetime.Transient;
 
         /// <inheritdoc />
         [Obsolete("Migrate to ResiliencePipeline")]
@@ -54,9 +54,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Configures the lifetime of any transformers. Defaults to Singleton
         /// </summary>
-        public ServiceLifetime TransformerLifetime { get; set; } = ServiceLifetime.Singleton;
-        
-        
+        public ServiceLifetime TransformerLifetime { get; set; } = ServiceLifetime.Transient;
     }
 
     public interface IBrighterOptions
