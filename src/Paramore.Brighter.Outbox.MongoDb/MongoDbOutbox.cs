@@ -476,8 +476,15 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
+            
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
             filter &= Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, olderThan);
+
+            if (trippedTopics != null)
+            {
+                filter &= Builders<OutboxMessage>.Filter.Nin(x => x.Topic,  trippedTopics.Select(x => x.Value));
+            }
+            
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
@@ -847,8 +854,14 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
+            
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
             filter &= Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, olderThan);
+            if (trippedTopics != null)
+            {
+                filter &= Builders<OutboxMessage>.Filter.Nin(x => x.Topic,  trippedTopics.Select(x => x.Value));
+            }
+            
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
