@@ -96,7 +96,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         );
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
 
-        _messagePump = new Proactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry,
+        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyDeferredCommand), messageMapperRegistry,
             new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, 

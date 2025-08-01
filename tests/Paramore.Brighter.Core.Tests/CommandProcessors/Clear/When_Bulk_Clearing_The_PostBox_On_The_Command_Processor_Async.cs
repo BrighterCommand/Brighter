@@ -34,16 +34,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var routingKey = new RoutingKey("MyCommand");
 
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
-            {
-                Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
-            };
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication{Topic = routingKey, RequestType = typeof(MyCommand)});
 
-            var routingKeyTwo = new RoutingKey("MyCommand2");
-            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider, InstrumentationOptions.All)
-            {
-                Publication = {Topic = routingKeyTwo, RequestType = typeof(MyCommand)}
-            };
+            var routingKeyTwo = new RoutingKey("MyCommand2"); 
+            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider, new Publication {Topic = routingKeyTwo, RequestType = typeof(MyCommand)});
 
             _messageOne = new Message(
                 new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND),

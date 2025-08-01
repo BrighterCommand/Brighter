@@ -58,28 +58,53 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
         _bulkSendBatchSize = bulkSendBatchSize;
     }
 
-    /// <inheritdoc />
-    public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+    /// <summary>
+    /// Creates a dictionary of in-memory message producers.
+    /// </summary>
+    /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+    /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
+
+    public Dictionary<ProducerKey, IAmAMessageProducer> Create()
     {
         var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
         var topicClientProvider = new ServiceBusSenderProvider(_clientProvider);
 
-        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+        var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
         foreach (var publication in _publications)
         {
             if (publication.Topic is null)
                 throw new ArgumentException("Publication must have a Topic.");
-            if(publication.UseServiceBusQueue)
-                producers.Add(publication.Topic, new AzureServiceBusQueueMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize));
+            
+            if (publication.UseServiceBusQueue)
+            {
+                var producer = new AzureServiceBusQueueMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize);
+                producer.Publication = publication;
+                RegisterProducer(publication, producers, producer);
+            }
             else
-                producers.Add(publication.Topic, new AzureServiceBusTopicMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize));
+            {
+                var producer = new AzureServiceBusTopicMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize);
+                producer.Publication = publication;
+                RegisterProducer(publication, producers, producer);
+
+            }
         }
 
         return producers;
     }
-
-    public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+    
+    public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
     {
         return Task.FromResult(Create());
     }
+       
+    private static void RegisterProducer(AzureServiceBusPublication publication, Dictionary<ProducerKey, IAmAMessageProducer> producers, IAmAMessageProducer producer)
+    {
+        var producerKey = new ProducerKey(publication.Topic!, publication.Type);
+        if (producers.ContainsKey(producerKey))
+            throw new ArgumentException($"A publication with the topic {publication.Topic}  and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
+        producers[producerKey] = producer;
+    }
+
+   
 }

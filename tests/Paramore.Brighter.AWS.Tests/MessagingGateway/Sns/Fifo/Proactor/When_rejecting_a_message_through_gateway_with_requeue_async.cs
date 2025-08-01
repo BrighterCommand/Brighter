@@ -24,7 +24,7 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         _myCommand = new MyCommand { Value = "Test" };
         var replyTo = new RoutingKey("http:\\queueUrl");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
-        var correlationId =Id.Random;
+        var correlationId =Id.Random();
         var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

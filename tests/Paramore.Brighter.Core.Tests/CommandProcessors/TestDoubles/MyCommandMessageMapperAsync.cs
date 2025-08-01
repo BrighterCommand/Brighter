@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             using MemoryStream stream = new MemoryStream();
             await JsonSerializer.SerializeAsync(stream, request, JsonSerialisationOptions.Options, cancellationToken);
-            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());
+            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), type: publication.Type);
             var body = new MessageBody(stream.ToArray());
             return new Message(header, body);
         }

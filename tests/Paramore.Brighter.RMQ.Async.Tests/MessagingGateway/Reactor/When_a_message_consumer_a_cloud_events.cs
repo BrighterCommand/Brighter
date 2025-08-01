@@ -38,7 +38,7 @@ public class RMQBufferedConsumerCloudEventsTests : IDisposable
         var messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND)
             {
-                Type = $"Type{Guid.NewGuid():N}",
+                Type = new CloudEventsType($"Type{Guid.NewGuid():N}"),
                 Subject = $"Subject{Guid.NewGuid():N}",
                 Source = new Uri($"/component/{Guid.NewGuid()}", UriKind.RelativeOrAbsolute),
                 DataSchema = new Uri("https://example.com/storage/tenant/container", UriKind.RelativeOrAbsolute)

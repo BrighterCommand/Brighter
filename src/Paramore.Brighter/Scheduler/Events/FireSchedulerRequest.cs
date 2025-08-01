@@ -5,7 +5,7 @@ namespace Paramore.Brighter.Scheduler.Events;
 /// <summary>
 /// The command to fire a scheduler request
 /// </summary>
-public class FireSchedulerRequest() : Command(Id.Random)
+public class FireSchedulerRequest() : Command(Id.Random())
 {
     /// <summary>
     /// The <see cref="RequestSchedulerType"/>

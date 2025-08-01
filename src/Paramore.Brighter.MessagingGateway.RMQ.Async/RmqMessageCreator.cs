@@ -296,7 +296,7 @@ internal sealed partial class RmqMessageCreator
     {
         if (string.IsNullOrEmpty(messageId))
         {
-            var newMessageId = Id.Random;
+            var newMessageId = Id.Random();
             Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
             return new HeaderResult<Id?>(newMessageId, true);
         }
@@ -331,15 +331,15 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
     }
 
-    private static HeaderResult<string> ReadType(IDictionary<string, object?> headers)
+    private static HeaderResult<CloudEventsType> ReadType(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out var type)
             && type is byte[] typeArray)
         {
-            return new HeaderResult<string>(Encoding.UTF8.GetString(typeArray), true);
+            return new HeaderResult<CloudEventsType>(new CloudEventsType(Encoding.UTF8.GetString(typeArray)), true);
         }
 
-        return new HeaderResult<string>(MessageHeader.DefaultType, true);
+        return new HeaderResult<CloudEventsType>(CloudEventsType.Empty, true);
     }
 
     private static HeaderResult<string?> ReadSubject(IDictionary<string, object?> headers)

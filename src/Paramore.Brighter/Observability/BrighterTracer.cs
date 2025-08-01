@@ -29,7 +29,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using OpenTelemetry;
 using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Observability;
@@ -170,7 +169,7 @@ public class BrighterTracer : IAmABrighterTracer
         {
             tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
 
-            tags.Add(BrighterSemanticConventions.CeType, message.Header.Type);
+            tags.Add(BrighterSemanticConventions.CeType, message.Header.Type.Value);
             tags.Add(BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value);
             tags.Add(BrighterSemanticConventions.HandledCount, message.Header.HandledCount);
 
@@ -288,7 +287,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
             tags.Add(BrighterSemanticConventions.RequestType, requestType.Name);
             tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
-        };
+        }
 
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -576,7 +575,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.CeSource, publication.Source);
             tags.Add(BrighterSemanticConventions.CeVersion, "1.0");
             tags.Add(BrighterSemanticConventions.CeSubject, publication.Subject);
-            tags.Add(BrighterSemanticConventions.CeType, publication.Type);
+            tags.Add(BrighterSemanticConventions.CeType, publication.Type.Value);
         }
 
         if (message is not null)
@@ -721,7 +720,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
             tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
-        };
+        }
         if (options.HasFlag(InstrumentationOptions.RequestBody))
             tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
         if (options.HasFlag(InstrumentationOptions.Brighter))
@@ -764,7 +763,7 @@ public class BrighterTracer : IAmABrighterTracer
         {   
             tags.Add(BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction);
             tags.Add(BrighterSemanticConventions.OutboxType, outBoxType);
-        };
+        }
         if(instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
             tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
         if (instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
@@ -843,12 +842,12 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.CeSource, message.Header.Source);
             tags.Add(BrighterSemanticConventions.CeVersion, "1.0");
             tags.Add(BrighterSemanticConventions.CeSubject, message.Header.Subject);
-            tags.Add(BrighterSemanticConventions.CeType, message.Header.Type);
+            tags.Add(BrighterSemanticConventions.CeType, message.Header.Type.Value);
         }
 
         span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}", DateTimeOffset.UtcNow, tags));
 
-        new TextContextPropogator().PropogateContext(span?.Context, message);
+        new TextContextPropogator().PropogateContext(span.Context, message);
     }
 
     private static void Propogate(Activity? parentActivity, Activity? activity)
@@ -873,7 +872,7 @@ public class BrighterTracer : IAmABrighterTracer
 
         if (parentActivity != null && parentActivity.Baggage.Any())
         {
-            foreach (var baggageItem in parentActivity!.Baggage)
+            foreach (var baggageItem in parentActivity.Baggage)
                 activity.SetBaggage(baggageItem.Key, baggageItem.Value);
         }
     }

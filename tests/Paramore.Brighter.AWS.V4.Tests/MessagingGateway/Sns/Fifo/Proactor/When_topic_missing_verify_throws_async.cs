@@ -40,7 +40,7 @@ public class AwsValidateMissingTopicTestsAsync
         await Assert.ThrowsAsync<BrokerUnreachableException>(async () =>
             await producer.SendAsync(new Message(
                 new MessageHeader("", _routingKey, MessageType.MT_EVENT,
-                    type: "plain/text", partitionKey: messageGroupId),
+                    type: new CloudEventsType("plain/text"), partitionKey: messageGroupId),
                 new MessageBody("Test"))));
     }
 }

@@ -3,7 +3,7 @@
 /// <summary>
 /// A command to fire a scheduler message
 /// </summary>
-public class FireSchedulerMessage() : Command(Id.Random)
+public class FireSchedulerMessage() : Command(Id.Random())
 {
     /// <summary>
     /// The message that will be fire

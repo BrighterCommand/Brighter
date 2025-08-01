@@ -40,31 +40,34 @@ namespace Paramore.Brighter
     {
 
         /// <summary>
-        /// Creates a dictionary of in-memory message producers.
+        /// Creates a dictionary of message producers.
         /// </summary>
         /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
-        /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
-        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+        /// <exception cref="ConfigurationException">Thrown when a publication does not have a topic</exception>
+        public Dictionary<ProducerKey, IAmAMessageProducer> Create()
         {
-            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+            var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
             foreach (var publication in publications)
             {
                 if (publication.Topic is null)
-                    throw new ArgumentException("A publication must have a Topic to be dispatched");
-                var producer = new InMemoryMessageProducer(bus, TimeProvider.System, instrumentationOptions);
+                    throw new ConfigurationException("A publication must have a Topic to be dispatched");
+                var producer = new InMemoryMessageProducer(bus, TimeProvider.System, instrumentationOptions:instrumentationOptions);
                 producer.Publication = publication;
-                producers[publication.Topic] = producer;
+                var producerKey = new ProducerKey(publication.Topic, publication.Type);
+                if (producers.ContainsKey(producerKey))
+                    throw new ConfigurationException($"A publication with the topic {publication.Topic}  and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
+                producers[producerKey] = producer;
             }
 
             return producers;
         }
 
         /// <summary>
-        /// Creates a dictionary of in-memory message producers.
+        /// Creates a dictionary of message producers.
         /// </summary>
         /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
         /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
-        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
         {
             return Task.FromResult(Create());
         }

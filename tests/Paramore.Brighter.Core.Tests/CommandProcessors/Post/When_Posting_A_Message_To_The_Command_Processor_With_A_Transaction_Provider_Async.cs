@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var routingKey = new RoutingKey(Topic);
             
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All) {Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}};
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication  {Topic = routingKey, RequestType = typeof(MyCommand)});
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),

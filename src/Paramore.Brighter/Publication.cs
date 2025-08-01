@@ -93,7 +93,7 @@ namespace Paramore.Brighter
         /// SHOULD be prefixed with a reverse-DNS name. The prefixed domain dictates the organization which defines the semantics of this event type.
         /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
         /// </summary>
-        public string Type { get; set; } = "goparamore.io.Paramore.Brighter.Message";
+        public CloudEventsType Type { get; set; } = CloudEventsType.Empty; 
         
         /// <summary>
         /// Gets or sets the default headers to be included in published messages when using default message mappers.

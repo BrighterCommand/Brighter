@@ -33,7 +33,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         const string replyTo = "http:\\queueUrl";
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var correlationId = Id.Random;
+        var correlationId = Id.Random();
         var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
@@ -108,8 +108,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-        _messagePump = new Reactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry,
-            null, new InMemoryRequestContextFactory(), _channel)
+        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand), 
+            messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };

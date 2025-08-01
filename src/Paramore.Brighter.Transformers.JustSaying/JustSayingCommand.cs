@@ -26,7 +26,7 @@ public class JustSayingCommand : Command, IJustSayingRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="JustSayingCommand"/> class. 
     /// </summary>
-    public JustSayingCommand() : this(Id.Random)
+    public JustSayingCommand() : this(Id.Random())
     {
     }
     

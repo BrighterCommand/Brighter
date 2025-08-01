@@ -25,7 +25,7 @@ public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
     public AwsValidateInfrastructureByArnTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        string correlationId = Id.Random;
+        string correlationId = Id.Random();
         var replyTo = new RoutingKey("http:\\queueUrl");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

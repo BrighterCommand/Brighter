@@ -50,7 +50,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="replyAddress">The <see cref="ReplyAddress"/> where the response should be sent.</param>
         public Request(ReplyAddress replyAddress)
-            : base(Id.Random)
+            : base(Id.Random())
         {
             ReplyAddress = replyAddress;
         }

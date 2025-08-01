@@ -28,7 +28,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
     public SqsMessageProducerSendTests()
     {
         _myCommand = new MyCommand { Value = "Test" }; 
-        _correlationId = Id.Random;
+        _correlationId = Id.Random();
         _replyTo = new RoutingKey("http:\\queueUrl");
         _contentType = new ContentType(MediaTypeNames.Text.Plain);
         _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

@@ -36,12 +36,12 @@ namespace Paramore.Brighter
         /// Creates message producers.
         /// </summary>
         /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
-        Dictionary<RoutingKey, IAmAMessageProducer> Create();
+        Dictionary<ProducerKey, IAmAMessageProducer> Create();
         
         /// <summary>
         /// Creates message producers.
         /// </summary>
         /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
-        Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync();
+        Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync();
     }
 }

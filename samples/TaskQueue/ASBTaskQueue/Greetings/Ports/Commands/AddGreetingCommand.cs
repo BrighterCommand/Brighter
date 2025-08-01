@@ -5,7 +5,7 @@ namespace Greetings.Ports.Commands
 {
     // This attribute is not required, it's just a demonstration
     [PublicationTopic("greeting.addGreetingCommand")]
-    public class AddGreetingCommand() : Command(Id.Random)
+    public class AddGreetingCommand() : Command(Id.Random())
     {
         public string GreetingMessage { get; set; } = "Hello Paul.";
 

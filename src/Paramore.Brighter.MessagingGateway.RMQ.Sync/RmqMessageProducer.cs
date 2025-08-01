@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
         static readonly object s_lock = new();
-        private readonly RmqPublication _publication;
+        private RmqPublication _publication;
         private readonly ConcurrentDictionary<ulong, string> _pendingConfirmations = new ConcurrentDictionary<ulong, string>();
         private bool _confirmsSelected;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
@@ -68,8 +68,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <summary>
         /// The publication configuration for this producer
         /// </summary>
-        public Publication Publication { get { return _publication; } }
-       
+        /// <value>A <see cref="RmqPublication"/></value>
+        public Publication Publication
+        {
+            get { return _publication; }
+            set { _publication = value as RmqPublication ?? throw new ConfigurationException("Publication must be of type RmqPublication"); }
+        }
+
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>

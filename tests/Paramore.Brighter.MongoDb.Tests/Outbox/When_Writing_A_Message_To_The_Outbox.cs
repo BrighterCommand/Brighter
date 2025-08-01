@@ -59,7 +59,7 @@ public class MongoDbOutboxWritingMessageTests : IDisposable
             topic:           new RoutingKey("test_topic"),
             messageType:     MessageType.MT_DOCUMENT,
             source:          new Uri("https://source.example.com"),
-            type:            "unit.test.type",
+            type:            new CloudEventsType("unit.test.type"),
             timeStamp:       DateTime.UtcNow.AddDays(-1),
             correlationId:   Guid.NewGuid().ToString(),
             replyTo:         new RoutingKey("ReplyTo"),

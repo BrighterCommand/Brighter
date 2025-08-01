@@ -229,7 +229,7 @@ public class MessageItem
             partitionKey: PartitionKey is not null ? new PartitionKey(PartitionKey) : Paramore.Brighter.PartitionKey.Empty,
             handledCount: 0,    //we set to zero in the outbox
             delayed: TimeSpan.Zero,
-            type:Type,
+            type:new CloudEventsType(Type ?? string.Empty),
             subject: Subject,
             source: !string.IsNullOrEmpty(Source) ? new Uri(Source) : new Uri("https://paramore.io"),
             dataSchema: !string.IsNullOrEmpty(DataSchema) ? new Uri(DataSchema) : new Uri("https://goparamore.io"),

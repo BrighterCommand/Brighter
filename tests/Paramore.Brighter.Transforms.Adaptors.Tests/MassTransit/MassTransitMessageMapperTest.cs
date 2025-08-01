@@ -134,7 +134,7 @@ public class MassTransitMessageMapperTests
     [Fact]
     public async Task MapToRequestAsync_CallsMapToRequest()
     {
-        var expectedId = Id.Random;
+        var expectedId = Id.Random();
         var envelope = new MassTransitMessageEnvelop<TestOtherRequest>
         {
             Message = new TestOtherRequest
@@ -177,6 +177,6 @@ public class TestEvent() : Event(Guid.NewGuid())
 public class TestOtherRequest : IRequest
 {
     public Id? CorrelationId { get; set; }
-    public Id Id { get; set; } = Id.Random;
+    public Id Id { get; set; } = Id.Random();
     public string Name { get; set; } = string.Empty;
 }

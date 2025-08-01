@@ -42,13 +42,13 @@ public class RmqMessageProducerSendMessageQuorumTestsAsync : IDisposable, IAsync
 
     public RmqMessageProducerSendMessageQuorumTestsAsync()
     {
-        var messageId = Id.Random;
+        var messageId = Id.Random();
         var topic = new RoutingKey(Guid.NewGuid().ToString());
         var messageType = MessageType.MT_COMMAND;
         var source = new Uri("http://testing.example");
         var type = "test-type";
         var timestamp = DateTimeOffset.UtcNow;
-        var correlationId = Id.Random;
+        var correlationId = Id.Random();
         var replyTo = new RoutingKey("reply-queue");
         var contentType = new ContentType(MediaTypeNames.Text.Plain){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         var handledCount = 5;
@@ -66,7 +66,7 @@ public class RmqMessageProducerSendMessageQuorumTestsAsync : IDisposable, IAsync
                 topic: topic,
                 messageType: messageType,
                 source: source,
-                type: type,
+                type: new CloudEventsType(type),
                 timeStamp: timestamp,
                 correlationId: correlationId,
                 replyTo: replyTo,

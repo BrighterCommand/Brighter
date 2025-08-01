@@ -77,7 +77,7 @@ public class KafkaMessageProducerSendTests : IDisposable
         var timestamp = DateTimeOffset.UtcNow;
         var contentType = new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         const string replyTo = "reply-queue";
-        const string type = "test-type";
+        var  type = new CloudEventsType("test-type");
         const string subject = "test-subject";
         var source = new Uri("http://testing.com");
         var schema = new Uri("http://schema.com");

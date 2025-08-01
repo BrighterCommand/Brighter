@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
-using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.CircuitBreaker;
@@ -19,9 +17,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     public class CommandProcessorPostMissingMessageTransformerTests : IDisposable
     {
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
         private readonly InMemoryOutbox _outbox;
-        private Exception _exception;
+        private Exception? _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly ProducerRegistry _producerRegistry;
         private readonly PolicyRegistry _policyRegistry;
@@ -37,11 +34,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var routingKey = new RoutingKey("MyTopic");
             
-            _message = new Message(
-                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-                );
-
             _messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
                 null);
@@ -58,10 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), InstrumentationOptions.All)
-                    {
-                        Publication = {Topic = routingKey, RequestType = typeof(MyCommand) }
-                    }
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication  {Topic = routingKey, RequestType = typeof(MyCommand) })
                 },
             });
 

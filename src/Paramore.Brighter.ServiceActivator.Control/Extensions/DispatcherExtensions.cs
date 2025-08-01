@@ -29,7 +29,7 @@ public static class DispatcherExtensions
     {
         return new NodeStatusEvent()
         {
-            Id = Id.Random,
+            Id = Id.Random(),
             AvailableTopics = nodeStatus.AvailableTopics,
             ExecutingAssemblyVersion = nodeStatus.ExecutingAssemblyVersion,
             NodeName = nodeStatus.NodeName,

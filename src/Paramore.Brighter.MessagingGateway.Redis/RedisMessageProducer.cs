@@ -58,14 +58,18 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     {
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageProducer>();
-        private readonly Publication _publication = publication; 
+        private Publication _publication = publication; 
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
         /// <summary>
         /// The publication configuration for this producer
         /// </summary>
-        public Publication Publication { get { return _publication; } }
+        public Publication Publication
+        {
+            get { return _publication; }
+            set {_publication = value;}
+        }
 
         /// <inheritdoc />
         public Activity? Span { get; set; }

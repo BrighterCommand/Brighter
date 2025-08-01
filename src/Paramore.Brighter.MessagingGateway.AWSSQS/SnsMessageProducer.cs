@@ -37,13 +37,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// </summary>
 public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync
 {
-    private readonly SnsPublication _publication;
+    private SnsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
 
     /// <summary>
     /// The publication configuration for this producer
     /// </summary>
-    public Publication Publication => _publication;
+    public Publication Publication
+    {
+        get => _publication;
+        set => _publication = value as SnsPublication ?? throw new ConfigurationException("Publication must be of type SnsPublication");
+    }
 
     /// <summary>
     /// The OTel Span we are writing Producer events too

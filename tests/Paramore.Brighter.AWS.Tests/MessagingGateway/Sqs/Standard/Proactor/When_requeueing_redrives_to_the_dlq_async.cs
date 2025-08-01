@@ -31,7 +31,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
         
         _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var correlationId = Id.Random;
+        var correlationId = Id.Random();
         var subscriptionName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);

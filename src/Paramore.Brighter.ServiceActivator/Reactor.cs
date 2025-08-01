@@ -23,7 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -36,19 +38,20 @@ namespace Paramore.Brighter.ServiceActivator
     /// <summary>
     /// Used when the message pump should block for I/O
     /// Will guarantee strict ordering of the messages on the queue
-    /// Predictable performance as only one thread, allows you to configure number of performers for number of threads to use
+    /// Predictable performance as only one thread, allows you to configure the number of performers for the number of threads to use
     /// Lower throughput than async
     /// See <a href="https://www.dre.vanderbilt.edu/~schmidt/PDF/reactor-siemens.pdf">Reactor Pattern</a> for more on this approach
     /// </summary>
-    /// <typeparam name="TRequest"></typeparam>
-    public partial class Reactor<TRequest> : MessagePump<TRequest>, IAmAMessagePump where TRequest : class, IRequest
+    public partial class Reactor : MessagePump, IAmAMessagePump
     {
-        private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
+        private readonly Func<Message, Type?> _mapRequestType;
+        private readonly TransformPipelineBuilder _transformPipelineBuilder;
 
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessor">Provides a way to grab a command processor correctly scoped</param>
+        /// <param name="mapRequestType">Pass in a <see cref="Func{T,TResult}" />which we use to determine the type of message on the channel. For a datatype channel, always returns the same type, for cloud events uses the header type</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         /// <param name="requestContextFactory">A factory to create instances of request synchronizationHelper, used to add synchronizationHelper to a pipeline</param>
@@ -57,6 +60,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         public Reactor(
             IAmACommandProcessor commandProcessor,
+            Func<Message, Type> mapRequestType,
             IAmAMessageMapperRegistry messageMapperRegistry, 
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
@@ -65,8 +69,8 @@ namespace Paramore.Brighter.ServiceActivator
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
             : base(commandProcessor, requestContextFactory, tracer,  instrumentationOptions)
         {
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory, instrumentationOptions);
-            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
+            _mapRequestType = mapRequestType;
+            _transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory, instrumentationOptions);
             Channel = channel;
         }
 
@@ -177,7 +181,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                     var request = TranslateMessage(message, context);
                     
-                    DispatchRequest(message.Header, request, context);
+                    InvokeDispatchRequest(request, message, context);
 
                     span?.SetStatus(ActivityStatusCode.Ok);
                 }
@@ -273,7 +277,7 @@ namespace Paramore.Brighter.ServiceActivator
             Channel.Acknowledge(message);
         }
         
-        private void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
+        private void DispatchRequest<TRequest>(MessageHeader messageHeader, TRequest request, RequestContext requestContext) where TRequest : class, IRequest
         {
             Log.DispatchingMessage(s_logger, request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
@@ -315,6 +319,67 @@ namespace Paramore.Brighter.ServiceActivator
 
             return Channel.Reject(message);
         }
+        
+        private void InvokeDispatchRequest(IRequest request, Message message, RequestContext context)
+        {
+            // NOTE: DispatchRequest<TRequest> is a generic method constrained to TRequest : class, IRequest, but at runtime
+            // we only have an IRequest reference due to the dynamic type lookup. To call the generic method with the actual
+            // runtime type (e.g., MyEvent), we need to use reflection to construct and invoke the generic method with the correct type.
+
+            try
+            {
+                MethodInfo dispatchMethod = MakeDispatchMethod(request);
+
+                dispatchMethod.Invoke(this, [message.Header, request, context]);
+            }
+            catch (TargetInvocationException tie)
+            {
+                throw tie.InnerException ?? tie; // Unwrap the inner exception if it exists
+            }
+        }
+
+        private MethodInfo MakeDispatchMethod(IRequest request)
+        {
+            var requestType = request.GetType();
+            MethodInfo? dispatchMethod;
+            if (DispatchMethodCache.TryGetValue(request.GetType(), out var cachedDispatchMethod))
+            {
+                dispatchMethod = cachedDispatchMethod;
+            }
+            else
+            {
+                dispatchMethod = typeof(Reactor)
+                    .GetMethod(nameof(DispatchRequest), BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?.MakeGenericMethod(requestType);
+                DispatchMethodCache[requestType] = dispatchMethod!;
+            }
+
+            if (dispatchMethod is null)
+                throw new InvalidOperationException($"Could not find DispatchRequest method for type {requestType.FullName}");
+            return dispatchMethod;
+        }
+
+        private object? MakeUnwrapPipeline(Type requestType)
+        {
+            MethodInfo typedPipelineFactory;
+            if (UnWrapPipelineFactoryCache.TryGetValue(requestType, out var cachedPipelineFactory))
+            {
+                typedPipelineFactory = cachedPipelineFactory;
+            }
+            else
+            {
+                // Get the generic method definition
+                var pipelineFactory = typeof(TransformPipelineBuilder).GetMethod(nameof(TransformPipelineBuilder.BuildUnwrapPipeline), Type.EmptyTypes);
+
+                // Make the generic method with the runtime type
+                typedPipelineFactory = pipelineFactory!.MakeGenericMethod(requestType);
+                UnWrapPipelineFactoryCache[requestType] = typedPipelineFactory;
+            }
+
+            // Invoke the method to get the pipeline instance
+            var pipeline = typedPipelineFactory.Invoke(_transformPipelineBuilder, null);
+            return pipeline;
+        }
 
         private bool RequeueMessage(Message message)
         {
@@ -339,16 +404,25 @@ namespace Paramore.Brighter.ServiceActivator
             return Channel.Requeue(message, RequeueDelay);
         }
         
-        private TRequest TranslateMessage(Message message, RequestContext requestContext)
+        private IRequest TranslateMessage(Message message, RequestContext requestContext)
         {
             Log.TranslateMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId);
             requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
 
-            TRequest request;
+            IRequest request;
 
+            var requestType = _mapRequestType(message);
+            if (requestType == null)
+                throw new MessageMappingException($"Failed to find request type for message {message.Id} ", 
+                    new ArgumentNullException(nameof(requestType), "The request type cannot be null."));
+            
             try
             {
-                request = _unwrapPipeline.Unwrap(message, requestContext);
+                object? pipeline = MakeUnwrapPipeline(requestType);
+
+                // Call Unwrap on the pipeline
+                var unwrapMethod = pipeline!.GetType().GetMethod("Unwrap");
+                request = (IRequest)unwrapMethod!.Invoke(pipeline, [message, requestContext])!;
             }
             catch (ConfigurationException)
             {
@@ -356,7 +430,7 @@ namespace Paramore.Brighter.ServiceActivator
             }
             catch (Exception exception)
             {
-                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+                throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", exception);
             }
 
             return request;

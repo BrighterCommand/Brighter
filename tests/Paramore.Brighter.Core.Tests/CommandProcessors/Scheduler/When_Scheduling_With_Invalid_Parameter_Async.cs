@@ -45,10 +45,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryMessageProducer(_internalBus, _timeProvider, InstrumentationOptions.All)
-        {
-            Publication = { Topic = routingKey, RequestType = typeof(MyCommand) }
-        };
+        var producer = new InMemoryMessageProducer(_internalBus, _timeProvider, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
         var policyRegistry = new PolicyRegistry
         {

@@ -17,8 +17,8 @@ public class MassTransitTransformTest
         var message = new Message(
             new MessageHeader
             {
-                MessageId = Id.Random, 
-                CorrelationId = Id.Random, 
+                MessageId = Id.Random(), 
+                CorrelationId = Id.Random(), 
                 TimeStamp = DateTimeOffset.UtcNow
             },
             new MessageBody("{\"test\": \"234\"}"));
@@ -48,8 +48,8 @@ public class MassTransitTransformTest
         var message = new Message(
             new MessageHeader
             {
-                MessageId = Id.Random, 
-                CorrelationId = Id.Random, 
+                MessageId = Id.Random(), 
+                CorrelationId = Id.Random(), 
                 TimeStamp = DateTimeOffset.UtcNow
             },
             new MessageBody("{\"test\": \"234\"}"));
@@ -105,8 +105,8 @@ public class MassTransitTransformTest
         var message = new Message(
             new MessageHeader
             {
-                MessageId = Id.Random, 
-                CorrelationId = Id.Random, 
+                MessageId = Id.Random(), 
+                CorrelationId = Id.Random(), 
                 TimeStamp = DateTimeOffset.UtcNow
             },
             new MessageBody("{\"test\": \"234\"}"));
@@ -159,8 +159,8 @@ public class MassTransitTransformTest
         var message = new Message(
             new MessageHeader
             {
-                MessageId = Id.Random, 
-                CorrelationId = Id.Random, 
+                MessageId = Id.Random(), 
+                CorrelationId = Id.Random(), 
                 TimeStamp = DateTimeOffset.UtcNow,
                 Bag =  new Dictionary<string, object>
                 {

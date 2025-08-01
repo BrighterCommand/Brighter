@@ -164,7 +164,7 @@ internal sealed partial class RmqMessagePublisher
             // Cloud event
             [HeaderNames.CLOUD_EVENTS_ID] = message.Header.MessageId.Value,
             [HeaderNames.CLOUD_EVENTS_SPEC_VERSION] = message.Header.SpecVersion,
-            [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type,
+            [HeaderNames.CLOUD_EVENTS_TYPE] = message.Header.Type.Value,
             [HeaderNames.CLOUD_EVENTS_SOURCE] = message.Header.Source.ToString(),
             [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRfc3339(),
 

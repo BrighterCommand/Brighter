@@ -109,15 +109,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public TimeSpan TopicFindTimeout { get; set; } = TimeSpan.FromMilliseconds(5000);
         
         /// <inheritdoc />
-        public override Type ChannelFactoryType => typeof(ChannelFactory); 
+        public override Type ChannelFactoryType => typeof(ChannelFactory);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="dataType">Type of the data.</param>
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="requestType">Type of the data.</param>
+        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="requestType"/> if null</param>
         /// <param name="groupId">What is the id of the consumer group that this consumer belongs to; will not process the same partition as others in group</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
@@ -133,41 +134,44 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
         /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
-        /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>       /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
-        public KafkaSubscription (
-            Type dataType, 
-            SubscriptionName? subscriptionName = null, 
-            ChannelName? channelName = null, 
-            RoutingKey? routingKey = null,
+        /// ///
+        public KafkaSubscription(
+            SubscriptionName subscriptionName,
+            ChannelName channelName,
+            RoutingKey routingKey,
+            Type? requestType = null,
+            Func<Message, Type>? getRequestType = null,
             string? groupId = null,
-            int bufferSize = 1, 
-            int noOfPerformers = 1, 
-            TimeSpan? timeOut = null, 
-            int requeueCount = -1, 
-            TimeSpan? requeueDelay = null, 
-            int unacceptableMessageLimit = 0, 
+            int bufferSize = 1,
+            int noOfPerformers = 1,
+            TimeSpan? timeOut = null,
+            int requeueCount = -1,
+            TimeSpan? requeueDelay = null,
+            int unacceptableMessageLimit = 0,
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
             long commitBatchSize = 10,
             TimeSpan? sessionTimeout = null,
-            TimeSpan? maxPollInterval = null, 
+            TimeSpan? maxPollInterval = null,
             TimeSpan? sweepUncommittedOffsetsInterval = null,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            MessagePumpType messagePumpType = MessagePumpType.Unknown, 
+            MessagePumpType messagePumpType = MessagePumpType.Unknown,
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory? channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
             Action<ConsumerConfig>? configHook = null) 
-            : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
-                requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(subscriptionName, channelName, routingKey,  requestType, getRequestType, bufferSize, 
+                noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
             GroupId = groupId;
@@ -196,6 +200,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
         /// <param name="groupId">What is the id of the consumer group that this consumer belongs to; will not process the same partition as others in group</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
@@ -212,43 +217,66 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
         /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>
-        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
-        public KafkaSubscription(
-            SubscriptionName? subscriptionName = null, 
-            ChannelName? channelName = null, 
-            RoutingKey? routingKey = null, 
+        public KafkaSubscription(SubscriptionName? subscriptionName = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
+            Func<Message, Type>? getRequestType = null,
             string? groupId = null,
-            int bufferSize = 1, 
-            int noOfPerformers = 1, 
-            TimeSpan? timeOut = null, 
-            int requeueCount = -1, 
-            TimeSpan? requeueDelay = null, 
-            int unacceptableMessageLimit = 0, 
+            int bufferSize = 1,
+            int noOfPerformers = 1,
+            TimeSpan? timeOut = null,
+            int requeueCount = -1,
+            TimeSpan? requeueDelay = null,
+            int unacceptableMessageLimit = 0,
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
             long commitBatchSize = 10,
             TimeSpan? sessionTimeout = null,
             TimeSpan? maxPollInterval = null,
             TimeSpan? sweepUncommittedOffsetsInterval = null,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            MessagePumpType messagePumpType = MessagePumpType.Reactor, 
+            MessagePumpType messagePumpType = MessagePumpType.Reactor,
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory? channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
             Action<ConsumerConfig>? configHook = null) 
-            : base(typeof(T), subscriptionName, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeOut, 
-                requeueCount, requeueDelay, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
-                sessionTimeout, maxPollInterval, sweepUncommittedOffsetsInterval, isolationLevel, messagePumpType, 
-                numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay,
-                partitionAssignmentStrategy, configHook)
+            : base(
+                subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
+                channelName ?? new ChannelName(typeof(T).FullName!), 
+                routingKey ?? new RoutingKey(typeof(T).FullName!), 
+                typeof(T), 
+                getRequestType, 
+                groupId, 
+                bufferSize, 
+                noOfPerformers, 
+                timeOut, 
+                requeueCount, 
+                requeueDelay, 
+                unacceptableMessageLimit, 
+                offsetDefault, 
+                commitBatchSize, 
+                sessionTimeout, 
+                maxPollInterval, 
+                sweepUncommittedOffsetsInterval, 
+                isolationLevel, 
+                messagePumpType,
+                numOfPartitions, 
+                replicationFactor, 
+                channelFactory, 
+                makeChannels,
+                emptyChannelDelay, 
+                channelFailureDelay, 
+                partitionAssignmentStrategy, 
+                configHook)
         {
         }
     }

@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
         // new fields for full header
         private readonly Uri _source;
-        private readonly string _type;
+        private readonly CloudEventsType _type;
         private readonly Uri _dataSchema;
         private readonly string _subject;
         private readonly TraceParent _traceParent;
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             // define and assign the extra header properties
             _source = new Uri("http://example.org/source");
-            _type = "custom-message-type";
+            _type = new CloudEventsType("custom-message-type");
             _dataSchema = new Uri("http://example.org/schema");
             _subject = "custom-subject";
             _traceParent = new TraceParent("00-abcdef1234567890abcdef1234567890-abcdef1234567890-01");

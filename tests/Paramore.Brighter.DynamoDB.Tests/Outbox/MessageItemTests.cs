@@ -28,7 +28,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private readonly int _delayedMilliseconds = 10;
         private readonly string _bagKey = "TestBagKey";
         private readonly string _bagValue = "TestBagValue";
-        private readonly string _type = "test.type";
+        private readonly CloudEventsType _type = new CloudEventsType("test.type");
         private readonly string _subject = "test.subject";
         private readonly string _specVersion = "1.0";
         private readonly string _source = "http://testsource";

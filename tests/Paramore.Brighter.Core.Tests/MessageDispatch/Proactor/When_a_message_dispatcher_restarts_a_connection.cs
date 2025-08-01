@@ -54,6 +54,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             _dispatcher.Receive();
             Task.Delay(1000).Wait();
             _dispatcher.Shut(_subscription);
+            
         }
         		 
 #pragma warning disable xUnit1031

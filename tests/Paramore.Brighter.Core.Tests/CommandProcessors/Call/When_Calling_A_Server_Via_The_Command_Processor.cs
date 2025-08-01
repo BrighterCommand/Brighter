@@ -8,6 +8,7 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
+using Polly.Retry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
@@ -27,10 +28,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer messageProducer = new(_bus, timeProvider, InstrumentationOptions.All);
             _routingKey = new RoutingKey("MyRequest");
-            
-            messageProducer.Publication = new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)};
+            var messageProducer = new  InMemoryMessageProducer(_bus, timeProvider, new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)});
             
             _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
@@ -112,7 +111,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000))
             );
             
-            var messagePump = new Reactor<MyRequest>(_commandProcessor, _messageMapperRegistry, 
+            var messagePump = new Reactor(_commandProcessor, (message) => typeof(MyRequest),_messageMapperRegistry, 
                     new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 

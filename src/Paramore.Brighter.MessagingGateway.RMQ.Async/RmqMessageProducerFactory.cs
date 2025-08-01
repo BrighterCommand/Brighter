@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -38,25 +39,35 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         IEnumerable<RmqPublication> publications)
         : IAmAMessageProducerFactory
     {
-        /// <inheritdoc />
-        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+        /// <summary>
+        /// Creates a dictionary of in-memory message producers.
+        /// </summary>
+        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+        /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
+        public Dictionary<ProducerKey, IAmAMessageProducer> Create()
         {
-            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+            var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
             foreach (var publication in publications)
             {
-                if (publication.Topic is null || RoutingKey.IsNullOrEmpty(publication.Topic))
-                {
-                    throw new ConfigurationException($"A RabbitMQ publication must have a topic");
-                }
-
-                producers[publication.Topic] = new RmqMessageProducer(connection, publication);
+                if (publication.Topic is null)
+                    throw new ConfigurationException("RmqMessageProducerFactory.Create => An RmqPublication must have a topic/routing key");
+                var messageProducer = new RmqMessageProducer(connection, publication);
+                messageProducer.Publication = publication;
+                var producerKey = new ProducerKey(publication.Topic, publication.Type);
+                if (producers.ContainsKey(producerKey))
+                    throw new ArgumentException($"A publication with the topic {publication.Topic}  and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
+                producers[producerKey] = messageProducer;
             }
 
             return producers;
         }
 
-        /// <inheritdoc /> 
-        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        /// <summary>
+        /// Creates a dictionary of in-memory message producers.
+        /// </summary>
+        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+        /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
+        public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
         {
             return Task.FromResult(Create());
         }

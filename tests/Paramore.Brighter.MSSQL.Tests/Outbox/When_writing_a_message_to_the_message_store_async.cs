@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly string _key5 = "name5";
         private readonly Uri _dataSchema = new Uri("http://schema.example.com");
         private readonly string _subject = "TestSubject";
-        private readonly string _type = "custom.type";
+        private readonly CloudEventsType _type = new CloudEventsType("custom.type");
         private readonly Uri _source = new Uri("http://source.example.com");
         private readonly TraceParent _traceParent = new TraceParent("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
         private readonly TraceState _traceState = new TraceState("congo=t61rcWkgMzE");
@@ -63,13 +63,13 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _baggage.LoadBaggage("userId=alice,server=node01");
             var messageHeader = new MessageHeader(
-                messageId:Id.Random,
+                messageId:Id.Random(),
                 topic: new RoutingKey("test_topic"), 
                 messageType: MessageType.MT_DOCUMENT, 
                 source: _source,
                 type: _type,
                 timeStamp: DateTime.UtcNow.AddDays(-1), 
-                correlationId: Id.Random,
+                correlationId: Id.Random(),
                 replyTo: new RoutingKey("ReplyAddress"),
                 contentType: new ContentType(MediaTypeNames.Text.Plain),
                 partitionKey: new PartitionKey(Guid.NewGuid().ToString()),

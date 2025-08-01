@@ -59,9 +59,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Creates a message producer registry.
         /// </summary>
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
-        public Dictionary<RoutingKey,IAmAMessageProducer> Create()
+        public Dictionary<ProducerKey,IAmAMessageProducer> Create()
         {
-            var publicationsByTopic = new Dictionary<RoutingKey, IAmAMessageProducer>();
+            var publicationsByTopic = new Dictionary<ProducerKey, IAmAMessageProducer>();
             foreach (var publication in _publications)
             {
                 if (publication.Topic is null) continue;
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 if (_configHook != null)
                     producer.ConfigHook(_configHook);
                 producer.Init();
-                publicationsByTopic[publication.Topic] = producer;
+                publicationsByTopic[new ProducerKey(publication.Topic, publication.Type)] = producer;
             }
 
             return publicationsByTopic;
@@ -81,9 +81,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <remarks>
         /// Mainly useful where the producer creation is asynchronous, such as when connecting to a remote service to create or validate infrastructure
         /// </remarks>
-        /// <param name="ct">A cancellation token to cancel the operation</param>
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
-        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
         {
            return Task.FromResult(Create()); 
         }

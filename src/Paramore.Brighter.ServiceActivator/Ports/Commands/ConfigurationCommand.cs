@@ -60,7 +60,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Commands
         /// </summary>
         /// <param name="type">The type.</param>
         /// <param name="subscriptionName"></param>
-        public ConfigurationCommand(ConfigurationCommandType type, SubscriptionName subscriptionName) : base(Id.Random)
+        public ConfigurationCommand(ConfigurationCommandType type, SubscriptionName subscriptionName) : base(Id.Random())
         {
             Type = type;
             SubscriptionName = subscriptionName;

@@ -1294,7 +1294,7 @@ namespace Paramore.Brighter
                 CreateSqlParameter($"@{prefix}PartitionKey", DbType.String, message.Header.PartitionKey.Value),
                 CreateSqlParameter($"@{prefix}HeaderBag", DbType.String, bagJson),
                 CreateSqlParameter($"@{prefix}Source", DbType.String, message.Header.Source.ToString()),
-                CreateSqlParameter($"@{prefix}Type", DbType.String, message.Header.Type),
+                CreateSqlParameter($"@{prefix}Type", DbType.String, message.Header.Type.Value),
                 CreateSqlParameter($"@{prefix}DataSchema", DbType.String, message.Header.DataSchema?.ToString()),
                 CreateSqlParameter($"@{prefix}Subject", DbType.String, message.Header.Subject),
                 CreateSqlParameter($"@{prefix}TraceParent", DbType.String, message.Header.TraceParent?.Value),
@@ -1593,20 +1593,16 @@ namespace Paramore.Brighter
         }
         
         protected virtual string TypeColumnName => "Type";
-        protected virtual string GetEventType(DbDataReader dr)
+        protected virtual CloudEventsType GetEventType(DbDataReader dr)
         {
             if (!TryGetOrdinal(dr, TypeColumnName, out var ordinal) || dr.IsDBNull(ordinal))
-            {
-                return MessageHeader.DefaultType;
-            }
+                return CloudEventsType.Empty;
             
             var type = dr.GetString(ordinal);
             if (string.IsNullOrEmpty(type))
-            {
-                return MessageHeader.DefaultType;
-            }
+                return CloudEventsType.Empty;
 
-            return type;
+            return new CloudEventsType(type);
         }
 
         protected virtual string TopicColumnName => "Topic";
@@ -1669,7 +1665,7 @@ namespace Paramore.Brighter
         {
             if (!TryGetOrdinal(dr, MessageIdColumnName, out var ordinal) || dr.IsDBNull(ordinal))
             {
-                return Id.Random;
+                return Id.Random();
             }
  
             var id = dr.GetString(ordinal);

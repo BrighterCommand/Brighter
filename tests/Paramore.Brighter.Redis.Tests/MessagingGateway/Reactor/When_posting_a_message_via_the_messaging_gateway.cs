@@ -19,7 +19,7 @@ public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
     private readonly string _correlationId;
     private readonly string _replyTo;
     private readonly Uri _source;
-    private readonly string _type;
+    private readonly CloudEventsType _type;
     private readonly Uri _dataSchema;
     private readonly string _subject;
     private readonly TraceParent _traceParent;
@@ -36,7 +36,7 @@ public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
         _correlationId = Guid.NewGuid().ToString();
         _replyTo = "reply-queue";
         _source = new Uri("http://testing.example.com");
-        _type = "test.message.type";
+        _type = new CloudEventsType("test.message.type");
         _dataSchema = new Uri("http://schema.example.com");
         _subject = "test-subject";
         _traceParent = new TraceParent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");

@@ -30,15 +30,16 @@ public class PublicationTopicAttribute : Attribute
     /// Initializes a new instance of the <see cref="PublicationTopicAttribute"/> class.
     /// </summary>
     /// <param name="topic">The topic associated with the command or event type.</param>
+    /// <param name="type">The Cloud Events type associated with the command or event if any</param>
     /// <exception cref="ArgumentException">Thrown if <paramref name="topic"/> is null or empty.</exception>
-    public PublicationTopicAttribute(string topic)
+    public PublicationTopicAttribute(string topic, string? type = null)
     {
         if (string.IsNullOrEmpty(topic))
         {
             throw new ArgumentException("topic cannot be null or empty");
         }
         
-        Topic = topic;
+        Destination = new ProducerKey(new RoutingKey(topic), type != null ? new CloudEventsType(type) : CloudEventsType.Empty);
     }
     
     /// <summary>
@@ -47,5 +48,5 @@ public class PublicationTopicAttribute : Attribute
     /// <value>
     /// The topic as a <see cref="string"/>.
     /// </value>
-    public string Topic { get; set; }
+    public ProducerKey Destination { get; set; }
 }

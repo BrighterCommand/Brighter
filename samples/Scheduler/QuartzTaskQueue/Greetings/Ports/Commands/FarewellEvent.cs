@@ -5,11 +5,11 @@ namespace Greetings.Ports.Commands;
 
 public class FarewellEvent : Event
 {
-    public FarewellEvent() : base(Id.Random)
+    public FarewellEvent() : base(Id.Random())
     {
     }
 
-    public FarewellEvent(string farewell) : base(Id.Random)
+    public FarewellEvent(string farewell) : base(Id.Random())
     {
         Farewell = farewell;
     }

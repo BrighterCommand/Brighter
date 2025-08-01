@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -41,30 +42,36 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         : IAmAMessageProducerFactory
     {
         /// <summary>
-        /// Creates message producers.
+        /// Creates a dictionary of message producers.
         /// </summary>
-        /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
-        public Dictionary<RoutingKey,IAmAMessageProducer> Create()
+        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+        /// <exception cref="ConfigurationException">Thrown when a publication does not have a topic</exception>
+        public Dictionary<ProducerKey,IAmAMessageProducer> Create()
         {
-            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+            var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
             foreach (var publication in publications)
             {
                 if (publication.Topic is null)
                     throw new ConfigurationException("RmqMessageProducerFactory.Create => An RmqPublication must have a topic/routing key");
-                producers[publication.Topic] = new RmqMessageProducer(connection, publication);
+                var messageProducer = new RmqMessageProducer(connection, publication);
+                messageProducer.Publication = publication;
+                var producerKey = new ProducerKey(publication.Topic, publication.Type);
+                if (producers.ContainsKey(producerKey))
+                    throw new ConfigurationException($"A publication with the topic {publication.Topic}  and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
+                producers[producerKey] = messageProducer;
             }
 
             return producers;
         }
 
         /// <summary>
-        /// Creates message producers.
+        /// Creates a dictionary of message producers.
         /// </summary>
-        /// <remarks>Not implemented in this package. This package supports only RMQ.Client V6 which is blocking, use the Paramore.Brighter.MessagingGateway.RMQ.Async for async clients</remarks>
-        /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
-        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+        /// <exception cref="ConfigurationException">Thrown when a publication does not have a topic</exception>
+        public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException("RmqMessageProducerFactory.CreateAsync is not implemented in this package. This package supports only RMQ.Client V6 which is blocking, use the Paramore.Brighter.MessagingGateway.RMQ.Async for async clients");
         }
     }
 }

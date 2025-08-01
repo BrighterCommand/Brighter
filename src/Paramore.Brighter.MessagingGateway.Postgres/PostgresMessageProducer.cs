@@ -23,17 +23,22 @@ public partial class PostgresMessageProducer(
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageProducer>();
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
+    private PostgresPublication _publication = publication;
 
-    private string SchemaName => publication.SchemaName ?? configuration.SchemaName ?? "public";
-    private string TableName => publication.QueueStoreTable ?? configuration.QueueStoreTable;
-    private string QueueName => publication.Topic!.Value;
-    private bool BinaryMessagePayload => publication.BinaryMessagePayload ?? configuration.BinaryMessagePayload;
+    private string SchemaName => _publication.SchemaName ?? configuration.SchemaName ?? "public";
+    private string TableName => _publication.QueueStoreTable ?? configuration.QueueStoreTable;
+    private string QueueName => _publication.Topic!.Value;
+    private bool BinaryMessagePayload => _publication.BinaryMessagePayload ?? configuration.BinaryMessagePayload;
     
     private NpgsqlDbType MessagePayloadDbType => BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json;
     
     /// <inheritdoc />
-    public Publication Publication => publication;
-    
+    public Publication Publication
+    {
+        get => _publication;
+        set => _publication = (PostgresPublication)value ?? throw new ArgumentException("Publication cannot be null");
+    }
+
     /// <inheritdoc />
     public Activity? Span { get; set; }
     
@@ -43,7 +48,7 @@ public partial class PostgresMessageProducer(
     /// <inheritdoc />
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
     {
-        if (publication is null)
+        if (_publication is null)
         {
             throw new ConfigurationException("No publication specified for producer");
         }
@@ -70,7 +75,7 @@ public partial class PostgresMessageProducer(
             return;
         }
         
-        if (publication is null)
+        if (_publication is null)
         {
             throw new ConfigurationException("No publication specified for producer");
         }
@@ -92,7 +97,7 @@ public partial class PostgresMessageProducer(
     /// <inheritdoc />
     public void Send(Message message)
     { 
-        if (publication is null)
+        if (_publication is null)
         {
             throw new ConfigurationException("No publication specified for producer");
         }
@@ -119,7 +124,7 @@ public partial class PostgresMessageProducer(
             return;
         }
         
-        if (publication is null)
+        if (_publication is null)
         {
             throw new ConfigurationException("No publication specified for producer");
         }

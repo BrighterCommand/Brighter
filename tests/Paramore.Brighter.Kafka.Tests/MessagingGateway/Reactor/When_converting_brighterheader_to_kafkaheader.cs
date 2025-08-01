@@ -28,7 +28,7 @@ public class KafkaDefaultMessageHeaderBuilderTests
                 partitionKey: "mykey"
             )
             {
-                Type = $"Type{Guid.NewGuid():N}",
+                Type = new CloudEventsType($"Type{Guid.NewGuid():N}"),
                 Subject = $"Subject{Guid.NewGuid():N}",
                 Source = new Uri($"/component/{Guid.NewGuid()}", UriKind.RelativeOrAbsolute),
                 DataSchema = new Uri("https://example.com/storage/tenant/container", UriKind.RelativeOrAbsolute)
@@ -64,7 +64,7 @@ public class KafkaDefaultMessageHeaderBuilderTests
         Assert.Equal(message.Header.ReplyTo!.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.REPLY_TO));
         Assert.Equal(message.Header.Delayed.TotalMilliseconds.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.DELAYED_MILLISECONDS));
         Assert.Equal(message.Header.HandledCount.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.HANDLED_COUNT));
-        Assert.Equal(message.Header.Type.ToByteArray(), headers.GetLastBytes(HeaderNames.CLOUD_EVENTS_TYPE));
+        Assert.Equal(message.Header.Type.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.CLOUD_EVENTS_TYPE));
         Assert.Equal(message.Header.Subject!.ToByteArray(), headers.GetLastBytes(HeaderNames.CLOUD_EVENTS_SUBJECT));
         Assert.Equal(message.Header.Source.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.CLOUD_EVENTS_SOURCE));
         Assert.Equal(message.Header.DataSchema!.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA));

@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             public required HeaderResult<int> HandledCount { get; set; }
             public required HeaderResult<string?> Subject { get; set; }
             public required HeaderResult<Uri?> DataSchema { get; set; }
-            public required HeaderResult<string?> Type { get; set; }
+            public required HeaderResult<CloudEventsType?> Type { get; set; }
             public required HeaderResult<Uri?> Source { get; set; }
             public required HeaderResult<TraceParent?> TraceParent { get; set; }
             public required HeaderResult<TraceState?> TraceState { get; set; }
@@ -293,7 +293,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private static HeaderResult<Id?> ReadMessageId(Headers headers)
         {
             var id = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_ID, true)
-                .Map(messageId => new HeaderResult<Id?>(string.IsNullOrEmpty(messageId) ? Id.Random : Id.Create(messageId), true));
+                .Map(messageId => new HeaderResult<Id?>(string.IsNullOrEmpty(messageId) ? Id.Random() : Id.Create(messageId), true));
             
             if (id.Success)
             {
@@ -307,7 +307,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (string.IsNullOrEmpty(messageId))
                     {
                         Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
-                        return new HeaderResult<Id?>(Id.Random, true);
+                        return new HeaderResult<Id?>(Id.Random(), true);
                     }
 
                     return new HeaderResult<Id?>(new Id(messageId!), true);
@@ -349,8 +349,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private static HeaderResult<string?> ReadSubject(Headers headers)
             => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_SUBJECT);
 
-        private static HeaderResult<string?> ReadType(Headers headers)
-            => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TYPE);
+        private static HeaderResult<CloudEventsType?> ReadType(Headers headers)
+            => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TYPE)
+                .Map(x =>x is not null 
+                    ? new HeaderResult<CloudEventsType?>(new CloudEventsType(x), true)
+                    : new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, true));
 
         private static HeaderResult<Uri?> ReadDataSchema(Headers headers) =>
             ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, true)

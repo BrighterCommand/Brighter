@@ -15,7 +15,7 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
     {
         // arrange
         var message = new Message(
-            new MessageHeader(Id.Random, new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
+            new MessageHeader(Id.Random(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
             new MessageBody("message body")
             );
         

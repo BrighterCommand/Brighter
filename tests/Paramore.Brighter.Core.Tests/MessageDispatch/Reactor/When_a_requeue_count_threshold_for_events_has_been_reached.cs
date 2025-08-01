@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
-            _messagePump = new Reactor<MyEvent>(_commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel) 
+            _messagePump = new ServiceActivator.Reactor(_commandProcessor, (message) => typeof(MyEvent), messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel) 
                 { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3 };
 
             var message1 = new Message(
@@ -42,6 +42,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             );
             _bus.Enqueue(message1);
             _bus.Enqueue(message2);
+            
         }
 
         [Fact]

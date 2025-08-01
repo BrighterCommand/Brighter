@@ -2,7 +2,6 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-
     <AwsDynamoDbV4>4.0.3.1</AwsDynamoDbV4>
   </PropertyGroup>
   <ItemGroup>
@@ -44,6 +43,7 @@
     <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.1" />
     <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
     <PackageVersion Include="MessagePack" Version="3.1.4" />
+    <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.7" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.0" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.7" />
