@@ -146,7 +146,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
             Action<ProducersConfiguration> configure,
-            ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
+            ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         {
             if (brighterBuilder is null)
                 throw new ArgumentNullException($"{nameof(brighterBuilder)} cannot be null.", nameof(brighterBuilder));
