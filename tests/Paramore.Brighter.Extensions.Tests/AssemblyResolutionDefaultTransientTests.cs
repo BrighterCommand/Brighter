@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Extensions.Tests
         [Fact]
         public void ShouldHaveTestMapperRegisteredCorrectly()
         {
-            TestRegistration(typeof(TestEventMessageMapper), ServiceLifetime.Singleton);
+            TestRegistration(typeof(TestEventMessageMapper), ServiceLifetime.Transient);
         }
 
         [Fact]
