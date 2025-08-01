@@ -5,7 +5,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 public class SpyContextFactory : IAmARequestContextFactory
 {
     public bool CreateWasCalled { get; set; }
-    public RequestContext Context { get; set; }
+    public RequestContext? Context { get; set; }
     
     public RequestContext Create()
     {

@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Paramore.Brighter.Mediator;
 
 namespace Paramore.Brighter.Core.Tests.Specifications.TestDoubles;
 

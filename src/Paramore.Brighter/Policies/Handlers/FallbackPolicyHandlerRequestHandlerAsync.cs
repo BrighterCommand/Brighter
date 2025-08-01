@@ -95,9 +95,9 @@ namespace Paramore.Brighter.Policies.Handlers
             {
                 return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
-            catch (BrokenCircuitException brokenCircuitExceptionexception)
+            catch (BrokenCircuitException brokenCircuitException)
             {
-                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception, (s, o) => brokenCircuitExceptionexception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitException, (s, o) => brokenCircuitException);
             }
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }

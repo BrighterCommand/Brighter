@@ -31,6 +31,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 new InMemorySchedulerFactory());
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();

@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {

@@ -58,6 +58,7 @@ namespace Paramore.Brighter
         private readonly IAmAHandlerFactoryAsync? _handlerFactoryAsync;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IPolicyRegistry<string> _policyRegistry;
+        private readonly ResiliencePipelineRegistry<string> _resiliencePipelineRegistry;
         private readonly InboxConfiguration? _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private readonly IEnumerable<Subscription>? _replySubscriptions;
@@ -71,10 +72,33 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
 
         /// <summary>
+        /// The key used to retrieve the resilience pipeline for outbox message production operations.
+        /// </summary>
+        /// <remarks>
+        /// This constant provides the lookup key for the resilience pipeline used internally by Brighter when:
+        /// <list type="bullet">
+        ///   <item><description>Producing messages to an outbox</description></item>
+        /// </list>
+        /// </remarks>
+        public const string OutboxProducer = "Paramore.Brighter.CommandProcessor.Outbox.Producer";
+
+        /// <summary>
+        /// The key used to retrieve the resilience pipeline for request-reply communication patterns.
+        /// </summary>
+        /// <remarks>
+        /// This constant provides the lookup key for the resilience pipeline used internally by Brighter when:
+        /// <list type="bullet">
+        ///   <item><description>Executing request-reply commands</description></item>
+        /// </list>
+        /// </remarks>
+        public const string RequestReply = "Paramore.Brighter.CommandProcessor.RequestReply";
+        
+        /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
         /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
+        [Obsolete("Migrate to Resilience Pipeline with OutboxProducer", error: false)]
         public const string CIRCUITBREAKER = "Paramore.Brighter.CommandProcessor.CircuitBreaker";
 
         /// <summary>
@@ -82,6 +106,7 @@ namespace Paramore.Brighter
         /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
+        [Obsolete("Migrate to Resilience Pipeline with OutboxProducer", error: false)]
         public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
 
         /// <summary>
@@ -89,6 +114,7 @@ namespace Paramore.Brighter
         /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
+        [Obsolete("Migrate to Resilience Pipeline with OutboxProducer", error: false)]
         public const string CIRCUITBREAKERASYNC = "Paramore.Brighter.CommandProcessor.CircuitBreaker.Async";
 
         /// <summary>
@@ -96,6 +122,7 @@ namespace Paramore.Brighter
         /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
+        [Obsolete("Migrate to Resilience Pipeline with OutboxProducer", error: false)]
         public const string RETRYPOLICYASYNC = "Paramore.Brighter.CommandProcessor.RetryPolicy.Async";
 
         /// <summary>
@@ -121,6 +148,7 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="resilienceResiliencePipelineRegistry">The resilience pipeline registry.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
@@ -131,6 +159,7 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            ResiliencePipelineRegistry<string> resilienceResiliencePipelineRegistry,
             IAmARequestSchedulerFactory requestSchedulerFactory,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
@@ -155,6 +184,7 @@ namespace Paramore.Brighter
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _schedulerFactory = requestSchedulerFactory;
+            _resiliencePipelineRegistry = resilienceResiliencePipelineRegistry;
         }
 
         /// <summary>
@@ -166,6 +196,7 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="resilienceResiliencePipelineRegistry">The resilience pipeline registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over.</param>
         /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -180,6 +211,7 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            ResiliencePipelineRegistry<string> resilienceResiliencePipelineRegistry,
             IAmAnOutboxProducerMediator bus,
             IAmARequestSchedulerFactory  requestSchedulerFactory,
             IAmABoxTransactionProvider? transactionProvider = null,
@@ -189,7 +221,8 @@ namespace Paramore.Brighter
             IAmAChannelFactory? responseChannelFactory = null,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, requestSchedulerFactory, featureSwitchRegistry, inboxConfiguration)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, 
+                resilienceResiliencePipelineRegistry, requestSchedulerFactory, featureSwitchRegistry, inboxConfiguration)
         {
             _responseChannelFactory = responseChannelFactory;
             _tracer = tracer;
@@ -206,6 +239,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="resilienceResiliencePipelineRegistry">The resilience pipeline registry.</param>
         /// <param name="mediator">The external service bus that we want to send messages over</param>
         /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -217,6 +251,7 @@ namespace Paramore.Brighter
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            ResiliencePipelineRegistry<string> resilienceResiliencePipelineRegistry,
             IAmAnOutboxProducerMediator mediator,
             IAmARequestSchedulerFactory requestSchedulerFactory,
             IAmABoxTransactionProvider? transactionProvider = null,
@@ -228,6 +263,7 @@ namespace Paramore.Brighter
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
+            _resiliencePipelineRegistry = resilienceResiliencePipelineRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _replySubscriptions = replySubscriptions;
@@ -1363,7 +1399,7 @@ namespace Paramore.Brighter
             //we do this to create the channel on the broker, or we won't have anything to send to; we 
             //retry in case the subscription is poor. An alternative would be to extract the code from
             //the channel to create the subscription, but this does not do much on a new queue
-            Retry(() => responseChannel.Purge());
+            ExecuteWithResiliencePipeline(() => responseChannel.Purge());
 
             var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
@@ -1380,7 +1416,7 @@ namespace Paramore.Brighter
 
             //now we block on the receiver to try and get the message, until timeout.
             Log.AwaitingResponseOn(s_logger, channelName);
-            Retry(() => responseMessage = responseChannel.Receive(timeOut));
+            ExecuteWithResiliencePipeline(() => responseMessage = responseChannel.Receive(timeOut));
             
                 if (responseMessage is not null && responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
@@ -1506,22 +1542,25 @@ namespace Paramore.Brighter
         {
             var context = requestContext ?? _requestContextFactory.Create();
             context.Span = span;
+#pragma warning disable CS0618 // Type or member is obsolete
             context.Policies = _policyRegistry;
+#pragma warning restore CS0618 // Type or member is obsolete
+            context.ResiliencePipeline = _resiliencePipelineRegistry;
             context.FeatureSwitches = _featureSwitchRegistry;
             return context;
         }
         
  
-        private void Retry(Action action)
+        private void ExecuteWithResiliencePipeline(Action action)
         {
-            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
-            var result = policy.ExecuteAndCapture(action);
-            if (result.Outcome != OutcomeType.Successful)
+            var resiliencePipeline = _resiliencePipelineRegistry.GetPipeline(RequestReply);
+            try
             {
-                if (result.FinalException != null)
-                {
-                    Log.ExceptionWhilstTryingToPublishMessage(s_logger, result.FinalException);
-                }
+                resiliencePipeline.Execute(action);
+            }
+            catch (Exception e)
+            {
+                Log.ExceptionWhilstTryingToPublishMessage(s_logger, e);
             }
         }
         

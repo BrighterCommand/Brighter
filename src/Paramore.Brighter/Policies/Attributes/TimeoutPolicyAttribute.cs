@@ -33,6 +33,7 @@ namespace Paramore.Brighter.Policies.Attributes
     /// do not natively support a timeout and can be used to prevent a handler from blocking on one of these operations. You should not use it where native
     /// timeouts are available, use the native timeout instead.
     /// </summary>
+    [Obsolete("It is recommended to use UsePolicyAttribute or UseResiliencePipelineAttribute instead")]
     public class TimeoutPolicyAttribute : RequestHandlerAttribute
     {
         private readonly int _milliseconds;

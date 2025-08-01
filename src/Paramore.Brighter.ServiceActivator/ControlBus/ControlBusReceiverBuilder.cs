@@ -32,7 +32,9 @@ using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Registry;
+using Polly.Retry;
 
 //Needs a different namespace to the DispatchBuilder to avoid collisions
 namespace Paramore.Brighter.ServiceActivator.ControlBus
@@ -140,10 +142,15 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             var policyRegistry = new PolicyRegistry
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
                 { CommandProcessor.RETRYPOLICY, retryPolicy }
+#pragma warning restore CS0618 // Type or member is obsolete
             };
 
+            var resiliencePipeline = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
+            
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
@@ -168,7 +175,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
-                policyRegistry: new DefaultPolicy(),
+                resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry: outgoingMessageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
@@ -184,7 +191,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
-                .Policies(policyRegistry)
+                .Resilience(resiliencePipeline, policyRegistry)
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())

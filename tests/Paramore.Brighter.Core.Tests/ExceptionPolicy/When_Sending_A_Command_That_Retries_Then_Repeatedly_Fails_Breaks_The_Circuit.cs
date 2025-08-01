@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyMultiplePoliciesFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                policyRegistry, new InMemorySchedulerFactory());
+                policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
         [Fact]

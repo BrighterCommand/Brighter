@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal sealed class MyContextAwareEventHandler : RequestHandler<MyEvent>
     {
-        public static string TestString { get; set; }
+        public static string? TestString { get; set; }
 
         public override MyEvent Handle(MyEvent @event)
         {
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         private void LogContext()
         {
-            TestString = (string)Context.Bag["TestString"];
+            TestString = (string)Context!.Bag["TestString"];
             Context.Bag["MyContextAwareEventHandler"] = "I was called and set the context";
         }
     }

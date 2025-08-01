@@ -86,20 +86,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
 
-            var policyRegistry = new PolicyRegistry
-            {
-                {
-                    CommandProcessor.RETRYPOLICYASYNC, Policy
-                        .Handle<Exception>()
-                        .RetryAsync()
-                },
-                {
-                    CommandProcessor.CIRCUITBREAKERASYNC, Policy
-                        .Handle<Exception>()
-                        .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1))
-                }
-            };
-
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { _routingKeyOne, messageProducer },
@@ -115,7 +101,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                policyRegistry,
+                new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),

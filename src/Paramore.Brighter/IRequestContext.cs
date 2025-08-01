@@ -22,9 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
+using Polly;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -53,11 +55,35 @@ namespace Paramore.Brighter
         ConcurrentDictionary<string, object> Bag { get; }
         
         /// <summary>
-        /// Gets the policies.
+        /// [Obsolete] Gets the legacy policy registry.
         /// </summary>
-        /// <value>The policies.</value>
+        /// <value>
+        /// The policy registry containing resilience policies. Returns <c>null</c> if no policies are configured.
+        /// </value>
+        /// <remarks>
+        /// This property is obsolete and will be removed in a future version. 
+        /// Migrate to <see cref="ResiliencePipeline"/> for new resilience implementations.
+        /// </remarks> 
+        [Obsolete("Migrate to ResiliencePipeline")]
         IPolicyRegistry<string>?  Policies { get; }
-
+        
+        /// <summary>
+        /// Gets the registry of resilience pipelines.
+        /// </summary>
+        /// <value>
+        /// The registry containing named resilience pipeline instances. Returns <c>null</c> if no pipelines are configured.
+        /// </value>
+        /// <remarks>
+        /// Use this registry to retrieve pre-configured resilience pipelines by name. 
+        /// This replaces the obsolete <see cref="Policies"/> property for modern resilience implementations.
+        /// </remarks> 
+        ResiliencePipelineRegistry<string>? ResiliencePipeline { get; }
+        
+        /// <summary>
+        /// Gets the <see cref="ResilienceContext"/>
+        /// </summary>
+        ResilienceContext? ResilienceContext { get; }
+        
         /// <summary>
         /// Gets the Feature Switches
         /// </summary>

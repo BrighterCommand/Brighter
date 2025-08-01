@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal sealed class MyContextAwareCommandHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        public static string TestString { get; set; }
+        public static string? TestString { get; set; }
 
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         private void LogContext()
         {
-            TestString = (string)Context.Bag["TestString"];
+            TestString = (string)Context!.Bag["TestString"];
             Context.Bag["MyContextAwareCommandHandler"] = "I was called and set the context";
         }
     }
