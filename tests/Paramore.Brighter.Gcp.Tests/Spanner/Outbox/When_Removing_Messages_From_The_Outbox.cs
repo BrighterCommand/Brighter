@@ -30,7 +30,7 @@ using Paramore.Brighter.Outbox.Spanner;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Outbox;
 
 [Trait("Category", "Spanner")]
-public class SqlOutboxDeletingMessagesTests : IDisposable
+public class SpannerOutboxDeletingMessagesTests : IDisposable
 {
     private readonly SpannerTestHelper _spannerTestHelper;
     private readonly Message _firstMessage;
@@ -38,7 +38,7 @@ public class SqlOutboxDeletingMessagesTests : IDisposable
     private readonly Message _thirdMessage;
     private readonly SpannerOutbox _sqlOutbox;
 
-    public SqlOutboxDeletingMessagesTests()
+    public SpannerOutboxDeletingMessagesTests()
     {
         _spannerTestHelper = new SpannerTestHelper();
         _spannerTestHelper.SetupMessageDb();
@@ -95,7 +95,7 @@ public class SqlOutboxDeletingMessagesTests : IDisposable
         Release();
     }
 
-    ~SqlOutboxDeletingMessagesTests()
+    ~SpannerOutboxDeletingMessagesTests()
     {
         Release();
     }

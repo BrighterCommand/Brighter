@@ -5,7 +5,7 @@ using Paramore.Brighter.Outbox.Spanner;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Outbox;
 
 [Trait("Category", "Spanner")]
-public class PostgresSqlArchiveFetchTests : IDisposable
+public class SpannerArchiveFetchTests : IDisposable
 {
     private readonly SpannerTestHelper _spannerTestHelper;
     private readonly Message _messageEarliest;
@@ -13,7 +13,7 @@ public class PostgresSqlArchiveFetchTests : IDisposable
     private readonly Message _messageUnDispatched;
     private readonly SpannerOutbox _sqlOutbox;
 
-    public PostgresSqlArchiveFetchTests()
+    public SpannerArchiveFetchTests()
     {
         _spannerTestHelper = new SpannerTestHelper();
         _spannerTestHelper.SetupMessageDb();

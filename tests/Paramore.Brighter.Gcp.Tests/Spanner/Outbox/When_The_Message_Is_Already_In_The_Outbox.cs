@@ -29,14 +29,14 @@ using Paramore.Brighter.Outbox.Spanner;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Outbox;
 
 [Trait("Category", "Spanner")]
-public class PostgreSqlOutboxMessageAlreadyExistsTests : IDisposable
+public class SpannerOutboxMessageAlreadyExistsTests : IDisposable
 {
     private Exception? _exception;
     private readonly Message _messageEarliest;
     private readonly SpannerOutbox _sqlOutbox;
     private readonly SpannerTestHelper _spannerTestHelper;
 
-    public PostgreSqlOutboxMessageAlreadyExistsTests()
+    public SpannerOutboxMessageAlreadyExistsTests()
     {
         _spannerTestHelper = new SpannerTestHelper();
         _spannerTestHelper.SetupMessageDb();

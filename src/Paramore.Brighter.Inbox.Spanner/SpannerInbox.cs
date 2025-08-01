@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Data;
+using System.Data.Common;
 using Google.Cloud.Spanner.Data;
+using Grpc.Core;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Spanner;
@@ -36,12 +38,48 @@ public class SpannerInbox(
     {
         
     }
+    
+    /// <inheritdoc />
+    protected override DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
+        params IDbDataParameter[] parameters)
+    {
+
+        var command = connection.CreateCommand();
+
+        // Spanner doesn't accept timeout as 0, so we are going to set the default value as 60
+        command.CommandTimeout = outBoxTimeout < 0 ? 60 : outBoxTimeout;
+        command.CommandText = sqlText;
+        command.Parameters.AddRange(parameters);
+
+        return command;
+    }
 
     /// <inheritdoc />
-    protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex) 
-        => ex is SpannerException { ErrorCode: ErrorCode.AlreadyExists };
+    protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex)
+        => ex is SpannerException se && se.RpcException.StatusCode == StatusCode.AlreadyExists;
 
     /// <inheritdoc />
-    protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value) 
-        => new SpannerParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
+    protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
+    {
+        if (parameterName == "@CommandBody")
+        {
+            return new SpannerParameter 
+            {
+                ParameterName = parameterName, 
+                SpannerDbType = SpannerDbType.Json,
+                Value = value ?? DBNull.Value 
+            };
+        }
+        
+        return new SpannerParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
+    }
+
+    protected override IDbDataParameter[] CreateGetParameters(string commandId, string contextKey)
+    {
+        return
+        [
+            new SpannerParameter("@CommandID", SpannerDbType.String, commandId),
+            new SpannerParameter("@ContextKey", SpannerDbType.String, contextKey),
+        ];
+    }
 }

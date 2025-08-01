@@ -14,16 +14,15 @@
 /// </remarks>
 public class SpannerInboxBuilder
 {
-    private const string OutboxDDL =
+    private const string InboxDDL =
         """
         CREATE TABLE IF NOT EXISTS `{0}`(
-            `CommandId` VARCHAR(256) NOT NULL ,
-            `CommandType` VARCHAR(256) NULL ,
-            `CommandBody` JSON NULL ,
-            `Timestamp` TIMESTAMP NULL ,
-            `ContextKey` VARCHAR(256) NULL,
-            PRIMARY KEY (`CommandId`, `ContextKey`)
-        );
+            `CommandId` STRING(256) NOT NULL,
+            `CommandType` STRING(256),
+            `CommandBody` JSON,
+            `Timestamp` TIMESTAMP,
+            `ContextKey` STRING(256) 
+        ) PRIMARY KEY (`CommandId`, `ContextKey`)
         """;
     
     /// <summary>
@@ -35,6 +34,6 @@ public class SpannerInboxBuilder
     /// for the Spanner inbox table, ready for execution.</returns>
     public static string GetDDL(string inboxTableName)
     {
-        return string.Format(OutboxDDL, inboxTableName);
-    }   
+        return string.Format(InboxDDL, inboxTableName);
+    }
 }

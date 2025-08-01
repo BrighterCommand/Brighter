@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
+using System.Linq;
 using Google.Cloud.Spanner.Data;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -44,8 +48,50 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
     }
     
     /// <inheritdoc />
+    protected override DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
+        params IDbDataParameter[] parameters)
+    {
+        var command = connection.CreateCommand();
+
+        // Spanner doesn't accept timeout as 0, so we are going to set the default value as 60
+        command.CommandTimeout = outBoxTimeout <= 0 ? 60 : outBoxTimeout;
+        command.CommandText = sqlText;
+        command.Parameters.AddRange(parameters);
+
+        return command;
+    }
+
+    /// <inheritdoc />
+    protected override DbCommand InitMarkDispatchedCommand(DbConnection connection, Id messageId, DateTimeOffset? dispatchedAt)
+        => CreateCommand(connection, GenerateSqlText(Queries.MarkDispatchedCommand), 0,
+            CreateSqlParameter("MessageId", DbType.String, messageId.Value),
+            CreateSqlParameter("DispatchedAt", DbType.DateTimeOffset, dispatchedAt?.ToUniversalTime()));
+
+    /// <inheritdoc />
+    protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize, int pageNumber)
+    {
+        var parameters = new IDbDataParameter[3];
+        parameters[0] = CreateSqlParameter("@Skip", DbType.Int32, Math.Max(pageNumber - 1, 0) * pageSize);
+        parameters[1] = CreateSqlParameter("@Take", DbType.Int32, pageSize);
+        parameters[2] = CreateSqlParameter("@DispatchedSince", DbType.DateTimeOffset, DateTimeOffset.UtcNow.Subtract(dispatchedSince));
+
+        return parameters;
+    }
+
+    protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize, int pageNumber,
+        IDbDataParameter[] inParams)
+    {
+        var parameters = new IDbDataParameter[3];
+        parameters[0] = CreateSqlParameter("@Skip", DbType.Int32, Math.Max(pageNumber - 1, 0) * pageSize);
+        parameters[1] = CreateSqlParameter("@Take", DbType.Int32, pageSize);
+        parameters[2] = CreateSqlParameter("@TimestampSince", DbType.DateTimeOffset, DateTimeOffset.UtcNow.Subtract(since));
+
+        return parameters.Concat(inParams).ToArray();
+    }
+
+    /// <inheritdoc />
     protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex) 
-        => ex is SpannerException { ErrorCode: ErrorCode.AlreadyExists };
+        => ex is SpannerException se && se.RpcException.StatusCode == StatusCode.AlreadyExists;
 
     /// <inheritdoc />
     protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value) 
@@ -53,5 +99,38 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
 
     /// <inheritdoc />
     protected override IDbDataParameter CreateSqlParameter(string parameterName, DbType dbType, object? value)
-        => new SpannerParameter { ParameterName = parameterName, DbType = dbType, Value = value ?? DBNull.Value };
+    {
+        var spannerType = ToSpannerDbType(dbType);
+        if (value is DateTimeOffset dateTimeOffset)
+        {
+            value = dateTimeOffset.DateTime;
+        }
+        
+        return new SpannerParameter(parameterName, spannerType, value ?? DBNull.Value);
+    }
+
+    private static SpannerDbType ToSpannerDbType(DbType dbType)
+    {
+        return dbType switch
+        {
+            DbType.String  => SpannerDbType.String,
+            DbType.DateTimeOffset => SpannerDbType.Timestamp,
+            DbType.Binary => SpannerDbType.Bytes,
+            DbType.Int32 => SpannerDbType.Int64,
+            _ => throw new ArgumentOutOfRangeException(nameof(dbType), dbType, null)
+        };
+    }
+
+    protected override bool TryGetOrdinal(DbDataReader dr, string columnName, out int ordinal)
+    {
+        try
+        {
+            return base.TryGetOrdinal(dr, columnName, out ordinal);
+        }
+        catch (KeyNotFoundException)
+        {
+            ordinal = -1;
+            return false;
+        }
+    }
 }

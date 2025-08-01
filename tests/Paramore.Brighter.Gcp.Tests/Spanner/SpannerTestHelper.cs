@@ -1,6 +1,7 @@
 ﻿using System;
 using Google.Cloud.Spanner.Data;
 using Microsoft.Extensions.Configuration;
+using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
 
@@ -78,6 +79,5 @@ internal sealed class SpannerTestHelper
 
 internal sealed class SpannerSqlSettings
 {
-    public string TestsBrighterConnectionString { get; set; }
-        = "Host=localhost;Username=postgres;Password=password;Database=brightertests;Include Error Detail=true;";
+    public string TestsBrighterConnectionString => $"Data Source=projects/{GatewayFactory.GetProjectId()}/instances/brighter-spanner/databases/brightertests";
 }

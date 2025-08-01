@@ -31,7 +31,7 @@ using Paramore.Brighter.Outbox.Spanner;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Outbox;
 
 [Trait("Category", "Spanner")]
-public class SqlOutboxWritingMessageTests : IDisposable
+public class SpannerOutboxWritingMessageTests : IDisposable
 {
     private const string Key1 = "name1";
     private const string Key2 = "name2";
@@ -49,7 +49,7 @@ public class SqlOutboxWritingMessageTests : IDisposable
     private readonly SpannerTestHelper _spannerTestHelper;
     private readonly RequestContext _context;
 
-    public SqlOutboxWritingMessageTests()
+    public SpannerOutboxWritingMessageTests()
     {
         _spannerTestHelper = new SpannerTestHelper();
         _spannerTestHelper.SetupMessageDb();
