@@ -547,35 +547,35 @@ jobs:
         run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
         
 # MongoDB tool too long time to run
-#  mongodb-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#    
-#    services:
-#      mongo:
-#        image: mongo
-#        ports:
-#          - 27017:27017
-#        env:
-#          MONGO_INITDB_ROOT_USERNAME: root
-#          MONGO_INITDB_ROOT_PASSWORD: example
-#          MONGO_INITDB_DATABASE: brighter
-#        options: >-
-#          --health-cmd mongo
-#          --health-interval 20s
-#          --health-timeout 10s
-#          --health-retries 10
-#    steps:
-#      - uses: actions/checkout@v4
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v4
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: MongoDB Tests
-#        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+  mongodb-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    services:
+      mongo:
+        image: mongo
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: example
+          MONGO_INITDB_DATABASE: brighter
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
+          --health-interval 20s
+          --health-timeout 10s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: MongoDB Tests
+        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
         

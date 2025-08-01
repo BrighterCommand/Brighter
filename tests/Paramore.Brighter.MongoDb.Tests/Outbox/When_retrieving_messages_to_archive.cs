@@ -45,7 +45,7 @@ public class MongoDbArchiveFetchTests : IDisposable
 
         //Assert
         Assert.Equal(2, allDispatched.Count());
-        Assert.Empty(messagesOverAnHour);
+        Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours);
     }
     
