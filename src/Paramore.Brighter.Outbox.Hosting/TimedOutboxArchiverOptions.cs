@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.Hosting
 {
@@ -37,5 +38,15 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// The minimum age in hours to Archive
         /// </summary>
         public TimeSpan MinimumAge { get; set; } = TimeSpan.FromHours(24);
+
+        /// <summary>
+        /// Gets or sets the archive batch size
+        /// </summary>
+        public int ArchiveBatchSize { get; set; }= 100;
+        
+        /// <summary>
+        /// Gets or sets the <see cref="InstrumentationOptions"/>
+        /// </summary>
+        public InstrumentationOptions Instrumentation { get; set; } = InstrumentationOptions.All;
     }
 }
