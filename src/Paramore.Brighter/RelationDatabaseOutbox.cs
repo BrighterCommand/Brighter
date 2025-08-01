@@ -1294,7 +1294,7 @@ namespace Paramore.Brighter
                 CreateSqlParameter($"@{prefix}PartitionKey", DbType.String, message.Header.PartitionKey.Value),
                 CreateSqlParameter($"@{prefix}HeaderBag", DbType.String, bagJson),
                 CreateSqlParameter($"@{prefix}Source", DbType.String, message.Header.Source.ToString()),
-                CreateSqlParameter($"@{prefix}Type", DbType.String, message.Header.Type),
+                CreateSqlParameter($"@{prefix}Type", DbType.String, message.Header.Type.Value),
                 CreateSqlParameter($"@{prefix}DataSchema", DbType.String, message.Header.DataSchema?.ToString()),
                 CreateSqlParameter($"@{prefix}Subject", DbType.String, message.Header.Subject),
                 CreateSqlParameter($"@{prefix}TraceParent", DbType.String, message.Header.TraceParent?.Value),
