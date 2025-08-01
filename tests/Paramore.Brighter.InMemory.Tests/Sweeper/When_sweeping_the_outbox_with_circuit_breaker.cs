@@ -29,7 +29,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new ();
         private readonly IAmAnOutboxProducerMediator _mediator;
-        private readonly OutboxSweeper _sweeper;
+        private OutboxSweeper _sweeper;
         private readonly IAmAnOutboxCircuitBreaker _circuitBreaker;
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly TimeSpan _timeSinceSent = TimeSpan.FromMilliseconds(6000);
@@ -126,15 +126,16 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             );
 
             CommandProcessor.ClearServiceBus();
-
-            _sweeper = new OutboxSweeper(_timeSinceSent, _mediator, new InMemoryRequestContextFactory(), batchSize: 2);
         }
 
 
-        [Fact]
-        public async Task When_outstanding_in_outbox_with_trippedTopic_sweep_clears_them_async()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task When_outstanding_in_outbox_with_trippedTopic_sweep_clears_them_async(bool useBulk)
         {
             // Arrange
+            _sweeper = new OutboxSweeper(_timeSinceSent, _mediator, new InMemoryRequestContextFactory(), batchSize: 2, useBulk: useBulk);
             var context = new RequestContext();
             await _outbox.AddAsync(_messageOne, context);
             await _outbox.AddAsync(_messageTwo, context);
@@ -164,10 +165,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             Assert.Equal(_messageTwo.Body.Value, sentMessage2.Body.Value);
         }
 
-        [Fact]
-        public async Task When_outstanding_in_outbox_and_one_topic_trips_Then_nonTripped_are_cleared_on_second_sweep()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task When_outstanding_in_outbox_and_one_topic_trips_Then_nonTripped_are_cleared_on_second_sweep(bool useBulk)
         {
             // Arrange
+            _sweeper = new OutboxSweeper(_timeSinceSent, _mediator, new InMemoryRequestContextFactory(), batchSize: 2, useBulk: useBulk);
             var context = new RequestContext();
             await _outbox.AddAsync(_failingMessage, context);
             await _outbox.AddAsync(_failingMessageTwo, context);

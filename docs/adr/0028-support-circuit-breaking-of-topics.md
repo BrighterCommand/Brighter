@@ -109,14 +109,14 @@ Changes to IAmABulkMessageProducerAsync interface as follows.
     public interface IAmABulkMessageProducerAsync : IAmAMessageProducer
     {
         /// <summary>
-        /// Sends the specified message.
+        /// Creates batches from messages
         /// </summary>
         /// <param name="messages">The messages to batch</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         IEnumerable<MessageBatch> CreateBatch(IEnumerable<Message> messages, CancellationToken cancellationToken);
 
         /// <summary>
-        /// Sends the specified message.
+        /// Sends a batch of messages.
         /// </summary>
         /// <param name="batch">A batch of messages to send</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
