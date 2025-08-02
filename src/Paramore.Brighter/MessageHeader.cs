@@ -107,6 +107,7 @@ namespace Paramore.Brighter
         /// Each entry consists of a key-value pair where the key identifies the vendor and the value contains user-defined request or workflow data.
         /// Whereas the <see cref="Bag"/> property is used for extended header attributes, the Baggage property is specifically for W3C Baggage.
         /// </summary>
+        /// <value>The baggage.</value>
         public Baggage Baggage { get; set; } = new();
         
         /// <summary>
@@ -118,6 +119,7 @@ namespace Paramore.Brighter
         /// though Cloud Events does not.
         /// Default value is "appliacation/json; charset=utf-8"
         /// </summary>
+        /// <value>The content type.</value>
         public ContentType ContentType { get; set; }
 
         /// <summary>
@@ -134,6 +136,7 @@ namespace Paramore.Brighter
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
         /// Identifies the schema that data adheres to. Incompatible changes to the schema SHOULD be reflected by a different URI. 
         /// </summary>
+        /// <value>The data schema.</value>
         public Uri? DataSchema { get; set; }
         
         /// <summary>
@@ -145,19 +148,31 @@ namespace Paramore.Brighter
         ///  - If the consumer wants to verify that the Data has not been tampered with, it can retrieve it from a trusted source using this attribute.
         ///  - If the Data MUST only be viewed by trusted consumers (e.g. personally identifiable information), only a trusted consumer can retrieve it using this attribute and a pre-shared secret.
         /// </summary>
+        /// <value>The data reference.</value>
         public string? DataRef { get; set; }
         
         /// <summary>
         /// OPTIONAL
         /// Internal usage. Gets the period the message was instructed to be delayed for
         /// </summary>
+        /// <value>The delay.</value>
         public TimeSpan Delayed { get; set; }
         
         /// <summary>
         /// OPTIONAL
         /// Internal usage. Gets the number of times this message has been seen 
         /// </summary>
+        /// <value>The number of times this message has been handled.</value>
         public int HandledCount { get; set; }
+        
+        /// <summary>
+        /// The identifier for an instance of a workflow. This is used to correlate messages that are part of a workflow.
+        /// </summary>
+        /// <remarks> Reserved for future use, currently not used in Brighter</remarks>
+        /// <value>The job identifier.</value>
+        [JsonConverter(typeof(IdConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+        public Id? JobId { get; }
 
         /// <summary>
         /// REQUIRED
@@ -184,6 +199,7 @@ namespace Paramore.Brighter
         /// If we are working with consistent hashing to distribute writes across multiple channels according to the
         /// hash value of a partition key then we need to be able to set that key, so that we can distribute writes effectively.
         /// </summary>
+        /// <value>The partition key.</value>
         public PartitionKey PartitionKey { get; set; } = PartitionKey.Empty;
         
         /// <summary>
@@ -212,6 +228,7 @@ namespace Paramore.Brighter
         /// The version of the CloudEvents specification which the event uses. This enables the interpretation of the context.
         /// Defaults tp 1.0
         /// </summary>
+        /// <value>The spec version.</value>
         public string SpecVersion { get; set; } = DefaultSpecVersion;
         
         /// <summary>
@@ -223,6 +240,7 @@ namespace Paramore.Brighter
         /// Producers MUST ensure that source + id is unique for each distinct event.
         /// Default: "http://goparamore.io" for backward compatibility as required
         /// </summary>
+        /// <value>The source.</value>
         public Uri Source { get; set; } = new Uri(DefaultSource);
 
         /// <summary>
@@ -240,6 +258,7 @@ namespace Paramore.Brighter
         /// Internal usage. The date the message was created.
         /// Defaults to now in UTC
         /// </summary>
+        /// <value>The time stamp.</value>
         public DateTimeOffset TimeStamp { get; init; }
         
         /// <summary>
@@ -253,6 +272,7 @@ namespace Paramore.Brighter
         ///     - trace-flags
         /// In .NET it is set from Activity.Current.Id
         /// </summary>
+        /// <value>The traceparent.</value>
         [JsonConverter(typeof(TraceParentConverter))]
         [Newtonsoft.Json.JsonConverter(typeof(TraceParentConverter))]
         public TraceParent? TraceParent { get; set; }
@@ -266,6 +286,7 @@ namespace Paramore.Brighter
         /// in multiple distributed tracing graphs.
         /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
         /// </summary>
+        /// <value>The tracestate.</value>
         [JsonConverter(typeof(TraceStateConverter))]
         [Newtonsoft.Json.JsonConverter(typeof(TraceStateConverter))]
         public TraceState? TraceState { get; set; }
@@ -278,7 +299,17 @@ namespace Paramore.Brighter
         /// SHOULD be prefixed with a reverse-DNS name. The prefixed domain dictates the organization which defines the semantics of this event type.
         /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
         /// </summary>
+        /// <value>The type of the event.</value>
         public string Type { get; set; } = DefaultType;
+        
+        /// <summary>
+        /// The identity of the workflow this message was sent as part of. This is used to correlate messages that are part of a workflow.
+        /// </summary>
+        /// <value>The workflow identifier.</value>
+        /// <remarks> Reserved for future use, currently not used in Brighter</remarks>
+        [JsonConverter(typeof(IdConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NIdConverter))]
+        public Id? WorkflowId { get; }
 
         /// <summary>
         /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'
@@ -303,6 +334,8 @@ namespace Paramore.Brighter
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
         /// <param name="dataSchema">A Uri that identifies the schema that data adheres to</param>
         /// <param name="subject">Describes the subject of the event in the context of the event producer</param>
+        /// <param name="workflowId">The identity of the workflow this message was sent as part of</param>
+        /// <param name="jobId">The identifier for an instance of that workflow</param>
         /// <param name="handledCount">The number of attempts to handle this message</param>
         /// <param name="delayed">The delay in milliseconds to this message (usually to retry)</param>
         /// <param name="traceParent">The traceparent for this message; follows the W3C standard</param>
@@ -322,6 +355,8 @@ namespace Paramore.Brighter
             Uri? dataSchema = null,
             string? subject = null,
             int handledCount = 0,
+            Id? workflowId = null,
+            Id? jobId = null,
             TimeSpan? delayed = null,
             TraceParent? traceParent = null,
             TraceState? traceState = null,
@@ -334,6 +369,8 @@ namespace Paramore.Brighter
             Type = type ?? DefaultType;
             TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
             HandledCount = handledCount;
+            WorkflowId = workflowId;
+            JobId = jobId;
             Delayed = delayed ?? TimeSpan.Zero;
             CorrelationId = correlationId ?? new Id(string.Empty);
             ReplyTo = replyTo ?? RoutingKey.Empty;
@@ -395,26 +432,33 @@ namespace Paramore.Brighter
         public bool Equals(MessageHeader? other)
         {
             if (ReferenceEquals(null, other)) return false;
-            return
-                MessageId == other.MessageId &&
-                Topic == other.Topic &&
-                MessageType == other.MessageType &&
-                Source == other.Source &&
-                Type == other.Type &&
-                CorrelationId == other.CorrelationId &&
-                ReplyTo == other.ReplyTo &&
-                ContentType.Equals(other.ContentType); //&&
-            /*
-            PartitionKey.Equals(other.PartitionKey) &&
-            DataSchema == other.DataSchema &&
-            Subject == other.Subject &&
-            SpecVersion == other.SpecVersion &&
-            HandledCount == other.HandledCount &&
-            Delayed.Equals(other.Delayed) &&
-            TraceParent == other.TraceParent &&
-            TraceState == other.TraceState &&
-            Baggage.ToString() == other.Baggage.ToString();
-            */
+
+            //We choose to break these into individual comparisons to make it easier to debug
+            bool messageIdEquals = MessageId == other.MessageId;
+            bool topicEquals = Topic == other.Topic;
+            bool messageTypeEquals = MessageType == other.MessageType;
+            bool sourceEquals = Source == other.Source;
+            bool typeEquals = Type == other.Type;
+            bool correlationIdEquals = CorrelationId == other.CorrelationId;
+            bool replyToEquals = ReplyTo == other.ReplyTo;
+            bool contentTypeEquals = ContentType.Equals(other.ContentType);
+            bool partitionKeyEquals = PartitionKey.Equals(other.PartitionKey);
+            bool dataSchemaEquals = DataSchema == other.DataSchema;
+            bool subjectEquals = Subject == other.Subject;
+            bool specVersionEquals = SpecVersion == other.SpecVersion;
+            bool workflowIdEquals = WorkflowId == other.WorkflowId;
+            bool jobIdEquals = JobId == other.JobId;
+            bool handledCountEquals = HandledCount == other.HandledCount;
+            bool delayedEquals = Delayed.Equals(other.Delayed);
+            bool traceParentEquals = TraceParent == other.TraceParent;
+            bool traceStateEquals = TraceState == other.TraceState;
+            bool baggageEquals = Baggage.ToString() == other.Baggage.ToString();
+
+            return messageIdEquals && topicEquals && messageTypeEquals && sourceEquals &&
+                   typeEquals && correlationIdEquals && replyToEquals && contentTypeEquals &&
+                   partitionKeyEquals && dataSchemaEquals && subjectEquals && specVersionEquals &&
+                   workflowIdEquals && jobIdEquals && handledCountEquals && delayedEquals &&
+                   traceParentEquals && traceStateEquals && baggageEquals;
         }
 
         /// <summary>

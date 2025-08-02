@@ -48,7 +48,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 contentType: new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()},
                 partitionKey: Context.GetPartitionKey(),
                 dataSchema: publication.DataSchema,
-               subject: publication.Subject
+               subject: publication.Subject,
+                workflowId: Context.GetWorkflowId(),
+                jobId: Context.GetJobId()
         );
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);

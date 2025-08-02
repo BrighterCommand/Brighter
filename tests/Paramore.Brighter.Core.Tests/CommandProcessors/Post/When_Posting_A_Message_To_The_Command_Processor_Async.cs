@@ -26,6 +26,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly RoutingKey _routingKey;
         private readonly Message _expectedMessage;
         private readonly PartitionKey _partitionKey = new(Id.Random);
+        private readonly Id _workflowId = Id.Random;
+        private readonly Id _jobId = Id.Random;
 
         public CommandProcessorPostCommandAsyncTests()
         {
@@ -59,7 +61,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                     contentType: new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()},
                     partitionKey: _partitionKey,
                     dataSchema: messageProducer.Publication.DataSchema,
-                    subject: messageProducer.Publication.Subject
+                    subject: messageProducer.Publication.Subject,
+                    workflowId: _workflowId,
+                    jobId: _jobId
                 ),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
             );
@@ -110,7 +114,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         [Fact]
         public async Task When_Posting_A_Message_To_The_Command_Processor_Async()
         {
-            var requestContext = new RequestContext { Bag = { [RequestContextBagNames.PartitionKey] = _partitionKey } };
+            var requestContext = new RequestContext
+            {
+                Bag =
+                {
+                    [RequestContextBagNames.PartitionKey] = _partitionKey,
+                    [RequestContextBagNames.WorkflowId] = _workflowId,
+                    [RequestContextBagNames.JobId] = _jobId
+                }
+            };
 
             await _commandProcessor.PostAsync(_myCommand, requestContext);
             
