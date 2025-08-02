@@ -12,6 +12,76 @@ namespace Paramore.Brighter.Extensions;
 public static class RequestContextExtensions
 {
     /// <summary>
+    /// Retrieves CloudEvent additional properties from the request context bag.
+    /// </summary>
+    /// <param name="context">The request context (may be null)</param>
+    /// <returns>
+    /// The CloudEvent extensions dictionary if present and valid, otherwise null.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// The value must be stored in the context bag as a <see cref="Dictionary{TKey, TValue}"/> 
+    /// where TKey is <see cref="string"/> and TValue is <see cref="object"/>.
+    /// </para>
+    /// <para>
+    /// Returns null for:
+    /// <list type="bullet">
+    /// <item><description>Null context</description></item>
+    /// <item><description>Missing CloudEventsAdditionalProperties entry</description></item>
+    /// <item><description>Type mismatch (not Dictionary&lt;string, object&gt;)</description></item>
+    /// </list>
+    /// </para>
+    /// <example>
+    /// Usage:
+    /// <code>
+    /// var cloudEventProps = requestContext.GetCloudEventAdditionalProperties();
+    /// if (cloudEventProps != null)
+    /// {
+    ///     // Add to CloudEvent extensions
+    /// }
+    /// </code>
+    /// </example>
+    /// <seealso cref="RequestContextBagNames.CloudEventsAdditionalProperties"/>
+    /// </remarks>
+    public static Dictionary<string, object>? GetCloudEventAdditionalProperties(this IRequestContext? context)
+    {
+        if (context != null 
+            && context.Bag.TryGetValue(RequestContextBagNames.CloudEventsAdditionalProperties, out var tmp)
+            && tmp is Dictionary<string, object> cloudEventAdditionalProperties)
+        {
+            return cloudEventAdditionalProperties;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Retrieves the JobId value from the request context bag.
+    /// </summary>
+    /// <param name="context">The request context (may be null).</param>
+    /// <returns>
+    /// The JobId as an <see cref="Id"/> if present and valid; otherwise, an empty <see cref="Id"/>.
+    /// </returns>
+    /// <remarks>
+    /// Reserved for future usage, this method retrieves the JobId which represents an instance of a workflow.
+    /// Returns an empty <see cref="Id"/> in the following cases:
+    /// - Null context.
+    /// - Missing JobId entry in the context bag.
+    /// - Type mismatch (not of type <see cref="Id"/>).
+    /// </remarks>
+    public static Id? GetJobId(this IRequestContext? context)
+    {
+        if (context != null
+            && context.Bag.TryGetValue(RequestContextBagNames.JobId, out var tmp) 
+            && tmp is Id jobId)
+        {
+            return jobId;
+        }
+
+        return null;
+    }
+    
+    /// <summary>
     /// Retrieves the partition key from the request context bag.
     /// </summary>
     /// <param name="context">The request context (may be null)</param>
@@ -105,46 +175,28 @@ public static class RequestContextExtensions
 
         return null;
     }
-    
+
     /// <summary>
-    /// Retrieves CloudEvent additional properties from the request context bag.
+    /// Retrieves the WorkflowId value from the request context bag.
     /// </summary>
-    /// <param name="context">The request context (may be null)</param>
+    /// <param name="context">The request context (may be null).</param>
     /// <returns>
-    /// The CloudEvent extensions dictionary if present and valid, otherwise null.
+    /// The WorkflowId as an <see cref="Id"/> if present and valid, otherwise null.
     /// </returns>
     /// <remarks>
-    /// <para>
-    /// The value must be stored in the context bag as a <see cref="Dictionary{TKey, TValue}"/> 
-    /// where TKey is <see cref="string"/> and TValue is <see cref="object"/>.
-    /// </para>
-    /// <para>
-    /// Returns null for:
-    /// <list type="bullet">
-    /// <item><description>Null context</description></item>
-    /// <item><description>Missing CloudEventsAdditionalProperties entry</description></item>
-    /// <item><description>Type mismatch (not Dictionary&lt;string, object&gt;)</description></item>
-    /// </list>
-    /// </para>
-    /// <example>
-    /// Usage:
-    /// <code>
-    /// var cloudEventProps = requestContext.GetCloudEventAdditionalProperties();
-    /// if (cloudEventProps != null)
-    /// {
-    ///     // Add to CloudEvent extensions
-    /// }
-    /// </code>
-    /// </example>
-    /// <seealso cref="RequestContextBagNames.CloudEventsAdditionalProperties"/>
+    /// Retrieves the WorkflowId which represents an instance of a workflow.
+    /// Returns null in the following cases:
+    /// - The context is null.
+    /// - The WorkflowId key is missing in the context bag.
+    /// - The value associated with the WorkflowId key is not of type <see cref="Id"/>.
     /// </remarks>
-    public static Dictionary<string, object>? GetCloudEventAdditionalProperties(this IRequestContext? context)
+    public static Id? GetWorkflowId(this IRequestContext? context)
     {
-        if (context != null 
-            && context.Bag.TryGetValue(RequestContextBagNames.CloudEventsAdditionalProperties, out var tmp)
-            && tmp is Dictionary<string, object> cloudEventAdditionalProperties)
+        if (context != null
+            && context.Bag.TryGetValue(RequestContextBagNames.WorkflowId, out var tmp) 
+            && tmp is Id workflowId)
         {
-            return cloudEventAdditionalProperties;
+            return workflowId;
         }
 
         return null;
