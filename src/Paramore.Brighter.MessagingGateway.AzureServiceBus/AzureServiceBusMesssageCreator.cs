@@ -178,17 +178,15 @@ public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscrip
         return DateTimeOffset.UtcNow;
     }
 
-    private string GetCloudEventsType(IBrokeredMessageWrapper azureServiceBusMessage)
+    private CloudEventsType GetCloudEventsType(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsType, out object? property))
         {
             s_logger.LogWarning("No Cloud Events type found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
-            return string.Empty;
+            return CloudEventsType.Empty;
         }
 
-        var type = property.ToString() ?? string.Empty;
-
-        return type;
+        return new CloudEventsType(property.ToString() ?? string.Empty);
     }
 
     private static ContentType GetContentType(IBrokeredMessageWrapper azureServiceBusMessage)

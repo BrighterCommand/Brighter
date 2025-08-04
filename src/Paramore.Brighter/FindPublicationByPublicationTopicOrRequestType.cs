@@ -36,30 +36,42 @@ namespace Paramore.Brighter;
 /// </remarks>
 public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFinder 
 {
-    private static readonly ConcurrentDictionary<Type, RoutingKey?> s_typeRoutingKeyCache = new();
+    private static readonly ConcurrentDictionary<Type, ProducerKey?> s_typeProducerKeyCache = new();
     
-    /// <inheritdoc cref="IAmAPublicationFinder"/>
-    public virtual Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext context) where TRequest : class, IRequest
+    /// <summary>
+    /// Finds the <see cref="Publication"/> configuration for the specified request type.
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the request (command or event).</typeparam>
+    /// <param name="registry">The <see cref="IAmAProducerRegistry"/> containing registered producers and their publications.</param>
+    /// <param name="requestContext">The <see cref="RequestContext"/>.</param>
+    /// <returns>The <see cref="Publication"/> configuration for the request type, or <c>null</c> if no matching publication is found.</returns>
+    public virtual Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext requestContext) where TRequest : class, IRequest
     {
-        if (context.Topic != null)
+        if (requestContext.Destination != null)
         {
-            var producer = registry.Producers.FirstOrDefault(x => context.Topic == x.Publication.Topic!);
-            if (producer != null)
+            var producers = registry.Producers.Where(x => requestContext.Destination.RoutingKey== x.Publication.Topic!).ToArray();
+            
+            if (producers.Length == 1)
+                return producers.First().Publication;
+            
+            if (producers.Length > 1)
             {
-                return producer.Publication;
+                var producer = producers.FirstOrDefault(x => x.Publication.Type == requestContext.Destination.Type);
+                if (producer != null)
+                    return producer.Publication;
             }
         }
         
-        var routingKey = s_typeRoutingKeyCache.GetOrAdd(typeof(TRequest), GetRoutingKey);
-        if (routingKey != null)
+        //Do we have a publication topic attribute for the routing key? If so cache and use it!
+        var producerKey = s_typeProducerKeyCache.GetOrAdd(typeof(TRequest), GetDestinationKey);
+        if (producerKey != null)
         {
-            var producer = registry.Producers.FirstOrDefault(x => routingKey == x.Publication.Topic!);
+            var producer = registry.Producers.FirstOrDefault(x => x.Publication.Topic! == producerKey.RoutingKey && x.Publication.Type == producerKey.Type);
             if (producer != null)
-            {
                 return producer.Publication;
-            }
         }
         
+        //If not attribute-based, then find the publication by matching this requesttype and the publication request type
         var publications = registry.Producers.Select( x=> x.Publication)
             .Where(x=> x.RequestType == typeof(TRequest))
             .ToArray();
@@ -68,14 +80,14 @@ public class FindPublicationByPublicationTopicOrRequestType : IAmAPublicationFin
         {
             0 => throw new ConfigurationException("No producer found for request type. Have you set the request type on the Publication?"),
             1 => publications[0],
-            _ => throw new ConfigurationException("Only one producer per request type is supported. Have you added the request type to multiple Publications?")
+            _ => throw new ConfigurationException("Only one producer per request type  is supported. Have you added the request type to multiple Publications?")
         };
     }
     
 
-    private static RoutingKey? GetRoutingKey(Type requestType)
+    private static ProducerKey? GetDestinationKey(Type requestType)
     {
         var attribute = requestType.GetCustomAttribute<PublicationTopicAttribute>();
-        return attribute == null ? null : new RoutingKey(attribute.Topic);
+        return attribute?.Destination;
     }
 }

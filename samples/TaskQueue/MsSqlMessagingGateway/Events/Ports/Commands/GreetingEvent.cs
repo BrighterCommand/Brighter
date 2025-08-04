@@ -29,9 +29,9 @@ namespace Events.Ports.Commands
 {
     public class GreetingEvent : Event
     {
-        public GreetingEvent() : base(Id.Random) { }
+        public GreetingEvent() : base(Id.Random()) { }
 
-        public GreetingEvent(string greeting) : base(Id.Random)
+        public GreetingEvent(string greeting) : base(Id.Random())
         {
             Greeting = greeting;
         }

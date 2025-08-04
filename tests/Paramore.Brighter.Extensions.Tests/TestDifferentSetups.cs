@@ -43,10 +43,7 @@ namespace Tests
                 new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
                     { 
-                        routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), InstrumentationOptions.All)
-                        {
-                            Publication = { Topic = routingKey}
-                        } 
+                        routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication{ Topic = routingKey})
                     },
                 });
             

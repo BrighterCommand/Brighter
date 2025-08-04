@@ -54,11 +54,8 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                     groupId: groupId,
                     commitBatchSize: 20,  //This large commit batch size may never be sent
                     sweepUncommittedOffsetsInterval: TimeSpan.FromMilliseconds(10000),
-                    numOfPartitions: 1,
-                    replicationFactor: 1,
-                    messagePumpType:  MessagePumpType.Proactor,
-                    makeChannels: OnMissingChannel.Create
-                ));
+                    messagePumpType: MessagePumpType.Proactor,
+                    numOfPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create));
     }
 
     //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]

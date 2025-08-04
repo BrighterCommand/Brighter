@@ -193,7 +193,7 @@ public static class ConfigureTransport
                 new SubscriptionName(typeof(T).Name),
                 new ChannelName(typeof(T).Name),
                 new RoutingKey(typeof(T).Name),
-                "kafka-GreetingsReceiverConsole-Sample",
+                groupId: "kafka-GreetingsReceiverConsole-Sample",
                 timeOut: TimeSpan.FromMilliseconds(100),
                 offsetDefault: AutoOffsetReset.Earliest,
                 commitBatchSize: 5,

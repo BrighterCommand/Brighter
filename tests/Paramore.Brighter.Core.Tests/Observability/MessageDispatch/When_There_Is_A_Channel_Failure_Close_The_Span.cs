@@ -74,7 +74,8 @@ public class MessagePumpChannelFailureOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactory(), 
+            _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent), 
+                messageMapperRegistry, new EmptyMessageTransformerFactory(), 
                 new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
@@ -93,6 +94,7 @@ public class MessagePumpChannelFailureOberservabilityTests
             
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
+            
     }
 
     [Fact]
