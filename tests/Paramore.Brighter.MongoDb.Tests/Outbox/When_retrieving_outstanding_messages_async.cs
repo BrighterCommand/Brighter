@@ -54,6 +54,22 @@ public class MongoDbFetchOutStandingMessageAsyncTests : IDisposable
         Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours);
     }
+    
+    [Fact]
+    public async Task When_Retrieving_Not_Dispatched_Messages_With_TrippedTopic_Async()
+    {
+        var context = new RequestContext();
+        await _outbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        await _outbox.MarkDispatchedAsync(_messageDispatched.Id, context);
+        
+        var allUnDispatched = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context, trippedTopics: [new RoutingKey("test_topic")]);
+
+        //Assert
+        Assert.Empty(allUnDispatched);
+        
+        allUnDispatched = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context, trippedTopics: [new RoutingKey("other_topic")]);
+        Assert.Equal(2, allUnDispatched.Count());
+    }
 
     public void Dispose()
     {
