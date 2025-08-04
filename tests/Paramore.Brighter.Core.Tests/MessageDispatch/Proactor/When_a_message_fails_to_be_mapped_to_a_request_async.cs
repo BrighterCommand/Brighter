@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SimpleMessageMapperFactoryAsync(_ => new FailingEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyFailingMapperEvent, FailingEventMessageMapperAsync>();
              
-            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(FailingEventMessageMapperAsync), 
+            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyFailingMapperEvent), 
                 messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3

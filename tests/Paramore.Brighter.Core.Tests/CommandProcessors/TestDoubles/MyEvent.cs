@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
