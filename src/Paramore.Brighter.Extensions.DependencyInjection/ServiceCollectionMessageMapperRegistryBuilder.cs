@@ -120,5 +120,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             serviceCollection.TryAdd(new ServiceDescriptor(defaultMapper, defaultMapper, lifetime));
             DefaultMessageMapperAsync = defaultMapper;
-        }    }
+        }    
+    }
 }

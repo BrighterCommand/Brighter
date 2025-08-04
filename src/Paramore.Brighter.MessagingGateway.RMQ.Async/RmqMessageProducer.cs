@@ -68,7 +68,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     {
         get { return _publication; }
         set { _publication = (RmqPublication)value ?? throw new ArgumentNullException(nameof(value), "RmqMessageProducer: Publication cannot be null"); }
-}
+    }
 
     /// <summary>
     /// The OTel Span we are writing Producer events too

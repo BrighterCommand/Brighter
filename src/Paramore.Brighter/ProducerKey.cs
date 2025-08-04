@@ -29,7 +29,7 @@ namespace Paramore.Brighter;
 /// <summary>
 /// A producer key is used to identify a producer in the <see cref="ProducerRegistry"/>.
 /// </summary>
-public class ProducerKey
+public sealed class ProducerKey
 {
     /// <summary>
     /// A producer key is used to identify a producer in the <see cref="ProducerRegistry"/>.
