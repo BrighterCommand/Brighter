@@ -189,7 +189,7 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
 
         if (envelop != null)
         {
-            var messageId = Id.Random;
+            var messageId = Id.Random();
             if (!Id.IsNullOrEmpty(envelop.MessageId))
             {
                messageId = envelop.MessageId!;

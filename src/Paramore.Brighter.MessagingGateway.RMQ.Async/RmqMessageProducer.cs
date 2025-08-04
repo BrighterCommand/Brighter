@@ -51,7 +51,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
     private static readonly SemaphoreSlim s_lock = new(1, 1);
 
-    private readonly RmqPublication _publication;
+    private RmqPublication _publication;
     private readonly ConcurrentDictionary<ulong, string> _pendingConfirmations = new();
     private readonly int _waitForConfirmsTimeOutInMilliseconds;
 
@@ -64,7 +64,11 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     /// <summary>
     /// The publication configuration for this producer
     /// </summary>
-    public Publication Publication { get { return _publication; } }
+    public Publication Publication
+    {
+        get { return _publication; }
+        set { _publication = (RmqPublication)value ?? throw new ArgumentNullException(nameof(value), "RmqMessageProducer: Publication cannot be null"); }
+    }
 
     /// <summary>
     /// The OTel Span we are writing Producer events too

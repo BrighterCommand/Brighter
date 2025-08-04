@@ -25,30 +25,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
         private readonly PartitionKey _partitionKey = new(Uuid.NewAsString());
-        private readonly Id _workflowId = Id.Random;
-        private readonly Id _jobId = Id.Random;
+        private readonly Id _workflowId = Id.Random();
+        private readonly Id _jobId = Id.Random();
 
         public CommandProcessorPostCommandTests()
         {
             _myCommand.Value = "Hello World";
-            _myCommand.CorrelationId = Id.Random;
+            _myCommand.CorrelationId = Id.Random();
 
             var timeProvider = new FakeTimeProvider();
             var routingKey = new RoutingKey(Topic);
-            
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
-            {
-                Publication =
+
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+                new Publication()
                 {
                     DataSchema = new Uri("https://goparamore.io/schemas/MyCommand.json"),
                     Source = new Uri("https://goparamore.io"),
                     Subject = "MyCommand",
                     Topic = routingKey,
-                    Type = "go.paramore.brighter.test",
+                    Type = new CloudEventsType("go.paramore.brighter.test"),
                     ReplyTo = "MyEvent",
                     RequestType = typeof(MyCommand)
-                }
-            };
+                });
 
             _expectedMessage = new Message(
                 new MessageHeader(

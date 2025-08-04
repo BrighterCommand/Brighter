@@ -25,9 +25,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly InternalBus _internalBus = new();
         private readonly RoutingKey _routingKey;
         private readonly Message _expectedMessage;
-        private readonly PartitionKey _partitionKey = new(Id.Random);
-        private readonly Id _workflowId = Id.Random;
-        private readonly Id _jobId = Id.Random;
+        private readonly PartitionKey _partitionKey = new(Id.Random());
+        private readonly Id _workflowId = Id.Random();
+        private readonly Id _jobId = Id.Random();
 
         public CommandProcessorPostCommandAsyncTests()
         {
@@ -35,19 +35,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _routingKey = new RoutingKey("MyCommand");
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
-            {
-                Publication =
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+                new Publication()
                 {
                     DataSchema = new Uri("https://goparamore.io/schemas/MyCommand.json"),
                     Source = new Uri("https://goparamore.io"),
                     Subject = "MyCommand",
                     Topic = _routingKey,
-                    Type = "go.paramore.brighter.test",
+                    Type = new CloudEventsType("go.paramore.brighter.test"),
                     ReplyTo = "MyEvent",
                     RequestType = typeof(MyCommand)
-                }
-            };
+                });
             
             _expectedMessage = new Message(
                 new MessageHeader(

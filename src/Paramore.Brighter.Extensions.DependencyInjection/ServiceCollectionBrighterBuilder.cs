@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public class ServiceCollectionBrighterBuilder : IBrighterBuilder
     {
         private readonly ServiceCollectionSubscriberRegistry _serviceCollectionSubscriberRegistry;
-        private readonly ServiceCollectionMessageMapperRegistry _mapperRegistry;
+        private readonly ServiceCollectionMessageMapperRegistryBuilder _mapperRegistryBuilder;
         private readonly ServiceCollectionTransformerRegistry _transformerRegistry;
         
         public IPolicyRegistry<string>? PolicyRegistry { get; set; }
@@ -46,20 +46,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services">The IoC container to update</param>
         /// <param name="serviceCollectionSubscriberRegistry">The register for looking up message handlers</param>
-        /// <param name="mapperRegistry">The register for looking up message mappers</param>
+        /// <param name="mapperRegistryBuilder">The register for looking up message mappers</param>
         /// <param name="transformerRegistry">The register for transforms</param>
         /// <param name="policyRegistry">The list of policies that we require</param>
         public ServiceCollectionBrighterBuilder(
             IServiceCollection services,
             ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry,
-            ServiceCollectionMessageMapperRegistry mapperRegistry,
+            ServiceCollectionMessageMapperRegistryBuilder mapperRegistryBuilder,
             ServiceCollectionTransformerRegistry? transformerRegistry = null,
             IPolicyRegistry<string>? policyRegistry = null
             )
         {
             Services = services;
             _serviceCollectionSubscriberRegistry = serviceCollectionSubscriberRegistry;
-            _mapperRegistry = mapperRegistry;
+            _mapperRegistryBuilder = mapperRegistryBuilder;
             _transformerRegistry = transformerRegistry ?? new ServiceCollectionTransformerRegistry(services);
             PolicyRegistry = policyRegistry;
         }
@@ -101,8 +101,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="extraAssemblies">Additional assemblies to scan</param>
         /// <param name="excludeDynamicHandlerTypes">If you want to register a handler with a dynamic routing rule - an agreement - you need to excluce it from auto-regisration by adding it to this list</param>
+        /// <param name="defaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
+        /// <param name="asyncDefaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
         /// <returns></returns>
-        public IBrighterBuilder AutoFromAssemblies(IEnumerable<Assembly>? extraAssemblies = null, IEnumerable<Type>? excludeDynamicHandlerTypes = null)
+        public IBrighterBuilder AutoFromAssemblies(IEnumerable<Assembly>? extraAssemblies = null, IEnumerable<Type>? excludeDynamicHandlerTypes = null, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper =  null)
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
                 !a.IsDynamic && a.FullName?.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) != true &&
@@ -110,7 +112,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var assemblies = extraAssemblies !=  null ? appDomainAssemblies.Concat(extraAssemblies) : appDomainAssemblies;
 
-            MapperRegistryFromAssemblies(assemblies);
+            MapperRegistryFromAssemblies(assemblies, defaultMessageMapper, asyncDefaultMessageMapper);
             HandlersFromAssemblies(assemblies, excludeDynamicHandlerTypes);
             AsyncHandlersFromAssemblies(assemblies, excludeDynamicHandlerTypes);
             TransformsFromAssemblies(assemblies);
@@ -122,13 +124,22 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Register message mappers
         /// </summary>
         /// <param name="registerMappers">A callback to register mappers</param>
+        /// <param name="defaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
+        /// <param name="asyncDefaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
         /// <returns></returns>
-        public IBrighterBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistry> registerMappers)
+        public IBrighterBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistryBuilder> registerMappers, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper =  null)
         {
             if (registerMappers == null) throw new ArgumentNullException(nameof(registerMappers));
+            
+            if (defaultMessageMapper is not null)
+                _mapperRegistryBuilder.SetDefaultMessageMapper(defaultMessageMapper);
+                
+            if (asyncDefaultMessageMapper is not null)
+                _mapperRegistryBuilder.SetDefaultMessageMapperAsync(asyncDefaultMessageMapper);
 
-            registerMappers(_mapperRegistry);
-            _mapperRegistry.EnsureDefaultMessageMapperIsRegistered();
+            _mapperRegistryBuilder.EnsureDefaultMessageMapperIsRegistered();
+            
+            registerMappers(_mapperRegistryBuilder);
 
             return this;
         }
@@ -137,18 +148,27 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Scan the assemblies provided for implementations of IAmAMessageMapper and register them with ServiceCollection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
+        /// <param name="defaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
+        /// <param name="asyncDefaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterBuilder MapperRegistryFromAssemblies(IEnumerable<Assembly> assemblies)
+        public IBrighterBuilder MapperRegistryFromAssemblies(IEnumerable<Assembly> assemblies, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper =  null)
         {
             if (!assemblies.Any())
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(assemblies));
+            
+            if (defaultMessageMapper is not null)
+                _mapperRegistryBuilder.SetDefaultMessageMapper(defaultMessageMapper);
+                
+            if (asyncDefaultMessageMapper is not null)
+                _mapperRegistryBuilder.SetDefaultMessageMapperAsync(asyncDefaultMessageMapper);
+            
+            _mapperRegistryBuilder.EnsureDefaultMessageMapperIsRegistered();
 
             RegisterMappersFromAssemblies(assemblies);
             RegisterAsyncMappersFromAssemblies(assemblies);
 
             return this;
         }
-
 
         /// <summary>
         /// Register handlers with the built in subscriber registry
@@ -176,7 +196,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).Assembly, excludeDynamicHandlerTypes);
             return this;
         }
-
+        
         /// <summary>
         /// Scan the assemblies for implementations of IAmAMessageTransformAsync and register them with the ServiceCollection
         /// </summary>
@@ -233,7 +253,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             foreach (var mapper in mappers)
             {
-                _mapperRegistry.Add(mapper.RequestType, mapper.HandlerType);
+                _mapperRegistryBuilder.Add(mapper.RequestType, mapper.HandlerType);
             }
         }
         
@@ -248,10 +268,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             foreach (var mapper in mappers)
             {
-                _mapperRegistry.AddAsync(mapper.RequestType, mapper.HandlerType);
+                _mapperRegistryBuilder.AddAsync(mapper.RequestType, mapper.HandlerType);
             }
         }
-
+        
         private static Type?[] GetLoadableTypes(Assembly assembly)
         {
             try

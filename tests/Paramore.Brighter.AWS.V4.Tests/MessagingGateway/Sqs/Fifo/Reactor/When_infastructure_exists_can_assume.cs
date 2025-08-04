@@ -26,7 +26,7 @@ public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         _myCommand = new MyCommand { Value = "Test" };
        var replyTo = new RoutingKey("http:\\queueUrl");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
-        var correlationId = Id.Random;
+        var correlationId = Id.Random();
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(queueName);

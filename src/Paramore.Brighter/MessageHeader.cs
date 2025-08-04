@@ -84,11 +84,6 @@ namespace Paramore.Brighter
         public const string DefaultSpecVersion = "1.0";
 
         /// <summary>
-        /// The default Brighter type
-        /// </summary>
-        public const string DefaultType = "goparamore.io.Paramore.Brighter.Message";
-
-        /// <summary>
         /// The default Brighter source
         /// </summary>
         public const string DefaultSource = "http://goparamore.io";
@@ -240,7 +235,6 @@ namespace Paramore.Brighter
         /// Producers MUST ensure that source + id is unique for each distinct event.
         /// Default: "http://goparamore.io" for backward compatibility as required
         /// </summary>
-        /// <value>The source.</value>
         public Uri Source { get; set; } = new Uri(DefaultSource);
 
         /// <summary>
@@ -297,10 +291,10 @@ namespace Paramore.Brighter
         /// This attribute contains a value describing the type of event related to the originating occurrence.
         /// Often this attribute is used for routing, observability, policy enforcement, etc.
         /// SHOULD be prefixed with a reverse-DNS name. The prefixed domain dictates the organization which defines the semantics of this event type.
-        /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
+        /// Default to empty string
         /// </summary>
-        /// <value>The type of the event.</value>
-        public string Type { get; set; } = DefaultType;
+        /// <value>The type of event as a <see cref="CloudEventsType"/>.</value>
+        public CloudEventsType Type { get; set; } = CloudEventsType.Empty;
         
         /// <summary>
         /// The identity of the workflow this message was sent as part of. This is used to correlate messages that are part of a workflow.
@@ -346,7 +340,7 @@ namespace Paramore.Brighter
             RoutingKey topic,
             MessageType messageType,
             Uri? source = null,
-            string? type = null,
+            CloudEventsType? type = null,
             DateTimeOffset? timeStamp = null,
             Id? correlationId = null,
             RoutingKey? replyTo = null,
@@ -366,7 +360,7 @@ namespace Paramore.Brighter
             Topic = topic;
             MessageType = messageType;
             if (source != null) Source = source;
-            Type = type ?? DefaultType;
+            Type = type ?? CloudEventsType.Empty;
             TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
             HandledCount = handledCount;
             WorkflowId = workflowId;
