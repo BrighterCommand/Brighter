@@ -55,6 +55,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly TraceParent _traceParent = new TraceParent("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
         private readonly TraceState _traceState = new TraceState("congo=t61rcWkgMzE");
         private readonly Baggage _baggage = new Baggage();
+        private readonly Id WorkflowId = Id.Random;
+        private readonly Id _jobId = Id.Random;
         private readonly MessageHeader _messageHeader;
 
         public SqlOutboxWritingMessageTests()
