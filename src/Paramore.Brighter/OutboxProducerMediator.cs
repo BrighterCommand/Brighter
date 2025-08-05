@@ -630,7 +630,7 @@ namespace Paramore.Brighter
 
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, cancellationToken);
+                        await BulkDispatchAsync(messages, requestContext, false, cancellationToken);
                     }
                     else
                     {
@@ -819,7 +819,10 @@ namespace Paramore.Brighter
             }
         }
 
-        private async Task BulkDispatchAsync(IEnumerable<Message> posts, RequestContext requestContext,
+        private async Task BulkDispatchAsync(
+            IEnumerable<Message> posts, 
+            RequestContext requestContext,
+            bool continueOnCapturedContext,
             CancellationToken cancellationToken)
         {
             var parentSpan = requestContext.Span;
@@ -849,21 +852,33 @@ namespace Paramore.Brighter
 
                         Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key);
 
-                        var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
-                        
-                        await foreach (var successfulMessage in dispatchesMessages)
+                        foreach (var batch in bulkMessageProducer.CreateBatches(messages))
                         {
-                            if (!(producer is ISupportPublishConfirmation))
-                            {
-                                await RetryAsync(async _ =>
-                                        await _asyncOutbox.MarkDispatchedAsync(
-                                            successfulMessage, requestContext, _timeProvider.GetUtcNow(),
-                                            cancellationToken: cancellationToken
-                                        ),
+                            var sent = await RetryAsync(
+                                    async _ => await bulkMessageProducer.SendAsync(batch, cancellationToken)
+                                        .ConfigureAwait(continueOnCapturedContext),
                                     requestContext,
-                                    cancellationToken: cancellationToken
-                                );
+                                    continueOnCapturedContext,
+                                    cancellationToken
+                                )
+                                .ConfigureAwait(continueOnCapturedContext);
+
+                            if (producer is not ISupportPublishConfirmation && sent)
+                            {
+                                foreach (var successfulMessage in batch.Ids())
+                                {
+                                    await RetryAsync(async _ =>
+                                            await _asyncOutbox.MarkDispatchedAsync(
+                                                successfulMessage, requestContext, _timeProvider.GetUtcNow(),
+                                                cancellationToken: cancellationToken
+                                            ),
+                                        requestContext,
+                                        cancellationToken: cancellationToken
+                                    );
+                                }
                             }
+
+                            if (!sent) TripTopic(batch.RoutingKey);
                         }
                     }
                     else
@@ -924,7 +939,7 @@ namespace Paramore.Brighter
                             );
                         }
 
-                        if(!sent) TripTopic(message);
+                        if(!sent) TripTopic(message.Header.Topic);
    
                     }
                     else
@@ -1070,10 +1085,10 @@ namespace Paramore.Brighter
             return true;
         }
 
-        private void TripTopic(Message message)
+        private void TripTopic(RoutingKey? routingKey)
         {
-            if(!RoutingKey.IsNullOrEmpty(message.Header.Topic))
-                _outboxCircuitBreaker?.TripTopic(message.Header.Topic);
+            if(!RoutingKey.IsNullOrEmpty(routingKey))
+                _outboxCircuitBreaker?.TripTopic(routingKey);
         }
         
         private static partial class Log
