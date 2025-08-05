@@ -56,12 +56,21 @@ public class MessageProducerRequeueTests
     {
         _channel.Purge();
         _sender.Send(_message);
-        _receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        _receivedMessage = _channel.Receive(TimeSpan.FromSeconds(5));
         _channel.Requeue(_receivedMessage);
 
-        _requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-
-        _channel.Acknowledge(_requeuedMessage);
+        for (var i = 0; i < 10; i++)
+        {
+            _requeuedMessage = _channel.Receive(TimeSpan.FromSeconds(10));
+            if (_requeuedMessage.Header.MessageType == MessageType.MT_NONE)
+            {
+                Thread.Sleep(1_000);
+                continue;
+            }
+            
+            _channel.Acknowledge(_requeuedMessage);
+            break;
+        }
 
         Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
     }

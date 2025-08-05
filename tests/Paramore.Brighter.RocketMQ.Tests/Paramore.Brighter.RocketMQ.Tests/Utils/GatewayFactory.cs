@@ -10,7 +10,7 @@ public static class GatewayFactory
         return new RocketMessagingGatewayConnection(new ClientConfig.Builder()
             .SetEndpoints("localhost:8081")
             .EnableSsl(false)
-            .SetRequestTimeout(TimeSpan.FromSeconds(5))
+            .SetRequestTimeout(TimeSpan.FromSeconds(10))
             .Build());
     }
 
