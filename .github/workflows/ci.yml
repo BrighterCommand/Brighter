@@ -583,24 +583,50 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     services:
-      namesrv:
-        image: apache/rocketmq:5.3.0
+      rocketmq-namesrv:
+        image: apache/rocketmq
         ports:
           - 9876:9876
-        command: sh mqnamesrv
-        # Check if the service is healthy before proceeding
-        # This is a simple wait, more robust checks might be needed
         options: >-
-          --health-cmd "telnet localhost 9876"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --name rmqnamesrv
+          --hostname rmqnamesrv
+          --health-cmd "netstat -an | grep 9876"
+          --health-interval 20s
+          --health-timeout 10s
+          --health-retries 10
+          
+      rocketmq-broker:
+        image: apache/rocketmq
+        ports:
+          - 10909:10909
+          - 10911:10911
+          - 10912:10912
+        options: >-
+          --name rmqbroker
+          --hostname rmqbroker
+          --link rmqnamesrv:rmqnamesrv
+          --health-cmd "netstat -an | grep 10911"
+          --health-interval 20s
+          --health-timeout 10s
+          --health-retries 10
+        env:
+          NAMESRV_ADDR: "rocketmq-namesrv:9876"
+          BROKER_CLUSTER_NAME: "DefaultCluster"
+          BROKER_NAME: "broker-a"
+          BROKER_ID: "0"
+          AUTO_CREATE_TOPIC_ENABLE: "true"  # Auto-create topics
+          
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
           show-progress: false 
+          
+      - name: Wait for RocketMQ to be ready
+        run: |
+          sleep 15
+          echo "RocketMQ should be ready now"
           
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
