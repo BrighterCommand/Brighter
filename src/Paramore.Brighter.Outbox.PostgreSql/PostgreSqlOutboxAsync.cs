@@ -1,10 +1,10 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -13,7 +13,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -28,6 +28,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
@@ -36,27 +38,24 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutboxSync : IAmABulkOutboxSync<Message>
+#pragma warning disable CS0618
+    public class PostgreSqlOutboxAsync : IAmABulkOutboxAsync<Message>
+#pragma warning restore CS0618
     {
         private readonly PostgreSqlOutboxConfiguration _configuration;
         private readonly IPostgreSqlConnectionProvider _connectionProvider;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
-
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxAsync>();
         
-        private const string _deleteMessageCommand = PostgreSqlOutboxQueries.DeleteMessageCommand;
         private readonly string _outboxTableName;
         
-        public bool ContinueOnCapturedContext
-        {
-            get => throw new NotImplementedException();
-            set => throw new NotImplementedException();
-        }
+        public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
-        /// Initialises a new instance of <see cref="PostgreSqlOutboxSync"> class.
+        /// Initialises a new instance of <see cref="PostgreSqlOutboxAsync"> class.
         /// </summary>
-        /// <param name="postgresSqlOutboxConfiguration">PostgreSql Outbox Configuration.</param>
-        public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
+        /// <param name="configuration">PostgreSql Outbox Configuration.</param>
+        /// <param name="connectionProvider">The connection provider for PostgreSQL</param>
+        public PostgreSqlOutboxAsync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);
@@ -64,15 +63,17 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
         /// <summary>
-        /// Adds the specified message.
+        /// Awaitable add the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var connectionProvider = GetConnectionProvider(transactionConnectionProvider);
             var parameters = InitAddDbParameters(message);
-            var connection = GetOpenConnection(connectionProvider);
+            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken);
 
             try
             {
@@ -80,7 +81,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     if (connectionProvider.HasOpenTransaction)
                         command.Transaction = connectionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
+                    
+                    if (outBoxTimeout != -1)
+                        command.CommandTimeout = outBoxTimeout;
+                        
+                    await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
             catch (PostgresException sqlException)
@@ -98,23 +103,23 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             finally
             {
                 if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
+                    await connection.DisposeAsync();
                 else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
+                    await connection.CloseAsync();
             }
         }
         
         /// <summary>
-        /// Awaitable add the specified message.
+        /// Awaitable add the specified messages.
         /// </summary>
-        /// <param name="messages">The message.</param>
+        /// <param name="messages">The messages.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var connectionProvider = GetConnectionProvider(transactionConnectionProvider);
-            var connection = GetOpenConnection(connectionProvider);
+            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken);
 
             try
             {
@@ -122,7 +127,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     if (connectionProvider.HasOpenTransaction)
                         command.Transaction = connectionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
+                        
+                    if (outBoxTimeout != -1)
+                        command.CommandTimeout = outBoxTimeout;
+                        
+                    await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
             catch (PostgresException sqlException)
@@ -139,9 +148,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             finally
             {
                 if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
+                    await connection.DisposeAsync();
                 else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
+                    await connection.CloseAsync();
             }
         }
 
@@ -153,26 +162,31 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
         /// <param name="outboxTimeout"></param>
         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(
+        public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
             double millisecondsDispatchedSince,
             int pageSize = 100,
             int pageNumber = 1,
             int outboxTimeout = -1,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
             var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
+            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken);
 
             try
             {
                 using (var command = InitPagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber))
                 {
+                    if (outboxTimeout != -1)
+                        command.CommandTimeout = outboxTimeout;
+                        
                     var messages = new List<Message>();
 
-                    using (var dbDataReader = command.ExecuteReader())
+                    using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken))
                     {
-                        while (dbDataReader.Read())
+                        while (await dbDataReader.ReadAsync(cancellationToken))
                             messages.Add(MapAMessage(dbDataReader));
                     }
 
@@ -182,9 +196,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             finally
             {
                 if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
+                    await connection.DisposeAsync();
                 else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
+                    await connection.CloseAsync();
             }
         }
 
@@ -194,11 +208,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Cancellation Token, if any</param>
         /// <returns>A list of messages</returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
+        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
+            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken);
 
             try
             {
@@ -206,9 +221,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     var messages = new List<Message>();
 
-                    using (var dbDataReader = command.ExecuteReader())
+                    using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken))
                     {
-                        while (dbDataReader.Read())
+                        while (await dbDataReader.ReadAsync(cancellationToken))
                         {
                             messages.Add(MapAMessage(dbDataReader));
                         }
@@ -220,24 +235,46 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             finally
             {
                 if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
+                    await connection.DisposeAsync();
                 else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
+                    await connection.CloseAsync();
             }
         }
 
         /// <summary>
-        /// Gets the specified message identifier.
+        /// Awaitable get the specified message identifier.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>The message</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default)
         {
             var sql = string.Format(PostgreSqlOutboxQueries.GetMessageByIdCommand, _configuration.OutboxTableName);
             var parameters = new[] { InitNpgsqlParameter("MessageId", messageId) };
 
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+            return await ExecuteCommandAsync(async command => await MapFunctionAsync(command, cancellationToken), sql, outBoxTimeout, parameters, cancellationToken);
+        }
+
+        /// <summary>
+        /// Awaitable get the messages.
+        /// </summary>
+        /// <param name="messageIds">The message identifiers.</param>
+        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>The messages</returns>
+        public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1, CancellationToken cancellationToken = default)
+        {
+            var messages = new List<Message>();
+            foreach (var messageId in messageIds)
+            {
+                var message = await GetAsync(messageId, outBoxTimeout, cancellationToken);
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    messages.Add(message);
+                }
+            }
+            return messages;
         }
 
         /// <summary>
@@ -245,24 +282,41 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+        /// <param name="args">Additional parameters required for the update</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
+            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken);
 
             try
             {
                 using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
             finally
             {
                 if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
+                    await connection.DisposeAsync();
                 else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
+                    await connection.CloseAsync();
+            }
+        }
+
+        /// <summary>
+        /// Update messages to show they are dispatched
+        /// </summary>
+        /// <param name="ids">The ids of the messages to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="args">Additional parameters required for the update</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        {
+            foreach (var id in ids)
+            {
+                await MarkDispatchedAsync(id, dispatchedAt, args, cancellationToken);
             }
         }
 
@@ -273,15 +327,17 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
-        public IEnumerable<Message> OutstandingMessages(
+        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
              double millSecondsSinceSent,
              int pageSize = 100,
              int pageNumber = 1,
-             Dictionary<string, object> args = null)
+             Dictionary<string, object> args = null,
+             CancellationToken cancellationToken = default)
         {
             var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
+            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken);
 
             try
             {
@@ -289,9 +345,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     var messages = new List<Message>();
 
-                    using (var dbDataReader = command.ExecuteReader())
+                    using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken))
                     {
-                        while (dbDataReader.Read())
+                        while (await dbDataReader.ReadAsync(cancellationToken))
                         {
                             messages.Add(MapAMessage(dbDataReader));
                         }
@@ -303,17 +359,70 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             finally
             {
                 if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
+                    await connection.DisposeAsync();
                 else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
+                    await connection.CloseAsync();
             }
         }
 
-        public void Delete(params Guid[] messageIds)
+        /// <summary>
+        /// Delete the specified messages
+        /// </summary>
+        /// <param name="messageIds">The id of the message to delete</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        public async Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
         {
-            WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+            await WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null, cancellationToken);
         }
         
+        /// <summary>
+        /// Get the messages that have been dispatched
+        /// </summary>
+        /// <param name="hoursDispatchedSince">The number of hours since the message was dispatched</param>
+        /// <param name="pageSize">The amount to return</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Messages that have already been dispatched</returns>
+        public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            int hoursDispatchedSince,
+            int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            var millisecondsDispatchedSince = hoursDispatchedSince * 60 * 60 * 1000;
+            return await DispatchedMessagesAsync(millisecondsDispatchedSince, pageSize, 1, -1, null, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the number of un dispatched messages in the outbox
+        /// </summary>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Number of messages in the outbox that have yet to be dispatched</returns>
+        public async Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            var sql = $"SELECT COUNT(*) FROM {_configuration.OutboxTableName} WHERE DISPATCHED IS NULL";
+            
+            var connectionProvider = GetConnectionProvider();
+            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken);
+
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = sql;
+                    var result = await command.ExecuteScalarAsync(cancellationToken);
+                    return Convert.ToInt32(result);
+                }
+            }
+            finally
+            {
+                if (!connectionProvider.IsSharedConnection)
+                    await connection.DisposeAsync();
+                else if (!connectionProvider.HasOpenTransaction)
+                    await connection.CloseAsync();
+            }
+        }
+
+        #region Helper Methods
+
         private NpgsqlCommand InitDeleteDispatchedCommand(NpgsqlConnection connection, IEnumerable<Guid> messageIds)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
@@ -321,7 +430,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 p.DbType = DbType.Object;
             }
-            return CreateCommand(connection, GenerateSqlText(_deleteMessageCommand, inClause.inClause), 0,
+            return CreateCommand(connection, GenerateSqlText(PostgreSqlOutboxQueries.DeleteMessageCommand, inClause.inClause), 0,
                 inClause.parameters);
         }
         
@@ -359,7 +468,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return command;
         }
         
-        private void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<NpgsqlConnection, NpgsqlCommand> commandFunc, Action loggingAction)
+        private async Task WriteToStoreAsync(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<NpgsqlConnection, NpgsqlCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
         {
             var connectionProvider = _connectionProvider;
             if (transactionConnectionProvider != null && transactionConnectionProvider is IPostgreSqlConnectionProvider provider)
@@ -368,20 +477,21 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var connection = connectionProvider.GetConnection();
 
             if (connection.State != ConnectionState.Open)
-                connection.Open();
+                await connection.OpenAsync(cancellationToken);
+                
             using (var command = commandFunc.Invoke(connection))
             {
                 try
                 {
                     if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
                         command.Transaction = connectionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 catch (PostgresException sqlException)
                 {
                     if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                     {
-                        loggingAction.Invoke();
+                        loggingAction?.Invoke();
                         return;
                     }
 
@@ -390,9 +500,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 finally
                 {
                     if (!connectionProvider.IsSharedConnection)
-                        connection.Dispose();
+                        await connection.DisposeAsync();
                     else if (!connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                        await connection.CloseAsync();
                 }
             }
         }
@@ -412,12 +522,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return connectionProvider;
         }
 
-        private NpgsqlConnection GetOpenConnection(IPostgreSqlConnectionProvider connectionProvider)
+        private async Task<NpgsqlConnection> GetOpenConnectionAsync(IPostgreSqlConnectionProvider connectionProvider, CancellationToken cancellationToken)
         {
             NpgsqlConnection connection = connectionProvider.GetConnection();
 
             if (connection.State != ConnectionState.Open)
-                connection.Open();
+                await connection.OpenAsync(cancellationToken);
 
             return connection;
         }
@@ -442,9 +552,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 InitNpgsqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
             };
 
-            var pagingSqlFormat = PostgreSqlOutboxQueries.PagedDispatchedCommand;
-
-            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+            command.CommandText = string.Format(PostgreSqlOutboxQueries.PagedDispatchedCommand, _configuration.OutboxTableName);
             command.Parameters.AddRange(parameters);
 
             return command;
@@ -460,9 +568,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 InitNpgsqlParameter("PageSize", pageSize)
             };
 
-            var pagingSqlFormat = PostgreSqlOutboxQueries.PagedReadCommand;
-
-            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+            command.CommandText = string.Format(PostgreSqlOutboxQueries.PagedReadCommand, _configuration.OutboxTableName);
             command.Parameters.AddRange(parameters);
 
             return command;
@@ -480,9 +586,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 InitNpgsqlParameter("OutstandingSince", milliSecondsSinceAdded)
             };
 
-            var pagingSqlFormat = PostgreSqlOutboxQueries.PagedOutstandingCommand;
-
-            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+            command.CommandText = string.Format(PostgreSqlOutboxQueries.PagedOutstandingCommand, _configuration.OutboxTableName);
             command.Parameters.AddRange(parameters);
 
             return command;
@@ -516,11 +620,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return command;
         }
 
-        private T ExecuteCommand<T>(Func<NpgsqlCommand, T> execute, string sql, int messageStoreTimeout,
-            NpgsqlParameter[] parameters)
+        private async Task<T> ExecuteCommandAsync<T>(Func<NpgsqlCommand, Task<T>> execute, string sql, int messageStoreTimeout,
+            NpgsqlParameter[] parameters, CancellationToken cancellationToken)
         {
             var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
+            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken);
 
             try
             {
@@ -532,15 +636,15 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                     if (messageStoreTimeout != -1)
                         command.CommandTimeout = messageStoreTimeout;
 
-                    return execute(command);
+                    return await execute(command);
                 }
             }
             finally
             {
                 if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
+                    await connection.DisposeAsync();
                 else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
+                    await connection.CloseAsync();
             }
         }
 
@@ -575,11 +679,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return command;
         }
 
-        private Message MapFunction(IDataReader reader)
+        private async Task<Message> MapFunctionAsync(NpgsqlCommand command, CancellationToken cancellationToken)
         {
-            if (reader.Read())
+            using (var reader = await command.ExecuteReaderAsync(cancellationToken))
             {
-                return MapAMessage(reader);
+                if (await reader.ReadAsync(cancellationToken))
+                {
+                    return MapAMessage(reader);
+                }
             }
 
             return new Message();
@@ -682,5 +789,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
+
+        #endregion
     }
 }

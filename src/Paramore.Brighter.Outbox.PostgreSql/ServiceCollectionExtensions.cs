@@ -27,6 +27,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildPostgreSqlOutboxSync, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildPostgreSqlOutboxAsync, serviceLifetime));
 
             return brighterBuilder;
         }
@@ -65,6 +66,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var connectionProvider = provider.GetService<IPostgreSqlConnectionProvider>();
 
             return new PostgreSqlOutboxSync(config, connectionProvider);
+        }
+
+        private static PostgreSqlOutboxAsync BuildPostgreSqlOutboxAsync(IServiceProvider provider)
+        {
+            var config = provider.GetService<PostgreSqlOutboxConfiguration>();
+            var connectionProvider = provider.GetService<IPostgreSqlConnectionProvider>();
+
+            return new PostgreSqlOutboxAsync(config, connectionProvider);
         }
     }
 }
