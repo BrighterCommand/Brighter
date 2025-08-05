@@ -578,7 +578,7 @@ jobs:
       - name: MongoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
-#  TODO: RocketMQ CI
+#  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
 #    runs-on: ubuntu-latest
 #    timeout-minutes: 5
