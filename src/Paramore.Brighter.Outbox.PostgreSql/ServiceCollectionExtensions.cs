@@ -26,7 +26,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IPostgreSqlConnectionProvider), connectionProvider, serviceLifetime));
             }
 
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildPostgreSqlOutboxSync, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildPostgreSqlOutboxSync, serviceLifetime));
+            // TODO: leave just one postgres outbox implementation for both sync and async interfaces
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildPostgreSqlOutboxAsync, serviceLifetime));
 
             return brighterBuilder;

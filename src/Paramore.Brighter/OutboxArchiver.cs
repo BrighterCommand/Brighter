@@ -51,7 +51,7 @@ namespace Paramore.Brighter
                 }
 
                 _outboxSync.Delete(messages.Select(e => e.Id).ToArray());
-                _logger.LogInformation(SUCCESS_MESSAGE, messages.Count(), messages.Count(), _batchSize);
+                _logger.LogDebug(SUCCESS_MESSAGE, messages.Count(), messages.Count(), _batchSize);
             }
             catch (Exception e)
             {
@@ -98,7 +98,7 @@ namespace Paramore.Brighter
                 }
                 
                 await _outboxAsync.DeleteAsync(successfullyArchivedMessages, cancellationToken);
-                _logger.LogInformation(SUCCESS_MESSAGE, messages.Count(), messages.Count(), _batchSize);
+                _logger.LogDebug(SUCCESS_MESSAGE, messages.Count(), messages.Count(), _batchSize);
             }
             catch (Exception e)
             {

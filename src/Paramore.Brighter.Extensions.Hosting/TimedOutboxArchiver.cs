@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Archiver Service is starting.");
+            s_logger.LogDebug("Outbox Archiver Service is starting.");
 
             _timer = new Timer(async (e) => await Archive(e, cancellationToken), null, TimeSpan.Zero,
                 TimeSpan.FromSeconds(_options.TimerInterval));
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Archiver Service is stopping.");
+            s_logger.LogDebug("Outbox Archiver Service is stopping.");
 
             _timer?.Change(Timeout.Infinite, 0);
 
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
             if (lockId != null)
             {
-                s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
+                s_logger.LogDebug("Outbox Archiver looking for messages to Archive");
                 try
                 {
                     var outBoxArchiver = new OutboxArchiver(
@@ -94,11 +94,11 @@ namespace Paramore.Brighter.Extensions.Hosting
                     await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, cancellationToken);
                 }
 
-                s_logger.LogInformation("Outbox Sweeper sleeping");
+                s_logger.LogDebug("Outbox Sweeper sleeping");
             }
             else
             {
-                s_logger.LogInformation("Outbox Archiver is still running - abandoning attempt.");
+                s_logger.LogDebug("Outbox Archiver is still running - abandoning attempt.");
             }
             
         }

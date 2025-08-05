@@ -12,6 +12,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             brighterBuilder.Services.AddSingleton<IEventStoreConnection>(connection);
 
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildEventStoreOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildEventStoreOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildEventStoreOutbox, serviceLifetime));
              
