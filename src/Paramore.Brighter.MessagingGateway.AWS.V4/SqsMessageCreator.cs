@@ -201,14 +201,14 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<DateTimeOffset?>(null, false);
     }
     
-    private static HeaderResult<string?> ReadCloudEventType(Dictionary<string, string> cloudEventHeaders)
+    private static HeaderResult<CloudEventsType?> ReadCloudEventType(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.Type, out var value))
         {
-            return new HeaderResult<string?>(value, true);
+            return new HeaderResult<CloudEventsType?>(new CloudEventsType(value), true);
         }
 
-        return new HeaderResult<string?>(null, false);
+        return new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, false);
     }
 
 
@@ -327,10 +327,10 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Id, out MessageAttributeValue? messageId))
         {
             var value = messageId.StringValue;
-            return new HeaderResult<Id?>(string.IsNullOrEmpty(value) ? Id.Random : Id.Create(value), true);
+            return new HeaderResult<Id?>(string.IsNullOrEmpty(value) ? Id.Random() : Id.Create(value), true);
         }
 
-        return new HeaderResult<Id?>(Id.Random, true);
+        return new HeaderResult<Id?>(Id.Random(), true);
     }
 
     private static HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)

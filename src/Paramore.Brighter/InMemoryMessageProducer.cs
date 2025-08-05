@@ -36,18 +36,33 @@ namespace Paramore.Brighter
     /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
     /// then inspect the messages that have been sent.
     /// </summary>
-    /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
-    /// <param name="timeProvider"></param>
-    /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    public sealed class InMemoryMessageProducer(IAmABus bus, TimeProvider timeProvider, InstrumentationOptions instrumentationOptions)
-        : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
+    public sealed class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         private ITimer? _requeueTimer;
+        private readonly IAmABus _bus;
+        private readonly TimeProvider _timeProvider;
+        private readonly InstrumentationOptions _instrumentationOptions;
+
+        /// <summary>
+        /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
+        /// then inspect the messages that have been sent.
+        /// </summary>
+        /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
+        /// <param name="timeProvider">The <see cref="TimeProvider"/> we use to</param>
+        /// <param name="publication">The <see cref="Publication"/> that we want to sent messages to via the publication; if null defaults to a Publication with a Topic of "Internal"</param>
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+        public InMemoryMessageProducer(IAmABus bus, TimeProvider? timeProvider = null, Publication? publication = null, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+        {
+            _bus = bus;
+            _timeProvider = timeProvider ?? TimeProvider.System;
+            _instrumentationOptions = instrumentationOptions;
+            Publication = publication ?? new Publication { Topic = new RoutingKey("Internal") };
+        }
 
         /// <summary>
         /// The publication that describes what the Producer is for
         /// </summary>
-        public Publication Publication { get; set; } = new();
+        public Publication Publication { get; set; }  
 
         /// <summary>
         /// Used for OTel tracing. We use property injection to set this, so that we can use the same tracer across all
@@ -92,9 +107,9 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, instrumentationOptions);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
-            bus.Enqueue(message);
+            _bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
             tcs.SetResult(message);
             return tcs.Task;
@@ -137,8 +152,8 @@ namespace Paramore.Brighter
         /// <param name="message">The message to send</param>
         public void Send(Message message)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, instrumentationOptions);
-            bus.Enqueue(message);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
+            _bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
         }
 
@@ -153,7 +168,7 @@ namespace Paramore.Brighter
             delay ??= TimeSpan.FromMilliseconds(0);
 
             //we don't want to block, so we use a timer to invoke the requeue after a delay
-            _requeueTimer = timeProvider.CreateTimer(
+            _requeueTimer = _timeProvider.CreateTimer(
                 msg => Send((Message)msg!),
                 message,
                 delay.Value,
@@ -173,7 +188,7 @@ namespace Paramore.Brighter
             delay ??= TimeSpan.FromMilliseconds(0);
 
             //we don't want to block, so we use a timer to invoke the requeue after a delay
-            _requeueTimer = timeProvider.CreateTimer(
+            _requeueTimer = _timeProvider.CreateTimer(
                 msg => SendAsync((Message)msg!, cancellationToken),
                 message,
                 delay.Value,

@@ -49,8 +49,10 @@ namespace Paramore.Brighter
             Bag = new ConcurrentDictionary<string, object>(bag);
         }
 
-        /// <inheritdoc />
-        public RoutingKey? Topic { get; set; }
+        /// <summary>
+        /// The destination topic can be used to override the topic that the request is posted to.
+        /// </summary>
+        public ProducerKey? Destination { get; set; }
 
         /// <summary>
         /// Gets the bag.

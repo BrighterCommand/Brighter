@@ -31,13 +31,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId: Id.Random, 
+                messageId: Id.Random(), 
                 topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayed: TimeSpan.FromMilliseconds(5),
-                correlationId: Id.Random,
+                correlationId: Id.Random(),
                 replyTo: new RoutingKey("ReplyTo"),
                 contentType: new ContentType(MediaTypeNames.Application.Octet),
                 partitionKey: "123456789");

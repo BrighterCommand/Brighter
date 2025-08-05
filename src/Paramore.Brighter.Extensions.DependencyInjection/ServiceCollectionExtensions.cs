@@ -94,7 +94,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var transformRegistry = new ServiceCollectionTransformerRegistry(services, options.TransformerLifetime);
             services.TryAddSingleton(transformRegistry);
 
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
+            var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
             
             services.TryAddSingleton(options.RequestContextFactory);
@@ -526,7 +526,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The message mapper registry, populated with any message mappers from the ioC container</returns>
         public static MessageMapperRegistry MessageMapperRegistry(IServiceProvider provider)
         {
-            var serviceCollectionMessageMapperRegistry = provider.GetRequiredService<ServiceCollectionMessageMapperRegistry>();
+            var serviceCollectionMessageMapperRegistry = provider.GetRequiredService<ServiceCollectionMessageMapperRegistryBuilder>();
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new ServiceProviderMapperFactory(provider),
