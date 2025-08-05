@@ -17,14 +17,14 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageProducerFactory>();
     
     /// <inheritdoc />
-    public Dictionary<RoutingKey, IAmAMessageProducer> Create() 
+    public Dictionary<ProducerKey, IAmAMessageProducer> Create() 
         => BrighterAsyncContext.Run(async () => await CreateAsync());
 
     /// <inheritdoc />
-    public async Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+    public async Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
     {
         var rocketProducer = await CreateProducerAsync();
-        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+        var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
         foreach (var publication in publications)
         {
             if (RoutingKey.IsNullOrEmpty(publication.Topic))
@@ -37,7 +37,7 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
                 Log.CreateTopicIsNotSupported(s_logger, publication.Topic);
             }
             
-            producers[publication.Topic] = new RocketMqMessageProducer(connection, rocketProducer, publication,  publication.Instrumentation ?? connection.Instrumentation);
+            producers[new ProducerKey(publication.Topic, publication.Type)] = new RocketMqMessageProducer(connection, rocketProducer, publication,  publication.Instrumentation ?? connection.Instrumentation);
         }
         return producers;
     }
