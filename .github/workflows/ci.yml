@@ -572,7 +572,9 @@ jobs:
       - name: Set up Apache Pulsar
         uses: reugn/github-action-pulsar@v1
         
-# MongoDB tool too long time to run
+      - name: Pulsar Tests
+        run: dotnet test ./tests/Paramore.Brighter.Pulsar.Tests/Paramore.Brighter.Pulsar.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
   mongodb-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
