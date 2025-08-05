@@ -29,13 +29,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Microsoft.Extensions.Logging;
-using Polly;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Polly.Retry;
 using System.Threading.Tasks;
 using Azure.Messaging;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Tasks;
+using Polly;
+using Polly.Retry;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
@@ -121,47 +122,59 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         await SendWithDelayAsync(message, cancellationToken: cancellationToken);
     }
 
+
     /// <summary>
-    /// Sends a Batch of Messages
+    /// Creates message batches
     /// </summary>
-    /// <param name="messages">The messages to send.</param>
-    /// <param name="cancellationToken">The Cancellation Token.</param>
-    /// <returns>List of Messages successfully sent.</returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public async IAsyncEnumerable<Id[]> SendAsync(
-        IEnumerable<Message> messages,
-        [EnumeratorCancellation] CancellationToken cancellationToken
-    )
+    /// <param name="messages">A collection of messages to create batches for</param>
+    public IEnumerable<IAmAMessageBatch> CreateBatches(IEnumerable<Message> messages)
     {
         var topics = messages.Select(m => m.Header.Topic).Distinct().ToArray();
+        
         if (topics.Count() != 1)
         {
             Logger.LogError("Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested", topics.Count());
             throw new Exception($"Cannot Bulk send for Multiple Topics, {topics.Count()} Topics Requested");
         }
+
         var topic = topics.First()!;
 
         var batches = Enumerable.Range(0, (int)Math.Ceiling(messages.Count() / (decimal)_bulkSendBatchSize))
-            .Select(i => new List<Message>(messages
+            .Select(i => new MessageBatch(new List<Message>(messages
                 .Skip(i * _bulkSendBatchSize)
                 .Take(_bulkSendBatchSize)
-                .ToArray()));
-
-        var serviceBusSenderWrapper = await GetSenderAsync(topic);
+                .ToArray()))).ToArray();
 
         Logger.LogInformation("Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}", topic, batches.Count(), _bulkSendBatchSize);
+
+        return batches;
+    }
+
+    /// <summary>
+    /// Sends a batch of messages.
+    /// </summary>
+    /// <param name="batch">A batch of messages to send</param>
+    /// <param name="cancellationToken">The Cancellation Token.</param>
+    /// <exception cref="NotImplementedException"></exception>
+    public async Task SendAsync(IAmAMessageBatch batch, CancellationToken cancellationToken)
+    {
+        if (batch is not MessageBatch messageBatch)
+            throw new NotImplementedException($"{nameof(SendAsync)} only supports ${typeof(MessageBatch)}");
+
+        var topic = batch.RoutingKey;
+        var serviceBusSenderWrapper = await GetSenderAsync(topic);
+
+        Logger.LogInformation("Sending Batch of size {BatchSize} of Messages for {TopicName}", _bulkSendBatchSize, topic);
+        
         try
         {
-            foreach (var batch in batches)
-            {
-                var asbMessages = batch.Select(message => AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message, _publication)).ToArray();
+            var asbMessages = messageBatch!.Messages.Select(message 
+                => AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message, _publication)).ToArray();
 
-                Logger.LogDebug("Publishing {NumberOfMessages} messages to topic {Topic}.",
-                    asbMessages.Length, topic);
+            Logger.LogDebug("Publishing {NumberOfMessages} messages to topic {Topic}.",
+                asbMessages.Length, topic);
 
-                await serviceBusSenderWrapper.SendAsync(asbMessages, cancellationToken);
-                yield return batch.Select(m => m.Id).ToArray();
-            }
+            await serviceBusSenderWrapper.SendAsync(asbMessages, cancellationToken);
         }
         finally
         {
@@ -251,5 +264,4 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     }
 
     protected abstract Task EnsureChannelExistsAsync(string channelName);
- 
 }
