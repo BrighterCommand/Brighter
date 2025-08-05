@@ -583,60 +583,34 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     services:
-      # Start RocketMQ Namesrv (service discovery)
-      nameserver:
-        image: apache/rocketmq
+      namesrv:
+        image: apache/rocketmq:5.3.0
         ports:
-          - "9876:9876"
-        env:
-          JAVA_OPT_EXT: "-Xms128m -Xmx128m"
+          - 9876:9876
+        command: sh mqnamesrv
+        # Check if the service is healthy before proceeding
+        # This is a simple wait, more robust checks might be needed
         options: >-
-          --health-cmd "netstat -an | grep 9876"
-          --health-interval 5s
-          --health-timeout 10s
-          --health-retries 10
-          
-      # Define the Broker container
-      broker:
-        image: apache/rocketmq
-        ports:
-          - "10909:10909"  # Broker HA port
-          - "10911:10911"  # Broker port
-          - "10912:10912"  # Broker TLS port (optional)
-        env: 
-          NAMESRV_ADDR: "nameserver:9876"
-          BROKER_CLUSTER_NAME: "DefaultCluster"
-          BROKER_NAME: "broker-a"
-          BROKER_ID: 0
-          AUTO_CREATE_TOPIC_ENABLE: "true"
-        options: >-
-          --health-cmd "netstat -an | grep 10911"
-          --health-interval 5s
-          --health-timeout 10s
-          --health-retries 10
-          
-      proxy:
-        image: apache/rocketmq
-        ports:
-          - "8081:8081"   # HTTP endpoint (for REST API)
-          - "9877:9877"   # gRPC endpoint (for clients)
-        env:
-          NAMESRV_ADDR: "nameserver:9876"
-        options: >-
-        
+          --health-cmd "telnet localhost 9876"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
           show-progress: false 
+          
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            
       - name: Install dependencies
         run: dotnet restore
-      - name: MongoDB Tests
+        
+      - name: RocketMQ Tests
         run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
