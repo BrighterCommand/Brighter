@@ -125,7 +125,7 @@ namespace Paramore.Brighter
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _resiliencePipelineRegistry = resiliencePipelineRegistry ??
-                              throw new ConfigurationException("Missing Policy Registry for External Bus Services");
+                              throw new ConfigurationException("Missing Resilience Pipeline Registry for External Bus Services");
 
             requestContextFactory ??= new InMemoryRequestContextFactory();
 
@@ -1055,39 +1055,28 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default)
         {
             var resiliencePipeline = _resiliencePipelineRegistry.GetPipeline(CommandProcessor.OutboxProducer);
-            var context = requestContext?.ResilienceContext ?? ResilienceContextPool.Shared.Get(null, cancellationToken);
 
             try
             {
-                var outcome = await resiliencePipeline.ExecuteOutcomeAsync(async (ctx, _)=>
-                    {
-                        try
-                        {
-                            await send(ctx.CancellationToken).ConfigureAwait(continueOnCapturedContext);
-                            return Outcome.FromResult(true);
-                        }
-                        catch (Exception ex)
-                        {
-                            return Outcome.FromException<bool>(ex);
-                        }
-                    }, context, true)
-                    .ConfigureAwait(continueOnCapturedContext);
-
-                if (outcome.Exception == null)
+                if (requestContext?.ResilienceContext != null)
                 {
-                    return true;
+                    await resiliencePipeline
+                        .ExecuteAsync(async context => await send(context.CancellationToken), requestContext.ResilienceContext)
+                        .ConfigureAwait(continueOnCapturedContext);
                 }
-            
-                Log.ExceptionWhilstTryingToPublishMessage(s_logger, outcome.Exception);
+                else
+                {
+                    await resiliencePipeline.ExecuteAsync(async _ => await send(cancellationToken), cancellationToken)
+                        .ConfigureAwait(continueOnCapturedContext);
+                }
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.ExceptionWhilstTryingToPublishMessage(s_logger, ex);
                 CheckOutstandingMessages(requestContext);
                 return false;
-            }
-            finally
-            {
-                if (requestContext?.ResilienceContext == null)
-                {
-                    ResilienceContextPool.Shared.Return(context);
-                }
             }
         }
 
