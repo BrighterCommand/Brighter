@@ -44,22 +44,16 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
 
         if(publication.Topic is null)
             throw new ArgumentException($"No Topic Defined for {publication}");
-        
-        var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
-        var header = new MessageHeader(
-            messageId: request.Id,
-            topic: publication.Topic,
-            messageType: messageType,
-            partitionKey: Context.GetPartitionKey(),
-#if NETSTANDARD2_0
-            contentType: new ContentType("application/json")
-#else
-            contentType: new ContentType(MediaTypeNames.Application.Json)
+
+ #if NETSTANDARD2_0
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType("application/json"),
+            source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo ?? RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject,  partitionKey: Context.GetPartitionKey());
+ #else       
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType(MediaTypeNames.Application.Json),
+            source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo ?? RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject,  partitionKey: Context.GetPartitionKey());
 #endif
-        )
-        {
-            Bag = defaultHeaders.Merge(Context.GetHeaders())
-        };
+        var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
+        header.Bag = defaultHeaders.Merge(Context.GetHeaders());
 
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);

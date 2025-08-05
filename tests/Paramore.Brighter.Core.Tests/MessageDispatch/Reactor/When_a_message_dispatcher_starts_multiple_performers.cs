@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = connection.RoutingKey});
             for (var i = 0; i < 6; i++)
                 channel.Enqueue(message);
-
+            
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }

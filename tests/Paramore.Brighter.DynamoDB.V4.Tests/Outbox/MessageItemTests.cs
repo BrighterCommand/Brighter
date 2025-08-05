@@ -48,7 +48,7 @@ public class MessageItemTests
             new RoutingKey(_topic),
             _messageType,
             source: new Uri(_source),
-            type: _type,
+            type: new CloudEventsType(_type),
             timeStamp: _timestamp,
             correlationId: new Id(_correlationId),
             replyTo: new RoutingKey(_replyTo),

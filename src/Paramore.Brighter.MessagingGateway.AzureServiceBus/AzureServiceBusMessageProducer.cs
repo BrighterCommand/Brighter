@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
 {
     private readonly IServiceBusSenderProvider _serviceBusSenderProvider;
-    private readonly AzureServiceBusPublication _publication;
+    private AzureServiceBusPublication _publication;
     protected bool TopicCreated;
         
     private const int TopicConnectionSleepBetweenRetriesInMilliseconds = 100;
@@ -57,8 +57,12 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// <summary>
     /// The publication configuration for this producer
     /// </summary>
-    public Publication Publication { get { return _publication; } }
-        
+    public Publication Publication
+    {
+        get { return _publication; }
+        set  {_publication = (AzureServiceBusPublication)value ?? throw new ConfigurationException("The publication must be an AzureServiceBusPublication"); }
+}
+
     /// <summary>
     /// The OTel Span we are writing Producer events too
     /// </summary>

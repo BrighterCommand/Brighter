@@ -32,6 +32,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
@@ -93,7 +94,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var transformRegistry = new ServiceCollectionTransformerRegistry(services, options.TransformerLifetime);
             services.TryAddSingleton(transformRegistry);
 
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
+            var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
             
             services.TryAddSingleton(options.RequestContextFactory);
@@ -145,7 +146,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
             Action<ProducersConfiguration> configure,
-            ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
+            ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         {
             if (brighterBuilder is null)
                 throw new ArgumentNullException($"{nameof(brighterBuilder)} cannot be null.", nameof(brighterBuilder));
@@ -489,6 +490,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 Tracer(serviceProvider),
                 PublicationFinder(serviceProvider),
                 outbox,
+                OutboxCircuitBreaker(serviceProvider),
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
@@ -524,7 +526,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The message mapper registry, populated with any message mappers from the ioC container</returns>
         public static MessageMapperRegistry MessageMapperRegistry(IServiceProvider provider)
         {
-            var serviceCollectionMessageMapperRegistry = provider.GetRequiredService<ServiceCollectionMessageMapperRegistry>();
+            var serviceCollectionMessageMapperRegistry = provider.GetRequiredService<ServiceCollectionMessageMapperRegistryBuilder>();
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new ServiceProviderMapperFactory(provider),
@@ -628,6 +630,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private static IAmABrighterTracer? Tracer(IServiceProvider serviceProvider)
         {
             return serviceProvider.GetService<BrighterTracer>();
+        }
+        private static IAmAnOutboxCircuitBreaker? OutboxCircuitBreaker(IServiceProvider serviceProvider)
+        {
+            return serviceProvider.GetService<IAmAnOutboxCircuitBreaker>();
         }
 
         /// <summary>                                                            x

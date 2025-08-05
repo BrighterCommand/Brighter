@@ -484,6 +484,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="pageSize">The number of messages to return on a page</param>
         /// <param name="pageNumber">The page number to return</param>
+        /// <param name="trippedTopics">Collection of tripped topics to filter out</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         public IEnumerable<Message> OutstandingMessages(
@@ -491,9 +492,12 @@ namespace Paramore.Brighter
             RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null
         )
         {
+            trippedTopics ??= [];
+
             ClearExpiredMessages();
 
             var span = Tracer?.CreateDbSpan(
@@ -507,7 +511,11 @@ namespace Paramore.Brighter
                 var now = _timeProvider.GetUtcNow();
                 var sentBefore = now - dispatchedSince;
                 var outstandingMessages = Requests.Values
-                    .Where(oe => oe.TimeFlushed == DateTimeOffset.MinValue && oe.WriteTime <= sentBefore.DateTime)
+                    .OrderBy(oe=>oe.Message.Header.TimeStamp)
+                    .Where(oe => 
+                        oe.TimeFlushed == DateTimeOffset.MinValue 
+                        && oe.WriteTime <= sentBefore.DateTime
+                        && !trippedTopics.Contains(oe.Message.Header.Topic))
                     .Take(pageSize)
                     .Select(oe => oe.Message).ToArray();
                 return outstandingMessages;
@@ -525,6 +533,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="pageSize">The number of messages to return on a page</param>
         /// <param name="pageNumber">The page to return</param>
+        /// <param name="trippedTopics">Collection of tripped topics to filter out</param>
         /// <param name="args">Additional arguments needed to find a message, if any</param>
         /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous operation</param>
         /// <returns></returns>
@@ -533,6 +542,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
@@ -540,7 +550,7 @@ namespace Paramore.Brighter
             
             var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            tcs.SetResult(OutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber, args));
+            tcs.SetResult(OutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber, trippedTopics, args));
 
             return tcs.Task;
         }

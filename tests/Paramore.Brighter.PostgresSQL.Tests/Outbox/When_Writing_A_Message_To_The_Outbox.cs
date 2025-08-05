@@ -57,13 +57,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
             var messageHeader = new MessageHeader(
-                messageId:    Id.Random,
+                messageId:    Id.Random(),
                 topic:        new RoutingKey("test_topic"),
                 messageType:  MessageType.MT_DOCUMENT,
                 source:       new Uri("https://source.test"),
-                type:         new RoutingKey("test_event_type"),
+                type:         new CloudEventsType("test_event_type"),
                 timeStamp:    DateTime.UtcNow.AddDays(-1),
-                correlationId:Id.Random,
+                correlationId:Id.Random(),
                 replyTo:      new RoutingKey("ReplyTo"),
                 contentType:  new ContentType(MediaTypeNames.Text.Plain),
                 partitionKey: Guid.NewGuid().ToString(),

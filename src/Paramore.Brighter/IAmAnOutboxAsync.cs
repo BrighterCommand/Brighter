@@ -171,6 +171,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext"></param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
+        /// <param name="trippedTopics">Collection of tripped topics</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
@@ -179,6 +180,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
+            IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
     }

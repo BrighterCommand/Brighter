@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly Uri _dataSchema = new Uri("http://schema.example.com");
         private readonly string _subject = "TestSubject";
-        private readonly string _type = "custom.type";
+        private readonly CloudEventsType _type = new CloudEventsType("custom.type");
         private readonly Uri _source = new Uri("http://source.example.com");
         private readonly TraceParent _traceParent = new TraceParent("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
         private readonly TraceState _traceState = new TraceState("congo=t61rcWkgMzE");

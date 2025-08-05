@@ -62,13 +62,13 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId: Id.Random,
+                messageId: Id.Random(),
                 topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
                 source: _source,
-                type: _type,
+                type: new CloudEventsType(_type),
                 timeStamp: DateTime.UtcNow.AddDays(-1),
-                correlationId: Id.Random,
+                correlationId: Id.Random(),
                 replyTo: new RoutingKey("ReplyTo"),
                 contentType: new ContentType(MediaTypeNames.Text.Plain),
                 partitionKey: new PartitionKey(Guid.NewGuid().ToString()),

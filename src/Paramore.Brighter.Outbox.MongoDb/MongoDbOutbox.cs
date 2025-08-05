@@ -461,7 +461,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         TimeSpan dispatchedSince,
         RequestContext? requestContext,
         int pageSize = 100,
-        int pageNumber = 1, Dictionary<string, object>? args = null,
+        int pageNumber = 1,
+        IEnumerable<RoutingKey>? trippedTopics = null,
+        Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
@@ -474,8 +476,16 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
+            
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
             filter &= Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, olderThan);
+
+            trippedTopics = trippedTopics?.ToList();
+            if (trippedTopics != null && trippedTopics.Any())
+            {
+                filter &= Builders<OutboxMessage>.Filter.Nin(x => x.Topic,  trippedTopics.Select(x => x.Value));
+            }
+            
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
@@ -831,7 +841,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc />
     public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext,
         int pageSize = 100,
-        int pageNumber = 1, Dictionary<string, object>? args = null)
+        int pageNumber = 1,
+        IEnumerable<RoutingKey>? trippedTopics = null,
+        Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -843,8 +855,16 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
+            
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
             filter &= Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, olderThan);
+            
+            trippedTopics = trippedTopics?.ToList();
+            if (trippedTopics != null && trippedTopics.Any())
+            {
+                filter &= Builders<OutboxMessage>.Filter.Nin(x => x.Topic,  trippedTopics.Select(x => x.Value));
+            }
+            
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);

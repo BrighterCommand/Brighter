@@ -33,12 +33,17 @@ using Paramore.Brighter.MessageMappers;
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     /// <summary>
+   /// </summary>
+    /// <remarks>
     /// When parsing for message mappers in assemblies, stores any found message mappers. A later step will add these to the message mapper registry
     /// Not used directly
-    /// </summary>
-    public class ServiceCollectionMessageMapperRegistry(
-        IServiceCollection serviceCollection,
-        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+    /// This builder registers the open generic type <see cref="CloudEventJsonMessageMapper{TRequest}"/> as the default mapper.
+    /// When Brighter needs to map a message and no explicit mapper has been registered for the message's type,
+    /// it will instantiate a closed generic version of <see cref="CloudEventJsonMessageMapper{TRequest}"/> with the specific request type.
+    /// This ensures that messages are serialized and deserialized according to the CloudEvents JSON format.
+    /// You can override this behaviour by providing a different default message mapper.
+    /// </remarks>
+    public class ServiceCollectionMessageMapperRegistryBuilder(IServiceCollection serviceCollection, ServiceLifetime lifetime = ServiceLifetime.Singleton) 
     {
         public Dictionary<Type, Type> Mappers { get; } = new Dictionary<Type, Type>();
         public Type DefaultMessageMapper { get; private set; } = typeof(JsonMessageMapper<>);
@@ -86,7 +91,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, lifetime));
             AsyncMappers.Add(message, mapper);
         }
-
+ 
+        /// <summary>
+        /// Ensure that the default mappers are registered with Dependency Injection
+        /// </summary>
+        public void EnsureDefaultMessageMapperIsRegistered()
+        {
+                serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapper, DefaultMessageMapper, lifetime));
+                serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapperAsync, DefaultMessageMapperAsync, lifetime));
+        }
+        
+        
         /// <summary>
         /// Set the Default Message Mapper
         /// </summary>
@@ -105,37 +120,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             serviceCollection.TryAdd(new ServiceDescriptor(defaultMapper, defaultMapper, lifetime));
             DefaultMessageMapperAsync = defaultMapper;
-        }
-
-        /// <summary>
-        /// Sets the <see cref="CloudEventJsonMessageMapper{TRequest}"/> as the default message mapper for both synchronous and asynchronous operations.
-        /// This configures Brighter to use JSON serialization adhering to the CloudEvents specification for mapping request objects to and from messages when no specific mapper is defined for a given message type.
-        /// </summary>
-        /// <remarks>
-        /// This method registers the open generic type <see cref="CloudEventJsonMessageMapper{TRequest}"/> as the default mapper.
-        /// When Brighter needs to map a message and no explicit mapper has been registered for the message's type,
-        /// it will instantiate a closed generic version of <see cref="CloudEventJsonMessageMapper{TRequest}"/> with the specific request type.
-        /// This ensures that messages are serialized and deserialized according to the CloudEvents JSON format.
-        /// </remarks>
-        /// <seealso cref="SetDefaultMessageMapper(Type)"/>
-        /// <seealso cref="SetDefaultMessageMapperAsync(Type)"/>
-        /// <seealso cref="CloudEventJsonMessageMapper{TRequest}"/>
-        public void SetCloudEventJsonAsDefaultMessageMapper()
-        {
-            SetDefaultMessageMapper(typeof(CloudEventJsonMessageMapper<>));
-            SetDefaultMessageMapperAsync(typeof(CloudEventJsonMessageMapper<>));
-        }
-
-        /// <summary>
-        /// Ensure that the default mappers are registered with Dependency Injection
-        /// </summary>
-        public void EnsureDefaultMessageMapperIsRegistered()
-        {
-            if(DefaultMessageMapper != null)
-                serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapper, DefaultMessageMapper, lifetime));
-            if (DefaultMessageMapperAsync != null)
-                serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapperAsync, DefaultMessageMapperAsync,
-                    lifetime));
-        }
+        }    
     }
 }

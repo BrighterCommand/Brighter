@@ -45,7 +45,7 @@ public class RmqMessageProducerSendMessageTests : IDisposable
         var topic = new RoutingKey(Guid.NewGuid().ToString());
         var messageType = MessageType.MT_COMMAND;
         var source = new Uri("http://testing.example");
-        var type = "test-type";
+        var type = new CloudEventsType("test-type");
         var timestamp = DateTimeOffset.UtcNow;
         var correlationId = Guid.NewGuid().ToString();
         var replyTo = new RoutingKey("reply-queue");

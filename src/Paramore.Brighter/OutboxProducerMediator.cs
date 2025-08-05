@@ -29,6 +29,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
@@ -59,6 +60,7 @@ namespace Paramore.Brighter
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly IAmAPublicationFinder _publicationFinder;
+        private readonly IAmAnOutboxCircuitBreaker? _outboxCircuitBreaker;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
         private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
@@ -93,6 +95,7 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="tracer"></param>
         /// <param name="publicationFinder">A publication finder.</param>
+        /// <param name="outboxCircuitBreaker">Track unhealthy topics and allow for cooldown, should be registered as singleton and shared with Outbox</param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
@@ -110,6 +113,7 @@ namespace Paramore.Brighter
             IAmABrighterTracer? tracer, 
             IAmAPublicationFinder publicationFinder,
             IAmAnOutbox? outbox = null,
+            IAmAnOutboxCircuitBreaker? outboxCircuitBreaker = null,
             IAmARequestContextFactory? requestContextFactory = null,
             int outboxTimeout = 300,
             int maxOutStandingMessages = -1,
@@ -148,6 +152,7 @@ namespace Paramore.Brighter
 
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+            _outboxCircuitBreaker = outboxCircuitBreaker;
 
             _outboxTimeout = outboxTimeout;
             _maxOutStandingMessages = maxOutStandingMessages;
@@ -155,7 +160,7 @@ namespace Paramore.Brighter
             _outBoxBag = outBoxBag ?? new Dictionary<string, object>();
             _instrumentationOptions = instrumentationOptions;
             _tracer = tracer;
-            _publicationFinder = publicationFinder; 
+            _publicationFinder = publicationFinder;
 
             ConfigureCallbacks(requestContextFactory.Create());
         }
@@ -595,6 +600,8 @@ namespace Paramore.Brighter
             WaitHandle[] clearTokens = new WaitHandle[2];
             clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
             clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
+            _outboxCircuitBreaker?.CoolDown();
+
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
                 //NOTE: The wait handle only signals availability, still need to increment the counter:
@@ -612,7 +619,7 @@ namespace Paramore.Brighter
                     if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
-                            pageSize: amountToClear, args: args, cancellationToken: cancellationToken)).ToArray();
+                            pageSize: amountToClear, trippedTopics: _outboxCircuitBreaker?.TrippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
 
                     BrighterTracer.WriteOutboxEvent(BoxDbOperation.OutStandingMessages, messages, span, false, true,
                         _instrumentationOptions);
@@ -760,9 +767,7 @@ namespace Paramore.Brighter
             return false;
         }
 
-        private void Dispatch(IEnumerable<Message> posts, 
-            RequestContext requestContext,
-            Dictionary<string, object>? args = null)
+        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
@@ -773,7 +778,7 @@ namespace Paramore.Brighter
                 {
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
-                    var producer = _producerRegistry.LookupBy(message.Header.Topic);
+                    var producer = _producerRegistry.LookupBy(message.Header.Topic, message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
                         _instrumentationOptions);
                     producer.Span = span;
@@ -844,7 +849,6 @@ namespace Paramore.Brighter
 
                         Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key);
 
-
                         var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
                         
                         await foreach (var successfulMessage in dispatchesMessages)
@@ -891,7 +895,7 @@ namespace Paramore.Brighter
                 {
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
-                    var producer = _producerRegistry.LookupBy(message.Header.Topic);
+                    var producer = _producerRegistry.LookupBy(message.Header.Topic, message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
                         _instrumentationOptions);
                     producer.Span = span;
@@ -899,40 +903,29 @@ namespace Paramore.Brighter
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
-                        if (producer is ISupportPublishConfirmation)
-                        {
-                            //mark dispatch handled by a callback - set in constructor
-                            await RetryAsync(
-                                    async _ =>
-                                        await producerAsync.SendAsync(message, cancellationToken)
-                                            .ConfigureAwait(continueOnCapturedContext),
-                                    requestContext,
-                                    continueOnCapturedContext,
-                                    cancellationToken)
-                                .ConfigureAwait(continueOnCapturedContext);
-                        }
-                        else
-                        {
-                            var sent = await RetryAsync(
-                                    async _ => await producerAsync.SendAsync(message, cancellationToken)
-                                        .ConfigureAwait(continueOnCapturedContext),
-                                    requestContext,
-                                    continueOnCapturedContext,
-                                    cancellationToken
-                                )
-                                .ConfigureAwait(continueOnCapturedContext
-                                );
+                        var sent = await RetryAsync(
+                                async _ => await producerAsync.SendAsync(message, cancellationToken)
+                                    .ConfigureAwait(continueOnCapturedContext),
+                                requestContext,
+                                continueOnCapturedContext,
+                                cancellationToken
+                            )
+                            .ConfigureAwait(continueOnCapturedContext);
 
-                            if (sent)
-                                await RetryAsync(
-                                    async _ => await _asyncOutbox.MarkDispatchedAsync(
-                                        message.Id, requestContext, _timeProvider.GetUtcNow(),
-                                        cancellationToken: cancellationToken
-                                    ),
-                                    requestContext,
+                        if (producer is not ISupportPublishConfirmation && sent)
+                        {
+                            await RetryAsync(
+                                async _ => await _asyncOutbox.MarkDispatchedAsync(
+                                    message.Id, requestContext, _timeProvider.GetUtcNow(),
                                     cancellationToken: cancellationToken
-                                );
+                                ),
+                                requestContext,
+                                cancellationToken: cancellationToken
+                            );
                         }
+
+                        if(!sent) TripTopic(message);
+   
                     }
                     else
                         throw new InvalidOperationException("No async message producer defined.");
@@ -1075,6 +1068,12 @@ namespace Paramore.Brighter
             }
 
             return true;
+        }
+
+        private void TripTopic(Message message)
+        {
+            if(!RoutingKey.IsNullOrEmpty(message.Header.Topic))
+                _outboxCircuitBreaker?.TripTopic(message.Header.Topic);
         }
         
         private static partial class Log

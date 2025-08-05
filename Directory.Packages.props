@@ -2,23 +2,23 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AwsDynamoDbV4>4.0.1.9</AwsDynamoDbV4>
+    <AwsDynamoDbV4>4.0.3.1</AwsDynamoDbV4>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.407.23, 4)" />
-    <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.406.11, 4)" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.409.10, 4)" />
+    <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.407.14, 4)" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400, 4)" />
-    <PackageVersion Include="AWSSDK.S3" Version="[3.7.417.6, 4)" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="[3.7.401.111, 4)" />
-    <PackageVersion Include="AWSSDK.Scheduler" Version="[3.7.400.162, 4)" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="[3.7.400.162, 4)" />
-    <PackageVersion Include="AWSSDK.SQS" Version="[3.7.400.162, 4)" />
-    <PackageVersion Include="Azure.Identity" Version="1.14.0" />
-    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.19.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
-    <PackageVersion Include="Confluent.Kafka" Version="2.10.0" />
-    <PackageVersion Include="Confluent.SchemaRegistry" Version="2.10.0" />
-    <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.10.0" />
+    <PackageVersion Include="AWSSDK.S3" Version="[3.7.421.10, 4)" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="[3.7.402.20, 4)" />
+    <PackageVersion Include="AWSSDK.Scheduler" Version="[3.7.400.185, 4)" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="[3.7.400.185, 4)" />
+    <PackageVersion Include="AWSSDK.SQS" Version="[3.7.400.186, 4)" />
+    <PackageVersion Include="Azure.Identity" Version="1.14.2" />
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
+    <PackageVersion Include="Confluent.Kafka" Version="2.11.0" />
+    <PackageVersion Include="Confluent.SchemaRegistry" Version="2.11.0" />
+    <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.11.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -40,37 +40,38 @@
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
     <PackageVersion Include="JustSaying" Version="7.3.0" />
     <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="7.3.0" />
-    <PackageVersion Include="MassTransit" Version="8.4.1" />
-    <PackageVersion Include="MassTransit.AmazonSQS" Version="8.4.1" />
+    <PackageVersion Include="MassTransit" Version="8.5.1" />
+    <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.1" />
     <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
-    <PackageVersion Include="MessagePack" Version="3.1.3" />
-    <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.0.2" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.5.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
+    <PackageVersion Include="MessagePack" Version="3.1.4" />
+    <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.0" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.7.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.4.2" />
     <PackageVersion Include="MQTTnet" Version="4.3.7.1207" />
     <PackageVersion Include="MySqlConnector" Version="2.4.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageVersion Include="NJsonSchema" Version="11.3.2" />
-    <PackageVersion Include="NJsonSchema.NewtonsoftJson" Version="11.3.2" />
+    <PackageVersion Include="NJsonSchema" Version="11.4.0" />
+    <PackageVersion Include="NJsonSchema.NewtonsoftJson" Version="11.4.0" />
     <PackageVersion Include="NUnit" Version="4.3.2" />
-    <PackageVersion Include="NUnit.Analyzers" Version="4.8.1">
+    <PackageVersion Include="NUnit.Analyzers" Version="4.9.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
@@ -89,7 +90,7 @@
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="4.1.1" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="4.1.1" />
     <PackageVersion Include="Paramore.Darker.QueryLogging" Version="4.1.1" />
-    <PackageVersion Include="Polly" Version="8.5.2" />
+    <PackageVersion Include="Polly" Version="8.6.2" />
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="Quartz" Version="3.14.0" />
@@ -104,19 +105,19 @@
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.8.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="8.1.4" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.3" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
-    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.5" />
-    <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
+    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.7" />
+    <PackageVersion Include="System.Linq.Async" Version="6.0.3" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <PackageVersion Include="System.Net.Security" Version="4.3.2" />
     <PackageVersion Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.5" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.7" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageVersion Include="System.Threading.Channels" Version="9.0.0" />
+    <PackageVersion Include="System.Threading.Channels" Version="9.0.7" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.1">
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>

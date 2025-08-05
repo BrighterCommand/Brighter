@@ -49,7 +49,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 null);
             messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
             
-            _messagePump = new Reactor<MyFailingMapperEvent>(commandProcessor, messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyFailingMapperEvent), 
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
             };
@@ -62,6 +63,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _bus.Enqueue(unmappableMessage);
             _bus.Enqueue(unmappableMessage);
             _bus.Enqueue(unmappableMessage);
+            
         }
 
         [Fact]

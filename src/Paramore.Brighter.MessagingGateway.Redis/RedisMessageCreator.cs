@@ -311,7 +311,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 return new HeaderResult<Id>(Id.Create(header), true);
             }
             
-            return new HeaderResult<Id>(Id.Random, true);
+            return new HeaderResult<Id>(Id.Random(), true);
         }
         
         private static HeaderResult<RoutingKey> ReadReplyTo(Dictionary<string, string> headers)
@@ -376,13 +376,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<TraceState>(TraceState.Empty, false);
         }
        
-       private static HeaderResult<string> ReadType(Dictionary<string, string> headers)
+       private static HeaderResult<CloudEventsType> ReadType(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out string? header))
             {
-                return new HeaderResult<string>(header, true);
+                return new HeaderResult<CloudEventsType>(new CloudEventsType(header), true);
             }
-            return new HeaderResult<string>(string.Empty, false);
+            return new HeaderResult<CloudEventsType>(CloudEventsType.Empty, false);
         }
 
         private static HeaderResult<RoutingKey> ReadTopic(Dictionary<string, string> headers)

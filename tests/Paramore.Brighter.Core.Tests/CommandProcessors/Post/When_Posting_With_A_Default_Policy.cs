@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
@@ -28,10 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
-            {
-                Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
-            };
+            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -55,6 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
                 tracer: tracer,
                 publicationFinder: new FindPublicationByPublicationTopicOrRequestType(),
+                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
                 outbox: _outbox
             );  
             
