@@ -35,6 +35,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _routingKey = new RoutingKey("MyCommand");
 
             var timeProvider = new FakeTimeProvider();
+            var cloudEventsType = new CloudEventsType("go.paramore.brighter.test");
+            
             InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
                 new Publication()
                 {
@@ -42,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                     Source = new Uri("https://goparamore.io"),
                     Subject = "MyCommand",
                     Topic = _routingKey,
-                    Type = new CloudEventsType("go.paramore.brighter.test"),
+                    Type = cloudEventsType,
                     ReplyTo = "MyEvent",
                     RequestType = typeof(MyCommand)
                 });
@@ -84,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             {
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
             };
-            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{_routingKey, messageProducer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> {{new ProducerKey(_routingKey, cloudEventsType) , messageProducer},});
            
             var tracer = new BrighterTracer(timeProvider); 
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
