@@ -169,7 +169,7 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
         {
             if (!properties.TryGetValue(HeaderNames.MessageId, out var id) || string.IsNullOrEmpty(id))
             {
-                return Id.Random;
+                return Id.Random();
             }
 
             return Id.Create(id);
@@ -233,15 +233,15 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
             return specVersion;
         }
         
-        static string GetCloudEventType(IReadOnlyDictionary<string, string> properties)
+        static CloudEventsType GetCloudEventType(IReadOnlyDictionary<string, string> properties)
         {
             if (!properties.TryGetValue(HeaderNames.Type, out var type) 
                 || string.IsNullOrEmpty(type))
             {
-                return MessageHeader.DefaultType;
+                return CloudEventsType.Empty;
             }
 
-            return type;
+            return new CloudEventsType(type);
         }
         
         static Uri GetSource(IReadOnlyDictionary<string, string> properties)

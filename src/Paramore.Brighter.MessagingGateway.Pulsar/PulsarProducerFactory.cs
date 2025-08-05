@@ -12,10 +12,10 @@ namespace Paramore.Brighter.MessagingGateway.Pulsar;
 public class PulsarProducerFactory(PulsarMessagingGatewayConnection connection, IEnumerable<PulsarPublication> publications) : IAmAMessageProducerFactory
 {
     /// <inheritdoc />
-    public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+    public Dictionary<ProducerKey, IAmAMessageProducer> Create()
     {
         var client = connection.Create();
-        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+        var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
         foreach (var publication in publications)
         {
             if (publication.Topic is null)
@@ -39,7 +39,7 @@ public class PulsarProducerFactory(PulsarMessagingGatewayConnection connection, 
 
             var producer = builder.Create();
             
-            producers[publication.Topic] = new PulsarMessageProducer(producer,
+            producers[new ProducerKey(publication.Topic, publication.Type)] = new PulsarMessageProducer(producer,
                 publication, 
                 publication.TimeProvider, 
                 publication.Instrumentation ?? connection.Instrumentation);
@@ -49,6 +49,6 @@ public class PulsarProducerFactory(PulsarMessagingGatewayConnection connection, 
     }
 
     /// <inheritdoc />
-    public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync() 
+    public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync() 
         => Task.FromResult(Create());
 }

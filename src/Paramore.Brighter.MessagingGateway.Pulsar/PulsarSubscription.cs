@@ -17,10 +17,11 @@ public class PulsarSubscription : Subscription
     /// <summary>
     /// Initializes a new Pulsar subscription configuration
     /// </summary>
-    /// <param name="dataType">The type of message payload expected</param>
     /// <param name="subscriptionName">Unique name for this subscription</param>
     /// <param name="channelName">Name of the channel associated with this subscription</param>
     /// <param name="routingKey">Topic routing key</param>
+    /// <param name="requestType">The <see cref="Type"/> of the data that this subscription handles.</param>
+    /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="requestType"/> if null</param>
     /// <param name="bufferSize">Number of messages to prefetch</param>
     /// <param name="noOfPerformers">Number of concurrent consumers</param>
     /// <param name="timeOut">Timeout for receive operations</param>
@@ -39,9 +40,9 @@ public class PulsarSubscription : Subscription
     /// <param name="subscriptionType">Pulsar subscription type</param>
     /// <param name="allowOutOfOrderDeliver">Allow out-of-order message delivery</param>
     /// <param name="configuration">Custom consumer configuration callback</param>
-    public PulsarSubscription(Type dataType, SubscriptionName? subscriptionName = null, ChannelName? channelName = null, 
-        RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
-        int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
+    public PulsarSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey, 
+        Type? requestType = null, Func<Message, Type>? getRequestType = null, int bufferSize = 1, int noOfPerformers = 1,
+        TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null, 
         TimeSpan? channelFailureDelay = null,
@@ -52,7 +53,7 @@ public class PulsarSubscription : Subscription
         SubscriptionType subscriptionType = SubscriptionType.Exclusive, 
         bool allowOutOfOrderDeliver = false,
         Action<IConsumerBuilder<ReadOnlySequence<byte>>>? configuration = null) 
-        : base(dataType, subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
+        : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, 
             requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, 
             channelFailureDelay)
     {
@@ -140,6 +141,7 @@ public class PulsarSubscription<T> : PulsarSubscription
     /// <param name="subscriptionName">Unique name for this subscription</param>
     /// <param name="channelName">Name of the channel associated with this subscription</param>
     /// <param name="routingKey">Topic routing key</param>
+    /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
     /// <param name="bufferSize">Number of messages to prefetch</param>
     /// <param name="noOfPerformers">Number of concurrent consumers</param>
     /// <param name="timeOut">Timeout for receive operations</param>
@@ -158,8 +160,8 @@ public class PulsarSubscription<T> : PulsarSubscription
     /// <param name="subscriptionType">Pulsar subscription type</param>
     /// <param name="allowOutOfOrderDeliver">Allow out-of-order message delivery</param>
     /// <param name="configuration">Custom consumer configuration callback</param>
-    public PulsarSubscription(SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
-        RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
+    public PulsarSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey,
+        Func<Message, Type>? getRequestType = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
@@ -171,7 +173,7 @@ public class PulsarSubscription<T> : PulsarSubscription
         SubscriptionType subscriptionType = SubscriptionType.Exclusive,
         bool allowOutOfOrderDeliver = false,
         Action<IConsumerBuilder<ReadOnlySequence<byte>>>? configuration = null)
-        : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
+        : base(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount,
             requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
             channelFailureDelay, schema, initialPosition, priorityLevel, readCompacted, subscriptionType, 
             allowOutOfOrderDeliver, configuration)
