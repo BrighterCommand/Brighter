@@ -55,7 +55,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <summary>
         /// Initialises a new instance of <see cref="PostgreSqlOutboxSync"> class.
         /// </summary>
-        /// <param name="postgresSqlOutboxConfiguration">PostgreSql Outbox Configuration.</param>
+        /// <param name="configuration">PostgreSql Outbox Configuration.</param>
+        /// <param name="connectionProvider">The connection provider for PostgreSQL</param>
         public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
