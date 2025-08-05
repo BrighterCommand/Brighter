@@ -26,7 +26,7 @@ public class JustSayingEvent : Event, IJustSayingRequest
     /// <summary>
     /// Initializes a new instance of the <see cref="JustSayingEvent"/> class. 
     /// </summary>
-    public JustSayingEvent() : this(Id.Random)
+    public JustSayingEvent() : this(Id.Random())
     {
         
     }

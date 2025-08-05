@@ -21,7 +21,7 @@ public class SmallPayloadNotCompressedTests
         string body = "small message";
         var contentType = new ContentType(MediaTypeNames.Application.Json);
         _message = new Message(
-            new MessageHeader(Id.Random, _topic, MessageType.MT_EVENT,
+            new MessageHeader(Id.Random(), _topic, MessageType.MT_EVENT,
                 timeStamp: DateTime.UtcNow, contentType: contentType),
             new MessageBody(body, contentType, CharacterEncoding.UTF8)
         );

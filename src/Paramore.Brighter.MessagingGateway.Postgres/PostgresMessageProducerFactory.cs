@@ -12,16 +12,18 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// </summary>
 public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications) :  PostgresMessagingGateway(connection), IAmAMessageProducerFactory
 {
-    /// <inheritdoc />
-    public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+    /// <summary>
+    /// Creates a dictionary of in-memory message producers.
+    /// </summary>
+    /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+    /// <exception cref="ConfigurationException">Thrown when a publication does not have a topic</exception>
+    public Dictionary<ProducerKey, IAmAMessageProducer> Create()
     {
-        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+        var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
         foreach (var publication in publications)
         {
             if (publication.Topic is null)
-            {
                 throw new ConfigurationException("Missing topic on Publication");
-            }
 
             var schemaName = publication.SchemaName ?? Connection.Configuration.SchemaName ?? "public";
             var tableName = publication.QueueStoreTable ?? Connection.Configuration.QueueStoreTable;
@@ -30,16 +32,25 @@ public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection c
             EnsureQueueStoreExists(schemaName, tableName, binaryMessagePayload, publication.MakeChannels);
             
             var producer = new PostgresMessageProducer(Connection.Configuration, publication);
-            producers[publication.Topic] = producer;
+            
+            producer.Publication = publication;
+            var producerKey = new ProducerKey(publication.Topic, publication.Type);
+            if (producers.ContainsKey(producerKey))
+                throw new ConfigurationException($"A publication with the topic {publication.Topic}  and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
+            producers[producerKey] = producer;
         }
 
         return producers;
     }
 
-    /// <inheritdoc />
-    public async Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+    /// <summary>
+    /// Creates a dictionary of in-memory message producers.
+    /// </summary>
+    /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+    /// <exception cref="ConfigurationException">Thrown when a publication does not have a topic</exception>
+    public async Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
     {
-        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+        var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
         foreach (var publication in publications)
         {
             if (publication.Topic is null)
@@ -54,7 +65,13 @@ public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection c
             await EnsureQueueStoreExistsAsync(schemaName, tableName, binaryMessagePayload, publication.MakeChannels, CancellationToken.None);
             
             var producer = new PostgresMessageProducer(Connection.Configuration, publication);
-            producers[publication.Topic] = producer;
+            
+            producer.Publication = publication;
+            var producerKey = new ProducerKey(publication.Topic, publication.Type);
+            if (producers.ContainsKey(producerKey))
+                throw new ConfigurationException($"A publication with the topic {publication.Topic}  and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
+            producers[producerKey] = producer;
+
         }
 
         return producers;

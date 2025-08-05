@@ -174,7 +174,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
         var id = message.Id;
         if (Id.IsNullOrEmpty(id) || !Guid.TryParse(id, out _))
         {
-            id = Id.Random;
+            id = Id.Random();
         }
         
         node[nameof(IJustSayingRequest.Id)] = id.Value;
@@ -217,7 +217,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
             return message.Header.CorrelationId;
         }
         
-        return Context.GetIdFromBag(JustSayingAttributesName.Conversation) ?? Id.Random;
+        return Context.GetIdFromBag(JustSayingAttributesName.Conversation) ?? Id.Random();
     }
 
     private void SetTenant(JsonNode node) => node[nameof(IJustSayingRequest.Tenant)] =  GetTenant(node.GetString(nameof(IJustSayingRequest.Tenant)));

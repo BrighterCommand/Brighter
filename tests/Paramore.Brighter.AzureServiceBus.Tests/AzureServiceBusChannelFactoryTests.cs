@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
@@ -12,8 +13,8 @@ public class AzureServiceBusChannelFactoryTests
     {
         var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(new AzureServiceBusConfiguration("Endpoint=sb://someString.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=oUWJw7777s7ydjdafqFqhk9O7TOs=")));
 
-        var subscription = new AzureServiceBusSubscription(typeof(object), new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
-            1, 1, messagePumpType: MessagePumpType.Proactor, timeOut: TimeSpan.FromMilliseconds(399));
+        var subscription = new AzureServiceBusSubscription<ASBTestCommand>(new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
+            bufferSize: 1, noOfPerformers: 1, messagePumpType: MessagePumpType.Proactor, timeOut: TimeSpan.FromMilliseconds(399));
             
         ArgumentException exception = Assert.Throws<ArgumentException>(() => factory.CreateSyncChannel(subscription));
 
@@ -25,8 +26,8 @@ public class AzureServiceBusChannelFactoryTests
     {
         var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(new AzureServiceBusConfiguration("Endpoint=sb://someString.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=oUWJw7777s7ydjdafqFqhk9O7TOs=")));
 
-        var subscription = new AzureServiceBusSubscription(typeof(object), new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
-            1, 1, messagePumpType: MessagePumpType.Proactor, timeOut: TimeSpan.FromMilliseconds(399));
+        var subscription = new AzureServiceBusSubscription<ASBTestCommand>(new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
+            bufferSize:1, noOfPerformers:1, messagePumpType: MessagePumpType.Proactor, timeOut: TimeSpan.FromMilliseconds(399));
             
         ArgumentException exception = Assert.Throws<ArgumentException>(() => factory.CreateAsyncChannel(subscription));
 
@@ -38,8 +39,8 @@ public class AzureServiceBusChannelFactoryTests
     {
         var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(new AzureServiceBusConfiguration("Endpoint=sb://someString.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=oUWJw7777s7ydjdafqFqhk9O7TOs=")));
 
-        var subscription = new AzureServiceBusSubscription(typeof(object), new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
-            1, 1, messagePumpType: MessagePumpType.Proactor, timeOut: TimeSpan.FromMilliseconds(399));
+        var subscription = new AzureServiceBusSubscription<ASBTestCommand>(new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
+            bufferSize:1, noOfPerformers:1, messagePumpType: MessagePumpType.Proactor, timeOut: TimeSpan.FromMilliseconds(399));
             
         ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(async () => await factory.CreateAsyncChannelAsync(subscription));
 

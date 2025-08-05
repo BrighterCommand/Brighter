@@ -14,8 +14,7 @@ public class CloudEventsTransformerTests
 {
     private readonly CloudEventsTransformer _transformer = new();
     private readonly Uri _source = new("http://goparamore.io/CloudEventsTransformerTests");
-    private readonly string _type = typeof(MyCommand).FullName ?? "MyCommand";
-    private readonly ContentType _dataContentType = new(MediaTypeNames.Application.Json);
+    private readonly CloudEventsType _type = new(typeof(MyCommand).FullName ?? "MyCommand");
     private readonly Uri _dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerTests/schema");
     private readonly string _subject = "CloudEventsTransformerTests";
     private Message _message;
@@ -23,8 +22,8 @@ public class CloudEventsTransformerTests
     public CloudEventsTransformerTests()
     {
         _message = new(
-            new MessageHeader(Id.Random, new RoutingKey("Test Topic"), MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Text.Plain), 
-                source: _source, subject: _subject, type: _type, dataSchema: _dataSchema), new MessageBody("test content")
+            new MessageHeader(Id.Random(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Text.Plain), 
+                source: _source, subject: _subject, type: _type, dataSchema: _dataSchema), new MessageBody("test content", contentType: new ContentType(MediaTypeNames.Text.Plain))
             );
     }
 
@@ -261,7 +260,7 @@ public class CloudEventsTransformerTests
         
         //assert
         Assert.Equal(new Uri("http://goparamore.io"), cloudEvents.Header.Source);
-        Assert.Equal( "goparamore.io.Paramore.Brighter.Message", cloudEvents.Header.Type);
+        Assert.Equal( CloudEventsType.Empty, cloudEvents.Header.Type);
         Assert.Equal(new ContentType(MediaTypeNames.Text.Plain), cloudEvents.Header.ContentType);
         Assert.Null(cloudEvents.Header.DataSchema);
         Assert.Null(cloudEvents.Header.Subject);
@@ -300,7 +299,7 @@ public class CloudEventsTransformerTests
        var message = _transformer.Unwrap(cloudEvents);
        
        Assert.Equal(_source, message.Header.Source);
-       Assert.Equal(_type, message.Header.Type);
+       Assert.Equal(CloudEventsType.Empty, message.Header.Type);
        Assert.Equal(_dataSchema, message.Header.DataSchema);
        Assert.Equal(_subject, message.Header.Subject);
        Assert.Equal(_message.Body.Bytes, message.Body.Bytes);

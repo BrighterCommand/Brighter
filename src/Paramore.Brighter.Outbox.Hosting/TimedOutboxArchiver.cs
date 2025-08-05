@@ -40,7 +40,6 @@ namespace Paramore.Brighter.Outbox.Hosting
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer? _timer;
         private readonly OutboxArchiver<TMessage, TTransaction> _archiver;
-        private readonly TimeSpan _dispatchedSince;
         private readonly IDistributedLock _distributedLock;
         private readonly TimedOutboxArchiverOptions _options;
 
@@ -48,17 +47,14 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// The archiver will find messages in the outbox that are older than a certain age and archive them
         /// </summary>
         /// <param name="archiver">The archiver to use</param>
-        /// <param name="dispatchedSince">How old should a message be, in order to archive it?</param>
         /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
         /// <param name="options">The <see cref="TimedOutboxArchiverOptions"/> that control how the archiver runs, such as interval</param>
         public TimedOutboxArchiver(
             OutboxArchiver<TMessage, TTransaction> archiver,
-            TimeSpan dispatchedSince,
             IDistributedLock distributedLock,
             TimedOutboxArchiverOptions options)
         {
             _archiver = archiver;
-            _dispatchedSince = dispatchedSince;
             _distributedLock = distributedLock;
             _options = options;
         }
@@ -74,7 +70,9 @@ namespace Paramore.Brighter.Outbox.Hosting
         {
             Log.OutboxArchiverServiceIsStarting(s_logger);
 
-            _timer = new Timer(async e => await Archive(e, cancellationToken), null, TimeSpan.Zero,
+            _timer = new Timer(_ => Archive(cancellationToken).GetAwaiter().GetResult(), 
+                null,
+                TimeSpan.Zero,
                 TimeSpan.FromSeconds(_options.TimerInterval));
 
             return Task.CompletedTask;
@@ -102,19 +100,21 @@ namespace Paramore.Brighter.Outbox.Hosting
             _timer?.Dispose();
         }
 
-        private async Task Archive(object? state, CancellationToken cancellationToken)
+        private async Task Archive(CancellationToken cancellationToken)
         {
-            var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
-            if (lockId != null)
+            try
             {
+                var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken);
+                if (lockId == null)
+                {
+                    Log.OutboxArchiverIsStillRunningAbandoningAttempt(s_logger);
+                    return;
+                }
+
                 Log.OutboxArchiverLookingForMessagesToArchive(s_logger);
                 try
                 {
-                    await _archiver.ArchiveAsync(_dispatchedSince, new RequestContext(), cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    Log.ErrorWhileSweepingTheOutbox(s_logger, e);
+                    await _archiver.ArchiveAsync(_options.MinimumAge, new RequestContext(), cancellationToken);
                 }
                 finally
                 {
@@ -123,11 +123,14 @@ namespace Paramore.Brighter.Outbox.Hosting
 
                 Log.OutboxSweeperSleeping(s_logger);
             }
-            else
+            catch (Exception e)
             {
-                Log.OutboxArchiverIsStillRunningAbandoningAttempt(s_logger);
+                Log.ErrorWhileSweepingTheOutbox(s_logger, e);
             }
-            
+            finally
+            {
+                Log.OutboxSweeperSleeping(s_logger);
+            }
         }
 
         private static partial class Log

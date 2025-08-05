@@ -26,14 +26,9 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class MyCommand : Command
+    public class MyCommand() : Command(Id.Random())
     {
-        public MyCommand()
-            :base(Guid.NewGuid()) 
-            
-        {}
-
-        public string Value { get; set; }
+        public string? Value { get; set; }
         public bool WasCancelled { get; set; }
         public bool TaskCompleted { get; set; }
     }

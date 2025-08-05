@@ -45,21 +45,19 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
 
         Brighter.CommandProcessor.ClearServiceBus();
 
+        var type = new CloudEventsType("io.goparamore.brighter.myevent");
         _publication = new Publication
         {
             Source = new Uri("http://localhost"),
             RequestType = typeof(MyEvent),
             Topic = _routingKey,
-            Type = nameof(MyEvent),
+            Type = type,
         };
 
-        var producer = new InMemoryMessageProducer(internalBus, _timeProvider, InstrumentationOptions.All)
-        {
-            Publication = _publication
-        };
+        var producer = new InMemoryMessageProducer(internalBus, _timeProvider, _publication);
 
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, producer } });
+            new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, type), producer } });
 
         var retryPolicy = Policy
             .Handle<Exception>()
@@ -94,9 +92,8 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
     {
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
         
-        var context = new RequestContext();
-        context.Span = parentActivity;
-        
+        var context = new RequestContext { Span = parentActivity };
+
         //add and clear message
         var myEvent = new MyEvent();
         var myMessage = new MyEventMessageMapper().MapToMessage(myEvent, _publication);

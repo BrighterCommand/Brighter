@@ -64,7 +64,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                     topic: routingKey,
                     messageType: MessageType.MT_COMMAND,
                     source: testSource,
-                    type: "goparamore.io.test.command",
+                    type: new CloudEventsType("goparamore.io.test.command"),
                     timeStamp: DateTimeOffset.UtcNow,
                     correlationId: _correlationId,
                     replyTo: testReplyTo,

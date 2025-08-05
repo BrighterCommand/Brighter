@@ -11,11 +11,11 @@ public class CombinedChannelFactoryTest
     [Fact]
     public void When_constructing_a_sync_channel_with_combined_factory()
     {
-        var sub1 = new MockSubscription(typeof(string), typeof(MockChannelFactory),
+        var sub1 = new MockSubscription(typeof(MockChannelFactory), dataType: typeof(string),
             messagePumpType: MessagePumpType.Proactor);
         var factory1 = new MockChannelFactory(sub1);
 
-        var sub2 = new MockSubscription(typeof(string), typeof(MockChannel2Factory),
+        var sub2 = new MockSubscription(typeof(MockChannel2Factory), dataType: typeof(string),
             messagePumpType: MessagePumpType.Proactor);
         var factory2 = new MockChannel2Factory(sub2);
 
@@ -36,11 +36,11 @@ public class CombinedChannelFactoryTest
     [Fact]
     public void When_constructing_a_async_channel_with_combined_factory()
     {
-        var sub1 = new MockSubscription(typeof(string), typeof(MockChannelFactory),
+        var sub1 = new MockSubscription(typeof(MockChannelFactory), dataType: typeof(string),
             messagePumpType: MessagePumpType.Proactor);
         var factory1 = new MockChannelFactory(sub1);
 
-        var sub2 = new MockSubscription(typeof(string), typeof(MockChannel2Factory),
+        var sub2 = new MockSubscription(typeof(MockChannel2Factory), dataType: typeof(string),
             messagePumpType: MessagePumpType.Proactor);
         var factory2 = new MockChannel2Factory(sub2);
 
@@ -61,11 +61,11 @@ public class CombinedChannelFactoryTest
     [Fact]
     public async Task When_constructing_a_async_channel_with_combined_factory_async()
     {
-        var sub1 = new MockSubscription(typeof(string), typeof(MockChannelFactory),
+        var sub1 = new MockSubscription(typeof(MockChannelFactory), dataType: typeof(string),
             messagePumpType: MessagePumpType.Proactor);
         var factory1 = new MockChannelFactory(sub1);
 
-        var sub2 = new MockSubscription(typeof(string), typeof(MockChannel2Factory),
+        var sub2 = new MockSubscription(typeof(MockChannel2Factory), dataType: typeof(string),
             messagePumpType: MessagePumpType.Proactor);
         var factory2 = new MockChannel2Factory(sub2);
 
@@ -86,13 +86,14 @@ public class CombinedChannelFactoryTest
     {
         public override Type ChannelFactoryType { get; }
 
-        public MockSubscription(Type dataType, Type channelFactoryType, SubscriptionName? name = null,
-            ChannelName? channelName = null, RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1,
-            TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
+        public MockSubscription(
+           Type channelFactoryType, SubscriptionName? name = null, ChannelName? channelName = null,  
+           RoutingKey? routingKey = null,  Type? dataType = null, Func<Message, Type>? getRequestType = null,
+            int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0, MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null, OnMissingChannel makeChannels = OnMissingChannel.Create,
-            TimeSpan? emptyChannelDelay = null, TimeSpan? channelFailureDelay = null) : base(dataType, name,
-            channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
+            TimeSpan? emptyChannelDelay = null, TimeSpan? channelFailureDelay = null) : base(name,
+            channelName, routingKey, dataType, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
             unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
             channelFailureDelay)
         {

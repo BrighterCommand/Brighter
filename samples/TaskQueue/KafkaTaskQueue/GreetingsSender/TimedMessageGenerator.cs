@@ -36,7 +36,7 @@ namespace GreetingsSender
         {
             _iteration++;
 
-            var greetingEvent = new GreetingEvent{ Id = Id.Random, Greeting = $"Hello # {_iteration}"};
+            var greetingEvent = new GreetingEvent{ Id = Id.Random(), Greeting = $"Hello # {_iteration}"};
             
             processor.Post(greetingEvent);
 

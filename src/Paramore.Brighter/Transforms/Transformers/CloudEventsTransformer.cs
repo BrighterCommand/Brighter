@@ -156,7 +156,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 MessageId = cloudEvents.Id,
                 SpecVersion = cloudEvents.SpecVersion,
                 Source = cloudEvents.Source,
-                Type = cloudEvents.Type,
+                Type = new CloudEventsType(cloudEvents.Type),
                 ContentType = new ContentType(cloudEvents.DataContentType!),
                 DataSchema = cloudEvents.DataSchema,
                 Subject = cloudEvents.Subject,
@@ -205,7 +205,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     private Message WritePublicationHeaders(Message message, Publication publication)
     {
         message.Header.Source = _source ?? publication.Source;
-        message.Header.Type = _type ?? publication.Type;
+        message.Header.Type = _type is not null ? new CloudEventsType(_type) : publication.Type;
         message.Header.DataSchema = _dataSchema ?? publication.DataSchema;
         message.Header.Subject = _subject ?? publication.Subject;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public Message MapToMessage(MyCommand request, Publication publication)
         {
-            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());
+            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), type: publication.Type);
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;

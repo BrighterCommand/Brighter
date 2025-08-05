@@ -78,7 +78,7 @@ while (!cts.IsCancellationRequested)
 await host.StopAsync();
 
 
-public class Greeting() : Event(Id.Random) 
+public class Greeting() : Event(Id.Random()) 
 {
     public string Name { get; set; } = string.Empty;
 }
@@ -105,7 +105,7 @@ public class GreetingMapper : IAmAMessageMapper<Greeting>, IAmAMessageMapperAsyn
         return new Message(new MessageHeader
             {
                 MessageId = request.Id,
-                CorrelationId = Id.Random,
+                CorrelationId = Id.Random(),
                 MessageType = MessageType.MT_EVENT,
                 Topic = publication.Topic!,
             }, 

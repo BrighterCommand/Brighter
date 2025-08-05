@@ -36,7 +36,7 @@ public class AWSValidateMissingTopicTestsAsync
         // act & assert
         await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => 
             await producer.SendAsync(new Message(
-                new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: "plain/text"),
+                new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("plain/text")),
                 new MessageBody("Test"))));
     }
 }

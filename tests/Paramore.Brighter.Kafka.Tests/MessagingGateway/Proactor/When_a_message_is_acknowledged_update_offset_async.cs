@@ -171,11 +171,8 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                 groupId: groupId,
                 offsetDefault: AutoOffsetReset.Earliest,
                 commitBatchSize: 5,
-                numOfPartitions: 1,
-                replicationFactor: 1,
                 messagePumpType: MessagePumpType.Proactor,
-                makeChannels: OnMissingChannel.Create
-            ));
+                numOfPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create));
     }
 
     public void Dispose()

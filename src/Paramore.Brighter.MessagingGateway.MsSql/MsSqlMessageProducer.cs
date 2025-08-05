@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <summary>
         /// Gets the publication used to configure the producer.
         /// </summary>
-        public Publication Publication { get; }
+        public Publication Publication { get; set; }
 
         /// <summary>
         /// Gets or sets the OTel span for writing producer events.
