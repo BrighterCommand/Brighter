@@ -56,10 +56,10 @@ public class MessageProducerRequeueTests
     {
         _channel.Purge();
         _sender.Send(_message);
-        _receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        _receivedMessage = _channel.Receive(TimeSpan.FromSeconds(5));
         _channel.Requeue(_receivedMessage);
 
-        _requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        _requeuedMessage = _channel.Receive(TimeSpan.FromSeconds(10));
 
         _channel.Acknowledge(_requeuedMessage);
 

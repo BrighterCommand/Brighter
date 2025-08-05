@@ -52,15 +52,7 @@ services:
     environment:
       - NAMESRV_ADDR=nameserver:9876
       - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
-    command: >
-      sh -c "
-          echo 'Waiting for broker to be healthy...' &&
-          until curl -s http://broker:10911/ &>/dev/null; do
-            echo 'Broker not fully ready yet, retrying in 60 seconds...'
-            sleep 60
-          done;
-          mqproxy
-      "
+    command: sh mqproxy
     healthcheck: 
       test: [ "CMD", "sh", "-c", "netstat -an | grep 8081" ]
       interval: 5s

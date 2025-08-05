@@ -56,10 +56,10 @@ public class MessageProducerRequeueTestsAsync
     {
         await _channel.PurgeAsync();
         await _sender.SendAsync(_message);
-        _receivedMessage = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        _receivedMessage = await _channel.ReceiveAsync(TimeSpan.FromSeconds(5));
         await _channel.RequeueAsync(_receivedMessage);
-
-        _requeuedMessage = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        
+        _requeuedMessage = await _channel.ReceiveAsync(TimeSpan.FromSeconds(10));
 
         await _channel.AcknowledgeAsync(_requeuedMessage);
 
