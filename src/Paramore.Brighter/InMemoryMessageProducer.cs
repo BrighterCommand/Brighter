@@ -131,8 +131,8 @@ namespace Paramore.Brighter
             var messages = messageBatch!.Messages as Message[] ?? messageBatch.Messages.ToArray();
             foreach (var message in messages)
             {
-                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, instrumentationOptions);
-                bus.Enqueue(message);
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
+                _bus.Enqueue(message);
                 OnMessagePublished?.Invoke(true, message.Id);
             }
 
