@@ -51,13 +51,13 @@ public class OutboxWritingMessageTests
     {
         _outbox = new(Configuration.CreateOutbox());
         var messageHeader = new MessageHeader(
-            messageId:       Id.Random,
+            messageId:       Id.Random(),
             topic:           new RoutingKey("test_topic"),
             messageType:     MessageType.MT_DOCUMENT,
             source:          new Uri("https://source.example.com"),
-            type:            "unit.test.type",
+            type:            new CloudEventsType("unit.test.type"),
             timeStamp:       DateTime.UtcNow.AddDays(-1),
-            correlationId:   Id.Random,
+            correlationId:   Id.Random(),
             replyTo:         new RoutingKey("ReplyTo"),
             contentType:     new ContentType(MediaTypeNames.Text.Plain),
             partitionKey:    Guid.CreateVersion7().ToString(),

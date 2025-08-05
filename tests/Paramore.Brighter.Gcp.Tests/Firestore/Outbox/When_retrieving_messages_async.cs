@@ -18,13 +18,13 @@ public class FetchMessageAsyncTests
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
-            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random(), routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageDispatched = new Message(
-            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random(), routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
         _messageUnDispatched = new Message(
-            new MessageHeader(Id.Random, routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Id.Random(), routingKey, MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
     }
 

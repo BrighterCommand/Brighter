@@ -1395,11 +1395,15 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                 [nameof(MessageHeader.Source)] = new Value { StringValue = message.Header.Source.ToString() },
                 [nameof(MessageHeader.Topic)] = new Value { StringValue = message.Header.Topic.Value },
                 [nameof(MessageHeader.TimeStamp)] = new Value { TimestampValue = Timestamp.FromDateTimeOffset(message.Header.TimeStamp) },
-                [nameof(MessageHeader.Type)] = new Value { StringValue = message.Header.Type },
                 [nameof(Message.Body)] = new Value { BytesValue = ByteString.CopyFrom(message.Body.Bytes) },
                 [nameof(MessageHeader.ContentType)] = new Value { StringValue = message.Header.ContentType.ToString() }
             } 
         };
+
+        if (message.Header.Type != CloudEventsType.Empty)
+        {
+            doc.Fields[nameof(MessageHeader.Type)] = new Value { StringValue = message.Header.Type };
+        }
 
         if (message.Header.Bag.Count > 0)
         {
@@ -1467,8 +1471,13 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         var specVersion = document.Fields[nameof(MessageHeader.SpecVersion)].StringValue;
         var topic = new RoutingKey(document.Fields[nameof(MessageHeader.Topic)].StringValue);
         var timeStamp = document.Fields[nameof(MessageHeader.TimeStamp)].TimestampValue.ToDateTimeOffset();
-        var type = document.Fields[nameof(MessageHeader.Type)].StringValue;
         var body = document.Fields[nameof(Message.Body)].BytesValue.ToByteArray();
+        
+        var type = CloudEventsType.Empty;
+        if (document.Fields.TryGetValue(nameof(MessageHeader.Type), out var typeValue))
+        {
+            type = new CloudEventsType(typeValue.StringValue);
+        }
         
         var bag = new Dictionary<string, object>();
         if (document.Fields.TryGetValue(nameof(MessageHeader.Bag), out var bagValue))

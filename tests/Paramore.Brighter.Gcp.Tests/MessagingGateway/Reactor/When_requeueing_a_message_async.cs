@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;

@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// <summary>
 /// The Google Cloud PubSub producer
 /// </summary>
-public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync, IAmABulkMessageProducerAsync
+public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync 
 {
     /// <inheritdoc />
     public Publication Publication => _publication;
@@ -43,40 +43,6 @@ public class GcpMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerS
         {
             _topicName = TopicName.FromProjectTopic(publication.TopicAttributes?.ProjectId ?? connection.ProjectId,
                 publication.TopicAttributes?.Name ?? publication.Topic!.Value);
-        }
-    }
-
-    /// <inheritdoc />
-    public async IAsyncEnumerable<Id[]> SendAsync(IEnumerable<Message> messages,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var msg = messages.ToArray();
-        if (msg.Length == 0)
-        {
-            yield break;
-        }
-
-        var client = await _connection.CreatePublisherServiceApiClientAsync();
-        
-        foreach (var chuck in msg.Chunk(_publication.BatchSize))
-        {
-            var pubSubMessages = new List<PubsubMessage>();
-            foreach (var message in chuck)
-            {
-                pubSubMessages.Add(Parser.ToPubSubMessage(message));
-                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message, _instrumentation);
-            }
-
-            await client.PublishAsync(
-                new PublishRequest { TopicAsTopicName = _topicName, Messages = { pubSubMessages } },
-                CallSettings.FromCancellationToken(cancellationToken));
-
-            yield return chuck.Select(x => x.Id).ToArray();
-
-            if (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
         }
     }
 

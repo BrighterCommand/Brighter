@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Paramore.Brighter.Outbox.Firestore;
 
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
@@ -38,7 +37,7 @@ public class OutboxMessageAlreadyExistsTests
     {
         _outbox = new (Configuration.CreateOutbox());
         _messageEarliest = new Message(
-            new MessageHeader(Id.Random, new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
+            new MessageHeader(Id.Random(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
             new MessageBody("message body")
         );
         _outbox.Add(_messageEarliest, new RequestContext());

@@ -28,13 +28,13 @@ public class GcpMessageProducerFactory : GcpPubSubMessageGateway, IAmAMessagePro
     }
 
     /// <inheritdoc />
-    public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+    public Dictionary<ProducerKey, IAmAMessageProducer> Create()
         => BrighterAsyncContext.Run(async () => await CreateAsync());
 
     /// <inheritdoc />
-    public async Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+    public async Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
     {
-        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+        var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
 
         foreach (var publication in _publications)
         {
@@ -50,7 +50,7 @@ public class GcpMessageProducerFactory : GcpPubSubMessageGateway, IAmAMessagePro
             }
 
             await EnsureTopicExistAsync(publication.TopicAttributes, publication.MakeChannels);
-            producers[publication.Topic] = new GcpMessageProducer(_connection, publication, _instrumentation ?? InstrumentationOptions.None);
+            producers[new ProducerKey(publication.Topic, publication.Type)] = new GcpMessageProducer(_connection, publication, _instrumentation ?? InstrumentationOptions.None);
         }
 
         return producers;

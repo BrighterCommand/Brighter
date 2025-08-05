@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net.Mime;
 using Google.Cloud.PubSub.V1;
 using Google.Protobuf;
@@ -165,14 +164,14 @@ internal static class Parser
         return string.Empty;
     }
 
-    private static string ReadType(MapField<string, string> attributes)
+    private static CloudEventsType ReadType(MapField<string, string> attributes)
     {
         if (attributes.TryGetValue(HeaderNames.Type, out var type))
         {
-            return type;
+            return new CloudEventsType(type);
         }
 
-        return string.Empty;
+        return CloudEventsType.Empty;
     }
 
     private static Uri? ReadSource(MapField<string, string> attributes)
@@ -216,12 +215,12 @@ internal static class Parser
         headers.Add(HeaderNames.MessageType, message.Header.MessageType.ToString());
         headers.Add(HeaderNames.SpecVersion, message.Header.SpecVersion);
         headers.Add(HeaderNames.Source, message.Header.Source.ToString());
-        headers.Add(HeaderNames.Type, message.Header.Type);
         headers.Add(HeaderNames.Timestamp, message.Header.TimeStamp.ToRfc3339());
+        headers.Add(HeaderNames.ContentType, message.Header.ContentType.ToString());
 
-        if (message.Header.ContentType != null )
+        if (message.Header.Type != CloudEventsType.Empty)
         {
-            headers.Add(HeaderNames.ContentType, message.Header.ContentType.ToString());
+            headers.Add(HeaderNames.Type, message.Header.Type);
         }
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))

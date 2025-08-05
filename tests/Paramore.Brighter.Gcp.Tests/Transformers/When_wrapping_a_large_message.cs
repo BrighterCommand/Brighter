@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Google.Apis.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.Observability;

@@ -188,7 +188,7 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
 
         if (subscription.DeadLetter != null)
         {
-            await EnsureSubscriptionExistsAsync(new GcpSubscription(subscription.DataType,
+            await EnsureSubscriptionExistsAsync(new GcpSubscription(
                 subscriptionName: new SubscriptionName($"dlq-{subscription.Name.Value}"),
                 channelName: subscription.DeadLetter.Subscription,
                 routingKey: subscription.DeadLetter.TopicName,

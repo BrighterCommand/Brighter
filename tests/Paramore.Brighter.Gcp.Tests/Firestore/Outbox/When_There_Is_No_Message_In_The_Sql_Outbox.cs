@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Paramore.Brighter.Outbox.Firestore;
 
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
@@ -32,7 +31,7 @@ namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 public class OutboxEmptyStoreTests
 {
     private readonly Message _messageEarliest = new(
-        new MessageHeader(Id.Random, new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
+        new MessageHeader(Id.Random(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
         new MessageBody("message body")
     );
     private readonly FirestoreOutbox _outbox = new (Configuration.CreateOutbox());

@@ -32,15 +32,15 @@ namespace Paramore.Brighter.Gcp.Tests.Firestore.Outbox;
 [Trait("Category", "Firestore")]
 public class OutboxDeletingMessagesTests
 {
-    private readonly Message _firstMessage = new(new MessageHeader(Id.Random, new RoutingKey("Test"),
+    private readonly Message _firstMessage = new(new MessageHeader(Id.Random(), new RoutingKey("Test"),
             MessageType.MT_COMMAND,
             timeStamp: DateTime.UtcNow.AddHours(-3)), new MessageBody("Body")
     );
-    private readonly Message _secondMessage = new(new MessageHeader(Id.Random, new RoutingKey("Test2"),
+    private readonly Message _secondMessage = new(new MessageHeader(Id.Random(), new RoutingKey("Test2"),
             MessageType.MT_COMMAND,
             timeStamp: DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2")
     );
-    private readonly Message _thirdMessage = new(new MessageHeader(Id.Random, new RoutingKey("Test3"),
+    private readonly Message _thirdMessage = new(new MessageHeader(Id.Random(), new RoutingKey("Test3"),
             MessageType.MT_COMMAND,
             timeStamp: DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3")
     );

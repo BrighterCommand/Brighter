@@ -129,11 +129,12 @@ public class GcpSubscription : Subscription
     /// <summary>
     /// Initializes a new instance of the <see cref="GcpSubscription"/> class, configuring base Brighter subscription properties.
     /// </summary>
-    /// <param name="dataType">The type of the message payload.</param>
     /// <param name="subscriptionName">The name of the subscription (logical name in Brighter).</param>
     /// <param name="channelName">The name of the channel (often corresponds to the physical Pub/Sub subscription ID).</param>
     /// <param name="routingKey">The routing key (often corresponds to the Pub/Sub topic ID).</param>
     /// <param name="bufferSize">The size of the buffer for messages read from the channel.</param>
+    /// <param name="requestType">The <see cref="Type"/> of the data that this subscription handles.</param>
+    /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="requestType"/> if null</param>
     /// <param name="noOfPerformers">The number of parallel performers (message processors) to run.</param>
     /// <param name="timeOut">The timeout for channel operations (in milliseconds).</param>
     /// <param name="requeueCount">The number of times to requeue a message before discarding (handled by Brighter, distinct from Pub/Sub dead-lettering).</param>
@@ -164,8 +165,8 @@ public class GcpSubscription : Subscription
     /// during channel provisioning (<paramref name="makeChannels"/>  = <see cref="OnMissingChannel.Create"/> or <see cref="OnMissingChannel.Validate"/>)
     /// or by the <see cref="GcpConsumerFactory"/> when creating the consumer.
     /// </remarks>
-    public GcpSubscription(Type dataType,  SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
-        RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
+    public GcpSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey, 
+        Type? requestType = null, Func<Message, Type>? getRequestType = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
@@ -175,7 +176,7 @@ public class GcpSubscription : Subscription
         bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
         ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null, TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null) 
-        : base(dataType, subscriptionName, channelName, routingKey, bufferSize,
+        : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
         noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
         makeChannels, emptyChannelDelay, channelFailureDelay)
     {
@@ -213,6 +214,7 @@ public class GcpSubscription<T> : GcpSubscription
     /// <param name="subscriptionName">The name of the subscription (logical name in Brighter).</param>
     /// <param name="channelName">The name of the channel (often corresponds to the physical Pub/Sub subscription ID).</param>
     /// <param name="routingKey">The routing key (often corresponds to the Pub/Sub topic ID).</param>
+    /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="requestType"/> if null</param>
     /// <param name="bufferSize">The size of the buffer for messages read from the channel.</param>
     /// <param name="noOfPerformers">The number of parallel performers (message processors) to run.</param>
     /// <param name="timeOut">The timeout for channel operations (in milliseconds).</param>
@@ -244,8 +246,8 @@ public class GcpSubscription<T> : GcpSubscription
     /// during channel provisioning (<paramref name="makeChannels"/>  = <see cref="OnMissingChannel.Create"/> or <see cref="OnMissingChannel.Validate"/>)
     /// or by the <see cref="GcpConsumerFactory"/> when creating the consumer.
     /// </remarks>
-    public GcpSubscription(SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
-        RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
+    public GcpSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey, 
+        Func<Message, Type>? getRequestType = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
@@ -255,7 +257,7 @@ public class GcpSubscription<T> : GcpSubscription
         bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
         ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null, TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null)
-        : base(typeof(T), subscriptionName, channelName, routingKey, bufferSize,
+        : base(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, projectId, topicAttributes,
             ackDeadlineSeconds, retainAckedMessages, messageRetentionDuration, labels, enableMessageOrdering, 

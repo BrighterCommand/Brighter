@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 
-using System;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Firestore;
@@ -40,7 +39,7 @@ public class InboxEmptyWhenSearchedTests
     [Fact]
     public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Get()
     {
-        string commandId = Id.Random;
+        string commandId = Uuid.NewAsString();
         var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(commandId, ContextKey, null));
 
         Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
@@ -49,7 +48,7 @@ public class InboxEmptyWhenSearchedTests
     [Fact]
     public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Exists()
     {
-        string commandId = Id.Random;
+        string commandId = Uuid.NewAsString();
         Assert.False(_inbox.Exists<MyCommand>(commandId, ContextKey, null));
     }
 }

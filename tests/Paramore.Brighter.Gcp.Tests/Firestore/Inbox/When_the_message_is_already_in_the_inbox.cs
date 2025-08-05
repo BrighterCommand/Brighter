@@ -23,8 +23,6 @@ THE SOFTWARE. */
 
 #endregion
 
-
-using System;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.Firestore;
 
@@ -35,7 +33,7 @@ public class InboxDuplicateMessageTests
 {
     private readonly FirestoreInbox _inbox = new (Configuration.CreateInbox());
     private readonly MyCommand _raisedCommand = new() { Value = "Test" };
-    private readonly string _contextKey = Id.Random;
+    private readonly string _contextKey = Uuid.NewAsString();
 
     [Fact]
     public void When_The_Message_Is_Already_In_The_Inbox()
