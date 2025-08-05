@@ -854,7 +854,7 @@ namespace Paramore.Brighter
 
                         foreach (var batch in bulkMessageProducer.CreateBatches(messages))
                         {
-                            var sent = await RetryAsync(
+                            var sent = await ExecuteWithResiliencePipelineAsync(
                                     async _ => await bulkMessageProducer.SendAsync(batch, cancellationToken)
                                         .ConfigureAwait(continueOnCapturedContext),
                                     requestContext,
@@ -867,7 +867,7 @@ namespace Paramore.Brighter
                             {
                                 foreach (var successfulMessage in batch.Ids())
                                 {
-                                    await RetryAsync(async _ =>
+                                    await ExecuteWithResiliencePipelineAsync(async _ =>
                                             await _asyncOutbox.MarkDispatchedAsync(
                                                 successfulMessage, requestContext, _timeProvider.GetUtcNow(),
                                                 cancellationToken: cancellationToken
