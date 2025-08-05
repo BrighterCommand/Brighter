@@ -77,25 +77,11 @@ namespace Paramore.Brighter.Extensions.Hosting
 
                     if (_options.UseBulk)
                     {
-                        if (outboxAsync != null)
-                        {
-                            await outBoxSweeper.SweepAsyncOutboxAsync();
-                        }
-                        else
-                        {
-                            outBoxSweeper.SweepAsyncOutbox();
-                        }
+                        await SweepInBulk(outboxAsync, outBoxSweeper);
                     }
                     else
                     {
-                        if (outboxAsync != null)
-                        {
-                            await outBoxSweeper.SweepAsync();
-                        }
-                        else
-                        {
-                            outBoxSweeper.Sweep();
-                        }
+                        await SweepWithoutBulk(outboxAsync, outBoxSweeper);
                     }
                 }
                 catch (Exception e)
@@ -115,6 +101,30 @@ namespace Paramore.Brighter.Extensions.Hosting
             }
             
             s_logger.LogDebug("Outbox Sweeper sleeping");
+        }
+
+        private static async Task SweepWithoutBulk(IAmAnOutboxAsync<Message> outboxAsync, OutboxSweeper outBoxSweeper)
+        {
+            if (outboxAsync != null)
+            {
+                await outBoxSweeper.SweepAsync();
+            }
+            else
+            {
+                outBoxSweeper.Sweep();
+            }
+        }
+
+        private static async Task SweepInBulk(IAmAnOutboxAsync<Message> outboxAsync, OutboxSweeper outBoxSweeper)
+        {
+            if (outboxAsync != null)
+            {
+                await outBoxSweeper.SweepAsyncOutboxAsync();
+            }
+            else
+            {
+                outBoxSweeper.SweepAsyncOutbox();
+            }
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
