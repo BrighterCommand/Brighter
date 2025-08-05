@@ -40,14 +40,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
         private IEnumerable<Message> _messages;
-        private readonly PostgreSqlOutboxAsync _sqlOutboxAsync;
+        private readonly PostgreSqlOutbox _sqlOutbox;
 
         public PostgreSqlOutboxRangeRequestAsyncTests()
         {
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxAsync = new PostgreSqlOutboxAsync(_postgresSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
         }
 
         [Fact]
@@ -57,13 +57,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
             
-            await _sqlOutboxAsync.AddAsync(messageEarliest);
+            await _sqlOutbox.AddAsync(messageEarliest);
             await Task.Delay(100);
-            await _sqlOutboxAsync.AddAsync(message1);
+            await _sqlOutbox.AddAsync(message1);
             await Task.Delay(100);
-            await _sqlOutboxAsync.AddAsync(message2);
+            await _sqlOutbox.AddAsync(message2);
 
-            _messages = await _sqlOutboxAsync.GetAsync(1, 3);
+            _messages = await _sqlOutbox.GetAsync(1, 3);
 
             //should fetch 1 message
             _messages.Should().HaveCount(1);

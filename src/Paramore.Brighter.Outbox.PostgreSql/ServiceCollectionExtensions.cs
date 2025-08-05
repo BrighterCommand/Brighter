@@ -26,10 +26,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IPostgreSqlConnectionProvider), connectionProvider, serviceLifetime));
             }
 
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildPostgreSqlOutboxSync, serviceLifetime));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildPostgreSqlOutboxSync, serviceLifetime));
-            // TODO: leave just one postgres outbox implementation for both sync and async interfaces
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildPostgreSqlOutboxAsync, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildPostgreSqlOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildPostgreSqlOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildPostgreSqlOutbox, serviceLifetime));
 
             return brighterBuilder;
         }
@@ -62,20 +61,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return brighterBuilder;
         }
 
-        private static PostgreSqlOutboxSync BuildPostgreSqlOutboxSync(IServiceProvider provider)
+        private static PostgreSqlOutbox BuildPostgreSqlOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<PostgreSqlOutboxConfiguration>();
             var connectionProvider = provider.GetService<IPostgreSqlConnectionProvider>();
 
-            return new PostgreSqlOutboxSync(config, connectionProvider);
-        }
-
-        private static PostgreSqlOutboxAsync BuildPostgreSqlOutboxAsync(IServiceProvider provider)
-        {
-            var config = provider.GetService<PostgreSqlOutboxConfiguration>();
-            var connectionProvider = provider.GetService<IPostgreSqlConnectionProvider>();
-
-            return new PostgreSqlOutboxAsync(config, connectionProvider);
+            return new PostgreSqlOutbox(config, connectionProvider);
         }
     }
 }
