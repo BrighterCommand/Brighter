@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
@@ -117,27 +116,35 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Send messages to a broker; in this case an <see cref="InternalBus"/> 
+        /// Sends a batch of messages.
         /// </summary>
-        /// <param name="messages">The list of messages to send</param>
-        /// <param name="cancellationToken">A cancellation token to end the operation</param>
-        /// <returns></returns>
+        /// <param name="batch">A batch of messages to send</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <exception cref="NotImplementedException"></exception>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async IAsyncEnumerable<Id[]> SendAsync(
-            IEnumerable<Message> messages,
-            [EnumeratorCancellation] CancellationToken cancellationToken
-            )
+        public Task SendAsync(IAmAMessageBatch batch, CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
-            var msgs = messages as Message[] ?? messages.ToArray();
-            foreach (var msg in msgs)
+            if (batch is not MessageBatch messageBatch)
+                throw new NotImplementedException($"{nameof(SendAsync)} only supports ${typeof(MessageBatch)}");
+
+            var messages = messageBatch!.Messages as Message[] ?? messageBatch.Messages.ToArray();
+            foreach (var message in messages)
             {
-                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg, _instrumentationOptions);
-                _bus.Enqueue(msg);
-                OnMessagePublished?.Invoke(true, msg.Id);
-                yield return [msg.Id];
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
+                _bus.Enqueue(message);
+                OnMessagePublished?.Invoke(true, message.Id);
             }
+
+            return Task.CompletedTask;
         }
+
+        /// <summary>
+        /// Creates message batches
+        /// </summary>
+        /// <param name="messages">A collection of messages to create batches for</param>
+        public IEnumerable<IAmAMessageBatch> CreateBatches(IEnumerable<Message> messages) 
+            => [new MessageBatch(messages)];
 
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/>

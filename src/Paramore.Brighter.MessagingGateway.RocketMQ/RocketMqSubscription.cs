@@ -40,10 +40,11 @@ public class RocketSubscription : Subscription
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscription"/> class.
     /// </summary>
-    /// <param name="dataType">Type of the data.</param>
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+    /// <param name="requestType">The <see cref="Type"/> of the data that this subscription handles.</param>
+    /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="RequestType"/> if null</param>
     /// <param name="consumerGroup">What is the id of the consumer group that this consumer belongs to</param>
     /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
     /// <param name="noOfPerformers">The no of threads reading this channel.</param>
@@ -59,10 +60,11 @@ public class RocketSubscription : Subscription
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     /// <param name="receiveMessageTimeout">How long it will wait to receive a message.</param>
     /// <param name="invisibilityTimeout">How long the RocketMQ should wait before retry.</param>
-    public RocketSubscription(Type dataType,
-        SubscriptionName? subscriptionName = null,
-        ChannelName? channelName = null,
-        RoutingKey? routingKey = null,
+    public RocketSubscription(SubscriptionName subscriptionName,
+        ChannelName channelName,
+        RoutingKey routingKey,
+        Type? requestType = null,
+        Func<Message, Type>? getRequestType = null,
         string? consumerGroup = null,
         int bufferSize = 1,
         int noOfPerformers = 1,
@@ -77,8 +79,8 @@ public class RocketSubscription : Subscription
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null,
         TimeSpan? receiveMessageTimeout = null,
-        TimeSpan? invisibilityTimeout = null) : base(dataType, subscriptionName, channelName, routingKey, bufferSize,
-        noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
+        TimeSpan? invisibilityTimeout = null) : base(subscriptionName, channelName, routingKey, requestType, getRequestType,
+        bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
         makeChannels, emptyChannelDelay, channelFailureDelay)
     {
         ConsumerGroup = consumerGroup ?? string.Empty;
@@ -102,6 +104,7 @@ public class RocketMqSubscription<T> : RocketSubscription
     /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
     /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
     /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+    /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="RequestType"/> if null</param>
     /// <param name="consumerGroup">What is the id of the consumer group that this consumer belongs to</param>
     /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
     /// <param name="noOfPerformers">The no of threads reading this channel.</param>
@@ -117,16 +120,16 @@ public class RocketMqSubscription<T> : RocketSubscription
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     /// <param name="receiveMessageTimeout">How long it will wait to receive a message.</param>
     /// <param name="invisibilityTimeout">How long the RocketMQ should wait before retry.</param>
-    public RocketMqSubscription(SubscriptionName? subscriptionName = null, ChannelName? channelName = null,
-        RoutingKey? routingKey = null, string? consumerGroup = null, int bufferSize = 1, int noOfPerformers = 1,
+    public RocketMqSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey,
+        Func<Message, Type>? getRequestType = null, string? consumerGroup = null, int bufferSize = 1, int noOfPerformers = 1,
         TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0, MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null, OnMissingChannel makeChannels = OnMissingChannel.Create,
         FilterExpression? filter = null, TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null, TimeSpan? receiveMessageTimeout = null,
-        TimeSpan? invisibilityTimeout = null) : base(typeof(T), subscriptionName, channelName, routingKey, consumerGroup, bufferSize,
-        noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
-        makeChannels, filter, emptyChannelDelay, channelFailureDelay, receiveMessageTimeout,
+        TimeSpan? invisibilityTimeout = null) : base(subscriptionName, channelName, routingKey, typeof(T),  getRequestType,
+        consumerGroup, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit,
+        messagePumpType, channelFactory, makeChannels, filter, emptyChannelDelay, channelFailureDelay, receiveMessageTimeout,
         invisibilityTimeout)
     {
     }

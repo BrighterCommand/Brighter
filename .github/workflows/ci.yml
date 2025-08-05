@@ -546,7 +546,6 @@ jobs:
       - name: Azure Tests
         run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
         
-# MongoDB tool too long time to run
   mongodb-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -579,3 +578,66 @@ jobs:
       - name: MongoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
+#  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
+#  rocketmq-ci:
+#    runs-on: ubuntu-latest
+#    timeout-minutes: 5
+#    needs: [build]
+#    services:
+#      rocketmq-namesrv:
+#        image: apache/rocketmq
+#        ports:
+#          - 9876:9876
+#        options: >-
+#          --name rmqnamesrv
+#          --hostname rmqnamesrv
+#          --health-cmd "netstat -an | grep 9876"
+#          --health-interval 20s
+#          --health-timeout 10s
+#          --health-retries 10
+#          
+#      rocketmq-broker:
+#        image: apache/rocketmq
+#        ports:
+#          - 10909:10909
+#          - 10911:10911
+#          - 10912:10912
+#        options: >-
+#          --name rmqbroker
+#          --hostname rmqbroker
+#          --link rmqnamesrv:rmqnamesrv
+#          --health-cmd "netstat -an | grep 10911"
+#          --health-interval 20s
+#          --health-timeout 10s
+#          --health-retries 10
+#        env:
+#          NAMESRV_ADDR: "rocketmq-namesrv:9876"
+#          BROKER_CLUSTER_NAME: "DefaultCluster"
+#          BROKER_NAME: "broker-a"
+#          BROKER_ID: "0"
+#          AUTO_CREATE_TOPIC_ENABLE: "true"  # Auto-create topics
+#          
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0 # Required to fetch the Git tags
+#          filter: tree:0
+#          show-progress: false 
+#          
+#      - name: Wait for RocketMQ to be ready
+#        run: |
+#          sleep 15
+#          echo "RocketMQ should be ready now"
+#          
+#      - name: Setup dotnet
+#        uses: actions/setup-dotnet@v4
+#        with:
+#          dotnet-version: |
+#            8.0.x
+#            9.0.x
+#            
+#      - name: Install dependencies
+#        run: dotnet restore
+#        
+#      - name: RocketMQ Tests
+#        run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n

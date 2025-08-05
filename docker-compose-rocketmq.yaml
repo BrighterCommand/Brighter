@@ -53,6 +53,11 @@ services:
       - NAMESRV_ADDR=nameserver:9876
       - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
     command: sh mqproxy
+    healthcheck: 
+      test: [ "CMD", "sh", "-c", "netstat -an | grep 8081" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
     
   # Service to create the RocketMQ topic
   create-topic:
