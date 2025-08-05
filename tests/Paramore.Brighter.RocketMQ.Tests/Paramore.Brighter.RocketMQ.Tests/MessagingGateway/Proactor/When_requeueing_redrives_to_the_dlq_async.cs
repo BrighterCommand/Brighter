@@ -61,7 +61,7 @@ public class MessageProducerDlqTestsAsync
         for (var i = 0; i < 32; i++)
         {
             receivedMessage = await _channel.ReceiveAsync(TimeSpan.FromSeconds(1));
-            if (receivedMessage.Header.MessageType == MessageType.MT_NONE)
+            if (receivedMessage.Header.MessageType != MessageType.MT_NONE)
             {
                 break;
             }

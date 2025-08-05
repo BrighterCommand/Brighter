@@ -58,10 +58,19 @@ public class MessageProducerRequeueTestsAsync
         await _sender.SendAsync(_message);
         _receivedMessage = await _channel.ReceiveAsync(TimeSpan.FromSeconds(5));
         await _channel.RequeueAsync(_receivedMessage);
-        
-        _requeuedMessage = await _channel.ReceiveAsync(TimeSpan.FromSeconds(10));
 
-        await _channel.AcknowledgeAsync(_requeuedMessage);
+        for (var i = 0; i < 10; i++)
+        {
+            _requeuedMessage = await _channel.ReceiveAsync(TimeSpan.FromSeconds(10));
+            if (_requeuedMessage.Header.MessageType == MessageType.MT_NONE)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                continue;
+            }
+            
+            await _channel.AcknowledgeAsync(_requeuedMessage);
+            break;
+        }
 
         Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
     }
