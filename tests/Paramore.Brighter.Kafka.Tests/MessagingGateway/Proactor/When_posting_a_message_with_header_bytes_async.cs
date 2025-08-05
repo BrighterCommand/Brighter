@@ -60,11 +60,8 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: groupId,
-                    numOfPartitions: 1,
-                    replicationFactor: 1,
                     messagePumpType: MessagePumpType.Proactor,
-                    makeChannels: OnMissingChannel.Create
-                ));
+                    numOfPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create));
 
         var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
         ISchemaRegistryClient schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);

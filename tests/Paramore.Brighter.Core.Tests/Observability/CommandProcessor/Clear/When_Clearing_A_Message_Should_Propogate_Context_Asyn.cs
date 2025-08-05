@@ -60,20 +60,20 @@ public class AsyncMessageDispatchPropogateContextTests
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, InstrumentationOptions.All)
-        {
-            Publication =
+        var type = new CloudEventsType("io.goparamore.brighter.myevent");
+        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+            new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = _routingKey,
-                Type = nameof(MyEvent),
+                Type = type,
             }
-        };
+        );
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer>
         {
-            {_routingKey, messageProducer}
+            {new ProducerKey(_routingKey, type) , messageProducer}
         });
         
          _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(

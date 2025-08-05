@@ -168,10 +168,9 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider, InstrumentationOptions.All)
-                {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
-                } },
+                { 
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider,  new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
+                },
             });
 
         var timeProvider = new FakeTimeProvider();
@@ -222,10 +221,9 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, InstrumentationOptions.All)
-                {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
-                } },
+                { 
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
+                 },
             });
 
         var tracer = new BrighterTracer(timeProvider);
@@ -275,10 +273,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, InstrumentationOptions.All)
-                {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
-                } },
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, new Publication{RequestType = typeof(MyCommand), Topic = routingKey})} 
             });
 
         var tracer = new BrighterTracer(timeProvider);
@@ -332,10 +327,9 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, InstrumentationOptions.All)
-                {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
-                } },
+                { 
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider,  new Publication{RequestType = typeof(MyCommand), Topic = routingKey} )
+                 },
             });
 
         var tracer = new BrighterTracer(timeProvider);

@@ -52,7 +52,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAMessageTransformerFactory? _messageTransformerFactory;
         private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync? _messageTransformerFactoryAsync;
-        private readonly IAmARequestContextFactory? _requestContextFactory;
+        private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmABrighterTracer? _tracer;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly ConcurrentDictionary<int, Task> _tasks;
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.ServiceActivator
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
-            _requestContextFactory = requestContextFactory;
+            _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
 
@@ -361,51 +361,26 @@ namespace Paramore.Brighter.ServiceActivator
         private Consumer CreateConsumer(Subscription subscription, int? consumerNumber)
         {
             Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name);
-            var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
+                
             if (subscription.MessagePumpType == MessagePumpType.Reactor)
             {
-                var types = new[]
-                {
-                    typeof(IAmACommandProcessor), typeof(Subscription),  typeof(IAmAMessageMapperRegistry),
-                    typeof(IAmAMessageTransformerFactory), typeof(IAmARequestContextFactory), typeof(IAmABrighterTracer), 
-                    typeof(InstrumentationOptions)
-                };
+                if (_messageMapperRegistry is null)
+                    throw new ConfigurationException("You must provide a message mapper registry for the Dispatcher to work");
                 
-                var consumerFactoryCtor = consumerFactoryType.GetConstructor(
-                    BindingFlags.Instance | BindingFlags.Public, null,
-                    CallingConventions.HasThis, types, null
-                );
-                    
-                var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object?[]
-                {
-                    CommandProcessor, subscription, _messageMapperRegistry,  _messageTransformerFactory,
-                    _requestContextFactory, _tracer, _instrumentationOptions
-                    
-                })!;   
+                var consumerFactory = new ConsumerFactory(CommandProcessor, subscription, _messageMapperRegistry, _messageTransformerFactory, 
+                    _requestContextFactory, _tracer, _instrumentationOptions);
 
-                return consumerFactory?.Create()!;
+                return consumerFactory.Create();
             }
             else
             {
-                 var types = new[]
-                 {
-                     typeof(IAmACommandProcessor),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), 
-                     typeof(IAmAMessageTransformerFactoryAsync), typeof(IAmARequestContextFactory), typeof(IAmABrighterTracer), 
-                     typeof(InstrumentationOptions)
-                 };
-                
-                 var consumerFactoryCtor = consumerFactoryType.GetConstructor(
-                         BindingFlags.Instance | BindingFlags.Public, null,
-                         CallingConventions.HasThis, types, null
-                     );
-                     
-                 var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object?[]
-                 {
-                     CommandProcessor,  subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync, 
-                     _requestContextFactory, _tracer, _instrumentationOptions
-                 })!;
+                if (_messageMapperRegistryAsync is null)
+                    throw new ConfigurationException("You must provide a message mapper registry for the Dispatcher to work");
+                    
+                var consumerFactory = new ConsumerFactory(CommandProcessor, subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync, 
+                    _requestContextFactory, _tracer, _instrumentationOptions);
 
-                 return consumerFactory?.Create()!;
+                return consumerFactory.Create();
             }
         }
 

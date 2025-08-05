@@ -218,7 +218,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
         if (!string.IsNullOrEmpty(Source))
             header.Source = new Uri(Source!);
         if (!string.IsNullOrEmpty(EventType))
-            header.Type = EventType!;
+            header.Type = new CloudEventsType(EventType!);
         if (!string.IsNullOrEmpty(SpecVersion))
             header.SpecVersion = SpecVersion;
         if (!string.IsNullOrEmpty(DataSchema))

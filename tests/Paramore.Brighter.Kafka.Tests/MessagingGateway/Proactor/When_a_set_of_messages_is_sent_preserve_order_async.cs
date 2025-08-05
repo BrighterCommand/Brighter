@@ -162,12 +162,9 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
                 routingKey: new RoutingKey(_topic),
                 groupId: _kafkaGroupId,
                 offsetDefault: AutoOffsetReset.Earliest,
-                commitBatchSize:1,
-                numOfPartitions: 1,
-                replicationFactor: 1,
+                commitBatchSize: 1,
                 messagePumpType: MessagePumpType.Proactor,
-                makeChannels: OnMissingChannel.Create
-            ));
+                numOfPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create));
     }
 
     public void Dispose()

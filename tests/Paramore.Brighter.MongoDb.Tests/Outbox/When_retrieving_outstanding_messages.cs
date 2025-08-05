@@ -54,6 +54,22 @@ public class MongoDbFetchOutStandingMessageTests : IDisposable
         Assert.Empty(messagesOver4Hours);
     }
     
+    [Fact]
+    public void When_Retrieving_Not_Dispatched_Messages_With_TrippedTopic()
+    {
+        var context = new RequestContext();
+        _outbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        _outbox.MarkDispatched(_messageDispatched.Id, context);
+        
+        var allUnDispatched = _outbox.OutstandingMessages(TimeSpan.Zero, context, trippedTopics: [new RoutingKey("test_topic")]);
+
+        //Assert
+        Assert.Empty(allUnDispatched);
+        
+        allUnDispatched = _outbox.OutstandingMessages(TimeSpan.Zero, context, trippedTopics: [new RoutingKey("other_topic")]);
+        Assert.Equal(2, allUnDispatched.Count());
+    }
+    
     public void Dispose()
     {
         Configuration.Cleanup(_collection);

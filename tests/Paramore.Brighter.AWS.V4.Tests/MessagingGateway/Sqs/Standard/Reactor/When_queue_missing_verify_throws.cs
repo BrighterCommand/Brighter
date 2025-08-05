@@ -32,7 +32,7 @@ public class AwsValidateMissingTopicTests
 
         //act && assert
         Assert.Throws<QueueDoesNotExistException>(() => producer.Send(new Message(
-            new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: "plain/text"),
+            new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("plain/text")),
             new MessageBody("Test"))));
     }
 }

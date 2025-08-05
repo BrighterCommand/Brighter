@@ -5,7 +5,7 @@ namespace SalutationApp.Requests;
 
 public class GreetingMade : Event
 {
-    public GreetingMade(string greeting) : base(Id.Random)
+    public GreetingMade(string greeting) : base(Id.Random())
     {
         Greeting = greeting;
     }

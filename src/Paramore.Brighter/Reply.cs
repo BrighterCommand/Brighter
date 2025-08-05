@@ -114,7 +114,7 @@ namespace Paramore.Brighter
         /// </remarks>
         public static Id SenderCorrelationIdOrDefault(ReplyAddress? sendersAddress)
         {
-            return sendersAddress is not null ? sendersAddress.CorrelationId: Id.Random;
+            return sendersAddress is not null ? sendersAddress.CorrelationId: Id.Random();
         }
     }
 }

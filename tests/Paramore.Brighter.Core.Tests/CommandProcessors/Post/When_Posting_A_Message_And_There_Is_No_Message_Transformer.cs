@@ -13,8 +13,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class CommandProcessorPostMissingMessageTransformerTests : IDisposable
     {
-        private readonly MyCommand _myCommand = new();
+        private readonly MyCommand _myCommand = new MyCommand();
         private readonly InMemoryOutbox _outbox;
+        private Exception? _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly ProducerRegistry _producerRegistry;
         private readonly IAmABrighterTracer _tracer;
@@ -37,10 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), InstrumentationOptions.All)
-                    {
-                        Publication = {Topic = routingKey, RequestType = typeof(MyCommand) }
-                    }
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication  {Topic = routingKey, RequestType = typeof(MyCommand) })
                 },
             });
          }

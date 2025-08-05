@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
     [Collection("CommandProcessor")]
     public class ControlBusSenderFactoryTests : IDisposable
     {
-        private IAmAControlBusSender _sender;
+        private IAmAControlBusSender? _sender;
         private readonly IAmAControlBusSenderFactory _senderFactory;
         private readonly IAmAnOutboxSync<Message, CommittableTransaction> _outbox;
         private readonly IAmAMessageProducerSync _gateway;
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public ControlBusSenderFactoryTests()
         {
             _outbox = new InMemoryOutbox(TimeProvider.System);
-            _gateway = new InMemoryMessageProducer(new InternalBus(), TimeProvider.System, InstrumentationOptions.All);
+            _gateway = new InMemoryMessageProducer(new InternalBus(), TimeProvider.System);
 
             _senderFactory = new ControlBusSenderFactory();
         }

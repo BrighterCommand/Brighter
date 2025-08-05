@@ -22,7 +22,7 @@ public class AwsAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
     public AwsAssumeInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand{Value = "Test"};
-        var correlationId = Id.Random;
+        var correlationId = Id.Random();
         var replyTo = new RoutingKey("http:\\queueUrl");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

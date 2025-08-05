@@ -33,14 +33,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, InstrumentationOptions.All)
-                    {
-                        Publication =
-                        {
-                            RequestType = typeof(MyEvent),
-                            Topic = routingKey
-                        }
-                    }
+                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -112,14 +105,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, InstrumentationOptions.All)
-                    {
-                        Publication =
-                        {
-                            RequestType = typeof(MyEvent),
-                            Topic = routingKey
-                        }
-                    }
+                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -190,14 +176,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, InstrumentationOptions.All)
-                    {
-                        Publication =
-                        {
-                            RequestType = typeof(MyEvent),
-                            Topic = routingKey
-                        }
-                    }
+                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -277,14 +256,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, InstrumentationOptions.All)
-                    {
-                        Publication =
-                        {
-                            RequestType = typeof(MyEvent),
-                            Topic = routingKey
-                        }
-                    }
+                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
