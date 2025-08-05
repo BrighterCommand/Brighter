@@ -53,7 +53,7 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
         
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-        var producer = new InMemoryMessageProducer (_internalBus, _timeProvider, InstrumentationOptions.All) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
+        var producer = new InMemoryMessageProducer (_internalBus, _timeProvider) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
             .AddBrighterDefault();
