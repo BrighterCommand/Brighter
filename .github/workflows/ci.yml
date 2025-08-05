@@ -578,6 +578,55 @@ jobs:
       - name: MongoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
+  gcp-emulator-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    services:
+      spanner-emulator:
+        # Use the official Spanner emulator Docker image.
+        image: gcr.io/cloud-spanner-emulator/emulator:latest
+        # Map the gRPC and REST ports. 9010 is the gRPC port.
+        ports:
+          # Map the default gRPC port
+          - 9010:9010
+          # Map the default HTTP/REST port (optional, depending on client)
+          - 9020:9020
+        # Wait for the service to be ready before proceeding to the steps.
+        options: >-
+          --health-cmd "grpc_health_probe -addr=localhost:9010"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to fetch the Git tags
+          filter: tree:0
+          show-progress: false 
+          
+      - name: Start Firestore
+        uses: mickfeech/firestore-emulator-action@0.0.12
+        with:
+          fireStoreProjectID: brighter-test 
+          
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore  
+
+      - name: GCP Tests
+        env:
+          SPANNER_EMULATOR_HOST: "spanner-emulator:9010"
+          FIRESTORE_EMULATOR_HOST: localhost:8080
+          GOOGLE_CLOUD_PROJECT: brighter-test
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+
 #  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
 #    runs-on: ubuntu-latest

@@ -26,7 +26,7 @@ public static class GatewayFactory
 
     public static string GetProjectId()
     {
-        return Environment.GetEnvironmentVariable("GCP_PROJECT_ID")!;
+        return Environment.GetEnvironmentVariable("GOOGLE_CLOUD_PROJECT")!;
     }
     
     public static ICredential GetCredential()
