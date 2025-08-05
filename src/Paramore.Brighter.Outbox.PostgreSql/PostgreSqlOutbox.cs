@@ -29,6 +29,7 @@ using System.Data;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Logging;
@@ -42,6 +43,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     public class PostgreSqlOutbox :
         RelationDatabaseOutboxSync<NpgsqlConnection, NpgsqlCommand, NpgsqlDataReader, NpgsqlParameter>
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
         private readonly IPostgreSqlConnectionProvider _connectionProvider;
         
         /// <summary>
@@ -81,7 +83,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                     {
-                        loggingAction?.Invoke();
+                        s_logger.LogWarning("PostgreSqlOutbox: A duplicate was detected in the batch");
                         return;
                     }
 
@@ -116,7 +118,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                     {
-                        loggingAction?.Invoke();
+                        s_logger.LogWarning("PostgreSqlOutbox: A duplicate was detected in the batch");
                         return;
                     }
 
