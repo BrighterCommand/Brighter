@@ -29,8 +29,15 @@ public static class GatewayFactory
         return Environment.GetEnvironmentVariable("GOOGLE_CLOUD_PROJECT")!;
     }
     
-    public static ICredential GetCredential()
+    public static ICredential? GetCredential()
     {
-        return GoogleCredential.GetApplicationDefault();
+        try
+        {
+            return GoogleCredential.GetApplicationDefault();
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
