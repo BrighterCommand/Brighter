@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         private static PostgreSqlOutbox BuildPostgreSqlOutbox(IServiceProvider provider)
         {
-            var config = provider.GetService<PostgreSqlOutboxConfiguration>();
+            var config = provider.GetRequiredService<PostgreSqlOutboxConfiguration>();
             var connectionProvider = provider.GetService<IPostgreSqlConnectionProvider>();
 
             return new PostgreSqlOutbox(config, connectionProvider);

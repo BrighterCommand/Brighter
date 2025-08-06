@@ -51,18 +51,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
-        public PostgreSqlOutbox(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider) : base(
+        public PostgreSqlOutbox(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null) : base(
             configuration.OutboxTableName, new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
         {
             ContinueOnCapturedContext = false;
-            _connectionProvider = connectionProvider;
+            _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);
         }
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="PostgreSqlOutbox" /> class.
-        /// </summary>
-        /// <param name="configuration">The configuration.</param>
-        public PostgreSqlOutbox(PostgreSqlOutboxConfiguration configuration) : this(configuration, new PostgreSqlNpgsqlConnectionProvider(configuration)) { }
 
         protected override void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<NpgsqlConnection, NpgsqlCommand> commandFunc, Action loggingAction)
         {
