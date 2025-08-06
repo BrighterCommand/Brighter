@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
             
-            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, messageProducer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> {{new (routingKey, cloudEventsType), messageProducer},});
 
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
