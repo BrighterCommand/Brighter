@@ -43,32 +43,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             );
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .RetryAsync();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
                     { _routingKey, messageProducer },
                 });
-
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
-            };
+ 
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
 
             var tracer = new BrighterTracer();
-            _spyOutbox = new SpyOutbox() {Tracer = tracer};
+            _spyOutbox = new SpyOutbox {Tracer = tracer};
             
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(
                 producerRegistry, 
-                policyRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -81,7 +70,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var scheduler = new InMemorySchedulerFactory();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 scheduler,
                 _transactionProvider
@@ -99,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //assert
 
             //message should not be in the outbox
-            Assert.False(_spyOutbox.Messages.Any(m => m.Message.Id == postedMessageId));
+            Assert.DoesNotContain(_spyOutbox.Messages, m => m.Message.Id == postedMessageId);
 
             //message should be in the current transaction
             var transaction = _transactionProvider.GetTransaction();

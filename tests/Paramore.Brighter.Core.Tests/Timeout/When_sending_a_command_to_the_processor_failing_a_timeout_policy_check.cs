@@ -53,7 +53,8 @@ namespace Paramore.Brighter.Core.Tests.Timeout
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
-           _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
+           _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
+               new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
         }
 
         //We have to catch the final exception that bubbles out after retry

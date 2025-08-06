@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
-using Polly;
 using Polly.Registry;
 using Xunit;
 
@@ -17,7 +16,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
-        private Exception? _exception;
 
         public CommandProcessorNoMessageMapperAsyncTests()
         {
@@ -32,15 +30,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
                 null);
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .RetryAsync();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
             
-            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, messageProducer},});
 
             var tracer = new BrighterTracer(timeProvider);
@@ -48,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
-                policyRegistry, 
+                resiliencePipelineRegistry, 
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -59,7 +51,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 new InMemorySchedulerFactory()
             );
@@ -68,8 +61,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         [Fact]
         public async Task When_Posting_A_Message_And_There_Is_No_Message_Mapper_Factory_Async()
         {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
-            Assert.IsType<ArgumentOutOfRangeException>(_exception); 
+            var exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
+            Assert.IsType<ArgumentOutOfRangeException>(exception); 
         }
 
         public void Dispose()

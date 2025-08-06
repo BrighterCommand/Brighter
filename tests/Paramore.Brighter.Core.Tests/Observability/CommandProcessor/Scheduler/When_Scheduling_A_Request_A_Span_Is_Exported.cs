@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
-using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
@@ -18,7 +15,6 @@ using Paramore.Brighter.Scheduler.Handlers;
 using Polly;
 using Polly.Registry;
 using Xunit;
-using MyEvent = Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyEvent;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Scheduler;
 
@@ -67,6 +63,7 @@ public class CommandProcessorSchedulerObservabilityTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             new InMemorySchedulerFactory{TimeProvider = _timeProvider},
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All

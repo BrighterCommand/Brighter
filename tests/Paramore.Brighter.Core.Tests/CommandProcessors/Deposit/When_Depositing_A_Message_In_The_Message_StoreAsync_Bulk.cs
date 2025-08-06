@@ -76,20 +76,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .RetryAsync();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-
-            PolicyRegistry policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
-            };
-
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
@@ -97,12 +83,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                     { _eventTopic, eventMessageProducer }
                 }); 
             
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
+            
             var tracer = new BrighterTracer(new FakeTimeProvider());
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                policyRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -114,7 +103,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 new InMemorySchedulerFactory()
             );
@@ -158,12 +148,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             Assert.Equal(_message.Header.MessageType, depositedPost.Header.MessageType);
 
             //message should correspond to the command
+            Assert.NotNull(depositedPost2);
             Assert.Equal(_message2.Id, depositedPost2.Id);
             Assert.Equal(_message2.Body.Value, depositedPost2.Body.Value);
             Assert.Equal(_message2.Header.Topic, depositedPost2.Header.Topic);
             Assert.Equal(_message2.Header.MessageType, depositedPost2.Header.MessageType);
 
             //message should correspond to the command
+            Assert.NotNull(depositedPost3);
             Assert.Equal(_message3.Id, depositedPost3.Id);
             Assert.Equal(_message3.Body.Value, depositedPost3.Body.Value);
             Assert.Equal(_message3.Header.Topic, depositedPost3.Header.Topic);

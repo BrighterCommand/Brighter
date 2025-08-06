@@ -63,7 +63,8 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _command = new MyCommand {Value = "My Test String"};
 
             _contextKey = typeof(MyStoredCommandHandler).FullName;
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
 
         }
 

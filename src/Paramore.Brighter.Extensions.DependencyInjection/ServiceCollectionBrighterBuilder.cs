@@ -39,7 +39,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceCollectionMessageMapperRegistryBuilder _mapperRegistryBuilder;
         private readonly ServiceCollectionTransformerRegistry _transformerRegistry;
         
+        /// <inheritdoc />
+        [Obsolete("Migrate to ResiliencePolicyRegistry")]
         public IPolicyRegistry<string>? PolicyRegistry { get; set; }
+        
+        /// <inheritdoc />
+        public ResiliencePipelineRegistry<string>? ResiliencePolicyRegistry { get; set; }
 
         /// <summary>
         /// Registers the components of Brighter pipelines
@@ -49,19 +54,23 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="mapperRegistryBuilder">The register for looking up message mappers</param>
         /// <param name="transformerRegistry">The register for transforms</param>
         /// <param name="policyRegistry">The list of policies that we require</param>
+        /// <param name="resiliencePipelineRegistry">The list of resilience pipeline registry that we required</param>
         public ServiceCollectionBrighterBuilder(
             IServiceCollection services,
             ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry,
             ServiceCollectionMessageMapperRegistryBuilder mapperRegistryBuilder,
             ServiceCollectionTransformerRegistry? transformerRegistry = null,
-            IPolicyRegistry<string>? policyRegistry = null
-            )
+            IPolicyRegistry<string>? policyRegistry = null,
+            ResiliencePipelineRegistry<string>? resiliencePipelineRegistry = null)
         {
             Services = services;
             _serviceCollectionSubscriberRegistry = serviceCollectionSubscriberRegistry;
             _mapperRegistryBuilder = mapperRegistryBuilder;
             _transformerRegistry = transformerRegistry ?? new ServiceCollectionTransformerRegistry(services);
+#pragma warning disable CS0618 // Type or member is obsolete
             PolicyRegistry = policyRegistry;
+#pragma warning restore CS0618 // Type or member is obsolete
+            ResiliencePolicyRegistry = resiliencePipelineRegistry;
         }
 
         /// <summary>
@@ -111,6 +120,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 a.FullName?.StartsWith("System.", true, CultureInfo.InvariantCulture) != true);
 
             var assemblies = extraAssemblies !=  null ? appDomainAssemblies.Concat(extraAssemblies) : appDomainAssemblies;
+            excludeDynamicHandlerTypes = excludeDynamicHandlerTypes?.ToList();
+            assemblies = assemblies.ToList();
 
             MapperRegistryFromAssemblies(assemblies, defaultMessageMapper, asyncDefaultMessageMapper);
             HandlersFromAssemblies(assemblies, excludeDynamicHandlerTypes);

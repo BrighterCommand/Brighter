@@ -57,6 +57,7 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new ResiliencePipelineRegistry<string>(),
                 new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);

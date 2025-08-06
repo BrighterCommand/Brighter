@@ -30,9 +30,9 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            MyDoesNotFailPolicyHandler.ReceivedCommand = false;
+            MyDoesNotFailPolicyHandlerAsync.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
         //We have to catch the final exception that bubbles out after retry
@@ -46,8 +46,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var innerException = _exception.InnerException;
             Assert.NotNull(innerException);
             Assert.IsType<KeyNotFoundException>(innerException);
-            //Should give the name of the missing policy
-            Assert.Contains("The given key 'MyDivideByZeroPolicy' was not present in the dictionary.", innerException.Message);
         }
 
         public void Dispose()

@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Policies.Handlers
 {
     /// <summary>
     /// Class ExceptionPolicyHandler.
-    /// The <see cref="UsePolicyAttribute"/> supports the use of <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to provide quality of service around exceptions
+    /// The <see cref="UsePolicyAttribute"/> supports the use of <a href="https://github.com/App-vNext/Polly">Polly</a> to provide quality of service around exceptions
     /// thrown from subsequent steps in the handler pipeline. A Polly Policy can be used to support a Retry or Circuit Breaker approach to exception handling
     /// Policies used by the attribute are identified by a string based key, which is used as a lookup into an <see cref="PolicyRegistry"/> and it is 
     /// assumed that you have registered required policies with a Policy Registry such as <see cref="PolicyRegistry"/> and configured that as a 
@@ -60,7 +60,9 @@ namespace Paramore.Brighter.Policies.Handlers
             
             //we expect the first and only parameter to be a string
             var policies = (List<string>?)initializerList[0] ?? [];
+#pragma warning disable CS0618 // Type or member is obsolete
             policies.Each(p => _policies.Add(Context!.Policies!.Get<Policy>(p)));
+#pragma warning restore CS0618 // Type or member is obsolete
             _initialized = true;
         }
 
