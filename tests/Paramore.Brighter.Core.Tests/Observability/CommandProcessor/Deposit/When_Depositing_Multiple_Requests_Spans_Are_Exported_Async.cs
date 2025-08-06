@@ -70,7 +70,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
-            policyRegistry, 
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
             messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
@@ -85,6 +85,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory(),
             tracer: tracer, 

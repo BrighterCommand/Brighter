@@ -71,6 +71,7 @@ namespace Paramore.Brighter.Policies.Handlers
     /// The handler is injected into the pipeline if the <see cref="TimeoutPolicyAttribute"/>
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
+    [Obsolete("Migrate to UsePolicyAttribute or UseResiliencePipelineAttribute instead")]
     public class TimeoutPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         /// <summary>

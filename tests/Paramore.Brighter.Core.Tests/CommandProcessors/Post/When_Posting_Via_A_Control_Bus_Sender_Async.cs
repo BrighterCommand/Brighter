@@ -8,7 +8,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
-using Polly;
 using Polly.Registry;
 using Xunit;
 
@@ -44,19 +43,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .RetryAsync();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{_routingKey, messageProducer},});
-            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
+            
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
+            
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
-                policyRegistry, 
+                resiliencePipelineRegistry, 
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -66,9 +60,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );
 
             CommandProcessor.ClearServiceBus();
-            CommandProcessor commandProcessor = new CommandProcessor(
+            var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus, 
                 new InMemorySchedulerFactory()
             );

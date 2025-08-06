@@ -7,7 +7,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
-using Polly;
 using Polly.Registry;
 using Xunit;
 
@@ -41,32 +40,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
                     { _routingKey, messageProducer },
                 });
 
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
 
             var tracer = new BrighterTracer();
             _fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                policyRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -78,7 +66,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 requestSchedulerFactory: new InMemorySchedulerFactory()
             );

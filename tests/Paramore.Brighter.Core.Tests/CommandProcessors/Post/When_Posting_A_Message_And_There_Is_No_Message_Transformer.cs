@@ -5,10 +5,7 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
-using Polly;
-using Polly.CircuitBreaker;
 using Polly.Registry;
-using Polly.Retry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
@@ -21,7 +18,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private Exception? _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly ProducerRegistry _producerRegistry;
-        private readonly PolicyRegistry _policyRegistry;
         private readonly IAmABrighterTracer _tracer;
 
         public CommandProcessorPostMissingMessageTransformerTests()
@@ -35,46 +31,36 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var routingKey = new RoutingKey("MyTopic");
             
             _messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
             _messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            RetryPolicy retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            CircuitBreakerPolicy circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-            
             _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
                     routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication  {Topic = routingKey, RequestType = typeof(MyCommand) })
                 },
             });
-
-            _policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
          }
 
         [Fact]
         public void When_Creating_A_Command_Processor_Without_Message_Transformer()
         {                                             
-            _exception = Catch.Exception(() => new OutboxProducerMediator<Message, CommittableTransaction>(
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
+            
+            var exception = Catch.Exception(() => new OutboxProducerMediator<Message, CommittableTransaction>(
                 _producerRegistry, 
-                _policyRegistry,
+                resiliencePipelineRegistry,
                 _messageMapperRegistry,
-                 null,
+                 null!,
                 new EmptyMessageTransformerFactoryAsync(),
                 _tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
                 _outbox)
             );               
 
-            Assert.IsType<ConfigurationException>(_exception); 
+            Assert.IsType<ConfigurationException>(exception); 
         }
 
         public void Dispose()

@@ -5,7 +5,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
-using Polly;
 using Polly.Registry;
 using Xunit;
 
@@ -21,26 +20,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
              _myRequest.RequestValue = "Hello World";
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
-            {
-                    return new MyRequestMessageMapper();
-
-                throw new ConfigurationException($"No mapper found for {type.Name}");
-            }), null);
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyRequestMessageMapper()), null);
 
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyResponseHandler());
-
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
             var timeProvider = new FakeTimeProvider();
             var routingKey = new RoutingKey("MyRequest");
@@ -52,17 +38,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                  },
             });
 
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
 
             var tracer = new BrighterTracer();
 
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                policyRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -76,7 +59,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 replySubscriptions:new List<Subscription>(),
                 responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System),

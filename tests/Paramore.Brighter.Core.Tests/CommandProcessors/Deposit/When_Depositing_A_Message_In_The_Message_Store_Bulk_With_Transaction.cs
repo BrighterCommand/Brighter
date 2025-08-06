@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
-using Polly;
 using Polly.Registry;
 using Xunit;
 
@@ -22,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly MyCommand _myCommand = new();
         private readonly MyCommand _myCommandTwo = new();
         private readonly MyEvent _myEvent = new();
-        private readonly List<Message> _messages = new List<Message>();
+        private readonly List<Message> _messages = [];
         private readonly SpyOutbox _spyOutbox;
         private readonly SpyTransactionProvider _transactionProvider = new();
         private readonly InternalBus _bus = new();
@@ -70,32 +69,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-            
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { _commandTopic, commandMessageProducer },
                 { _eventTopic, eventMessageProducer}
             });
-
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
+            
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
 
             var tracer = new BrighterTracer();
             _spyOutbox = new SpyOutbox() {Tracer = tracer};
             
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(
                 producerRegistry, 
-                policyRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -108,7 +96,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var scheduler = new InMemorySchedulerFactory();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 scheduler,
                 _transactionProvider
@@ -122,19 +111,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //act
             var requests = new List<IRequest> {_myCommand, _myCommandTwo, _myEvent } ;
             _commandProcessor.DepositPost(requests);
-            var context = new RequestContext();
 
             //assert
 
             //messages should not be in the outbox
-            Assert.False(_spyOutbox.Messages.Any(m => m.Message.Id == _myCommand.Id));
-            Assert.False(_spyOutbox.Messages.Any(m => m.Message.Id == _myCommandTwo.Id));
-            Assert.False(_spyOutbox.Messages.Any(m => m.Message.Id == _myEvent.Id));
+            Assert.DoesNotContain(_spyOutbox.Messages, m => m.Message.Id == _myCommand.Id);
+            Assert.DoesNotContain(_spyOutbox.Messages, m => m.Message.Id == _myCommandTwo.Id);
+            Assert.DoesNotContain(_spyOutbox.Messages, m => m.Message.Id == _myEvent.Id);
 
             //messages should be in the current transaction
             var transaction = _transactionProvider.GetTransaction();
             List<Message?> messages = requests.Select(r => transaction.Get(r.Id)).ToList();
-            Assert.False(messages.Any(m => m is null));
+            Assert.DoesNotContain(messages, m => m is null);
 
             //messages should not be posted
             Assert.False(_bus.Stream(new RoutingKey(_commandTopic)).Any());

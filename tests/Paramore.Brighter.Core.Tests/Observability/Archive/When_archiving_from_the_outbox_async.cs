@@ -59,12 +59,6 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
         var producerRegistry =
             new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, type), producer } });
 
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .RetryAsync();
-
-        var policyRegistry = new PolicyRegistry { { Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy } };
-
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
             null);
@@ -74,7 +68,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
 
         _bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -124,7 +118,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
         //We should have exported matching activities
         Assert.Equal(9, _exportedActivities.Count);
 
-        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
 
         //there should be an archive create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ArchiveMessages} {CommandProcessorSpanOperation.Archive.ToSpanName()}");

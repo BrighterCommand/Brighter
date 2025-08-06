@@ -68,27 +68,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .RetryAsync();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
-            };
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, messageProducer},});
-
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
+            
             var tracer = new BrighterTracer(timeProvider);
             _spyOutbox = new SpyOutbox() {Tracer = tracer};
             _transactionProvider = new SpyTransactionProvider();
             
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(
                 producerRegistry, 
-                policyRegistry, 
+                resiliencePipelineRegistry, 
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -101,7 +91,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var scheduler = new InMemorySchedulerFactory();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 scheduler,
                 _transactionProvider

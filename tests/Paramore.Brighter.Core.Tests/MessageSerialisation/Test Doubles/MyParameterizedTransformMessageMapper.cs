@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
