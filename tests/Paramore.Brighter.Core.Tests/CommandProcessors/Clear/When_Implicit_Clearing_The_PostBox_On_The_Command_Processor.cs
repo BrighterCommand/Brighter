@@ -9,7 +9,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
-using Polly;
 using Polly.Registry;
 using Xunit;
 
@@ -48,31 +47,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
-
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { Topic, messageProducer },
             });
+            
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
 
             var tracer = new BrighterTracer();
             _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
 
             _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
-                policyRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -84,7 +72,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 _mediator,
                 requestSchedulerFactory: new InMemorySchedulerFactory()
             );

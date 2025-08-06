@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+﻿namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     public class MyRequest : Request
     {

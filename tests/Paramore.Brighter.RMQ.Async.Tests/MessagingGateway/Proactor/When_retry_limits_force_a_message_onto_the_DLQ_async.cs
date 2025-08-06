@@ -89,6 +89,7 @@ public class RMQMessageConsumerRetryDLQTestsAsync : IDisposable
             handlerFactory: new QuickHandlerFactoryAsync(() => handler),
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
+            resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
             requestSchedulerFactory: new InMemorySchedulerFactory()
         );
 

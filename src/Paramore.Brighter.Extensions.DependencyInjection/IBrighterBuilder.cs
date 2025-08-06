@@ -101,10 +101,32 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IBrighterBuilder TransformsFromAssemblies(IEnumerable<Assembly> assemblies);
 
         /// <summary>
-        /// The policy registry to use for the command processor and the event bus
-        /// It needs to be here as we need to pass it between AddBrighter and AddProducers
+        /// [Obsolete] Gets or sets the legacy policy registry used for the command processor and event bus.
         /// </summary>
+        /// <value>
+        /// The legacy policy registry instance. Required for coordination between AddBrighter and AddProducers.
+        /// Returns <c>null</c> if not configured.
+        /// </value>
+        /// <remarks>
+        /// This property is obsolete and will be removed in a future version. 
+        /// It remains temporarily to support transition between Brighter components.
+        /// Migrate to <see cref="ResiliencePolicyRegistry"/> for new implementations.
+        /// </remarks>
+        [Obsolete("Migrate to ResiliencePolicyRegistry")]
         IPolicyRegistry<string>? PolicyRegistry { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the registry of resilience pipelines used for the command processor and event bus.
+        /// </summary>
+        /// <value>
+        /// The registry containing named resilience pipeline instances. Required for coordination between AddBrighter and AddProducers.
+        /// Returns <c>null</c> if no pipelines are configured.
+        /// </value>
+        /// <remarks>
+        /// Replaces <see cref="PolicyRegistry"/> for modern resilience patterns. 
+        /// Use this registry to share configured resilience pipelines between Brighter components.
+        /// </remarks>
+        ResiliencePipelineRegistry<string>? ResiliencePolicyRegistry { get; set; }
 
         /// <summary>
         /// The IoC container to populate

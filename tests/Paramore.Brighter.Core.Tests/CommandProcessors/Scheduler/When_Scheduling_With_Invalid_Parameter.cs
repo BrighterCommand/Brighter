@@ -46,39 +46,16 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
 
         var producer = new InMemoryMessageProducer(_internalBus, _timeProvider, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
-        var policyRegistry = new PolicyRegistry
-        {
-            {
-                CommandProcessor.RETRYPOLICY, Policy
-                    .Handle<Exception>()
-                    .Retry()
-            },
-            {
-                CommandProcessor.CIRCUITBREAKER, Policy
-                    .Handle<Exception>()
-                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(1))
-            },
-            {
-                CommandProcessor.RETRYPOLICYASYNC, Policy
-                    .Handle<Exception>()
-                    .RetryAsync()
-            },
-            {
-                CommandProcessor.CIRCUITBREAKERASYNC, Policy
-                    .Handle<Exception>()
-                    .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1))
-            }
-        };
-
-        var producerRegistry =
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
+        var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+            .AddBrighterDefault();
 
         var tracer = new BrighterTracer(_timeProvider);
         _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
 
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -91,7 +68,8 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
         _commandProcessor = new CommandProcessor(registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry,
+            new DefaultPolicy(),
+            resiliencePipelineRegistry,
             bus,
             new InMemorySchedulerFactory { TimeProvider = _timeProvider });
         PipelineBuilder<MyCommand>.ClearPipelineCache();

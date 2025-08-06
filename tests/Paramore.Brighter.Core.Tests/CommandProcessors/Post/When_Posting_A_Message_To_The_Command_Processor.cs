@@ -74,26 +74,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
             
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
-            var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> {{new (routingKey, cloudEventsType), messageProducer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, messageProducer},});
 
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
-                policyRegistry, 
+                resiliencePipelineRegistry, 
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -105,7 +96,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 new InMemorySchedulerFactory()
             );

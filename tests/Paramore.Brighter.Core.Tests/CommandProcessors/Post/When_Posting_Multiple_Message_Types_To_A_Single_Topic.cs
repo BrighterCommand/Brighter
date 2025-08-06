@@ -79,18 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyOtherCommand, MyOtherCommandMessageMapper>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-            
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
+            var resiliencePipeline = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
             var messageProducers = new Dictionary<ProducerKey, IAmAMessageProducer>
             {
                 { new ProducerKey(routingKey, cloudEventsType), messageProducer }, 
@@ -104,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
-                policyRegistry, 
+                resiliencePipeline, 
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -116,7 +105,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipeline,
                 bus,
                 new InMemorySchedulerFactory()
             );

@@ -1,5 +1,4 @@
-﻿using Org.Apache.Rocketmq;
-using Paramore.Brighter.MessagingGateway.RocketMQ;
+﻿using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Xunit;
 
@@ -32,7 +31,7 @@ public class BufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
         var messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND)
             {
-                Type = $"Type{Guid.NewGuid():N}",
+                Type = new CloudEventsType($"Type{Guid.NewGuid():N}"),
                 Subject = $"Subject{Guid.NewGuid():N}",
                 Source = new Uri($"/component/{Guid.NewGuid()}", UriKind.RelativeOrAbsolute),
                 DataSchema = new Uri("https://example.com/storage/tenant/container", UriKind.RelativeOrAbsolute)

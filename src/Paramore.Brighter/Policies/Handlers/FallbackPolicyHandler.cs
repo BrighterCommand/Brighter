@@ -47,11 +47,11 @@ namespace Paramore.Brighter.Policies.Handlers
             bool catchAll = Convert.ToBoolean(initializerList[0]);
             bool catchBrokenCircuit = Convert.ToBoolean(initializerList[1]);
 
-            if (catchBrokenCircuit == true)
+            if (catchBrokenCircuit)
             {
                 _exceptionHandlerFunc = CatchBrokenCircuit;
             }
-            else if (catchAll == true)
+            else if (catchAll)
             {
                 _exceptionHandlerFunc = CatchAll;
             }
@@ -86,7 +86,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (Exception exception)
             {
-                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, exception, (s, o) => exception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, exception, (_, _) => exception);
                 return base.Fallback(command);
             }
         }
@@ -97,14 +97,14 @@ namespace Paramore.Brighter.Policies.Handlers
             {
                 return base.Handle(command);
             }
-            catch (BrokenCircuitException brokenCircuitExceptionexception)
+            catch (BrokenCircuitException brokenCircuitException)
             {
-                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception, (s, o) => brokenCircuitExceptionexception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitException, (_, _) => brokenCircuitException);
                 return base.Fallback(command);
             }
         }
 
-        private TRequest CatchNone(TRequest command)
+        private static TRequest CatchNone(TRequest command)
         {
             return command;
         }

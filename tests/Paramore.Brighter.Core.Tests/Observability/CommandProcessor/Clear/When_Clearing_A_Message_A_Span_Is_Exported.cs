@@ -264,10 +264,10 @@ public class CommandProcessorClearObservabilityTests
         var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, _publicationType), messageProducer } });
 
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            policyRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
+            producerRegistry, 
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
+            messageMapperRegistry, 
+            new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
@@ -280,7 +280,8 @@ public class CommandProcessorClearObservabilityTests
             registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry,
+            policyRegistry, 
+            new ResiliencePipelineRegistry<string>(),
             bus,
             new InMemorySchedulerFactory(),
             tracer: tracer,

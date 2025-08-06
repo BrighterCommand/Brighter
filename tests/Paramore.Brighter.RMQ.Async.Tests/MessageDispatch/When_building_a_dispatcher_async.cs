@@ -35,10 +35,6 @@ public class DispatchBuilderTestsAsync : IDisposable
                 TimeSpan.FromMilliseconds(150)
             });
 
-        var circuitBreakerPolicy = Policy
-            .Handle<Exception>()
-            .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-
         var rmqConnection = new RmqMessagingGatewayConnection
         {
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
@@ -53,11 +49,7 @@ public class DispatchBuilderTestsAsync : IDisposable
 
         var commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
-            .Policies(new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            })
+            .DefaultResilience()
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())

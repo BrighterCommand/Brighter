@@ -60,7 +60,7 @@ public class QuartzSchedulerMessageTests
 
         var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -85,6 +85,7 @@ public class QuartzSchedulerMessageTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new ResiliencePipelineRegistry<string>(),
             outboxBus,
             _scheduler
         );
@@ -105,9 +106,9 @@ public class QuartzSchedulerMessageTests
         var id = scheduler.Schedule(message,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
@@ -128,9 +129,9 @@ public class QuartzSchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
@@ -151,13 +152,13 @@ public class QuartzSchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.NotEqual(0, id.Length);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         scheduler.ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         Thread.Sleep(TimeSpan.FromSeconds(4));
 
@@ -177,13 +178,13 @@ public class QuartzSchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromHours(1));
 
-        Assert.True((id)?.Any());
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.NotEqual(0, id.Length);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         scheduler.ReScheduler(id, TimeSpan.FromSeconds(5));
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        Assert.Empty(_internalBus.Stream(_routingKey));
 
         Thread.Sleep(TimeSpan.FromSeconds(4));
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
@@ -203,7 +204,7 @@ public class QuartzSchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         scheduler.Cancel(id);
 
@@ -239,7 +240,7 @@ public class QuartzSchedulerMessageTests
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
         scheduler.Cancel(id);
 
