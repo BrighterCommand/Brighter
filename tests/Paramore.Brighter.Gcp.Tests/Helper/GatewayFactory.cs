@@ -37,7 +37,7 @@ public static class GatewayFactory
         }
         catch
         {
-            return null;
+            return GoogleCredential.FromAccessToken("mock");
         }
     }
 }
