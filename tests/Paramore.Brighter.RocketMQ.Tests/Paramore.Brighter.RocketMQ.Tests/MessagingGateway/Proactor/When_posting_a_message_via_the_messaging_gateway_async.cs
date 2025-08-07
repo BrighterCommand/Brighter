@@ -17,14 +17,13 @@ public class MessageProducerSendAsyncTests  : IAsyncDisposable
     private readonly MyCommand _myCommand;
     private readonly Id _correlationId;
     private readonly RoutingKey _replyTo;
-    private readonly ContentType _contentType;
 
     public MessageProducerSendAsyncTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        _correlationId = Id.Random;
+        _correlationId = Id.Random();
         _replyTo = new RoutingKey("http:\\queueUrl");
-        _contentType = new ContentType(MediaTypeNames.Text.Plain);
+        ContentType contentType = new(MediaTypeNames.Text.Plain);
         var channelName = Guid.NewGuid().ToString();
         var publication = new RocketMqPublication{ Topic = "rmq_post_via_gateway_async" };
 
@@ -38,7 +37,7 @@ public class MessageProducerSendAsyncTests  : IAsyncDisposable
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, publication.Topic!, MessageType.MT_COMMAND, correlationId: _correlationId,
-                replyTo: new RoutingKey(_replyTo), contentType: _contentType),
+                replyTo: new RoutingKey(_replyTo), contentType: contentType),
             new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
 

@@ -51,7 +51,7 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
-        private readonly IPolicyRegistry<string> _policyRegistry;
+        private readonly ResiliencePipelineRegistry<string> _resiliencePipelineRegistry;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
@@ -89,7 +89,7 @@ namespace Paramore.Brighter
         /// Creates an instance of the Outbox Producer Mediator
         /// </summary>
         /// <param name="producerRegistry">A registry of producers</param>
-        /// <param name="policyRegistry">A registry for reliability policies</param>
+        /// <param name="resiliencePipelineRegistry">A registry for reliability policies</param>
         /// <param name="mapperRegistry">The mapper registry; it should also implement IAmAMessageMapperRegistryAsync</param>
         /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
@@ -106,7 +106,7 @@ namespace Paramore.Brighter
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
         public OutboxProducerMediator(
             IAmAProducerRegistry producerRegistry,
-            IPolicyRegistry<string> policyRegistry,
+            ResiliencePipelineRegistry<string> resiliencePipelineRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
@@ -124,8 +124,8 @@ namespace Paramore.Brighter
         {
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
-            _policyRegistry = policyRegistry ??
-                              throw new ConfigurationException("Missing Policy Registry for External Bus Services");
+            _resiliencePipelineRegistry = resiliencePipelineRegistry ??
+                              throw new ConfigurationException("Missing Resilience Pipeline Registry for External Bus Services");
 
             requestContextFactory ??= new InMemoryRequestContextFactory();
 
@@ -216,7 +216,7 @@ namespace Paramore.Brighter
             BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, message, requestContext.Span,
                 overridingTransactionProvider != null, true, _instrumentationOptions);
 
-            var written = await RetryAsync(
+            var written = await ExecuteWithResiliencePipelineAsync(
                 async ct =>
                 {
                     await _asyncOutbox
@@ -259,7 +259,7 @@ namespace Paramore.Brighter
             BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, message, requestContext.Span,
                 overridingTransactionProvider != null, false, _instrumentationOptions);
 
-            var written = Retry(() =>
+            var written = ExecuteWithResiliencePipeline(() =>
                 {
                     _outBox.Add(message, requestContext, _outboxTimeout, overridingTransactionProvider);
                 },
@@ -282,7 +282,7 @@ namespace Paramore.Brighter
         {
             //We assume that this only occurs over a blocking producer
             var producer = _producerRegistry.LookupSyncBy(outMessage.Header.Topic);
-                Retry(
+                ExecuteWithResiliencePipeline(
                     () => producer.Send(outMessage),
                     requestContext
                 );
@@ -330,7 +330,7 @@ namespace Paramore.Brighter
                     BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, message, span, false, false,
                         _instrumentationOptions);
 
-                    Dispatch(new[] { message }, requestContext, args);
+                    Dispatch([message], requestContext, args);
                 }
             }
             finally
@@ -386,7 +386,7 @@ namespace Paramore.Brighter
                     BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, message, requestContext.Span, false, true,
                         _instrumentationOptions);
 
-                    await DispatchAsync(new[] { message }, requestContext, continueOnCapturedContext,
+                    await DispatchAsync([message], requestContext, continueOnCapturedContext,
                         cancellationToken);
                 }
             }
@@ -525,7 +525,7 @@ namespace Paramore.Brighter
 
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
             
-            var written = Retry(() =>
+            var written = ExecuteWithResiliencePipeline(() =>
                 {
                     _outBox.Add(_outboxBatches[batchId], requestContext, _outboxTimeout, transactionProvider);
                 },
@@ -554,7 +554,7 @@ namespace Paramore.Brighter
 
             if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
             
-            var written = await RetryAsync(
+            var written = await ExecuteWithResiliencePipelineAsync(
                 async _ =>
                 {
                     await _asyncOutbox.AddAsync(_outboxBatches[batchId], requestContext, _outboxTimeout,
@@ -630,7 +630,7 @@ namespace Paramore.Brighter
 
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, cancellationToken);
+                        await BulkDispatchAsync(messages, requestContext, false, cancellationToken);
                     }
                     else
                     {
@@ -728,7 +728,7 @@ namespace Paramore.Brighter
                     {
                         Log.SentMessage(s_logger, id);
                         if (_asyncOutbox != null)
-                            await RetryAsync(
+                            await ExecuteWithResiliencePipelineAsync(
                                 async ct =>
                                     await _asyncOutbox.MarkDispatchedAsync(id, requestContext, _timeProvider.GetUtcNow(),
                                         cancellationToken: ct),
@@ -756,7 +756,7 @@ namespace Paramore.Brighter
                         Log.SentMessage(s_logger, id);
 
                         if (_outBox != null)
-                            Retry(
+                            ExecuteWithResiliencePipeline(
                                 () => _outBox.MarkDispatched(id, requestContext, _timeProvider.GetUtcNow()),
                                 requestContext);
                     }
@@ -789,18 +789,18 @@ namespace Paramore.Brighter
                         if (producer is ISupportPublishConfirmation)
                         {
                             //mark dispatch handled by a callback - set in constructor
-                            Retry(
+                            ExecuteWithResiliencePipeline(
                                 () => { producerSync.Send(message); },
                                 requestContext);
                         }
                         else
                         {
-                            var sent = Retry(
+                            var sent = ExecuteWithResiliencePipeline(
                                 () => { producerSync.Send(message); },
                                 requestContext
                             );
                             if (sent)
-                                Retry(
+                                ExecuteWithResiliencePipeline(
                                     () => _outBox.MarkDispatched(message.Id, requestContext, _timeProvider.GetUtcNow(), args),
                                     requestContext
                                 );
@@ -819,7 +819,10 @@ namespace Paramore.Brighter
             }
         }
 
-        private async Task BulkDispatchAsync(IEnumerable<Message> posts, RequestContext requestContext,
+        private async Task BulkDispatchAsync(
+            IEnumerable<Message> posts, 
+            RequestContext requestContext,
+            bool continueOnCapturedContext,
             CancellationToken cancellationToken)
         {
             var parentSpan = requestContext.Span;
@@ -843,27 +846,39 @@ namespace Paramore.Brighter
                         producerSpans.TryAdd(topicBatch.Key, span);
                     }
 
-                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
+                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer and not ISupportPublishConfirmation)
                     {
                         var messages = topicBatch.ToArray();
 
                         Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key);
 
-                        var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
-                        
-                        await foreach (var successfulMessage in dispatchesMessages)
+                        foreach (var batch in bulkMessageProducer.CreateBatches(messages))
                         {
-                            if (!(producer is ISupportPublishConfirmation))
-                            {
-                                await RetryAsync(async _ =>
-                                        await _asyncOutbox.MarkDispatchedAsync(
-                                            successfulMessage, requestContext, _timeProvider.GetUtcNow(),
-                                            cancellationToken: cancellationToken
-                                        ),
+                            var sent = await ExecuteWithResiliencePipelineAsync(
+                                    async _ => await bulkMessageProducer.SendAsync(batch, cancellationToken)
+                                        .ConfigureAwait(continueOnCapturedContext),
                                     requestContext,
-                                    cancellationToken: cancellationToken
-                                );
+                                    continueOnCapturedContext,
+                                    cancellationToken
+                                )
+                                .ConfigureAwait(continueOnCapturedContext);
+
+                            if (producer is not ISupportPublishConfirmation && sent)
+                            {
+                                foreach (var successfulMessage in batch.Ids())
+                                {
+                                    await ExecuteWithResiliencePipelineAsync(async _ =>
+                                            await _asyncOutbox.MarkDispatchedAsync(
+                                                successfulMessage, requestContext, _timeProvider.GetUtcNow(),
+                                                cancellationToken: cancellationToken
+                                            ),
+                                        requestContext,
+                                        cancellationToken: cancellationToken
+                                    );
+                                }
                             }
+
+                            if (!sent) TripTopic(batch.RoutingKey);
                         }
                     }
                     else
@@ -903,7 +918,7 @@ namespace Paramore.Brighter
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
-                        var sent = await RetryAsync(
+                        var sent = await ExecuteWithResiliencePipelineAsync(
                                 async _ => await producerAsync.SendAsync(message, cancellationToken)
                                     .ConfigureAwait(continueOnCapturedContext),
                                 requestContext,
@@ -914,7 +929,7 @@ namespace Paramore.Brighter
 
                         if (producer is not ISupportPublishConfirmation && sent)
                         {
-                            await RetryAsync(
+                            await ExecuteWithResiliencePipelineAsync(
                                 async _ => await _asyncOutbox.MarkDispatchedAsync(
                                     message.Id, requestContext, _timeProvider.GetUtcNow(),
                                     cancellationToken: cancellationToken
@@ -924,7 +939,7 @@ namespace Paramore.Brighter
                             );
                         }
 
-                        if(!sent) TripTopic(message);
+                        if(!sent) TripTopic(message.Header.Topic);
    
                     }
                     else
@@ -1026,54 +1041,67 @@ namespace Paramore.Brighter
             }
         }
 
-        private bool Retry(Action action, RequestContext? requestContext)
+        private bool ExecuteWithResiliencePipeline(Action action, RequestContext? requestContext)
         {
-            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
-            var result = policy.ExecuteAndCapture(action);
-            if (result.Outcome != OutcomeType.Successful)
-            {
-                if (result.FinalException != null)
-                {
-                    Log.ExceptionWhilstTryingToPublishMessage(s_logger, result.FinalException);
-                    CheckOutstandingMessages(requestContext);
-                }
+            var resiliencePipeline = _resiliencePipelineRegistry.GetPipeline(CommandProcessor.OutboxProducer);
 
+            try
+            {
+                if (requestContext?.ResilienceContext != null)
+                {
+                    resiliencePipeline.Execute(_ => action, requestContext.ResilienceContext);
+                }
+                else
+                {
+                    resiliencePipeline.Execute(action);
+                }
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.ExceptionWhilstTryingToPublishMessage(s_logger, ex);
+                CheckOutstandingMessages(requestContext);
                 return false;
             }
-
-            return true;
         }
 
-        private async Task<bool> RetryAsync(
+        private async Task<bool> ExecuteWithResiliencePipelineAsync(
             Func<CancellationToken, Task> send,
             RequestContext? requestContext,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
-            var policy = _policyRegistry.Get<AsyncPolicy>(CommandProcessor.RETRYPOLICYASYNC);
-            
-            var result = await policy
-                .ExecuteAndCaptureAsync(send, cancellationToken, continueOnCapturedContext)
-                .ConfigureAwait(continueOnCapturedContext);
+            var resiliencePipeline = _resiliencePipelineRegistry.GetPipeline(CommandProcessor.OutboxProducer);
 
-            if (result.Outcome != OutcomeType.Successful)
+            try
             {
-                if (result.FinalException != null)
+                if (requestContext?.ResilienceContext != null)
                 {
-                    Log.ExceptionWhilstTryingToPublishMessage(s_logger, result.FinalException);
-                    CheckOutstandingMessages(requestContext);
+                    await resiliencePipeline
+                        .ExecuteAsync(async context => await send(context.CancellationToken), requestContext.ResilienceContext)
+                        .ConfigureAwait(continueOnCapturedContext);
                 }
-
+                else
+                {
+                    await resiliencePipeline.ExecuteAsync(async _ => await send(cancellationToken), cancellationToken)
+                        .ConfigureAwait(continueOnCapturedContext);
+                }
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.ExceptionWhilstTryingToPublishMessage(s_logger, ex);
+                CheckOutstandingMessages(requestContext);
                 return false;
             }
-
-            return true;
         }
 
-        private void TripTopic(Message message)
+        private void TripTopic(RoutingKey? routingKey)
         {
-            if(!RoutingKey.IsNullOrEmpty(message.Header.Topic))
-                _outboxCircuitBreaker?.TripTopic(message.Header.Topic);
+            if(!RoutingKey.IsNullOrEmpty(routingKey))
+                _outboxCircuitBreaker?.TripTopic(routingKey);
         }
         
         private static partial class Log

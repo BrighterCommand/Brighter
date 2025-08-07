@@ -28,7 +28,9 @@ public class MediatorMultipleWorkflowFlowTests
         CommandProcessor? commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+        
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var firstWorkflowData= new WorkflowTestData { Bag = { ["MyValue"] = "Test" } };

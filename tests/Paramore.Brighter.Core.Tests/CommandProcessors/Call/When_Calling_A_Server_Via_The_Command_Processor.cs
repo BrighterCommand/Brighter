@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
-using Polly;
 using Polly.Registry;
 using Polly.Retry;
 using Xunit;
@@ -18,9 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
-        //private readonly Message _message;
         private readonly InternalBus _bus = new() ;
-        private readonly string _replyAddressCorrelationId = Guid.NewGuid().ToString();
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly RoutingKey _routingKey;
 
@@ -47,14 +44,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyResponseHandler());
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
             var internalBus = new InternalBus();
             InMemoryChannelFactory inMemoryChannelFactory = new(internalBus, TimeProvider.System);
             
@@ -63,11 +52,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new Subscription<MyResponse>()
             };
 
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+                .AddBrighterDefault();
+            
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
@@ -77,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var tracer = new BrighterTracer();
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
-                policyRegistry,           
+                resiliencePipelineRegistry,
                 _messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
@@ -90,7 +77,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(), 
-                policyRegistry,
+                new DefaultPolicy(),
+                resiliencePipelineRegistry,
                 bus,
                 replySubscriptions:replySubs,
                 responseChannelFactory: inMemoryChannelFactory,
@@ -116,7 +104,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
             //RunAsync the pump on a new thread
-            Task pump = Task.Factory.StartNew(() => messagePump.Run());
+            Task.Factory.StartNew(() => messagePump.Run());
             
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOut: TimeSpan.FromMilliseconds(500));
             

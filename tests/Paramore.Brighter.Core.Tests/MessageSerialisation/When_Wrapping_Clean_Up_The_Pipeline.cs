@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 

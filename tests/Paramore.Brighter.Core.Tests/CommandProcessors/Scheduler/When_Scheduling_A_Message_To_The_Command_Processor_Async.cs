@@ -53,28 +53,17 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
         
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .RetryAsync();
-
-        var circuitBreakerPolicy = Policy
-            .Handle<Exception>()
-            .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-
-        var producer = new InMemoryMessageProducer (_internalBus, _timeProvider, new Publication  { Topic = routingKey, RequestType = typeof(MyCommand) });
-        var policyRegistry = new PolicyRegistry
-        {
-            { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
-        };
-        
+        var producer = new InMemoryMessageProducer (_internalBus, _timeProvider) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
+        var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
+            .AddBrighterDefault();
 
         var tracer = new BrighterTracer(_timeProvider);
         _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
 
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            policyRegistry,
+            resiliencePipelineRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -87,7 +76,8 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
         _commandProcessor = new CommandProcessor(registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry,
+            new DefaultPolicy(),
+            resiliencePipelineRegistry,
             bus,
             new InMemorySchedulerFactory { TimeProvider = _timeProvider });
         PipelineBuilder<MyCommand>.ClearPipelineCache();

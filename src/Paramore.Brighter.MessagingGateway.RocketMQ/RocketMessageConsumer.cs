@@ -249,15 +249,10 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
             return MessageHeader.DefaultSpecVersion;
         }
         
-        static string ReadType(MessageView message)
+        static CloudEventsType ReadType(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.Type);
-            if (!string.IsNullOrEmpty(val))
-            {
-                return val;
-            }
-
-            return MessageHeader.DefaultType;
+            return string.IsNullOrEmpty(val) ? CloudEventsType.Empty : new CloudEventsType(val);
         }
         
         static Uri? ReadDataSchema(MessageView message)
@@ -318,7 +313,7 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
            return false;
        }
         
-       // Waiting for next RocketMQ C# version, due an issue on ChangeInvisibleDuration  
+       // Waiting for next RocketMQ C# version, due an issue on ChangeInvisibleDuration
        // consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
        return true;
     }
