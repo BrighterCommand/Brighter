@@ -24,20 +24,7 @@ public class DispatchBuilderWithNamedGateway : IDisposable
             null
         );
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-        var policyRegistry = new PolicyRegistry
-        {
-            {
-                CommandProcessor.RETRYPOLICY, Policy
-                    .Handle<Exception>()
-                    .WaitAndRetry(new[] {TimeSpan.FromMilliseconds(50)})
-            },
-            {
-                CommandProcessor.CIRCUITBREAKER, Policy
-                    .Handle<Exception>()
-                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(500))
-            }
-        };
-
+        
         var connection = GatewayFactory.CreateConnection(); 
         var consumerFactory = new PulsarMessageConsumerFactory(connection);
 

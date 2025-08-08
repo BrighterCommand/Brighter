@@ -24,18 +24,6 @@ public class DispatchBuilderTests : IDisposable
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .WaitAndRetry([
-                TimeSpan.FromMilliseconds(50),
-                TimeSpan.FromMilliseconds(100),
-                TimeSpan.FromMilliseconds(150)
-            ]);
-
-        var circuitBreakerPolicy = Policy
-            .Handle<Exception>()
-            .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-
         var connection = GatewayFactory.CreateConnection(); 
         var consumerFactory = new PulsarMessageConsumerFactory(connection);
         var container = new ServiceCollection();
