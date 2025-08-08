@@ -45,7 +45,7 @@ public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer,
     
     /// <inheritdoc />
     public void Send(Message message) 
-        => BrighterAsyncContext.Run(async() => await SendAsync(message));
+        => SendWithDelay(message, TimeSpan.Zero);
 
     /// <inheritdoc />
     public Task SendAsync(Message message, CancellationToken cancellationToken = default) 

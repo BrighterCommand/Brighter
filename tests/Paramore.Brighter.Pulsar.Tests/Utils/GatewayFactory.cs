@@ -16,12 +16,16 @@ public static class GatewayFactory
         };
     }
 
-    public static IConsumer<ReadOnlySequence<byte>> CreateConsumer(PulsarMessagingGatewayConnection connection, Publication publication)
+    public static PulsarBackgroundMessageConsumer CreateConsumer(PulsarMessagingGatewayConnection connection, Publication publication)
     {
-        return connection.Create().NewConsumer(Schema.ByteSequence)
+        var background = new PulsarBackgroundMessageConsumer(1, connection.Create().NewConsumer(Schema.ByteSequence)
             .Topic(publication.Topic!.Value)
             .SubscriptionName(Guid.NewGuid().ToString())
-            .Create();
+            .Create());
+        
+        background.Start();
+
+        return background;
     }
     
     public static IProducer<ReadOnlySequence<byte>> CreateProducer(PulsarMessagingGatewayConnection connection, Publication publication)
