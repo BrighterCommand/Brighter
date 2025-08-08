@@ -1084,7 +1084,7 @@ namespace Paramore.Brighter
                 }
                 else
                 {
-                    await resiliencePipeline.ExecuteAsync(async _ => await send(cancellationToken), cancellationToken)
+                    await resiliencePipeline.ExecuteAsync(async ct => await send(ct), cancellationToken)
                         .ConfigureAwait(continueOnCapturedContext);
                 }
                 
