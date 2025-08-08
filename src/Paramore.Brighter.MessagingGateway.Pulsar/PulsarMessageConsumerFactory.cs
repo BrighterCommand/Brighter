@@ -1,4 +1,6 @@
-﻿using DotPulsar.Extensions;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using DotPulsar.Extensions;
 
 namespace Paramore.Brighter.MessagingGateway.Pulsar;
 
@@ -8,6 +10,8 @@ namespace Paramore.Brighter.MessagingGateway.Pulsar;
 /// <param name="connection">The connection gateway to Apache Pulsar used for creating consumers.</param>
 public class PulsarMessageConsumerFactory(PulsarMessagingGatewayConnection connection) : IAmAMessageConsumerFactory
 {
+    private static readonly ConcurrentDictionary<PulsarSubscription, PulsarBackgroundMessageConsumer> s_backgroundConsumers = new();
+    
     /// <inheritdoc />
     public IAmAMessageConsumerSync Create(Subscription subscription) 
         => CreatePulsarConsumer(subscription);
@@ -22,7 +26,14 @@ public class PulsarMessageConsumerFactory(PulsarMessagingGatewayConnection conne
         {
             throw new ConfigurationException("We expect PulsarSubscription or PulsarSubscription<T> as a parameter");
         }
+        
+        var background = s_backgroundConsumers.GetOrAdd(pulsarSubscription, CreateConsumerBackground);
+        background.Start();
+        return new PulsarMessageConsumer(background);
+    }
 
+    private PulsarBackgroundMessageConsumer CreateConsumerBackground(PulsarSubscription pulsarSubscription)
+    {
         var client = connection.Create();
         var builder = client.NewConsumer(pulsarSubscription.Schema)
             .AllowOutOfOrderDeliver(pulsarSubscription.AllowOutOfOrderDeliver)
@@ -37,6 +48,8 @@ public class PulsarMessageConsumerFactory(PulsarMessagingGatewayConnection conne
         pulsarSubscription.Configuration?.Invoke(builder);
 
         var consumer = builder.Create();
-        return new PulsarMessageConsumer(consumer);
+
+        var maxBufferSize = pulsarSubscription.BufferSize * pulsarSubscription.NoOfPerformers;
+        return new PulsarBackgroundMessageConsumer(maxBufferSize, consumer);
     }
 }

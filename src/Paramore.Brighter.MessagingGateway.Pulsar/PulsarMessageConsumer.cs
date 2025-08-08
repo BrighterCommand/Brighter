@@ -5,7 +5,6 @@ using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using DotPulsar;
-using DotPulsar.Abstractions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -24,7 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.Pulsar;
 /// - Manages message lifecycle operations (Ack/Nack/Requeue)
 /// - Implements proper resource disposal patterns
 /// </remarks>
-public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> consumer) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+public partial class PulsarMessageConsumer(PulsarBackgroundMessageConsumer backgroundPulsarConsumer) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PulsarMessageConsumer>();
     
@@ -47,7 +46,7 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
 
         try
         {
-            await consumer.Acknowledge(messageId, cancellationToken);
+            await backgroundPulsarConsumer.Consumer.Acknowledge(messageId, cancellationToken);
             Log.AcknowledgedMessage(s_logger, message.Id, messageId.ToString());
         }
         catch (Exception ex)
@@ -77,7 +76,7 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
         try
         {
             Log.RejectingMessage(s_logger, message.Id, messageId.ToString());
-            await consumer.Acknowledge(messageId, cancellationToken);
+            await backgroundPulsarConsumer.Consumer.Acknowledge(messageId, cancellationToken);
             return true;
         }
         catch (Exception exception)
@@ -95,13 +94,13 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
     {
         try
         {
-            Log.PurgingQueue(s_logger, consumer.SubscriptionName);
-            await consumer.Seek(MessageId.Latest, cancellationToken);
-            Log.PurgedQueue(s_logger, consumer.SubscriptionName);
+            Log.PurgingQueue(s_logger, backgroundPulsarConsumer.Consumer.SubscriptionName);
+            await backgroundPulsarConsumer.Consumer.Seek(MessageId.Latest, cancellationToken);
+            Log.PurgedQueue(s_logger, backgroundPulsarConsumer.Consumer.SubscriptionName);
         }
         catch (Exception exception)
         {
-            Log.ErrorPurgingQueue(s_logger, exception, consumer.SubscriptionName);
+            Log.ErrorPurgingQueue(s_logger, exception, backgroundPulsarConsumer.Consumer.SubscriptionName);
             throw;
         }
     }
@@ -110,6 +109,7 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
     public Message[] Receive(TimeSpan? timeOut = null) 
         => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
 
+    /// <inheritdoc />
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -120,7 +120,7 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
 
         try
         {
-            var pulsarMessage =  await consumer.Receive(cts.Token);
+            var pulsarMessage = await backgroundPulsarConsumer.Reader.ReadAsync(cts.Token);
             var bag = new Dictionary<string, object>();
 
             foreach (var pair in pulsarMessage.Properties)
@@ -137,7 +137,7 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
 
             var header = new MessageHeader(
                 messageId: GetMessageId(pulsarMessage.Properties),
-                topic: GetTopic(pulsarMessage.Properties, consumer.Topic),
+                topic: GetTopic(pulsarMessage.Properties, backgroundPulsarConsumer.Consumer.Topic),
                 messageType: GetMessageType(pulsarMessage.Properties),
                 contentType: GetContentType(pulsarMessage.Properties),
                 partitionKey: GetPartitionKey(pulsarMessage.Key),
@@ -162,7 +162,7 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
         }
         catch (OperationCanceledException)
         {
-            return [MessageFactory.CreateEmptyMessage(new RoutingKey(""))];
+            return [new Message()];
         }
 
         static Id GetMessageId(IReadOnlyDictionary<string, string> properties)
@@ -335,7 +335,7 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
 
             Log.RejectingMessage(s_logger, message.Id, messageId.ToString());
 
-            await consumer.RedeliverUnacknowledgedMessages([messageId], cancellationToken);
+            await backgroundPulsarConsumer.Consumer.RedeliverUnacknowledgedMessages([messageId], cancellationToken);
             
             Log.RequeuedMessage(s_logger, message.Id);
             return true;
@@ -348,15 +348,16 @@ public partial class PulsarMessageConsumer(IConsumer<ReadOnlySequence<byte>> con
     }
     
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        await consumer.DisposeAsync();
+        backgroundPulsarConsumer.Stop();
+        return new ValueTask();
     }
     
     /// <inheritdoc />
     public void Dispose()
     {
-        consumer.DisposeAsync().GetAwaiter().GetResult();
+        backgroundPulsarConsumer.Stop();
     }
     
     private static partial class Log

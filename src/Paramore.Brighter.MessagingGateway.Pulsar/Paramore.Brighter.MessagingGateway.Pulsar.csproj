@@ -16,4 +16,8 @@
   <ItemGroup>
     <PackageReference Include="DotPulsar" />
   </ItemGroup>
+  
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Threading.Channels" />
+  </ItemGroup>
 </Project>
