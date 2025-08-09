@@ -1300,6 +1300,8 @@ namespace Paramore.Brighter
                 CreateSqlParameter($"@{prefix}TraceParent", DbType.String, message.Header.TraceParent?.Value),
                 CreateSqlParameter($"@{prefix}TraceState", DbType.String, message.Header.TraceState?.Value),
                 CreateSqlParameter($"@{prefix}Baggage", DbType.String, message.Header.Baggage.ToString()),
+                CreateSqlParameter($"@{prefix}WorkflowId", DbType.String, message.Header.WorkflowId?.Value),
+                CreateSqlParameter($"@{prefix}JobId", DbType.String, message.Header.JobId?.Value),
             ];
         }
 
@@ -1404,7 +1406,8 @@ namespace Paramore.Brighter
                 messageParams.Add(
                     $"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, " +
                     $"@p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body, " +
-                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, @p{i}_Baggage)");
+                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, " +  
+                    $"@p{i}_Baggage, @p{i}_WorkflowId, @p{i}_JobId)");
 
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
             }

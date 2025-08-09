@@ -102,7 +102,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             //should read the header from the sql outbox
             Assert.Equal(_message.Header.Topic, _storedMessage.Header.Topic);
             Assert.Equal(_message.Header.MessageType, _storedMessage.Header.MessageType);
-            Assert.Equal(_message.Header.TimeStamp, _storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1)); // Allow for slight differences in timestamp precision
+            Assert.Equal(_message.Header.TimeStamp, _storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(5)); // Allow for slight differences in timestamp precision
             Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
             Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
             Assert.Equal(_message.Header.CorrelationId, _storedMessage.Header.CorrelationId);

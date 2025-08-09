@@ -22,7 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.IO;
+using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +41,22 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             using MemoryStream stream = new MemoryStream();
             await JsonSerializer.SerializeAsync(stream, request, JsonSerialisationOptions.Options, cancellationToken);
-            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), type: publication.Type);
+            var header = new MessageHeader(
+                messageId: request.Id,
+                topic: publication.Topic ?? RoutingKey.Empty,
+                messageType: request.RequestToMessageType(),
+                source: publication.Source,
+                type: publication.Type,
+                correlationId: request.CorrelationId,
+                timeStamp: DateTimeOffset.UtcNow,
+                replyTo: publication.ReplyTo ?? RoutingKey.Empty,
+                contentType: new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()},
+                partitionKey: Context.GetPartitionKey(),
+                dataSchema: publication.DataSchema,
+                subject: publication.Subject,
+                workflowId: Context.GetWorkflowId(),
+                jobId: Context.GetJobId()
+            );
             var body = new MessageBody(stream.ToArray());
             return new Message(header, body);
         }
