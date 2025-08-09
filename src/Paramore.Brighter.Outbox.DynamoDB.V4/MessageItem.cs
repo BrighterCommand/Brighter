@@ -16,40 +16,47 @@ public class MessageItem
     /// <summary>
     /// The message body
     /// </summary>
+    /// <value>The message body as a <see cref="byte[]"/>. May be <c>null</c>.</value>
     [DynamoDBProperty(typeof(MessageItemBodyConverter))]
     public byte[]? Body { get; set; }
         
     /// <summary>
     /// What is the character encoding of the body?
     /// </summary>
+    /// <value>The character encoding as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? CharacterEncoding { get; set; }
 
     /// <summary>
     /// What is the content type of the message?
     /// </summary>
+    /// <value>The content type as a <see cref="string"/>. May be <c>null</c>.</value>
     [DynamoDBProperty]
     public string? ContentType { get; set; } 
 
     ///<summary>
     /// The correlation id of the message
     /// </summary>
+    /// <value>The correlation id as a <see cref="string"/>. May be <c>null</c>.</value>
     [DynamoDBProperty]
     public string? CorrelationId { get; set; }
 
     /// <summary>
     /// The time at which the message was created, formatted as a string yyyy-MM-ddTHH:mm:ss.fffZ
     /// </summary>
+    /// <value>The creation time as a <see cref="string"/> in ISO format. May be <c>null</c>.</value>
     public string? CreatedAt { get; set; }
 
     /// <summary>
     /// The time at which the message was created, in ticks
     /// </summary>
+    /// <value>The creation time as a <see cref="long"/> in ticks. May be <c>null</c>.</value>
     [DynamoDBProperty]
     public long? CreatedTime { get; set; }
 
     /// <summary>
     /// The time at which the message was created, in ticks. Null if the message has been dispatched.
     /// </summary>
+    /// <value>The outstanding creation time as a <see cref="long"/> in ticks. May be <c>null</c>.</value>
     [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
     [DynamoDBProperty]
     public long? OutstandingCreatedTime { get; set; }
@@ -57,47 +64,56 @@ public class MessageItem
     /// <summary>
     /// The <a href="https://cloudevents.io/">CloudEvents</a> data schema of the message, if any.
     /// </summary>
+    /// <value>The data schema as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? DataSchema { get; }
         
     /// <summary>
     /// The <a href="https://cloudevents.io/">CloudEvents</a> data ref for a claim check, if any.
     /// </summary>
+    /// <value>The data reference as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? DataRef { get; set; }
         
     /// <summary>
     ///  If the message is to be delayed before send, how long is it delayed for?
     /// </summary>
+    /// <value>The delay in milliseconds as an <see cref="int"/>.</value>
     public int DelayedMilliseconds { get; set; }
 
     /// <summary>
     /// The time at which the message was delivered, formatted as a string yyyy-MM-dd
     /// </summary>
+    /// <value>The delivery time as a <see cref="string"/> in ISO format. May be <c>null</c>.</value>
     [DynamoDBProperty]
     public string? DeliveredAt { get; set; }
 
     /// <summary>
     /// The time that the message was delivered to the broker, in ticks
     /// </summary>
+    /// <value>The delivery time as a <see cref="long"/> in ticks. May be <c>null</c>.</value>
     [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Delivered")]
     [DynamoDBProperty]
     public long? DeliveryTime { get; set; }
         
+    /// <value>The expiration time as a <see cref="long"/> in ticks. May be <c>null</c>.</value>
     [DynamoDBProperty]
     public long? ExpiresAt { get; set; }
 
     /// <summary>
     /// If there have been multiple attempts to process a message, keeps a running total
     /// </summary>
+    /// <value>The handled count as an <see cref="int"/>.</value>
     public  int HandledCount { get; set; }
         
     /// <summary>
     /// A JSON object representing a dictionary of additional properties set on the message
     /// </summary>
+    /// <value>The header bag as a <see cref="string"/> containing JSON. May be <c>null</c>.</value>
     public string? HeaderBag { get; set; }
 
     /// <summary>
     /// The ID of the Message. Used as a Global Secondary Index
     /// </summary>
+    /// <value>The message ID as a <see cref="string"/>. May be <c>null</c>.</value>
     [DynamoDBHashKey]
     [DynamoDBProperty]
     public string? MessageId { get; set; }
@@ -105,39 +121,45 @@ public class MessageItem
     /// <summary>
     /// The type of message i.e., MT_COMMAND, MT_EVENT, etc. An enumeration rendered as a string
     /// </summary>
+    /// <value>The message type as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? MessageType { get; set; }
 
     /// <summary>
     /// The partition key for the Kafka message
     /// </summary>
+    /// <value>The partition key as a <see cref="string"/>. May be <c>null</c>.</value>
     [DynamoDBProperty]
     public string? PartitionKey { get; set; }
 
     /// <summary>
     /// If this is a conversation i.e. request-response, what is the reply channel
     /// </summary>
+    /// <value>The reply-to address as a <see cref="string"/>. May be <c>null</c>.</value>
     [DynamoDBProperty]
     public string? ReplyTo { get; set; }
 
     /// <summary>
     /// The <a href="https://cloudevents.io/">CloudEvents</a> source 
     /// </summary>
+    /// <value>The source as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? Source { get; set; } 
         
     /// <summary>
     /// The SpecVersion of <a href="https://cloudevents.io/">CloudEvents</a>  
     /// </summary>
+    /// <value>The spec version as a <see cref="string"/>. Never <c>null</c>.</value>
     public string SpecVersion { get; set; } = MessageHeader.DefaultSpecVersion;
         
     /// <summary>
     /// The <a href="https://cloudevents.io/">CloudEvents</a> subject of the message, if any.
     /// </summary>
+    /// <value>The subject as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? Subject { get; set; }
         
     /// <summary>
     /// The Topic the message was published to
     /// </summary>
-    /// 
+    /// <value>The topic as a <see cref="string"/>. May be <c>null</c>.</value>
     [DynamoDBGlobalSecondaryIndexHashKey("Delivered")]
     [DynamoDBProperty]
     public string? Topic { get; set; }
@@ -145,6 +167,7 @@ public class MessageItem
     /// <summary>
     /// The Topic suffixed with the shard number
     /// </summary>
+    /// <value>The topic shard as a <see cref="string"/>. May be <c>null</c>.</value>
     [DynamoDBGlobalSecondaryIndexHashKey("Outstanding")]
     [DynamoDBProperty]
     public string? TopicShard { get; set; }
@@ -152,18 +175,22 @@ public class MessageItem
     /// <summary>
     /// What is the W3C Trace Parent of the span publishing the message?
     /// </summary>
+    /// <value>The trace parent as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? TraceParent { get; }
         
     /// <summary>
     /// What is the W3C Trace State of the span publishing the message?
     /// </summary>
+    /// <value>The trace state as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? TraceState { get; }
 
     /// <summary>
     /// What is the <a href="https://cloudevents.io/">CloudEvents</a> Type of the message? 
     /// </summary>
+    /// <value>The type as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? Type { get; set; }
 
+    /// <value>The baggage as a <see cref="string"/>. May be <c>null</c>.</value>
     public string? Baggage { get; }
 
     public MessageItem()
