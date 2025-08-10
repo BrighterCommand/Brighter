@@ -120,6 +120,10 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             Assert.Equal(_testbagUuid, _storedMessage.Header.Bag[_key4]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
             Assert.Equal(_testBagDateTime, _storedMessage.Header.Bag[_key5]);
+            
+            //Asserts for workflow properties
+            Assert.Equal(_message.Header.WorkflowId, _storedMessage.Header.WorkflowId);
+            Assert.Equal(_message.Header.JobId, _storedMessage.Header.JobId);
 
             // Additional asserts for Cloud Events and W3C Tracing properties
             Assert.Equal(_message.Header.Source, _storedMessage.Header.Source);
