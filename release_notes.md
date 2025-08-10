@@ -68,10 +68,14 @@ var publication = new Publication
 
 Comprehensive OpenTelemetry support has been added throughout Brighter:
 
-- **Transport Tracing**: Automatic trace propagation across message boundaries with W3C TraceContext
-- **Outbox Tracing**: Distributed tracing for all outbox implementations
-- **Claim Check Tracing**: Tracing support for claim check pattern and luggage stores
+- **Transport Tracing**: Automatic trace propagation across message boundaries with W3C TraceContext ([PR #3605](https://github.com/BrighterCommand/Brighter/pull/3605))
+- **Outbox Tracing**: Distributed tracing for all outbox implementations ([PR #3557](https://github.com/BrighterCommand/Brighter/pull/3557))
+- **Inbox Tracing**: OpenTelemetry support for all inbox implementations ([PR #3576](https://github.com/BrighterCommand/Brighter/pull/3576))
+- **Claim Check Tracing**: Tracing support for claim check pattern and luggage stores ([PR #3614](https://github.com/BrighterCommand/Brighter/pull/3614))
 - **Span Attributes**: Rich semantic attributes following OpenTelemetry conventions
+- **Instrumentation Control**: Configurable instrumentation options across all tracer operations ([PR #3620](https://github.com/BrighterCommand/Brighter/pull/3620))
+
+OpenTelemetry integration enables end-to-end distributed tracing across message boundaries, making it easier to diagnose performance issues and understand message flow in distributed systems.
 
 ### Nullable Reference Types
 
@@ -107,7 +111,7 @@ services.AddBrighter()
 
 ### Polly Resilience Pipeline
 
-**Breaking Change**: New resilience pipeline attributes replace legacy timeout policies:
+**Breaking Change**: New resilience pipeline attributes replace legacy timeout policies ([PR #3677](https://github.com/BrighterCommand/Brighter/pull/3677)):
 
 ```csharp
 // V9 - Deprecated
@@ -119,15 +123,70 @@ public override MyResult Handle(MyCommand command) { }
 public override MyResult Handle(MyCommand command) { }
 ```
 
-The `TimeoutPolicyAttribute` is now marked as obsolete. Use Polly's Resilience Pipeline instead.
+The `TimeoutPolicyAttribute` is now marked as obsolete. The new approach provides:
+- **Full Polly v8 Support**: Access to all Polly resilience strategies
+- **CancellationToken Integration**: Proper cancellation token flow from resilience pipelines ([PR #3698](https://github.com/BrighterCommand/Brighter/pull/3698))
+- **Enhanced Context**: Request context integration with Polly's resilience context
+
+Configure resilience pipelines in your DI container:
+
+```csharp
+services.AddResilienceEnrichment();
+services.Configure<ResilienceOptions>(options =>
+{
+    options.Pipelines.Add("MyPipeline", builder => builder
+        .AddTimeout(TimeSpan.FromSeconds(5))
+        .AddRetry(new RetryStrategyOptions())
+        .AddCircuitBreaker(new CircuitBreakerStrategyOptions()));
+});
+```
+
+### Default Message Mappers
+
+**Important Clarification**: An explicit message mapper isn't always required for every `IRequest`. Brighter provides default mappers that can handle most common scenarios:
+
+- **JsonMapper**: Automatically handles JSON serialization/deserialization for requests and events
+- **CloudEventsMapper**: Handles Cloud Events format messages 
+- **Built-in Fallbacks**: Brighter will attempt to use appropriate default mappers when no explicit mapper is registered
+
+You only need to create custom message mappers when you require explicit transforms or have specific serialization requirements. The default mappers can also serve as templates for custom implementations.
+
+```csharp
+// No explicit mapper needed - will use JsonMapper by default
+public class MyCommand : Command<MyCommand> 
+{
+    public string Name { get; set; }
+    public int Value { get; set; }
+}
+
+// Only create custom mappers when you need specific transforms
+public class MyCustomMapper : IAmAMessageMapper<MyCommand>
+{
+    // Custom serialization logic here
+}
+```
 
 ### Request Context Enhancements
 
 **Breaking Change**: The `IRequestContext` interface has been enhanced to support:
 
-- **Partition Key**: Set message partition keys dynamically
+- **Partition Key**: Set message partition keys dynamically (see [PR #3678](https://github.com/BrighterCommand/Brighter/pull/3678))
 - **Custom Headers**: Add headers via request context
 - **Resilience Context**: Integration with Polly Resilience Pipeline
+
+```csharp
+// Set partition key and custom headers via request context
+public class MyHandler : RequestHandler<MyCommand>
+{
+    public override MyCommand Handle(MyCommand command)
+    {
+        Context.Span.SetAttribute("custom.header", "value");
+        Context.PartitionKey = command.TenantId;
+        
+        return base.Handle(command);
+    }
+}
+```
 
 ### AWS SDK v4 Support
 
@@ -139,10 +198,14 @@ Complete AWS SDK v4 support has been added:
 
 You can now use the latest AWS SDK v4 while maintaining backwards compatibility with v3.
 
-### RabbitMQ Enhancements
+### Transport Improvements
 
-- **Quorum Queues**: Support for RabbitMQ quorum queues for improved consistency and availability
+**PostgreSQL Message Broker**: Added support for using PostgreSQL as a message broker ([PR #3612](https://github.com/BrighterCommand/Brighter/pull/3612)), enabling pub/sub messaging patterns directly with PostgreSQL's LISTEN/NOTIFY functionality.
+
+**RabbitMQ Enhancements**:
+- **Quorum Queues**: Support for RabbitMQ quorum queues for improved consistency and availability ([PR #3638](https://github.com/BrighterCommand/Brighter/pull/3638))
 - **RabbitMQ 7.x**: Updated to support RabbitMQ client library v7
+- **Connection Stability**: Improved connection handling and error recovery ([PR #3685](https://github.com/BrighterCommand/Brighter/pull/3685))
 
 ```csharp
 // Configure Quorum queues
@@ -153,13 +216,57 @@ var subscription = new RmqSubscription<MyMessage>(
 );
 ```
 
+**Kafka Improvements**:
+- **Configuration Callback**: Enhanced configuration support through KafkaSubscription callback ([PR #3640](https://github.com/BrighterCommand/Brighter/pull/3640))
+- **Updated Defaults**: Improved default configuration values for better out-of-the-box experience ([PR #3618](https://github.com/BrighterCommand/Brighter/pull/3618))
+
+**AWS Improvements**:
+- **SQS Publication Enhancement**: Allow setting queue attributes and channel type in SqsPublication ([PR #3666](https://github.com/BrighterCommand/Brighter/pull/3666))
+- **S3 Claim-Check**: Fixed AWS S3 claim-check implementation ([PR #3632](https://github.com/BrighterCommand/Brighter/pull/3632))
+
+**General Transport Features**:
+- **Cloud Events Unwrapping**: Fixed Cloud Events unwrapping for JSON format ([PR #3686](https://github.com/BrighterCommand/Brighter/pull/3686))
+- **Outbox Improvements**: Enhanced outbox pattern with better URI handling and code consolidation ([PR #3659](https://github.com/BrighterCommand/Brighter/pull/3659))
+- **RocketMQ Fixes**: Various improvements to RocketMQ transport ([PR #3696](https://github.com/BrighterCommand/Brighter/pull/3696))
+
 ### Circuit Breaking
 
 Topic-level circuit breaking has been added to prevent cascade failures:
 
 - **Failure Tracking**: Automatic tracking of dispatch failures per topic
-- **Configurable Thresholds**: Set failure thresholds and cooldown periods
+- **Configurable Thresholds**: Set failure thresholds and cooldown periods  
 - **Automatic Recovery**: Topics automatically recover after cooldown period
+- **Bulk Dispatch Support**: Circuit breaking now properly supports bulk dispatch operations ([PR #3688](https://github.com/BrighterCommand/Brighter/pull/3688))
+- **Per-Transport Integration**: Circuit breaking is integrated with MongoDB ([PR #3692](https://github.com/BrighterCommand/Brighter/pull/3692)) and other outbox implementations
+
+The bulk dispatch implementation brings circuit breaking inline with single dispatch, allowing individual batches to be retried and providing better control over transport-specific batching behavior.
+
+See [PR #3651](https://github.com/BrighterCommand/Brighter/pull/3651) for the core implementation and [PR #3688](https://github.com/BrighterCommand/Brighter/pull/3688) for bulk dispatch support.
+
+### Scheduled Messaging
+
+Brighter now supports scheduling messages to be sent at specific times or after delays. This feature allows you to defer message processing until a future time, enabling scenarios like delayed notifications, scheduled tasks, and time-based workflows.
+
+- **Time-based Scheduling**: Schedule messages for specific dates and times
+- **Delay-based Scheduling**: Schedule messages to be sent after a specified delay
+- **Multiple Schedulers**: Support for Quartz, AWS EventBridge Scheduler, and Azure Service Bus scheduled messages
+- **Command Processor Integration**: New `SendAt` and `PublishAt` methods on the Command Processor
+
+```csharp
+// Schedule a command to be sent at a specific time
+await commandProcessor.SendAt(new MyCommand(), DateTime.UtcNow.AddHours(1));
+
+// Schedule an event to be published after a delay  
+await commandProcessor.PublishAt(new MyEvent(), TimeSpan.FromMinutes(30));
+
+// Configure with Quartz scheduler
+services.AddBrighter()
+    .UseQuartzScheduler(options => {
+        options.ConnectionString = connectionString;
+    });
+```
+
+See [PR #3487](https://github.com/BrighterCommand/Brighter/pull/3487) for more details.
 
 ### Multi-Transport Support
 
@@ -173,18 +280,42 @@ factory.AddTransport("rabbitmq", rmqFactory);
 
 ### Performance Improvements
 
-- **GUID v7**: Support for GUID v7 on .NET 9+ for better database performance
-- **Sealed Classes**: Internal classes sealed to reduce virtual dispatch overhead
-- **Optimized Collections**: Reduced dictionary lookups and improved collection usage
-- **Memory Optimization**: Better memory usage in SQL data readers and stream handling
+- **GUID v7**: Support for GUID v7 on .NET 9+ for better database performance ([PR #3687](https://github.com/BrighterCommand/Brighter/pull/3687))
+- **Sealed Classes**: Internal classes sealed to reduce virtual dispatch overhead ([PR #3552](https://github.com/BrighterCommand/Brighter/pull/3552))
+- **Optimized Collections**: Reduced dictionary lookups and improved collection usage ([PR #3550](https://github.com/BrighterCommand/Brighter/pull/3550))
+- **Memory Optimization**: Better memory usage in SQL data readers and stream handling ([PR #3625](https://github.com/BrighterCommand/Brighter/pull/3625))
+- **Source-Generated Logging**: Migrated to source-generated logging for superior performance and stronger typing ([PR #3579](https://github.com/BrighterCommand/Brighter/pull/3579))
+- **Reduced Allocations**: Optimized string comparisons and reduced unnecessary allocations ([PR #3555](https://github.com/BrighterCommand/Brighter/pull/3555))
+
+GUID v7 provides better database clustering and performance characteristics compared to GUID v4, especially beneficial for high-throughput scenarios with database-backed outboxes and inboxes.
 
 ### .NET 9 Support
 
 Brighter now supports .NET 9 with optimizations for the latest runtime features.
 
-### Test Infrastructure
+### Test Infrastructure and Developer Experience
 
 **Breaking Change**: Fluent Assertions has been removed in favor of xUnit assertions for better maintainability and licensing compliance.
+
+**Enhanced Testing**:
+- **Colorful Test Output**: Improved test runner with colorful output and GitHub Actions logger support ([PR #3635](https://github.com/BrighterCommand/Brighter/pull/3635))
+- **Better Test Infrastructure**: Enhanced test reliability and coverage across all transport implementations
+- **Connection Provider Registration**: Improved registration of connection and transaction provider interfaces ([PR #3668](https://github.com/BrighterCommand/Brighter/pull/3668))
+
+**Code Quality Improvements**:
+- **CA1852 Warnings**: Enabled and fixed analyzer warnings for unsealed classes ([PR #3554](https://github.com/BrighterCommand/Brighter/pull/3554))
+- **RFC3339 Typo Fix**: Corrected method name typo `ToRcf3339` to `ToRfc3339` ([PR #3622](https://github.com/BrighterCommand/Brighter/pull/3622))
+
+### Command Processor Dispatching Strategy
+
+Enhanced command processor with support for content-based routing using specification patterns ([PR #3652](https://github.com/BrighterCommand/Brighter/pull/3652)). This enables routing requests based on content rather than just type, supporting more sophisticated message routing scenarios.
+
+### Additional Bug Fixes and Improvements
+
+- **Outbox Sweeper**: Fixed NullReference exception in outbox sweeper ([PR #3683](https://github.com/BrighterCommand/Brighter/pull/3683))
+- **ASB Defer Exception**: Fixed issue where Azure Service Bus defer exception caused attempted reject then complete ([PR #3619](https://github.com/BrighterCommand/Brighter/pull/3619))
+- **Scheduler Tests**: Fixed scheduler tests for long scheduling windows with proper EntryTimeToLive configuration ([PR #3582](https://github.com/BrighterCommand/Brighter/pull/3582))
+- **Quorum Queue Tests**: Enhanced quorum queue testing to properly validate queue creation ([PR #3642](https://github.com/BrighterCommand/Brighter/pull/3642))
 
 ### Breaking Changes Summary
 
@@ -207,6 +338,12 @@ For users upgrading from V9 to V10:
 
 6. **Generic Message Pumps**:
    - Remove generic type parameters if directly instantiating message pumps
+
+7. **Test Framework Changes**:
+   - Replace Fluent Assertions with xUnit assertions in your test projects
+
+8. **Default Message Mappers**:
+   - Review your message mappers - many can now be removed in favor of default implementations
 
 ### Database Schema Updates
 
