@@ -23,7 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Mime;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -44,6 +46,17 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly int _value3 = 123;
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
+        
+        private readonly Uri _source;
+        private readonly CloudEventsType _type;
+        private readonly Uri _dataSchema;
+        private readonly string _subject;
+        private readonly TraceParent _traceParent;
+        private readonly TraceState _traceState;
+        private readonly Baggage _baggage;
+        private readonly Id _workflowId;
+        private readonly Id _jobId;
+        
         private readonly Message _messageEarliest;
         private Message _storedMessage;
  
@@ -53,10 +66,39 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
  
+            // define and assign the extra header properties
+            _source = new Uri("http://example.org/source");
+            _type = new CloudEventsType("custom-message-type");
+            _dataSchema = new Uri("http://example.org/schema");
+            _subject = "custom-subject";
+            _traceParent = new TraceParent("00-abcdef1234567890abcdef1234567890-abcdef1234567890-01");
+            _traceState = new TraceState("state");
+            _baggage = Baggage.FromString("userId=123,sessionId=xyz");
+            _workflowId = Id.Random();
+            _jobId = Id.Random();
+
             var messageHeader = new MessageHeader(
-                Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), handledCount:5, delayed: TimeSpan.FromMilliseconds(5)
+                messageId: Guid.NewGuid().ToString(),
+                topic: new RoutingKey("test_topic"),
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
+                correlationId: Guid.NewGuid().ToString(),
+                replyTo: new RoutingKey("ReplyTo"),
+                contentType: new ContentType(MediaTypeNames.Text.Plain),
+                partitionKey: Guid.NewGuid().ToString(),
+                source: _source,
+                type: _type,
+                dataSchema: _dataSchema,
+                subject: _subject,
+                traceParent: _traceParent,
+                traceState: _traceState,
+                baggage: _baggage,
+                workflowId: _workflowId,
+                jobId: _jobId
             );
+            
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -82,6 +124,11 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
             //should read the message header type from the sql outbox
             Assert.Equal(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
+            
+            
+            //Asserts for workflow properties
+            Assert.Equal(_messageEarliest.Header.WorkflowId, _storedMessage.Header.WorkflowId);
+            Assert.Equal(_messageEarliest.Header.JobId, _storedMessage.Header.JobId);
             
             //Bag serialization
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));

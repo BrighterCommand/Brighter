@@ -48,7 +48,6 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
 
-        // new fields for full header
         private readonly Uri _source;
         private readonly CloudEventsType _type;
         private readonly Uri _dataSchema;
@@ -56,6 +55,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly TraceParent _traceParent;
         private readonly TraceState _traceState;
         private readonly Baggage _baggage;
+        private readonly Id _workflowId;
+        private readonly Id _jobId;
 
         private readonly Message _messageEarliest;
         private Message _storedMessage;
@@ -74,6 +75,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _traceParent = new TraceParent("00-abcdef1234567890abcdef1234567890-abcdef1234567890-01");
             _traceState = new TraceState("state");
             _baggage = Baggage.FromString("userId=123,sessionId=xyz");
+            _workflowId = Id.Random();
+            _jobId = Id.Random();
 
             var messageHeader = new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
@@ -92,7 +95,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
                 subject: _subject,
                 traceParent: _traceParent,
                 traceState: _traceState,
-                baggage: _baggage
+                baggage: _baggage,
+                workflowId: _workflowId,
+                jobId: _jobId
             );
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
@@ -133,6 +138,10 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
             Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
+            
+            //Asserts for workflow properties
+            Assert.Equal(_messageEarliest.Header.WorkflowId, _storedMessage.Header.WorkflowId);
+            Assert.Equal(_messageEarliest.Header.JobId, _storedMessage.Header.JobId);
 
             // assert the newly set header properties round-trip
             Assert.Equal(_source, _storedMessage.Header.Source);
