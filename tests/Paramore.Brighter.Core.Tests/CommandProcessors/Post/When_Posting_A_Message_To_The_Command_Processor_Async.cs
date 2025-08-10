@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -122,6 +123,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var message = await _outbox.GetAsync(_myCommand.Id, requestContext);
             Assert.NotNull(message);
             
+            Debug.Assert(_expectedMessage == message);
             Assert.Equal(_expectedMessage, message);
             
         }

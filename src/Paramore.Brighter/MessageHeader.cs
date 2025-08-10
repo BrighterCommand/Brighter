@@ -444,15 +444,11 @@ namespace Paramore.Brighter
             bool jobIdEquals = JobId == other.JobId;
             bool handledCountEquals = HandledCount == other.HandledCount;
             bool delayedEquals = Delayed.Equals(other.Delayed);
-            bool traceParentEquals = TraceParent == other.TraceParent;
-            bool traceStateEquals = TraceState == other.TraceState;
-            bool baggageEquals = Baggage.ToString() == other.Baggage.ToString();
 
             return messageIdEquals && topicEquals && messageTypeEquals && sourceEquals &&
                    typeEquals && correlationIdEquals && replyToEquals && contentTypeEquals &&
                    partitionKeyEquals && dataSchemaEquals && subjectEquals && specVersionEquals &&
-                   workflowIdEquals && jobIdEquals && handledCountEquals && delayedEquals &&
-                   traceParentEquals && traceStateEquals && baggageEquals;
+                   workflowIdEquals && jobIdEquals && handledCountEquals && delayedEquals;
         }
 
         /// <summary>
