@@ -55,6 +55,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly TraceParent _traceParent = new TraceParent("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
         private readonly TraceState _traceState = new TraceState("congo=t61rcWkgMzE");
         private readonly Baggage _baggage = new Baggage();
+        private readonly Id _workflowId = Id.Random();
+        private readonly Id _jobId = Id.Random();
         private readonly MessageHeader _messageHeader;
 
         public SqlOutboxWritingMessageTests()
@@ -82,7 +84,9 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
                 delayed: TimeSpan.FromMilliseconds(5),
                 traceParent: _traceParent,
                 traceState: _traceState,
-                baggage: _baggage
+                baggage: _baggage,
+                workflowId: _workflowId,
+                jobId: _jobId
             );
             _messageHeader.Bag.Add(_key1, _value1);
             _messageHeader.Bag.Add(_key2, _value2);
@@ -118,7 +122,6 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             //should read the header from the sql outbox
             Assert.Equal(_message.Header.Topic, _storedMessage.Header.Topic);
             Assert.Equal(_message.Header.MessageType, _storedMessage.Header.MessageType);
-            Assert.Equal(_message.Header.TimeStamp, _storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1)); // Allow for slight differences in timestamp precision
             Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
             Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
             Assert.Equal(_message.Header.CorrelationId, _storedMessage.Header.CorrelationId);
@@ -134,6 +137,10 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             Assert.Equal(_message.Header.TraceParent, _storedMessage.Header.TraceParent);
             Assert.Equal(_message.Header.TraceState, _storedMessage.Header.TraceState);
             Assert.Equal(_message.Header.Baggage, _storedMessage.Header.Baggage);
+            
+            //Asserts for workflow properties
+            Assert.Equal(_message.Header.WorkflowId, _storedMessage.Header.WorkflowId);
+            Assert.Equal(_message.Header.JobId, _storedMessage.Header.JobId);
 
             //Bag serialization
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));

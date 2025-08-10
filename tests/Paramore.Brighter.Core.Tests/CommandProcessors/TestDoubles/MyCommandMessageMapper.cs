@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
@@ -34,8 +36,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public Message MapToMessage(MyCommand request, Publication publication)
         {
-            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), type: publication.Type);
-            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
+            var header = new MessageHeader(
+                messageId: request.Id, 
+                topic: publication.Topic ?? RoutingKey.Empty, 
+                messageType: request.RequestToMessageType(), 
+                source: publication.Source,
+                type: publication.Type,
+                correlationId: request.CorrelationId,
+                timeStamp: DateTimeOffset.UtcNow,
+                replyTo: publication.ReplyTo ?? RoutingKey.Empty,
+                contentType: new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()},
+                partitionKey: Context.GetPartitionKey(),
+                dataSchema: publication.DataSchema,
+               subject: publication.Subject,
+                workflowId: Context.GetWorkflowId(),
+                jobId: Context.GetJobId()
+        );
+        var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
         }
