@@ -55,6 +55,8 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private readonly TraceParent _traceParent = new("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
         private readonly TraceState _traceState = new("congo=t61rcWkgMzE");
         private readonly Baggage _baggage = new();
+        private readonly Id _workflowId = Id.Random();
+        private readonly Id _jobId = Id.Random();
 
         public MySqlOutboxWritingMessageTests()
         {
@@ -78,7 +80,9 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
                 delayed: TimeSpan.FromMilliseconds(5),
                 traceParent: _traceParent,
                 traceState: _traceState,
-                baggage: _baggage);
+                baggage: _baggage,
+                workflowId: _workflowId,
+                jobId: _jobId);
 
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
@@ -107,7 +111,10 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             Assert.Equal(_messageEarliest.Header.ReplyTo, _storedMessage.Header.ReplyTo);
             Assert.Equal(_messageEarliest.Header.ContentType, _storedMessage.Header.ContentType);
             Assert.Equal(_messageEarliest.Header.PartitionKey, _storedMessage.Header.PartitionKey);
-
+            
+            //Asserts for workflow properties
+            Assert.Equal(_messageEarliest.Header.WorkflowId, _storedMessage.Header.WorkflowId);
+            Assert.Equal(_messageEarliest.Header.JobId, _storedMessage.Header.JobId);
 
             //Bag serialization
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));
