@@ -1436,6 +1436,8 @@ namespace Paramore.Brighter
                 dataSchema: GetDataSchema(dr),
                 subject: GetSubject(dr),
                 handledCount: 0, // HandledCount is zero when restored from the Outbox
+                workflowId: GetWorkflowId(dr),
+                jobId: GetJobId(dr),
                 delayed: TimeSpan.Zero, // Delayed is zero when restored from the Outbox
                 traceParent: GetTraceParent(dr),
                 traceState:  GetTraceState(dr),
@@ -1607,6 +1609,18 @@ namespace Paramore.Brighter
 
             return new CloudEventsType(type);
         }
+        
+        protected virtual string JobIdColumnName => "JobId";
+
+        protected virtual Id? GetJobId(DbDataReader dr)
+        {
+            if (!TryGetOrdinal(dr, JobIdColumnName, out var ordinal) || dr.IsDBNull(ordinal))
+            {
+                return null;
+            }
+            var jobId = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(jobId) ? null : new Id(jobId);
+        }
 
         protected virtual string TopicColumnName => "Topic";
         protected virtual RoutingKey GetTopic(DbDataReader dr)
@@ -1744,6 +1758,19 @@ namespace Paramore.Brighter
 
             var traceState = dr.GetString(ordinal);
             return string.IsNullOrEmpty(traceState) ? null :  new TraceState(traceState);
+        }
+        
+        protected virtual string WorkflowIdColumnName => "WorkflowId";
+
+        protected virtual Id? GetWorkflowId(DbDataReader dr)
+        {
+            if (!TryGetOrdinal(dr, WorkflowIdColumnName, out var ordinal) || dr.IsDBNull(ordinal))
+            {
+                return null;
+            }
+            
+            var workflowId = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(workflowId) ? null : new Id(workflowId);
         }
 
         private static partial class Log
