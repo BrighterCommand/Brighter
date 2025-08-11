@@ -75,7 +75,7 @@ public class MongoDbOutboxDeletingMessagesTests : IDisposable
         var remainingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
 
         var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
-        Assert.Equal(2, (msgs)?.Count());
+        Assert.Equal(2, (msgs)?.Length);
         Assert.Contains(_secondMessage, msgs);
         Assert.Contains(_thirdMessage, msgs);
 

@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var remainingMessages = _mySqlOutbox.OutstandingMessages(TimeSpan.Zero, _context);
 
             var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
-            Assert.Equal(2, (msgs)?.Count());
+            Assert.Equal(2, msgs?.Length);
             Assert.Contains(_secondMessage, msgs);
             Assert.Contains(_thirdMessage, msgs);
             
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var remainingMessages = await _mySqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, _context);
 
             var messages = remainingMessages as Message[] ?? remainingMessages.ToArray();
-            Assert.Equal(2, (messages)?.Count());
+            Assert.Equal(2, messages?.Length);
             Assert.Contains(_secondMessage, messages);
             Assert.Contains(_thirdMessage, messages);
             

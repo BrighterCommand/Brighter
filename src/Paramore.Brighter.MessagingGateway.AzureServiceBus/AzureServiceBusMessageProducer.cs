@@ -131,10 +131,10 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     {
         var topics = messages.Select(m => m.Header.Topic).Distinct().ToArray();
         
-        if (topics.Count() != 1)
+        if (topics.Length != 1)
         {
-            Logger.LogError("Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested", topics.Count());
-            throw new Exception($"Cannot Bulk send for Multiple Topics, {topics.Count()} Topics Requested");
+            Logger.LogError("Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested", topics.Length);
+            throw new Exception($"Cannot Bulk send for Multiple Topics, {topics.Length} Topics Requested");
         }
 
         var topic = topics.First()!;
@@ -145,7 +145,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
                 .Take(_bulkSendBatchSize)
                 .ToArray()))).ToArray();
 
-        Logger.LogInformation("Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}", topic, batches.Count(), _bulkSendBatchSize);
+        Logger.LogInformation("Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}", topic, batches.Length, _bulkSendBatchSize);
 
         return batches;
     }
