@@ -4,7 +4,7 @@
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -13,7 +13,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
@@ -31,14 +32,14 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgresSql")]
-    public class PostgreSqlOutboxEmptyStoreTests : IDisposable
+    public class PostgreSqlOutboxMessageAlreadyExistsAsyncTests : IDisposable
     {
-        private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
+        private Exception _exception;
         private readonly Message _messageEarliest;
         private readonly PostgreSqlOutbox _sqlOutbox;
-        private Message _storedMessage;
+        private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
 
-        public PostgreSqlOutboxEmptyStoreTests()
+        public PostgreSqlOutboxMessageAlreadyExistsAsyncTests()
         {
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
@@ -48,12 +49,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Outbox()
+        public async Task When_The_Message_Is_Already_In_The_Outbox_Async()
         {
-            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
+            await _sqlOutbox.AddAsync(_messageEarliest);
+            
+            _exception = await Catch.ExceptionAsync(async () => await _sqlOutbox.AddAsync(_messageEarliest));
 
-            //should return a empty message
-            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+            //should ignore the duplicate key and still succeed
+            _exception.Should().BeNull();
         }
 
         public void Dispose()
