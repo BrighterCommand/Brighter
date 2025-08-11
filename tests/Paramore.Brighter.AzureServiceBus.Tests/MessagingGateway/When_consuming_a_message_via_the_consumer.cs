@@ -67,6 +67,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                     type: new CloudEventsType("goparamore.io.test.command"),
                     timeStamp: DateTimeOffset.UtcNow,
                     correlationId: _correlationId,
+                    replyTo: testReplyTo,
                     contentType: _contentType,
                     partitionKey: testPartitionKey,
                     dataSchema: testSchema,
