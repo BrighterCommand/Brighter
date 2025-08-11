@@ -52,7 +52,5 @@ namespace Paramore.Test.Helpers.Loggers
     /// <typeparam name="TCategoryName">
     /// The type used to categorize the logger. Typically, this is the type of the class using the logger.
     /// </typeparam>
-    public interface ITestOutputLogger<out TCategoryName> : ILogger<TCategoryName>, ITestOutputLogger
-    {
-    }
+    public interface ITestOutputLogger<out TCategoryName> : ILogger<TCategoryName>, ITestOutputLogger;
 }

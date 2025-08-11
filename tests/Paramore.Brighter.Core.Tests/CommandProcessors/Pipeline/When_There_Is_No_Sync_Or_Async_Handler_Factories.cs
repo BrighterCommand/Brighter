@@ -60,8 +60,5 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
         CommandProcessor.ClearServiceBus();
     }
 
-    sealed class DummyHandlerFactory : IAmAHandlerFactory
-    {
-
-    }
+    sealed class DummyHandlerFactory : IAmAHandlerFactory;
 }

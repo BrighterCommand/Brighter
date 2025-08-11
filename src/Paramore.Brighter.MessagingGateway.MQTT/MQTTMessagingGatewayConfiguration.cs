@@ -47,6 +47,6 @@
     }
 
 
-    public class MqttMessagingGatewayProducerConfiguration : MqttMessagingGatewayConfiguration{}
-    public class MqttMessagingGatewayConsumerConfiguration : MqttMessagingGatewayConfiguration{}
+    public class MqttMessagingGatewayProducerConfiguration : MqttMessagingGatewayConfiguration;
+    public class MqttMessagingGatewayConsumerConfiguration : MqttMessagingGatewayConfiguration;
 }

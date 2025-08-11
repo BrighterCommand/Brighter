@@ -9,8 +9,5 @@
     /// from that. The properties you add to the derived class should normally be used within that base gateway and are often private to the base class
     /// not shared with the derived classes as they are specific to how we connect not how we produce or consume
     /// </summary>
-    public interface IAmGatewayConfiguration
-    {
-        
-    }
+    public interface IAmGatewayConfiguration;
 }

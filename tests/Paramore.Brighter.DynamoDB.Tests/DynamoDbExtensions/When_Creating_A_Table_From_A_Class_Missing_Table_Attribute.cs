@@ -18,6 +18,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             });
         }
 
-        private sealed class DynamoDbEntity{}
+        private sealed class DynamoDbEntity;
     }
 }
