@@ -184,7 +184,7 @@ public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscrip
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsParitionKey, out object? property))
         {
-            s_logger.LogWarning("No Cloud Events type found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            s_logger.LogWarning("No Cloud Events partition key found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
             return PartitionKey.Empty;
         }
 
