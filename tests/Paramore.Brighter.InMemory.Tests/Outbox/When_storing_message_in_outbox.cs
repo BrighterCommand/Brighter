@@ -142,12 +142,12 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             //Assert
             var messages = sentMessages as Message[] ?? sentMessages.ToArray();
-            Assert.Equal(2, messages.Count());
+            Assert.Equal(2, messages.Length);
             Assert.Contains(messages, msg => msg.Id == messageIds[0]);
             Assert.Contains(messages, msg => msg.Id == messageIds[4]);
-            
+
              var collection = outstandingMessages as Message[] ?? outstandingMessages.ToArray();
-            Assert.Equal(3, collection.Count());
+            Assert.Equal(3, collection.Length);
             Assert.Contains(collection, msg => msg.Id == messageIds[1]);
             Assert.Contains(collection, msg => msg.Id == messageIds[2]);
             Assert.Contains(collection, msg => msg.Id == messageIds[3]);        }

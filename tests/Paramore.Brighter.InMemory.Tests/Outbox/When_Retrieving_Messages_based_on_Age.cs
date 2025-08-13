@@ -39,7 +39,7 @@ public class When_Retrieving_Messages_based_on_Age
         var messagesAfterDispatch = outbox.OutstandingMessages(TimeSpan.Zero, context);
 
         Assert.Equal(2, messagesToDispatch.Count());
-        Assert.Equal(4, allMessages.Count());
+        Assert.Equal(4, allMessages.Length);
         Assert.Empty(messagesAfterDispatch);
     }
     
@@ -69,7 +69,7 @@ public class When_Retrieving_Messages_based_on_Age
         var messagesAfterDispatch = await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
         Assert.Equal(2, messagesToDispatch.Count());
-        Assert.Equal(4, allMessages.Count());
+        Assert.Equal(4, allMessages.Length);
         Assert.Empty(messagesAfterDispatch);
     }
 }
