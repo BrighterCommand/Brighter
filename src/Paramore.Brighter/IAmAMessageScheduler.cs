@@ -3,6 +3,4 @@
 /// <summary>
 /// The base interface for Message Scheduler (Async & Sync)
 /// </summary>
-public interface IAmAMessageScheduler
-{
-}
+public interface IAmAMessageScheduler;

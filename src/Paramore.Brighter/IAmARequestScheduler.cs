@@ -3,6 +3,4 @@
 /// <summary>
 /// The base interface for Request Scheduler (Async & Sync)
 /// </summary>
-public interface IAmARequestScheduler
-{
-}
+public interface IAmARequestScheduler;
