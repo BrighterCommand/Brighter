@@ -30,7 +30,7 @@ Every request flows through a pipeline of handlers:
 - **Direct** - Direct handler invocation for local processing
 - **Bus** - Message-based communication via transports (RabbitMQ, AWS SQS, etc.)
 - **Outbox pattern** - Ensures transactional consistency for external messaging
-- **Inbox pattern** - Deduplicates mesages for external messaging
+- **Inbox pattern** - Deduplicates messages for external messaging
 
 ## Core Components
 
