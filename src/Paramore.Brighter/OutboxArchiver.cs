@@ -98,7 +98,7 @@ namespace Paramore.Brighter
                     .DispatchedMessages(dispatchedSince, requestContext, _archiveBatchSize)
                     .ToArray();
 
-                Log.FoundMessagesToArchive(s_logger, messages.Count(), _archiveBatchSize);
+                Log.FoundMessagesToArchive(s_logger, messages.Length, _archiveBatchSize);
 
                 if (messages.Length <= 0) return;
 
@@ -109,7 +109,7 @@ namespace Paramore.Brighter
 
                 _outBox.Delete(messages.Select(e => e.Id).ToArray(), requestContext);
 
-                Log.SuccessfullyArchivedMessages(s_logger, messages.Count(), _archiveBatchSize);
+                Log.SuccessfullyArchivedMessages(s_logger, messages.Length, _archiveBatchSize);
             }
             catch (Exception e)
             {

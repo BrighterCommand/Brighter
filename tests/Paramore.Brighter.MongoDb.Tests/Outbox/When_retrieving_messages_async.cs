@@ -43,7 +43,7 @@ public class MongoDbFetchMessageAsyncTests : IDisposable
         var messages = await _outbox.GetAsync();
 
         //Assert
-        Assert.Equal(3, (messages)?.Count());
+        Assert.Equal(3, messages?.Count);
     }
 
     [Fact]

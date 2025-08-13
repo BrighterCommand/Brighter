@@ -42,7 +42,7 @@ public class MongoDbFetchMessageTests : IDisposable
         var messages = _outbox.Get();
 
         //Assert
-        Assert.Equal(3, (messages)?.Count());
+        Assert.Equal(3, messages?.Count);
     }
 
     [Fact]

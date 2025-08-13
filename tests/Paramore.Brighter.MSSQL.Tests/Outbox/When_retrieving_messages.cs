@@ -44,7 +44,7 @@ public class MsSqlFetchMessageTests : IDisposable
         var messages = _sqlOutbox.Get(null);
 
         //Assert
-        Assert.Equal(3, messages.Count());
+        Assert.Equal(3, messages.Count);
     }
 
     [Fact]
