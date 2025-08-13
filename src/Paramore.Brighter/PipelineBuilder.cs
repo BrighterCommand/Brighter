@@ -106,7 +106,7 @@ namespace Paramore.Brighter
                 
                 observerTypes.Each(observer =>
                 {
-                    var context = observerTypes.Count() == 1 ? requestContext : requestContext.CreateCopy();
+                    var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
                     var instanceScope = GetSyncInstanceScope();
                     var handler = (RequestHandler<TRequest>?)_syncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
@@ -151,7 +151,7 @@ namespace Paramore.Brighter
                 
                 observerTypes.Each(observer =>
                 {
-                    var context = observerTypes.Count() == 1 ? requestContext : requestContext.CreateCopy();
+                    var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
                     var instanceScope = GetAsyncInstanceScope();
                     var handler = (RequestHandlerAsync<TRequest>?)_asyncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)

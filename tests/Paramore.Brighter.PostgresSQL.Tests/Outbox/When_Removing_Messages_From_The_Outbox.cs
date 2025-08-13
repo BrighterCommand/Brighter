@@ -74,7 +74,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             var remainingMessages = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
 
             var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
-            Assert.Equal(2, (msgs)?.Count());
+            Assert.Equal(2, msgs?.Length);
             Assert.Contains(_secondMessage, msgs);
             Assert.Contains(_thirdMessage, msgs);
             
