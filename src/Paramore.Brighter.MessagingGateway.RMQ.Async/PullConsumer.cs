@@ -110,7 +110,7 @@ public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(
             exchange,
             routingKey,
             properties,
-            body,
+            payload,
             cancellationToken));
 
         return Task.CompletedTask;

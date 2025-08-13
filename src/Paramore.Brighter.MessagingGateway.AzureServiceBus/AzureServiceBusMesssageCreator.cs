@@ -76,6 +76,7 @@ public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscrip
         var traceParent = GetTraceParent(azureServiceBusMessage);
         var traceState = GetTraceState(azureServiceBusMessage);
         var baggage = GetBaggage(azureServiceBusMessage);
+        var partitionKey = GetPartitionKey(azureServiceBusMessage);
             
         // TODO: We only support  a header based approach to Cloud Events at the moment, so we don't
         // have support here for Cloud Events JSON as the body. We should probably support that as well in the future.
@@ -97,7 +98,8 @@ public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscrip
             delayed: TimeSpan.Zero,
             traceParent: traceParent,
             traceState: traceState,
-            baggage: baggage
+            baggage: baggage,
+            partitionKey: partitionKey
         );
 
         headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
@@ -176,6 +178,17 @@ public class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscrip
 
         s_logger.LogWarning("Invalid Cloud Events time format in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
         return DateTimeOffset.UtcNow;
+    }
+
+    private PartitionKey GetPartitionKey(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsParitionKey, out object? property))
+        {
+            s_logger.LogWarning("No Cloud Events partition key found in message from topic {Topic} via subscription {SubscriptionName}", _topic, subscription.Name);
+            return PartitionKey.Empty;
+        }
+
+        return new PartitionKey(property.ToString() ?? string.Empty);
     }
 
     private CloudEventsType GetCloudEventsType(IBrokeredMessageWrapper azureServiceBusMessage)
