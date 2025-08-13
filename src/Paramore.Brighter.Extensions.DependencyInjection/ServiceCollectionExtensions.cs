@@ -211,6 +211,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     $"Unable to register outbox of type {outbox.GetType().Name} - no transaction provider has been registered that matches the outbox's transaction type");
             }
 
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox), _ => outbox, ServiceLifetime.Singleton));
+
             if (syncOutboxInterface != null)
             {
                 var outboxDescriptor =

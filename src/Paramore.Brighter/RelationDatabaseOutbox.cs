@@ -642,7 +642,7 @@ namespace Paramore.Brighter
                 var result = ReadFromStore(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
                     MapListFunction).ToList();
 
-                span?.AddTag("db.response.returned_rows", result.Count());
+                span?.AddTag("db.response.returned_rows", result.Count);
                 return result;
             }
             finally
@@ -684,7 +684,7 @@ namespace Paramore.Brighter
                     connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
                     dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
 
-                span?.AddTag("db.response.returned_rows", result.Count());
+                span?.AddTag("db.response.returned_rows", result.Count);
                 return result;
             }
             finally

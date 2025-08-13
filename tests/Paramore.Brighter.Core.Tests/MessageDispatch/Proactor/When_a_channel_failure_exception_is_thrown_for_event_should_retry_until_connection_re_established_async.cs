@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             _messagePump.Run();
 
             //Should publish the message via the command processor
-            Assert.Equal(2, _commandProcessor.Commands.Count());
+            Assert.Equal(2, _commandProcessor.Commands.Count);
             Assert.Equal(CommandType.PublishAsync, _commandProcessor.Commands[0]);
             Assert.Equal(CommandType.PublishAsync, _commandProcessor.Commands[1]);
 
