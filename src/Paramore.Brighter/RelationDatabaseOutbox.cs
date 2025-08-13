@@ -642,7 +642,7 @@ namespace Paramore.Brighter
                 var result = ReadFromStore(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
                     MapListFunction).ToList();
 
-                span?.AddTag("db.response.returned_rows", result.Count());
+                span?.AddTag("db.response.returned_rows", result.Count);
                 return result;
             }
             finally
@@ -684,7 +684,7 @@ namespace Paramore.Brighter
                     connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
                     dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
 
-                span?.AddTag("db.response.returned_rows", result.Count());
+                span?.AddTag("db.response.returned_rows", result.Count);
                 return result;
             }
             finally
@@ -1300,6 +1300,8 @@ namespace Paramore.Brighter
                 CreateSqlParameter($"@{prefix}TraceParent", DbType.String, message.Header.TraceParent?.Value),
                 CreateSqlParameter($"@{prefix}TraceState", DbType.String, message.Header.TraceState?.Value),
                 CreateSqlParameter($"@{prefix}Baggage", DbType.String, message.Header.Baggage.ToString()),
+                CreateSqlParameter($"@{prefix}WorkflowId", DbType.String, message.Header.WorkflowId?.Value),
+                CreateSqlParameter($"@{prefix}JobId", DbType.String, message.Header.JobId?.Value),
             ];
         }
 
@@ -1404,7 +1406,8 @@ namespace Paramore.Brighter
                 messageParams.Add(
                     $"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, " +
                     $"@p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body, " +
-                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, @p{i}_Baggage)");
+                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, " +  
+                    $"@p{i}_Baggage, @p{i}_WorkflowId, @p{i}_JobId)");
 
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
             }
@@ -1433,6 +1436,8 @@ namespace Paramore.Brighter
                 dataSchema: GetDataSchema(dr),
                 subject: GetSubject(dr),
                 handledCount: 0, // HandledCount is zero when restored from the Outbox
+                workflowId: GetWorkflowId(dr),
+                jobId: GetJobId(dr),
                 delayed: TimeSpan.Zero, // Delayed is zero when restored from the Outbox
                 traceParent: GetTraceParent(dr),
                 traceState:  GetTraceState(dr),
@@ -1604,6 +1609,18 @@ namespace Paramore.Brighter
 
             return new CloudEventsType(type);
         }
+        
+        protected virtual string JobIdColumnName => "JobId";
+
+        protected virtual Id? GetJobId(DbDataReader dr)
+        {
+            if (!TryGetOrdinal(dr, JobIdColumnName, out var ordinal) || dr.IsDBNull(ordinal))
+            {
+                return null;
+            }
+            var jobId = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(jobId) ? null : new Id(jobId);
+        }
 
         protected virtual string TopicColumnName => "Topic";
         protected virtual RoutingKey GetTopic(DbDataReader dr)
@@ -1741,6 +1758,19 @@ namespace Paramore.Brighter
 
             var traceState = dr.GetString(ordinal);
             return string.IsNullOrEmpty(traceState) ? null :  new TraceState(traceState);
+        }
+        
+        protected virtual string WorkflowIdColumnName => "WorkflowId";
+
+        protected virtual Id? GetWorkflowId(DbDataReader dr)
+        {
+            if (!TryGetOrdinal(dr, WorkflowIdColumnName, out var ordinal) || dr.IsDBNull(ordinal))
+            {
+                return null;
+            }
+            
+            var workflowId = dr.GetString(ordinal);
+            return string.IsNullOrEmpty(workflowId) ? null : new Id(workflowId);
         }
 
         private static partial class Log

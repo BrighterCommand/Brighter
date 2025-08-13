@@ -626,7 +626,7 @@ namespace Paramore.Brighter
 
                     requestContext.Span = parentSpan;
 
-                    Log.FoundMessagesToClear(s_logger, messages.Count(), amountToClear);
+                    Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
 
                     if (useBulk)
                     {

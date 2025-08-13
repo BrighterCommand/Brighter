@@ -46,6 +46,13 @@ public static class RequestContextBagNames
     /// </remarks>
     public const string CloudEventsAdditionalProperties = "Brighter-CloudEvents-AdditionalProperties";
     
+    
+    /// <summary>
+    /// Key used to store the job ID, representing an instance of a workflow, in the request context bag.
+    /// </summary>
+    /// <remarks>Reserved for future usage</remarks>
+    public const string JobId = "Brighter-JobId";
+    
     /// <summary>
     /// Key used to specify a custom partition key override in the request context bag.
     /// </summary>
@@ -117,4 +124,11 @@ public static class RequestContextBagNames
     /// </para>
     /// </remarks>
     public const string Headers = "Brighter-Headers";
+
+    /// <summary>
+    /// Used to store the worfkflow ID, which indicates which workflow this request belongs to, in the request context bag.
+    /// </summary>
+    /// <remarks>Reserved for future usage</remarks>
+    public const string WorkflowId = "Brighter-WorkflowId";
+    
 }

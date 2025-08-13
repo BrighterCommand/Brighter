@@ -123,7 +123,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         
         //Then we should see three activities for each of the deposits
         var depositActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Deposit.ToSpanName()}").ToList();
-        Assert.Equal(3, depositActivities.Count());
+        Assert.Equal(3, depositActivities.Count);
         
         for(int i = 0; i < 3; i++)
         {
