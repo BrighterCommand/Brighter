@@ -128,7 +128,7 @@ namespace Paramore.Brighter
             if (batch is not MessageBatch messageBatch)
                 throw new NotImplementedException($"{nameof(SendAsync)} only supports ${typeof(MessageBatch)}");
 
-            var messages = messageBatch!.Messages as Message[] ?? messageBatch.Messages.ToArray();
+            var messages = messageBatch!.Content as Message[] ?? messageBatch.Content.ToArray();
             foreach (var message in messages)
             {
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
@@ -143,8 +143,8 @@ namespace Paramore.Brighter
         /// Creates message batches
         /// </summary>
         /// <param name="messages">A collection of messages to create batches for</param>
-        public IEnumerable<IAmAMessageBatch> CreateBatches(IEnumerable<Message> messages) 
-            => [new MessageBatch(messages)];
+        public ValueTask<IEnumerable<IAmAMessageBatch>> CreateBatchesAsync(IEnumerable<Message> messages, CancellationToken cancellationToken)
+            => new([new MessageBatch(messages)]);
 
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/>

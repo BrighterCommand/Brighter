@@ -45,5 +45,10 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             => [new MessageBatch(messages)];
         public Task SendAsync(IAmAMessageBatch batch, CancellationToken cancellationToken)
             => throw new NotImplementedException();
+
+        public ValueTask<IEnumerable<IAmAMessageBatch>> CreateBatchesAsync(IEnumerable<Message> messages, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

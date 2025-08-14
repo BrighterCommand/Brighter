@@ -6,12 +6,12 @@ namespace Paramore.Brighter;
 /// Class MessageBatch
 /// A collection of T <see cref="Message"/>
 /// </summary>
-public interface IAmAMessageBatch<out T> : IAmAMessageBatch
+public interface IAmAMessageBatch<out TContent> : IAmAMessageBatch
 {
     /// <summary>
     /// Collection of messages within the batch, this could either be a Message implementation or a producer specific type like a ServiceBusMessageBatch 
     /// </summary>
-    public T Messages { get; }
+    public TContent Content { get; }
 }
 
 /// <summary>
