@@ -38,9 +38,8 @@ public class AzureServiceBusMessagePublisher
     /// Map a Brighter <see cref="Message"/> to an Azure Service Bus <see cref="ServiceBusMessage"/>.
     /// </summary>
     /// <param name="message">The Azure Service Bus <see cref="ServiceBusMessage"/> to map to a  Brighter <see cref="Message"/></param>
-    /// <param name="publication">The publication for the channel, used for message properties such as Cloud Events</param>
     /// <returns></returns>
-    public static ServiceBusMessage ConvertToServiceBusMessage(Message message, AzureServiceBusPublication publication)
+    public static ServiceBusMessage ConvertToServiceBusMessage(Message message)
     {
         var azureServiceBusMessage = new ServiceBusMessage(message.Body.Value);
         

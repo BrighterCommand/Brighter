@@ -28,20 +28,20 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             else
             {
+
                 await _serviceBusSender.SendMessageAsync(message, cancellationToken);
             }
         }
 
-        public Task SendAsync(ServiceBusMessage[] messages, CancellationToken cancellationToken = default)
-        {
-            return _serviceBusSender.SendMessagesAsync(messages, cancellationToken);
-        }
+        public Task ScheduleMessageAsync(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime,
+            CancellationToken cancellationToken = default) =>
+            _serviceBusSender.ScheduleMessageAsync(message, scheduleEnqueueTime, cancellationToken);
 
-        public async Task ScheduleMessageAsync(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime,
-            CancellationToken cancellationToken = default)
-        {
-            await _serviceBusSender.ScheduleMessageAsync(message, scheduleEnqueueTime, cancellationToken);
-        }
+        public ValueTask<ServiceBusMessageBatch> CreateMessageBatchAsync(CancellationToken cancellationToken = default) 
+            => _serviceBusSender.CreateMessageBatchAsync(cancellationToken);
+
+        public Task SendAsync(ServiceBusMessageBatch batch, CancellationToken cancellationToken = default)
+            => _serviceBusSender.SendMessagesAsync(batch, cancellationToken);
 
         public Task CloseAsync()
         {

@@ -38,7 +38,8 @@ namespace Paramore.Brighter
         /// Creates message batches
         /// </summary>
         /// <param name="messages">A collection of messages to create batches for</param>
-        IEnumerable<IAmAMessageBatch> CreateBatches(IEnumerable<Message> messages);
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        ValueTask<IEnumerable<IAmAMessageBatch>> CreateBatchesAsync(IEnumerable<Message> messages, CancellationToken cancellationToken);
 
         /// <summary>
         /// Sends a batch of messages.

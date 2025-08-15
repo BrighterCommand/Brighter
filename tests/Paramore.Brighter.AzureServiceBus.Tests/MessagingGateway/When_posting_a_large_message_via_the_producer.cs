@@ -14,7 +14,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
     [Trait("Category", "ASB")]
     [Trait("Fragile", "CI")]
-    public class ASBProducerTests : IDisposable
+    public class LargeAsbMessageProducerTests : IDisposable
     {
         private readonly IAmAChannelSync _topicChannel;
         private readonly IAmAChannelSync _queueChannel;
@@ -26,7 +26,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         private readonly string _queueName;
         private readonly IAdministrationClientWrapper _administrationClient;
 
-        public ASBProducerTests()
+        public LargeAsbMessageProducerTests()
         {
             _command = new ASBTestCommand
             {
@@ -63,6 +63,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var clientProvider = ASBCreds.ASBClientProvider;
             _administrationClient = new AdministrationClientWrapper(clientProvider);
+            _administrationClient.CreateQueueAsync(_queueName, TimeSpan.FromMinutes(5), 3000).GetAwaiter().GetResult();
+            _administrationClient.CreateTopicAsync(_topicName, TimeSpan.FromMinutes(5), 3000).GetAwaiter().GetResult();
             _administrationClient.CreateSubscriptionAsync(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration())
                 .GetAwaiter()
                 .GetResult();
@@ -85,51 +87,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public async Task When_posting_a_message_via_the_producer(bool testQueues)
+        public async Task When_posting_a_large_message_via_the_bulk_producer(bool testQueues)
         {
             //arrange
             string testHeader = "TestHeader";
             string testHeaderValue = "Blah!!!";
-            var commandMessage = GenerateMessage(testQueues ? _queueName : _topicName);
-            commandMessage.Header.Bag.Add(testHeader, testHeaderValue);
-
-            var producer = _producerRegistry.LookupBy(testQueues
-                ? new RoutingKey(_queueName) : new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
-
-            await producer.SendAsync(commandMessage);
-
-            var channel = testQueues ? _queueChannel : _topicChannel;
-
-            var message = channel.Receive(TimeSpan.FromMilliseconds(5000));
-
-            //clear the queue
-            channel.Acknowledge(message);
-
-            Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-            Assert.Equal(_command.Id, message.Id);
-            Assert.False(message.Redelivered);
-            Assert.Equal(_command.Id, message.Header.MessageId);
-            Assert.Contains(testQueues ? _queueName : _topicName, message.Header.Topic.Value);
-            Assert.Equal(_correlationId, message.Header.CorrelationId);
-            Assert.Equal(_contentType, message.Header.ContentType);
-            Assert.Equal(0, message.Header.HandledCount);
-            //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-            Assert.True(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-            Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
-            //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-            Assert.Equal(commandMessage.Body.Value, message.Body.Value);
-            Assert.Contains(testHeader, message.Header.Bag.Keys);
-            Assert.Equal(testHeaderValue, message.Header.Bag[testHeader]);
-        }
-
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task When_posting_a_message_via_the_bulk_producer(bool testQueues)
-        {
-            //arrange
-            string testHeader = "TestHeader";
-            string testHeaderValue = "Blah!!!";
+            _command = ASBTestCommand.BuildLarge();
             var commandMessage = GenerateMessage(testQueues ? _queueName : _topicName);
             commandMessage.Header.Bag.Add(testHeader, testHeaderValue);
 
@@ -169,6 +132,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             ),
             new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
         );
+
 
         public void Dispose()
         {
