@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Brighter Messaging Gateway for Apache Pulsar</Description>
+    <Authors>Your Name</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference tới core Brighter -->
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+
+    <!-- Apache Pulsar .NET Client -->
+    <PackageReference Include="DotPulsar"/>
+  </ItemGroup>
+
+</Project>

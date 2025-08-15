@@ -13,6 +13,7 @@
     <PackageVersion Include="AWSSDK.Scheduler" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.SQS" Version="[3.7.500.5, 4)" />
+    <PackageVersion Include="DotPulsar" Version="3.1.0" />
     <PackageVersion Include="Azure.Identity" Version="1.14.2" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
@@ -104,6 +105,7 @@
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.8.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <PackageVersion Include="Moq" Version="4.20.69" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.3" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.8" />
@@ -116,6 +118,8 @@
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
     <PackageVersion Include="System.Threading.Channels" Version="9.0.8" />
     <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.abstractions" Version="2.0.3" />
+    <PackageVersion Include="xunit.extensibility.core" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

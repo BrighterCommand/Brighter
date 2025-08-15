@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Paramore.Brighter.ServiceActivator.Control.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:57434;http://localhost:57435"
+    }
+  }
+}
