@@ -1,4 +1,5 @@
 ﻿using System;
+using Greetings.Adaptors.Data;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,6 +7,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
+using Paramore.Brighter.MsSql.EntityFrameworkCore;
 
 namespace GreetingsSender
 {
@@ -42,6 +44,7 @@ namespace GreetingsSender
                 .AddProducers((config) =>
                 {
                     config.ProducerRegistry = producerRegistry;
+                    config.TransactionProvider = typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>);
                 })
                 .AutoFromAssemblies();
 
