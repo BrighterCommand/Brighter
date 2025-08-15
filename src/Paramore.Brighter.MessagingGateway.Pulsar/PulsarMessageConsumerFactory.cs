@@ -12,11 +12,19 @@ public class PulsarMessageConsumerFactory(PulsarMessagingGatewayConnection conne
 {
     private static readonly ConcurrentDictionary<PulsarSubscription, PulsarBackgroundMessageConsumer> s_backgroundConsumers = new();
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Creates a consumer for the specified queue.
+    /// </summary>
+    /// <param name="subscription">The queue to connect to</param>
+    /// <returns>IAmAMessageConsumerSync</returns
     public IAmAMessageConsumerSync Create(Subscription subscription) 
         => CreatePulsarConsumer(subscription);
 
-    /// <inheritdoc />
+     /// <summary>
+     /// Creates a consumer for the specified queue.
+     /// </summary>
+     /// <param name="subscription">The queue to connect to</param>
+     /// <returns>IAmAMessageConsumerSync</returns>
     public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         => CreatePulsarConsumer(subscription);
 

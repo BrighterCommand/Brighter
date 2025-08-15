@@ -47,6 +47,10 @@ public class PulsarMessagingGatewayConnection
     
     private IPulsarClient? _pulsarClient;
     
+    /// <summary>
+    /// Creates a singleton instance of the Pulsar client using a thread-safe initialization pattern.
+    /// </summary>
+    /// <returns>The singleton <see cref="IPulsarClient"/> instance</returns>
     public IPulsarClient Create()
     {
         if (_pulsarClient != null)

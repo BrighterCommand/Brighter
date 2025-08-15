@@ -34,28 +34,51 @@ public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer,
     /// <inheritdoc />
     public async ValueTask DisposeAsync() => await producer.DisposeAsync();
 
-    /// <inheritdoc />
+    /// <summary>
+    /// The <see cref="Publication "/>that this Producer is for.
+    /// </summary>
     public Publication Publication => publication;
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Allows us to set a <see cref="BrighterTracer"/> to let a Producer participate in our telemetry
+    /// </summary>
     public Activity? Span { get; set; }
     
-    /// <inheritdoc />
+    /// <summary>
+    /// The external message scheduler
+    /// </summary>
     public IAmAMessageScheduler? Scheduler { get; set; }
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Sends the specified message.
+    /// </summary>
+    /// <param name="message">The message.</param>
     public void Send(Message message) 
         => SendWithDelay(message, TimeSpan.Zero);
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Sends the specified message.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">A cancellation token to end the operation</param>
     public Task SendAsync(Message message, CancellationToken cancellationToken = default) 
         => SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Send the specified message with specified delay
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="delay">Delay delivery of the message. 0 is no delay. Defaults to 0</param>
     public void SendWithDelay(Message message, TimeSpan? delay)
         => BrighterAsyncContext.Run(async() => await SendWithDelayAsync(message, delay));
 
-    /// <inheritdoc />
+    
+    /// <summary>
+    /// Send the specified message with specified delay
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0</param>
+    /// <param name="cancellationToken">A cancellation token to end the operation</param>
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
     {
         BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Pulsar, message, instrumentation);

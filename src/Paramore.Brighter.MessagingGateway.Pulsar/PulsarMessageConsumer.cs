@@ -12,15 +12,42 @@ using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Pulsar;
 
+/// <summary>
+/// A message consumer implementation for Apache Pulsar that supports both synchronous and asynchronous operations.
+/// </summary>
+/// <remarks>
+/// This class handles message consumption from Pulsar topics including:
+/// - Message acknowledgment
+/// - Message rejection
+/// - Queue purging
+/// - Message receiving
+/// - Message requeuing
+/// 
+/// It wraps a background Pulsar consumer and provides adapters to convert Pulsar-specific message formats
+/// to Brighter's internal message format.
+/// </remarks>
+/// <param name="backgroundPulsarConsumer">The background consumer responsible for low-level Pulsar interactions</param>
 public partial class PulsarMessageConsumer(PulsarBackgroundMessageConsumer backgroundPulsarConsumer) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PulsarMessageConsumer>();
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Acknowledge a message so it won't be redelivered
+    /// </summary>
+    /// <param name="message">The message to acknowledge</param>
+    /// <remarks>
+    /// Uses the "ReceiptHandle" stored in the message's header bag to identify
+    /// the Pulsar MessageId for acknowledgment
+    /// </remarks>
     public void Acknowledge(Message message) 
         => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously acknowledge a message so it won't be redelivered
+    /// </summary>
+    /// <param name="message">The message to acknowledge</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <exception cref="Exception">Throws if acknowledgment fails</exception>
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     { 
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
@@ -45,11 +72,25 @@ public partial class PulsarMessageConsumer(PulsarBackgroundMessageConsumer backg
         }
     }
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Reject a message so it can be redelivered
+    /// </summary>
+    /// <param name="message">The message to reject</param>
+    /// <returns>True if message was rejected successfully</returns>
     public bool Reject(Message message)
         => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously reject a message so it can be redelivered
+    /// </summary>
+    /// <param name="message">The message to reject</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>True if message was rejected successfully</returns>
+    /// <remarks>
+    /// In Pulsar, rejection is implemented as an acknowledgment since Pulsar
+    /// doesn't have a native reject mechanism. This might cause the message to be
+    /// permanently removed rather than redelivered depending on configuration.
+    /// </remarks>
     public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
@@ -75,10 +116,19 @@ public partial class PulsarMessageConsumer(PulsarBackgroundMessageConsumer backg
         }
     }
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Purge all messages in the queue
+    /// </summary>
+    /// <remarks>
+    /// Implemented by seeking to the latest message position, effectively
+    /// skipping all pending messages
+    /// </remarks>
     public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously purge all messages in the queue
+    /// </summary>
+    /// <param name="cancellationToken">Optional cancellation token</param>
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -94,11 +144,33 @@ public partial class PulsarMessageConsumer(PulsarBackgroundMessageConsumer backg
         }
     }
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Receive messages from the queue (synchronous wrapper)
+    /// </summary>
+    /// <param name="timeOut">Maximum time to wait for messages</param>
+    /// <returns>Array of received messages</returns>
     public Message[] Receive(TimeSpan? timeOut = null) 
         => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
 
     /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously receive messages from Pulsar
+    /// </summary>
+    /// <param name="timeOut">Optional timeout for receiving messages</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>Array of received messages</returns>
+    /// <remarks>
+    /// Converts Pulsar messages to Brighter's internal message format:
+    /// 1. Extracts Pulsar properties into message header bag
+    /// 2. Maps Pulsar metadata to Brighter header fields
+    /// 3. Handles timeouts by returning empty message array
+    /// 
+    /// Important mappings:
+    /// - Pulsar MessageId → "ReceiptHandle" in header bag
+    /// - Pulsar Properties → Custom header attributes
+    /// - EventTime → Timestamp header
+    /// - RedeliveryCount → HandledCount header
+    /// </remarks>
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -300,11 +372,27 @@ public partial class PulsarMessageConsumer(PulsarBackgroundMessageConsumer backg
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Requeue a message with optional delay
+    /// </summary>
+    /// <param name="message">The message to requeue</param>
+    /// <param name="delay">Optional delay before redelivery (not supported in Pulsar)</param>
+    /// <returns>True if message was requeued successfully</returns>
+    /// <remarks>
+    /// In Pulsar, this triggers redelivery of the message through
+    /// the redeliverUnacknowledgedMessages API
+    /// </remarks>
     public bool Requeue(Message message, TimeSpan? delay = null) 
         => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
 
     /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously requeue a message with optional delay
+    /// </summary>
+    /// <param name="message">The message to requeue</param>
+    /// <param name="delay">Optional delay before redelivery (ignored in Pulsar implementation)</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>True if message was requeued successfully</returns> 
     public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
         CancellationToken cancellationToken = default)
     {
@@ -336,14 +424,18 @@ public partial class PulsarMessageConsumer(PulsarBackgroundMessageConsumer backg
         }
     }
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously release consumer resources
+    /// </summary>
     public ValueTask DisposeAsync()
     {
         backgroundPulsarConsumer.Stop();
         return new ValueTask();
     }
     
-    /// <inheritdoc />
+    /// <summary>
+    /// Release consumer resources
+    /// </summary>
     public void Dispose()
     {
         backgroundPulsarConsumer.Stop();
@@ -383,6 +475,5 @@ public partial class PulsarMessageConsumer(PulsarBackgroundMessageConsumer backg
 
         [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
         public static partial void ErrorRequeueingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
-
     }
 }

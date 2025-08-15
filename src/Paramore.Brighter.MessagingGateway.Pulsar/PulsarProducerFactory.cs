@@ -11,7 +11,10 @@ namespace Paramore.Brighter.MessagingGateway.Pulsar;
 /// <param name="publications">Collection of publication definitions</param>
 public class PulsarProducerFactory(PulsarMessagingGatewayConnection connection, IEnumerable<PulsarPublication> publications) : IAmAMessageProducerFactory
 {
-    /// <inheritdoc />
+    /// <summary>
+    /// Creates message producers.
+    /// </summary>
+    /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
     public Dictionary<ProducerKey, IAmAMessageProducer> Create()
     {
         var client = connection.Create();
@@ -48,7 +51,10 @@ public class PulsarProducerFactory(PulsarMessagingGatewayConnection connection, 
         return producers;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Creates message producers.
+    /// </summary>
+    /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
     public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync() 
         => Task.FromResult(Create());
 }
