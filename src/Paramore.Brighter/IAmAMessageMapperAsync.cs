@@ -32,7 +32,7 @@ namespace Paramore.Brighter
     /// Map between a <see cref="Command"/> or an <see cref="Event"/> and a <see cref="Message"/>. You must implement this for each Command or Message you intend to send over
     /// a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> 
     /// </summary>
-    public interface IAmAMessageMapperAsync { }
+    public interface IAmAMessageMapperAsync;
 
     /// <summary>
     /// Interface IAmAMessageMapperAsync

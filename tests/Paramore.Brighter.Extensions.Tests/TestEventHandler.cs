@@ -2,9 +2,7 @@ using Paramore.Brighter;
 
 namespace Tests
 {
-    public class TestEventHandler : RequestHandler<TestEvent>
-    {
-    }
+    public class TestEventHandler : RequestHandler<TestEvent>;
 }
 
 

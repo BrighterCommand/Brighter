@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var msgs = messages as Message[] ?? messages.ToArray();
             Assert.True((msgs)?.Any());
 
-            Assert.Equal(3, (msgs)?.Count());
+            Assert.Equal(3, msgs?.Length);
         }
         
         [Fact]
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
 
             var msgs = messages as Message[] ?? messages.ToArray();
             Assert.True((msgs)?.Any());
-            Assert.Equal(3, (msgs)?.Count());
+            Assert.Equal(3, msgs?.Length);
         }
 
         public void Dispose()

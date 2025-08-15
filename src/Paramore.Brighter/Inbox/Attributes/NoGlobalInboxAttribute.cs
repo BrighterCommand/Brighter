@@ -8,7 +8,6 @@ namespace Paramore.Brighter.Inbox.Attributes
     /// builder that it should not push an inbox handler into the chain.
     /// There is no async version of this attribute, as we don't need one for a marker interface
     /// </summary>
-    
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class NoGlobalInboxAttribute : Attribute {}
+    public class NoGlobalInboxAttribute : Attribute;
 }

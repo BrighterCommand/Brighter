@@ -626,7 +626,7 @@ namespace Paramore.Brighter
 
                     requestContext.Span = parentSpan;
 
-                    Log.FoundMessagesToClear(s_logger, messages.Count(), amountToClear);
+                    Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
 
                     if (useBulk)
                     {
@@ -852,7 +852,7 @@ namespace Paramore.Brighter
 
                         Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key);
 
-                        foreach (var batch in bulkMessageProducer.CreateBatches(messages))
+                        foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
                             var sent = await ExecuteWithResiliencePipelineAsync(
                                     async _ => await bulkMessageProducer.SendAsync(batch, cancellationToken)

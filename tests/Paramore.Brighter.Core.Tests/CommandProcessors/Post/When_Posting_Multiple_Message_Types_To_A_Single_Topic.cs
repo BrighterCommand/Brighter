@@ -60,12 +60,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 });
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, type: cloudEventsType),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
             
             _messageTwo = new Message(
-                new MessageHeader(_myOtherCommand.Id, routingKey, MessageType.MT_COMMAND),
+                new MessageHeader(_myOtherCommand.Id, routingKey, MessageType.MT_COMMAND, type: otherEventsType),
                 new MessageBody(JsonSerializer.Serialize(_myOtherCommand, JsonSerialisationOptions.Options))
             );
 

@@ -49,6 +49,8 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
         private readonly RequestContext _context;
+        private readonly Id _workflowId = Id.Random();
+        private readonly Id _jobId = Id.Random();
 
         public SqlOutboxWritingMessageTests()
         {
@@ -73,8 +75,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
                 delayed:      TimeSpan.FromMilliseconds(5),
                 traceParent:  "00-abcdef0123456789-abcdef0123456789-01",
                 traceState:   "state123",
-                baggage:      new Baggage()
-            );
+                baggage:      new Baggage(),
+                workflowId: _workflowId,
+                jobId: _jobId);
+            
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -115,6 +119,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
             Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
+            
+            //Asserts for workflow properties
+            Assert.Equal(_messageEarliest.Header.WorkflowId, _storedMessage.Header.WorkflowId);
+            Assert.Equal(_messageEarliest.Header.JobId, _storedMessage.Header.JobId);
 
             // new fields assertions
             Assert.Equal(_messageEarliest.Header.Source,       _storedMessage.Header.Source);

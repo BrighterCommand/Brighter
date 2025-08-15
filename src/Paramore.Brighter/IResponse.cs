@@ -34,7 +34,5 @@ namespace Paramore.Brighter
     /// Responses flow through the same message handling pipeline as regular requests,
     /// but they contain correlation information to link them back to the original request.
     /// </remarks>
-    public interface IResponse : IRequest
-    {
-    }
+    public interface IResponse : IRequest;
 }

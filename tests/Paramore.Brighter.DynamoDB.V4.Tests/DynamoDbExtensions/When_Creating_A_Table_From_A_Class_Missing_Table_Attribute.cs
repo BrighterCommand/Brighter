@@ -19,5 +19,5 @@ public class DynamoDbFactoryMissingTableAttributeTests
         });
     }
 
-    private sealed class DynamoDbEntity{}
+    private sealed class DynamoDbEntity;
 }

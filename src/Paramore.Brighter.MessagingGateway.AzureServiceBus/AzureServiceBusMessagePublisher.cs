@@ -38,9 +38,8 @@ public class AzureServiceBusMessagePublisher
     /// Map a Brighter <see cref="Message"/> to an Azure Service Bus <see cref="ServiceBusMessage"/>.
     /// </summary>
     /// <param name="message">The Azure Service Bus <see cref="ServiceBusMessage"/> to map to a  Brighter <see cref="Message"/></param>
-    /// <param name="publication">The publication for the channel, used for message properties such as Cloud Events</param>
     /// <returns></returns>
-    public static ServiceBusMessage ConvertToServiceBusMessage(Message message, AzureServiceBusPublication publication)
+    public static ServiceBusMessage ConvertToServiceBusMessage(Message message)
     {
         var azureServiceBusMessage = new ServiceBusMessage(message.Body.Value);
         
@@ -59,59 +58,57 @@ public class AzureServiceBusMessagePublisher
         if(!string.IsNullOrEmpty(message.Header.CorrelationId))
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
         if (!string.IsNullOrEmpty(message.Header.ReplyTo!))
-            azureServiceBusMessage.ReplyTo = message.Header.ReplyTo!;
+            azureServiceBusMessage.ReplyTo = message.Header.ReplyTo?.Value;
         if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
             azureServiceBusMessage.SessionId = value.ToString();
 
         foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
         {
-            azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
+            azureServiceBusMessage.ApplicationProperties[header.Key] = header.Value;
         }
             
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.MessageTypeHeaderBagKey] = message.Header.MessageType.ToString();
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.HandledCountHeaderBagKey] = message.Header.HandledCount;
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.ReplyToHeaderBagKey] = message.Header.ReplyTo?.Value;
         
    }
     
     private static void AddCloudEventHeaders(Message message, ServiceBusMessage azureServiceBusMessage)
     {
         //required Cloud Event headers
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSource, message.Header.Source?.ToString() ?? string.Empty);
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsId, message.Id.ToString());
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSpecVersion, message.Header.SpecVersion);
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsType, message.Header.Type);
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsSource] = message.Header.Source?.ToString() ?? string.Empty;
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsId] = message.Id.ToString();
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsSpecVersion] = message.Header.SpecVersion;
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsType] = message.Header.Type.Value;
 
         //optional Cloud Event headers
         if (message.Header.ContentType is not null)
-            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsContentType, message.Header.ContentType.ToString());
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsContentType] = message.Header.ContentType.ToString();
        
         if(message.Header.DataSchema is not null)
-            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSchema, message.Header.DataSchema);
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsSchema] = message.Header.DataSchema;
         
         if (!string.IsNullOrEmpty(message.Header.Subject))
-            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsSubject, message.Header.Subject);
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsSubject] = message.Header.Subject;
        
         if (message.Header.TimeStamp != default)
-            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsTime, message.Header.TimeStamp.ToRfc3339());
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsTime] = message.Header.TimeStamp.ToRfc3339();
         
         //extension Cloud Event headers
         if (message.Header.DataRef is not null)
-            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventDataRef, message.Header.DataRef);
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventDataRef] = message.Header.DataRef;
         
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.CloudEventsParitionKey, message.Header.PartitionKey.Value);
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsParitionKey] = message.Header.PartitionKey.Value;
     }
     
     private static void AddOtelHeaders(Message message, ServiceBusMessage azureServiceBusMessage)
     {
         if(message.Header.TraceParent is not null)
-            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.OtelTraceParent, message.Header.TraceParent);
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.OtelTraceParent] = message.Header.TraceParent.Value;
         
         if(message.Header.TraceState is not null)
-            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.OtelTraceState, message.Header.TraceState);
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.OtelTraceState] = message.Header.TraceState.Value;
         
-        
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.Baggage, message.Header.Baggage.ToString());
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.Baggage] = message.Header.Baggage.ToString();
     }
-    
 }
