@@ -44,7 +44,7 @@ jobs:
             8.0.x
             9.0.x
       - run: dotnet --info
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: actions/cache@v4
@@ -91,7 +91,7 @@ jobs:
     needs: [build]
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
@@ -109,7 +109,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
@@ -127,7 +127,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
@@ -156,7 +156,7 @@ jobs:
           --health-retries 5             
       
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
@@ -181,7 +181,7 @@ jobs:
       
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
@@ -211,7 +211,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
@@ -276,7 +276,7 @@ jobs:
     - name: docker check
       run: docker ps -a
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Setup dotnet
       uses: actions/setup-dotnet@v4
       with:
@@ -306,7 +306,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
@@ -332,7 +332,7 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: Password123!
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
@@ -360,7 +360,7 @@ jobs:
         options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
@@ -391,7 +391,7 @@ jobs:
           - 8000:8000
       
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
@@ -421,7 +421,7 @@ jobs:
           SERVICES: s3,sqs,sns,sts,dynamodb,iam,scheduler
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
@@ -457,7 +457,7 @@ jobs:
       AWS_DEFAULT_OUTPUT: json    
       
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
@@ -491,7 +491,7 @@ jobs:
       AWS_DEFAULT_OUTPUT: json
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
@@ -517,7 +517,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
@@ -534,7 +534,7 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
@@ -566,7 +566,7 @@ jobs:
           --health-timeout 10s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
@@ -618,7 +618,7 @@ jobs:
 #          AUTO_CREATE_TOPIC_ENABLE: "true"  # Auto-create topics
 #          
 #    steps:
-#      - uses: actions/checkout@v4
+#      - uses: actions/checkout@v5
 #        with:
 #          fetch-depth: 0 # Required to fetch the Git tags
 #          filter: tree:0
