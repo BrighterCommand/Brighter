@@ -40,7 +40,7 @@ public class SqsSubscription : Subscription
     /// The routing key type.
     /// </summary>
     public ChannelType ChannelType { get; }
-    
+
     /// <summary>
     /// Indicates how we should treat the <see cref="RoutingKey"/>
     /// TopicFindBy.Arn -> the routing key is an Arn; assumes that you know it exists and provide it
@@ -55,12 +55,12 @@ public class SqsSubscription : Subscription
     /// QueueFindBy.Name -> The Channel Name contains the name of the queue; we will look up the queue Url
     /// </summary>
     public QueueFindBy FindQueueBy { get; set; }
-    
+
     /// <summary>
     /// The underlying <see cref="QueueAttributes"/> definition. This is used to create the queue if it does not exist.
     /// </summary>
     public SqsAttributes QueueAttributes { get; }
-    
+
     /// <summary>
     /// The attributes of the topic; used if the <see cref="ChannelType"/> is <see cref="ChannelType.PubSub"/>
     /// </summary>
@@ -90,7 +90,7 @@ public class SqsSubscription : Subscription
     /// <param name="queueAttributes">What are the <see cref="SqsAttributes"/> of the Sqs queue we use to receive messages</param>
     /// <param name="topicAttributes">What are the <see cref="SnsAttributes"/>  of the topic to which are queue subscribes, if we are <see cref="ChannelType.PubSub"/> </param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-    protected SqsSubscription(
+    public SqsSubscription(
         SubscriptionName subscriptionName,
         ChannelName channelName,
         ChannelType channelType,
@@ -118,16 +118,16 @@ public class SqsSubscription : Subscription
     {
         if (channelType == ChannelType.PubSub && routingKey is null)
             throw new ArgumentNullException(nameof(routingKey), "Routing Key is required for PubSub channels");
-        
+
         if (channelType == ChannelType.PointToPoint && channelName is null)
             throw new ArgumentNullException(nameof(channelName), "Channel Name is required for PointToPoint channels");
 
         QueueAttributes = queueAttributes ?? SqsAttributes.Empty;
         TopicAttributes = topicAttributes ?? SnsAttributes.Empty;
-        
-        if (channelType == ChannelType.PubSub && QueueAttributes.Type !=  TopicAttributes.Type)
-                throw new InvalidOperationException(" For PubSub channels, you must set both queue and topic attribute to the same Type (default Standard)");
-        
+
+        if (channelType == ChannelType.PubSub && QueueAttributes.Type != TopicAttributes.Type)
+            throw new InvalidOperationException(" For PubSub channels, you must set both queue and topic attribute to the same Type (default Standard)");
+
         ChannelType = channelType;
         FindTopicBy = findTopicBy;
         FindQueueBy = findQueueBy;
@@ -188,25 +188,26 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         SnsAttributes? topicAttributes = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
         : base(
-            subscriptionName ?? new SubscriptionName(typeof(T).FullName!), 
-            channelName ?? new ChannelName(typeof(T).FullName!), 
-            channelType, 
-            routingKey ?? new RoutingKey(typeof(T).FullName!), 
-            typeof(T), 
-            getRequestType, 
-            bufferSize, 
-            noOfPerformers, 
+            subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
+            channelName ?? new ChannelName(typeof(T).FullName!),
+            channelType,
+            routingKey ?? new RoutingKey(typeof(T).FullName!),
+            typeof(T),
+            getRequestType,
+            bufferSize,
+            noOfPerformers,
             timeOut,
-            requeueCount,  
-            requeueDelay, 
-            unacceptableMessageLimit, 
-            messagePumpType,  
-            channelFactory,  
-            emptyChannelDelay, 
-            channelFailureDelay, 
-            findTopicBy, 
-            findQueueBy, 
-            queueAttributes, 
-            topicAttributes, 
-            makeChannels) { }
+            requeueCount,
+            requeueDelay,
+            unacceptableMessageLimit,
+            messagePumpType,
+            channelFactory,
+            emptyChannelDelay,
+            channelFailureDelay,
+            findTopicBy,
+            findQueueBy,
+            queueAttributes,
+            topicAttributes,
+            makeChannels)
+    { }
 }
