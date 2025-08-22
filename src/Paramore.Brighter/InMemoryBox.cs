@@ -83,7 +83,7 @@ namespace Paramore.Brighter
         /// </summary>
         public double CompactionPercentage{ get; set; }
 
-        protected void ClearExpiredMessages()
+        public void ClearExpiredMessages()
         {
             var now = timeProvider.GetUtcNow();
 
