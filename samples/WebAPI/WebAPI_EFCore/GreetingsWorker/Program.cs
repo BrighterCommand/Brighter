@@ -12,6 +12,7 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using TransportMaker;
 
+const string AsbNamespace = "recs-testing.servicebus.windows.net";
 
 IHost host = CreateHostBuilder(args).Build();
 
@@ -79,7 +80,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
         throw new InvalidOperationException("Transport is not set");
 
     MessagingTransport messagingTransport = MessagingTransport.Asb;
-    var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("recs-testing.servicebus.windows.net");
+    var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider(AsbNamespace);
     var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbClientProvider);
     TokenCredential[] credentials = [new VisualStudioCredential()];
 
