@@ -5,49 +5,49 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentMigrator" />
-    <PackageReference Include="FluentMigrator.Runner" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-    <PackageReference Include="OpenTelemetry.Exporter.Console" />
+    <PackageReference Include="FluentMigrator"/>
+    <PackageReference Include="FluentMigrator.Runner"/>
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
+    <PackageReference Include="OpenTelemetry.Exporter.Console"/>
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
-    <PackageReference Include="Paramore.Darker.AspNetCore" />
-    <PackageReference Include="Paramore.Darker.Policies" />
-    <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore"/>
+    <PackageReference Include="Paramore.Darker.AspNetCore"/>
+    <PackageReference Include="Paramore.Darker.Policies"/>
+    <PackageReference Include="Swashbuckle.AspNetCore"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.Hosting\Paramore.Brighter.Outbox.Hosting.csproj" />
     <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
-    <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj" />
+    <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj"/>
     <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="out\**" />
+    <Compile Remove="out\**"/>
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Remove="out\**" />
+    <EmbeddedResource Remove="out\**"/>
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="out\**" />
+    <None Remove="out\**"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="out\**" />
+    <Content Remove="out\**"/>
   </ItemGroup>
 
   <ItemGroup>
-    <_ContentIncludedByDefault Remove="out\web.config" />
-    <_ContentIncludedByDefault Remove="out\appsettings.Development.json" />
-    <_ContentIncludedByDefault Remove="out\appsettings.json" />
-    <_ContentIncludedByDefault Remove="out\appsettings.Production.json" />
-    <_ContentIncludedByDefault Remove="out\GreetingsAdapters.deps.json" />
-    <_ContentIncludedByDefault Remove="out\GreetingsAdapters.runtimeconfig.json" />
+    <_ContentIncludedByDefault Remove="out\web.config"/>
+    <_ContentIncludedByDefault Remove="out\appsettings.Development.json"/>
+    <_ContentIncludedByDefault Remove="out\appsettings.json"/>
+    <_ContentIncludedByDefault Remove="out\appsettings.Production.json"/>
+    <_ContentIncludedByDefault Remove="out\GreetingsAdapters.deps.json"/>
+    <_ContentIncludedByDefault Remove="out\GreetingsAdapters.runtimeconfig.json"/>
   </ItemGroup>
 </Project>

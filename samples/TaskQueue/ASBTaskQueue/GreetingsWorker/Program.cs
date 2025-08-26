@@ -60,7 +60,7 @@ var subscriptions = new Subscription[]
 };
 
 string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
-            
+
 //EF
 builder.Services.AddDbContext<GreetingsDataContext>(o =>
 {
@@ -71,15 +71,16 @@ var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb:/
 
 var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
 builder.Services.AddConsumers(options =>
-    {
-        options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-        options.UseScoped = true;
-    })
+{
+    options.Subscriptions = subscriptions;
+    options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+    options.UseScoped = true;
+
+})
     .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
-                
+
 builder.Logging.SetMinimumLevel(LogLevel.Information).AddConsole();
 
 
