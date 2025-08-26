@@ -17,7 +17,7 @@
       "applicationUrl": "http://localhost:5256",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "BRIGHTER_GREETINGS_DATABASE": "Sqlite",
+        "BRIGHTER_GREETINGS_DATABASE": "MySQL",
         "BRIGHTER_TRANSPORT": "AzureServiceBus"
       }
     },
@@ -29,7 +29,7 @@
       "applicationUrl": "https://localhost:7068;http://localhost:5256",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "BRIGHTER_GREETINGS_DATABASE": "Sqlite",
+        "BRIGHTER_GREETINGS_DATABASE": "MySQL",
         "BRIGHTER_TRANSPORT": "AzureServiceBus"
       }
     },

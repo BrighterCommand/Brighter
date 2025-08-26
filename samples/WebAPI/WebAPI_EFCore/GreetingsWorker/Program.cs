@@ -1,121 +1,166 @@
-﻿using System.Text.Json;
-using Azure.Core;
+﻿using Azure.Core;
 using Azure.Identity;
 using DbMaker;
 using GreetingsApp.EntityGateway;
 using GreetingsApp.Events;
-using GreetingsWorker;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
-using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using TransportMaker;
 
-JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+IHost host = CreateHostBuilder(args).Build();
 
-var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbClientProvider);
-TokenCredential[] credentials = [new VisualStudioCredential()];
-MessagingTransport messagingTransport = MessagingTransport.Asb;
+host.CheckDbIsUp(ApplicationType.Greetings);
+host.MigrateDatabase();
+host.CreateOutbox(ApplicationType.Greetings, ConfigureTransport.HasBinaryMessagePayload());
 
-var sqlhelper = new MySqlTestHelper();
-sqlhelper.SetupMessageDb();
+host.Run();
+return;
 
-RelationalDatabaseConfiguration outboxConfiguration = new(
-    sqlhelper._mysqlSettings.TestsBrighterConnectionString
-);
-
-builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
-builder.Services.AddHealthChecks();
-builder.Services.ConfigureEfCore<GreetingsEntityGateway>(builder.Configuration);
-
-var dbType = builder.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-if (string.IsNullOrEmpty(dbType))
-    throw new ArgumentNullException("No database type specified in configuration");
-
-var rdbms = DbResolver.GetDatabaseType(dbType);
-(IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-    OutboxFactory.MakeEfOutbox<GreetingsEntityGateway>(rdbms, outboxConfiguration);
-
-var subscriptions = new Subscription[]
-{
-    new AzureServiceBusSubscription<GreetingAsyncEvent>(
-        new SubscriptionName("Async Event"),
-        new ChannelName("paramore.example.greeting"),
-        new RoutingKey("greeting.Asyncevent"),
-        timeOut: TimeSpan.FromMilliseconds(400),
-        makeChannels: OnMissingChannel.Assume,
-        requeueCount: 3,
-        messagePumpType: MessagePumpType.Proactor),
-
-    new AzureServiceBusSubscription<GreetingEvent>(
-        new SubscriptionName("Event"),
-        new ChannelName("paramore.example.greeting"),
-        new RoutingKey("greeting.event"),
-        timeOut: TimeSpan.FromMilliseconds(400),
-        makeChannels: OnMissingChannel.Assume,
-        requeueCount: 3,
-        messagePumpType: MessagePumpType.Proactor)
-};
-
-var producerRegistry = new AzureServiceBusProducerRegistryFactory(
-        asbClientProvider,
-        new AzureServiceBusPublication[]
+static IHostBuilder CreateHostBuilder(string[] args) =>
+    Host.CreateDefaultBuilder(args)
+        .ConfigureHostConfiguration(configurationBuilder =>
         {
-            new() { Topic = new RoutingKey("greeting.event"), MakeChannels = OnMissingChannel.Assume},
-            new() { Topic = new RoutingKey("greeting.addGreetingCommand"), MakeChannels = OnMissingChannel.Assume },
-            new() { Topic = new RoutingKey("greeting.Asyncevent"), MakeChannels = OnMissingChannel.Assume }
-        }
-    )
-    .Create();
+            configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
+            configurationBuilder.AddJsonFile("appsettings.json", optional: true);
+            configurationBuilder.AddJsonFile($"appsettings.Development.json", optional: true);
+            configurationBuilder
+                .AddEnvironmentVariables(
+                    prefix: "ASPNETCORE_"); //NOTE: Although not web, we use this to grab the environment
+            configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
+            configurationBuilder.AddCommandLine(args);
+        })
+        .ConfigureLogging((_, builder) =>
+        {
+            builder.AddConsole();
+            builder.AddDebug();
+        })
+        .ConfigureServices((hostContext, services) =>
+        {
+            GreetingsDbFactory.ConfigureMigration(hostContext.Configuration, services);
+            ConfigureEFCore(hostContext, services);
+            ConfigureBrighter(hostContext, services);
+        })
+        .UseConsoleLifetime();
 
-builder.Services.AddConsumers(options =>
+static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection services)
 {
-    options.Subscriptions = subscriptions;
-    options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-    options.UseScoped = true;
-});
+    string? connectionString = ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Greetings);
 
-builder.Services.AddBrighter(options =>
-{
-    options.InstrumentationOptions = InstrumentationOptions.All;
-
-}).AddProducers(configure =>
-{
-    configure.ProducerRegistry = producerRegistry;
-    configure.Outbox = makeOutbox.outbox;
-    configure.TransactionProvider = makeOutbox.transactionProvider;
-    configure.ConnectionProvider = makeOutbox.connectionProvider;
-    configure.MaxOutStandingMessages = 5;
-    configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
-});
-
-builder.Services.AddHostedService<ServiceActivatorHostedService>();
-
-WebApplication app = builder.Build();
-
-app.MapHealthChecks("/health");
-app.MapHealthChecks("/health/detail", new HealthCheckOptions
-{
-    ResponseWriter = async (context, report) =>
+    if (hostContext.HostingEnvironment.IsDevelopment())
     {
-        var content = new
-        {
-            Status = report.Status.ToString(),
-            Results = report.Entries.ToDictionary(e => e.Key,
-                e => new { Status = e.Value.Status.ToString(), e.Value.Description, e.Value.Duration }),
-            report.TotalDuration
-        };
-
-        context.Response.ContentType = "application/json";
-        await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
+        services.AddDbContext<GreetingsEntityGateway>(
+            builder =>
+            {
+                builder.UseSqlite(connectionString);
+            });
     }
-});
+    else
+    {
+        services.AddDbContextPool<GreetingsEntityGateway>(builder =>
+        {
+            builder
+                .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+                .EnableDetailedErrors()
+                .EnableSensitiveDataLogging();
+        });
+    }
+}
 
-app.Run();
+static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
+{
+    string? transport = hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
+    if (string.IsNullOrWhiteSpace(transport))
+        throw new InvalidOperationException("Transport is not set");
+
+    MessagingTransport messagingTransport = MessagingTransport.Asb;
+    var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("recs-testing.servicebus.windows.net");
+    var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbClientProvider);
+    TokenCredential[] credentials = [new VisualStudioCredential()];
+
+    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+    if (string.IsNullOrWhiteSpace(dbType))
+        throw new InvalidOperationException("DbType is not set");
+
+    string? connectionString =
+        ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Greetings);
+
+    RelationalDatabaseConfiguration relationalDatabaseConfiguration = new(connectionString);
+    services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
+
+    RelationalDatabaseConfiguration outboxConfiguration = new(
+        connectionString,
+        binaryMessagePayload: false
+    );
+    services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
+
+    Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
+    (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+        OutboxFactory.MakeEfOutbox<GreetingsEntityGateway>(rdbms, outboxConfiguration);
+
+    IAmAProducerRegistry producerRegistry = new AzureServiceBusProducerRegistryFactory(
+        asbClientProvider,
+        [
+            new AzureServiceBusPublication
+            {
+                Topic = new RoutingKey("greeting.event"),
+            },
+            new AzureServiceBusPublication
+            {
+                Topic = new RoutingKey("greeting.addGreetingCommand"),
+            },
+            new AzureServiceBusPublication
+            {
+                Topic = new RoutingKey("greeting.Asyncevent"),
+            }
+        ]
+    ).Create();
+
+    var subscriptions = new Subscription[]
+    {
+        new AzureServiceBusSubscription<GreetingAsyncEvent>(
+            new SubscriptionName("Async Event"),
+            new ChannelName("paramore.example.greeting"),
+            new RoutingKey("greeting.Asyncevent"),
+            timeOut: TimeSpan.FromMilliseconds(400),
+            makeChannels: OnMissingChannel.Assume,
+            requeueCount: 3,
+            messagePumpType: MessagePumpType.Proactor),
+
+        new AzureServiceBusSubscription<GreetingEvent>(
+            new SubscriptionName("Event"),
+            new ChannelName("paramore.example.greeting"),
+            new RoutingKey("greeting.event"),
+            timeOut: TimeSpan.FromMilliseconds(400),
+            makeChannels: OnMissingChannel.Assume,
+            requeueCount: 3,
+            messagePumpType: MessagePumpType.Proactor)
+    };
+
+    services.AddConsumers(options =>
+        {
+            options.Subscriptions = subscriptions;
+            options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+            options.UseScoped = true;
+            options.HandlerLifetime = ServiceLifetime.Scoped;
+            options.MapperLifetime = ServiceLifetime.Singleton;
+            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+        })
+        .AddProducers((configure) =>
+        {
+            configure.ProducerRegistry = producerRegistry;
+            configure.Outbox = makeOutbox.outbox;
+            configure.TransactionProvider = makeOutbox.transactionProvider;
+            configure.ConnectionProvider = makeOutbox.connectionProvider;
+            configure.MaxOutStandingMessages = 5;
+            configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+        })
+        .AutoFromAssemblies();
+
+    services.AddHostedService<ServiceActivatorHostedService>();
+}
