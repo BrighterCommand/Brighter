@@ -8,6 +8,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
+using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using TransportMaker;
@@ -15,6 +16,8 @@ using TransportMaker;
 const string AsbNamespace = "recs-testing.servicebus.windows.net";
 
 IHost host = CreateHostBuilder(args).Build();
+
+host.Services.GetRequiredService<IDispatcher>();
 
 host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.Fakes;
@@ -17,26 +18,40 @@ namespace Tests
 {
     public class ResolveDispatcherWithScopedRegisteredTransactionProvider
     {
-        private readonly IServiceProvider _provider;
-        private readonly IServiceCollection _services;
+        private IServiceProvider _provider;
 
-        public ResolveDispatcherWithScopedRegisteredTransactionProvider()
+        public void Build()
         {
-            _services = new ServiceCollection();
+            var services = new ServiceCollection();
 
-            _services.AddScoped<FakeDbContext>();
+            AddServices(services);
 
-            _services
+            _provider = services.BuildServiceProvider();
+        }
+
+        public void BuildHost()
+        {
+            _provider = Host.CreateDefaultBuilder([])
+                .ConfigureServices((hostContext, services) =>
+                {
+                    AddServices(services);
+
+                }).Build().Services;
+        }
+
+        private void AddServices(IServiceCollection services)
+        {
+            services.AddScoped<FakeDbContext>();
+
+            services
                 .AddBrighter()
                 .AddProducers(configure =>
                 {
-                    configure.ProducerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer>()
-                    {
+                    configure.ProducerRegistry = new ProducerRegistry(
+                        new Dictionary<ProducerKey, IAmAMessageProducer>()
                         {
-                            new ProducerKey("greeting.event"),
-                            new FakeMessageProducer()
-                        }
-                    });
+                            { new ProducerKey("greeting.event"), new FakeMessageProducer() }
+                        });
                     configure.TransactionProvider = typeof(FakeTransactionProvider<FakeDbContext>);
                     configure.ConnectionProvider = typeof(FakeConnectionProvider);
                     configure.MaxOutStandingMessages = 5;
@@ -44,14 +59,28 @@ namespace Tests
                 })
                 .AutoFromAssemblies();
 
-            _services.AddConsumers(options => { options.CommandProcessorLifetime = ServiceLifetime.Scoped; });
-
-            _provider = _services.BuildServiceProvider();
+            services.AddConsumers(options =>
+            {
+                options.UseScoped = true;
+                options.HandlerLifetime = ServiceLifetime.Scoped;
+                options.MapperLifetime = ServiceLifetime.Singleton;
+                options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+            });
         }
 
         [Fact]
         public void ShouldResolveIDispatcherCorrectly()
         {
+            Build();
+
+            var dispatcher = _provider.GetRequiredService<IDispatcher>();
+        }
+
+        [Fact]
+        public void ShouldResolveIDispatcherCorrectlyWithHost()
+        {
+            BuildHost();
+
             var dispatcher = _provider.GetRequiredService<IDispatcher>();
         }
     }
