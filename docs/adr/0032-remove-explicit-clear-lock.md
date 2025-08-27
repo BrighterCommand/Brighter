@@ -47,11 +47,11 @@ internal async Task ClearOutboxAsync(
 }
 ```
 
-At scale, this proves problematic as you now have sequential `Clear` operations on the outbox, even though the range of messages to clear is no sequential.
+At scale, this proves problematic as you now have sequential `Clear` operations on the outbox, even though the range of messages to clear is not sequential. In pratice, this means that you will back up HTTP API requests that write to the Outbox, behind this semaphore. Once enough requests queue you up, you will end up with a Bad Gateway error.
 
 ## Decision
 
-Drop the usage of `_clearSemaphoreToken` as `IDistributedLock` now protects us against dual publish by Sweepers 
+Drop the usage of `_clearSemaphoreToken` as `IDistributedLock` now protects us against dual publish by Sweepers. 
 
 ## Consequences
 
