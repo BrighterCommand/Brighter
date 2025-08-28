@@ -946,7 +946,7 @@ namespace Paramore.Brighter
         // type before we call it.
         private Id CallDepositPost<TRequest>(
             TRequest actualRequest, 
-            IAmABoxTransactionProvider? iamABoxTransactionProvider,
+            IAmABoxTransactionProvider? transactionProvider,
             RequestContext? requestContext, 
             Dictionary<string, object>? dictionary, 
             string? batchId,
@@ -971,7 +971,7 @@ namespace Paramore.Brighter
             }
 
             return CallMethodAndPreserveException(() =>
-                (deposit?.Invoke(this, [actualRequest, iamABoxTransactionProvider, requestContext, dictionary, batchId]) as Id)!
+                (deposit?.Invoke(this, [actualRequest, transactionProvider, requestContext, dictionary, batchId]) as Id)!
             );
         }
 
