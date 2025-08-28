@@ -23,8 +23,8 @@
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.11.1" />
-    <PackageVersion Include="Confluent.SchemaRegistry" Version="2.11.0" />
-    <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.11.0" />
+    <PackageVersion Include="Confluent.SchemaRegistry" Version="2.11.1" />
+    <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.11.1" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
