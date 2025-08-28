@@ -29,7 +29,6 @@ namespace Paramore.Brighter
 
         internal IAmAProducerRegistry ProducerRegistry { get; set; }
 
-        private static readonly SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
         private static readonly SemaphoreSlim _backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
         private static readonly SemaphoreSlim _checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
@@ -191,22 +190,13 @@ namespace Paramore.Brighter
             if (!HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            // Only allow a single Clear to happen at a time
-            _clearSemaphoreToken.Wait();
-            try
+            foreach (var messageId in posts)
             {
-                foreach (var messageId in posts)
-                {
-                    var message = OutBox.Get(messageId);
-                    if (message == null || message.Header.MessageType == MessageType.MT_NONE)
-                        throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
+                var message = OutBox.Get(messageId);
+                if (message == null || message.Header.MessageType == MessageType.MT_NONE)
+                    throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    Dispatch(new[] {message});
-                }
-            }
-            finally
-            {
-                _clearSemaphoreToken.Release();
+                Dispatch(new[] {message});
             }
             
             CheckOutstandingMessages();
@@ -221,21 +211,13 @@ namespace Paramore.Brighter
             if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            await _clearSemaphoreToken.WaitAsync(cancellationToken);
-            try
+            foreach (var messageId in posts)
             {
-                foreach (var messageId in posts)
-                {
-                    var message = await AsyncOutbox.GetAsync(messageId, OutboxTimeout, cancellationToken);
-                    if (message == null || message.Header.MessageType == MessageType.MT_NONE)
-                        throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
+                var message = await AsyncOutbox.GetAsync(messageId, OutboxTimeout, cancellationToken);
+                if (message == null || message.Header.MessageType == MessageType.MT_NONE)
+                    throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    await DispatchAsync(new[] {message}, continueOnCapturedContext, cancellationToken);
-                }
-            }
-            finally
-            {
-                _clearSemaphoreToken.Release();
+                await DispatchAsync(new[] {message}, continueOnCapturedContext, cancellationToken);
             }
 
             CheckOutstandingMessages();
@@ -312,7 +294,6 @@ namespace Paramore.Brighter
             var span = Activity.Current;
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
-                await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
                     
@@ -333,7 +314,6 @@ namespace Paramore.Brighter
                 finally
                 {
                     span?.Dispose();
-                    _clearSemaphoreToken.Release();
                     _backgroundClearSemaphoreToken.Release();
                 }
 
@@ -352,7 +332,6 @@ namespace Paramore.Brighter
             var span = Activity.Current;
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
-                await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
                     
@@ -383,7 +362,6 @@ namespace Paramore.Brighter
                 finally
                 {
                     span?.Dispose();
-                    _clearSemaphoreToken.Release();
                     _backgroundClearSemaphoreToken.Release();
                 }
 
