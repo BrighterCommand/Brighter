@@ -12,7 +12,7 @@ public static class ConnectionResolver
         string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (string.IsNullOrWhiteSpace(dbType))
             throw new InvalidOperationException("DbType is not set");
-
+        
         Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
         
        if (applicationType == ApplicationType.Greetings)

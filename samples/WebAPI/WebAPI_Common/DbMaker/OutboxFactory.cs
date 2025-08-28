@@ -107,7 +107,7 @@ public static class OutboxFactory
     private static (IAmAnOutbox, Type, Type) MakeEfMySqlOutbox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return (new MySqlOutbox(configuration), typeof(MySqlConnectionProvider), typeof(MySqlEntityFrameworkConnectionProvider<T>));
+        return (new MySqlOutbox(configuration), typeof(MySqlConnectionProvider), typeof(MsSqlEntityFrameworkCoreConnectionProvider<T>));
     }
 
     private static (IAmAnOutbox, Type, Type) MakeDapperSqliteOutBox(RelationalDatabaseConfiguration configuration)

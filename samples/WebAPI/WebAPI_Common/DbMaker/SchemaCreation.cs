@@ -134,6 +134,10 @@ public static class SchemaCreation
             //Rethrow, if we can't create the Outbox, shut down
             throw;
         }
+        finally
+        {
+            conn.Close();
+        }
     }
 
     private static void CreateSalutationsIfNotExists(Rdbms rdbms, DbConnection conn)
@@ -170,6 +174,10 @@ public static class SchemaCreation
             Console.WriteLine($"Issue with creating Greetings tables, {e.Message}");
             //Rethrow, if we can't create the Outbox, shut down
             throw;
+        }
+        finally
+        {
+            conn.Close();
         }
     }
 
