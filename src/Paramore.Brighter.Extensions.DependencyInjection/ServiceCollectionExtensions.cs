@@ -477,7 +477,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return command;
         }
         
-        private static IAmAnOutboxProducerMediator? BuildOutBoxProducerMediator(IServiceProvider serviceProvider,
+        private static IAmAnOutboxProducerMediator? BuildOutBoxProducerMediator(
+            IServiceProvider serviceProvider,
             Type transactionType,
             ProducersConfiguration busConfiguration,
             ResiliencePipelineRegistry<string>? resiliencePipelineRegistry,
