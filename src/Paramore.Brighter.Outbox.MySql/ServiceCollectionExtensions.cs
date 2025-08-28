@@ -28,6 +28,7 @@ namespace Paramore.Brighter.Outbox.MySql
             brighterBuilder.Services.AddSingleton<MySqlConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMySqlConnectionProvider), connectionProvider, serviceLifetime));
 
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
              
