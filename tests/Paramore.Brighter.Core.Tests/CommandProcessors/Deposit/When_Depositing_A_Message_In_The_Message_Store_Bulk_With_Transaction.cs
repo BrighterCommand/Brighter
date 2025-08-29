@@ -110,7 +110,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         {
             //act
             var requests = new List<IRequest> {_myCommand, _myCommandTwo, _myEvent } ;
-            _commandProcessor.DepositPost(requests);
+            _commandProcessor.DepositPost(requests, _transactionProvider);
 
             //assert
 

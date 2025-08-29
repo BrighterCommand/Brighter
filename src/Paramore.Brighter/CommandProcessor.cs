@@ -137,7 +137,6 @@ namespace Paramore.Brighter
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCalls = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCallsAsync = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundMediatorMethods = new();
-        private static IAmABoxTransactionProvider? s_defaultTransactionProvider;
         private static Type s_transactionType = typeof(CommittableTransaction);
 
         /// <summary>
@@ -771,7 +770,7 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            return CallDepositPost(request, s_defaultTransactionProvider, requestContext, args, null, s_transactionType);
+            return CallDepositPost(request, null, requestContext, args, null, s_transactionType);
         }
 
         /// <summary>
@@ -847,7 +846,7 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            return CallBulkDepositPost(requests, s_defaultTransactionProvider, requestContext, args, s_transactionType); 
+            return CallBulkDepositPost(requests, null, requestContext, args, s_transactionType); 
         }
 
         /// <summary>
@@ -998,7 +997,7 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            return await CallDepositPostAsync(request, s_defaultTransactionProvider, requestContext, args, 
+            return await CallDepositPostAsync(request, null, requestContext, args, 
                 continueOnCapturedContext, cancellationToken, null, s_transactionType);
         }
 
@@ -1081,7 +1080,7 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            return await CallBulkDepositPostAsync(requests, s_defaultTransactionProvider, requestContext, args,
+            return await CallBulkDepositPostAsync(requests, null, requestContext, args,
                 continueOnCapturedContext, cancellationToken, s_transactionType);
         }
 
@@ -1501,7 +1500,7 @@ namespace Paramore.Brighter
         // Create an instance of the OutboxProducerMediator if one not already set for this app. Note that we do not support reinitialization here, so once you have
         // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         // if needed as a "get out of gaol" card.
-        private static void InitExtServiceBus(IAmAnOutboxProducerMediator bus, IAmABoxTransactionProvider? defaultTransactionProvider)
+        private static void InitExtServiceBus(IAmAnOutboxProducerMediator bus, IAmABoxTransactionProvider? transactionProvider)
         {
             if (s_mediator == null)
             {
@@ -1510,13 +1509,12 @@ namespace Paramore.Brighter
                     if (s_mediator == null)
                     {
                         s_mediator = bus;
-                        s_defaultTransactionProvider = defaultTransactionProvider;
 
-                        if (defaultTransactionProvider != null)
+                        if (transactionProvider != null)
                         {
-                            s_transactionType = GetTransactionTypeFromTransactionProvider(defaultTransactionProvider) 
+                            s_transactionType = GetTransactionTypeFromTransactionProvider(transactionProvider) 
                                     ?? throw new ConfigurationException(
-                                        $"Unable to initialise outbox producer mediator. {defaultTransactionProvider.GetType().Name} does not implement {typeof(IAmABoxTransactionProvider<>).Name}.");
+                                        $"Unable to initialise outbox producer mediator. {transactionProvider.GetType().Name} does not implement {typeof(IAmABoxTransactionProvider<>).Name}.");
                         }
                         else
                         {
