@@ -1,6 +1,6 @@
 # 32. Remove Semaphore from Explicit Clear 
 
-Date: 2019-08-01
+Date: 2025-08-28
 
 ## Status
 

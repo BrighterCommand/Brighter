@@ -95,7 +95,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new ResiliencePipelineRegistry<string>(),
                 bus,
                 scheduler,
-                _transactionProvider
+                typeof(SpyTransaction)
             );
         }
 
