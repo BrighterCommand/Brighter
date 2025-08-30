@@ -197,7 +197,7 @@ namespace Paramore.Brighter
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="resilienceResiliencePipelineRegistry">The resilience pipeline registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over.</param>
-        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
+        /// <param name="transactionType">When writing to the Outbox, what type of transaction should we use? If the Outbox is in-memory, pass null and we will use a default CommittableTransaction</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
@@ -213,7 +213,7 @@ namespace Paramore.Brighter
             ResiliencePipelineRegistry<string> resilienceResiliencePipelineRegistry,
             IAmAnOutboxProducerMediator bus,
             IAmARequestSchedulerFactory  requestSchedulerFactory,
-            IAmABoxTransactionProvider? transactionProvider = null,
+            Type? transactionType = null,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
             IEnumerable<Subscription>? replySubscriptions = null,
@@ -229,7 +229,7 @@ namespace Paramore.Brighter
             _replySubscriptions = replySubscriptions;
             _schedulerFactory = requestSchedulerFactory;
 
-            InitExtServiceBus(bus, transactionProvider);
+            InitExtServiceBus(bus, transactionType);
         }
 
         /// <summary>
@@ -240,7 +240,7 @@ namespace Paramore.Brighter
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="resilienceResiliencePipelineRegistry">The resilience pipeline registry.</param>
         /// <param name="mediator">The external service bus that we want to send messages over</param>
-        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
+        /// <param name="transactionType">When writing to the Outbox, what type of transaction should we use? If the Outbox is in-memory, pass null and we will use a default CommittableTransaction</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
@@ -253,7 +253,7 @@ namespace Paramore.Brighter
             ResiliencePipelineRegistry<string> resilienceResiliencePipelineRegistry,
             IAmAnOutboxProducerMediator mediator,
             IAmARequestSchedulerFactory requestSchedulerFactory,
-            IAmABoxTransactionProvider? transactionProvider = null,
+            Type? transactionType = null,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
             IEnumerable<Subscription>? replySubscriptions = null,
@@ -270,7 +270,26 @@ namespace Paramore.Brighter
             _instrumentationOptions = instrumentationOptions;
             _schedulerFactory = requestSchedulerFactory;
 
-            InitExtServiceBus(mediator, transactionProvider); 
+            InitExtServiceBus(mediator, transactionType); 
+        }
+
+        /// <summary>
+        /// This is a helper method which allow you to extract the transaction type from a transaction provider. You can then use
+        /// this to pass the transaction type into the command processor.
+        /// </summary>
+        /// <param name="transactionProvider">An <see cref="IAmABoxTransactionProvider"/> which provides a transaction for TransactionalMessaging</param>
+        /// <returns>The transaction type, or CommitableTransaction if transactionProvider is null</returns>
+        public static Type GetTransactionTypeFromTransactionProvider (IAmABoxTransactionProvider? transactionProvider)
+        {
+            Type? transactionType = typeof(CommittableTransaction);
+            if (transactionProvider == null) return transactionType;
+            
+            var transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
+            foreach (Type i in transactionProvider.GetType().GetInterfaces())
+                if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
+                    transactionType = i.GetGenericArguments()[0];
+
+            return transactionType;
         }
 
         /// <summary>
@@ -1500,7 +1519,7 @@ namespace Paramore.Brighter
         // Create an instance of the OutboxProducerMediator if one not already set for this app. Note that we do not support reinitialization here, so once you have
         // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         // if needed as a "get out of gaol" card.
-        private static void InitExtServiceBus(IAmAnOutboxProducerMediator bus, IAmABoxTransactionProvider? transactionProvider)
+        private static void InitExtServiceBus(IAmAnOutboxProducerMediator bus, Type? transactionType)
         {
             if (s_mediator == null)
             {
@@ -1509,33 +1528,12 @@ namespace Paramore.Brighter
                     if (s_mediator == null)
                     {
                         s_mediator = bus;
-
-                        if (transactionProvider != null)
-                        {
-                            s_transactionType = GetTransactionTypeFromTransactionProvider(transactionProvider) 
-                                    ?? throw new ConfigurationException(
-                                        $"Unable to initialise outbox producer mediator. {transactionProvider.GetType().Name} does not implement {typeof(IAmABoxTransactionProvider<>).Name}.");
-                        }
-                        else
-                        {
-                            s_transactionType = typeof(CommittableTransaction);
-                        }
+                        s_transactionType = transactionType ?? typeof(CommittableTransaction);
                     }
                 }
             }
         }
 
-        private static Type? GetTransactionTypeFromTransactionProvider (IAmABoxTransactionProvider transactionProvider)
-        {
-            var transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
-            Type? transactionType = null;
-            foreach (Type i in transactionProvider.GetType().GetInterfaces())
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
-                    transactionType = i.GetGenericArguments()[0];
-
-            return transactionType;
-        }
-        
         private RequestContext InitRequestContext(Activity? span, RequestContext? requestContext)
         {
             var context = requestContext ?? _requestContextFactory.Create();

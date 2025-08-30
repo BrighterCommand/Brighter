@@ -38,17 +38,20 @@ Historical Evolution
    - Not all `CommandProcesor` instances will have an `IAmABoxTransactionProvider`, as not all applications will use an outbox. In this case the `IAmABoxTransactionProvider` is null, and the `OutboxProducerMediator` will not manage transactions.
 
 Problems with this Design
-- The static singleton pattern can lead to issues in testing, as tests may interfere with each other if they rely on the same static instance. This is mitigated by the `ClearServiceBus` method, which resets the static fields for testing purposes.
-- Because we only have a single `OutboxProducerMediator`, we cannot have different configurations of the Outbox for different `CommandProcessor `instances. This is a limitation but it is likely that most applications will only need one configuration for the `IAmAnOutbox`.
+- The`OutBoxProducerMediator` singleton pattern can lead to issues in testing, as tests may interfere with each other if they rely on the same static instance. This is mitigated by the `ClearServiceBus` method, which resets the static fields for testing purposes.
+- Because we only have a single `OutboxProducerMediator`, we cannot have different configurations of the Outbox for different `CommandProcessor `instances in the same application. 
 - There is an issue with the static `IAmABoxTransactionProvider` when the concrete implementation of the`IAmABoxTransactionProvider` has state. For EntityFramework the recommendation is to scope the `DbContext` per request, and use a new instance of the `CommandProcessor` per request, because the concrete `DbContext` has scope. This causes errors because our static `TransactionProvider` is set once, and holds a reference to the `DbContext` that was passed in when it was set. This means that if the `CommandProcessor` is created in a different scope, it will have a different `DbContext` instance to the static `IAmABoxTransactionProvider`. Whilst this is not an issue for stateless transaction providers, it is an issue for stateful ones like EntityFramework.
 - Removing the `Func<IAmACommandProcessorProvider>` from the `Dispatcher` means that we cannot create a new `CommandProcessor` for each message, which could be an issue if the `CommandProcessor` has dependencies with scoped lifetimes. However, this is mitigated by the fact that the `CommandProcessor` can still be scoped to the `Dispatcher`, allowing it to work with a `DbContext` that is also scoped per message.
 
 ## Decision
 
 Given we want to control the scope of V10, we need to remove errors caused by the static `IAmABoxTransactionProvider` holding a reference to a `DbContext` that is out of scope.
-- we will not fix the issue about the possibility of multiple `IAmAnOutbox`. It may need to be addressed in a future version, if we see demand for it. 
-- The fix here is to make the `IAmABoxTransactionProvider` non-static. It is already passed into the `OutboxProducerMediator` via a method call, rather than being set when the `CommandProcessor` is created. 
-- As such, it should be easy to refactor `CommandProcessor` to use a scoped instance instead. This means that the `IAmABoxTransactionProvider` will be scoped to the `CommandProcessor` instance, and will not hold a reference to a `DbContext` that is out of scope.
+- The fix to the singleton `IAmABoxTransactionProvider` is to remove it. It is already passed into the `OutboxProducerMediator` via a method call, so we do not need the one set when the `CommandProcessor` is created. This means that the `IAmABoxTransactionProvider` can be scoped to the `CommandProcessor` instance, and will not hold a reference to a `DbContext` that is out of scope.
+- The `IAmABoxTransactionProvider` parameter that is passed into the `CommandProcessor` via its constructor is confusing as it implies we set the transaction provider for the `CommandProcessor` lifetime. As we only extract the transaction type we will change this to pass a `Type`, the transaction type, to the constructor. We can default it to CommitableTransaction (we need a default for `OutboxProducerMediator`).
+- When we call `CommandProcessor` `Post` or `PostAsync` we will pass null for the `IAmABoxTransactionProvider`. By using `Post` or `PostAsync` you are not using a transactional outbox, so the `IAmABoxTransactionProvider` is not needed.
+- We will add an InMemoryTransactionProvider for testing purposes, which will be a no-op implementation of `IAmABoxTransactionProvider`. It will use a `CommitableTransaction` type.
+- We will expose a helper method to CommandProcessor to extract the transaction type from an `IAmABoxTransactionProvider` to simplify changing existing calls.
+- We will not fix the issue about the possibility of multiple `IAmAnOutbox`. This is a limitation but it is likely that most applications will only need one configuration for the `IAmAnOutbox`. It may need to be addressed in a future version, if we see demand for it.
 
 We need to restore the use of a `Func<IAmACommandProcessorProvider>` in the `Dispatcher` to allow the `Dispatcher` to create a new `CommandProcessor` for each message, allowing it to work with a `DbContext` that is also scoped per message.
 
