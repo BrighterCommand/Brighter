@@ -53,12 +53,7 @@ Given we want to control the scope of V10, we need to remove errors caused by th
 - We will expose a helper method to CommandProcessor to extract the transaction type from an `IAmABoxTransactionProvider` to simplify changing existing calls.
 - We will not fix the issue about the possibility of multiple `IAmAnOutbox`. This is a limitation but it is likely that most applications will only need one configuration for the `IAmAnOutbox`. It may need to be addressed in a future version, if we see demand for it.
 
-We need to restore the use of a `Func<IAmACommandProcessorProvider>` in the `Dispatcher` to allow the `Dispatcher` to create a new `CommandProcessor` for each message, allowing it to work with a `DbContext` that is also scoped per message.
-
-- Replace the direct `IAmACommandProcessor` parameter with a Func<IAmACommandProcessorProvider>.
-- Wherever the `Dispatcher` currently uses the `CommandProcessor` field, change it to invoke the factory.
-- If any code that creates a `Dispatcher` expects to pass an instance, update it to pass a factory instead.
-- Update XML documentation comments to reflect the new constructor parameter and its purpose.
+Because we remove the static `IAmABoxTransactionProvider`, we can also safely still remove the `Func<IAmACommandProcessorProvider>` from the `Dispatcher`. This simplifies the design and makes it easier to understand. The `CommandProcessor` can still be scoped to the `Dispatcher`, allowing it to work with a `DbContext` that is also scoped to the parameter to the `DepositPost` call. 
 
 
 ## Consequences
