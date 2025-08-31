@@ -1,6 +1,4 @@
-using Paramore.Brighter;
-
-namespace Tests
+namespace Paramore.Brighter.Extensions.Tests.TestDoubles
 {
     public class TestEventHandler : RequestHandler<TestEvent>;
 }
