@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
     /// A connection provider that uses the same connection as EF Core
     /// </summary>
     /// <typeparam name="T">The Db Context to take the connection from</typeparam>
-    public class SqliteEntityFrameworkConnectionProvider<T> : RelationalDbTransactionProvider where T: DbContext
+    public class SqliteEntityFrameworkTransactionProvider<T> : RelationalDbTransactionProvider where T: DbContext
     {
         private readonly T _context;
 
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         /// Constructs and instance from a Db context
         /// </summary>
         /// <param name="context">The database context to use</param>
-        public SqliteEntityFrameworkConnectionProvider(T context)
+        public SqliteEntityFrameworkTransactionProvider(T context)
         {
             _context = context;
         }

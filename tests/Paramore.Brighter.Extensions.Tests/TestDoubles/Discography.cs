@@ -17,7 +17,7 @@ public class Discography : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder
-            .UseSqlite("Data Source=:memory:");
+            .UseSqlite("Data Source=discography.db;Cache=Shared");
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

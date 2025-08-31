@@ -118,6 +118,6 @@ public static class OutboxFactory
     private static (IAmAnOutbox, Type, Type) MakeEfSqliteOutBox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteEntityFrameworkConnectionProvider<T>));
+        return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteEntityFrameworkTransactionProvider<T>));
     }
 }
