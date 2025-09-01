@@ -16,7 +16,7 @@ Historical Evolution
 1. Early Versions
    - In earlier versions of Brighter, the producer was an instance field of the `CommandProcessor`, but typically the `CommandProcessor` was a singleton.
    Once the `IAmAnOutbox` was added to the architecture, to reduce the complexity of the `CommandProcessor`, and centralize the `IAmAMessageProducer` code, an `ExternalServiceBus` (now `OutboxProducerMediator`) was introduced. The`ExternalServiceBus` (now `OutboxProducerMediator`) took on the responsibility of managing both the `IAmAnOutbox` and the `IAmAMessageProducer`.
-   - The `ExternalServiceBus` was injected as a dependency into the `CommandProcessor` instance, and not managed as a static singleton.
+   - The `ExternalServiceBus` was injected as a dependency into the `CommandProcessor` instance.
 2. Refactoring to Static Singleton
    - The need for a single, application-wide `IAmAnOutbox` became clear to avoid multiple `IAmAnOutbox` instances. This was a particular concern with an `InMemoryOutbox`, where an instance of the `CommandProcessor` would have ended up with its own instance of an `InMemoryOutbox`, and thus `Clear` would not find messages that had been deposited. 
     - As `ExternalServiceBus` (now `OutboxProducerMediator`) held the `IAmAnOutbox` it was refactored to be static. The usage of a singleton `IAmAMessageProducer` also had benefits. 
@@ -46,23 +46,20 @@ Problems with this Design
 ## Decision
 
 Given we want to control the scope of V10, we need to remove errors caused by the static `IAmABoxTransactionProvider` holding a reference to a `DbContext` that is out of scope.
-- The fix to the singleton `IAmABoxTransactionProvider` is to remove it. It is already passed into the `OutboxProducerMediator` via a method call, so we do not need the one set when the `CommandProcessor` is created. This means that the `IAmABoxTransactionProvider` can be scoped to the `CommandProcessor` instance, and will not hold a reference to a `DbContext` that is out of scope.
-- The `IAmABoxTransactionProvider` parameter that is passed into the `CommandProcessor` via its constructor is confusing as it implies we set the transaction provider for the `CommandProcessor` lifetime. As we only extract the transaction type we will change this to pass a `Type`, the transaction type, to the constructor. We can default it to CommitableTransaction (we need a default for `OutboxProducerMediator`).
-- Because an `IAmABoxTransactionProvider` may have a scoped dependency, we need to create a scope for it, in order to grab its type, during the configuration of our platform.
-- When we call `CommandProcessor` `Post` or `PostAsync` we will pass null for the `IAmABoxTransactionProvider`. By using `Post` or `PostAsync` you are not using a transactional outbox, so the `IAmABoxTransactionProvider` is not needed.
+- The fix to the singleton `IAmABoxTransactionProvider` is to remove it. It is already passed into the `OutboxProducerMediator` via a method call, so we do not need the one set when the `CommandProcessor` is created. This means that the `IAmABoxTransactionProvider` can be scoped to the`IHandleRequests` derived class, which typically takes it in its constructor as a "unit of work" and users should configure Brighter to use the appropriate handler lifetime, which we will honor from our factory. 
+- The `IAmABoxTransactionProvider` parameter that is passed into the `CommandProcessor` via its constructor is confusing as it implies we set the transaction provider for the `CommandProcessor` lifetime. As we only extract the transaction type we will change this to pass a `Type`, the transaction type, to the constructor. We can default it to CommitableTransaction (we need a default for `OutboxProducerMediator`). In our hostbuilder services, when constructing a command processor instance, we need to pull the type from the `IAmABoxTransactionProvider` given to us in configuration. Because an `IAmABoxTransactionProvider` may have a scoped dependency, we need to create a scope for it during construction of our seervices, in order to grab its type. (Ultimately it may make more sense to have a separate configuration option for the transaction type, but this is a bigger change and we want to minimize the impact of this change).
 - We will expose a helper method to CommandProcessor to extract the transaction type from an `IAmABoxTransactionProvider` to simplify changing existing calls.
-- We will not fix the issue about the possibility of multiple `IAmAnOutbox`. This is a limitation but it is likely that most applications will only need one configuration for the `IAmAnOutbox`. It may need to be addressed in a future version, if we see demand for it.
+- When we call `CommandProcessor` `Post` or `PostAsync` we will pass null for the `IAmABoxTransactionProvider`. By using `Post` or `PostAsync` you are not using a transactional outbox, so the `IAmABoxTransactionProvider` is not needed.
+- We will not fix the issue about the possibility of multiple `IAmAnOutbox` that `OutboxProducerMediator` cannot support. This is a limitation but it is likely that most applications will only need one configuration for the `IAmAnOutbox`. It may need to be addressed in a future version, if we see demand for it.
 - The testing issues around `CommandProcessor` is mitigated by the `ClearServiceBus` method, which resets the static fields for testing purposes.
 
-Because we remove the static `IAmABoxTransactionProvider`, we can also safely still remove the `Func<IAmACommandProcessorProvider>` from the `Dispatcher`. This simplifies the design and makes it easier to understand. The `CommandProcessor` can still be scoped to the `Dispatcher`, allowing it to work with a `DbContext` that is also scoped to the parameter to the `DepositPost` call. 
-
-In effect, this allows us to revert to a model where the `CommandProcessor` can be a Singleton, because it no longer holds a reference to a scoped `IAmABoxTransactionProvider`. All of the other dependencies of `CommandProcessor` are either a factory or can have a singleton lifetime.
+Because we remove the static `IAmABoxTransactionProvider`, we can also safely still remove the `Func<IAmACommandProcessorProvider>` from the `Dispatcher`. A singletone instance of `CommandProcessor' does not cause an issue as the dependency on the scoped transaction provider is only in the `IHandleRequests` type. This simplifies the design and makes it easier to understand. 
+These changes allow us to revert to a model where the `CommandProcessor` can be a Singleton, because it no longer holds a reference to a scoped `IAmABoxTransactionProvider`. All of the other dependencies of `CommandProcessor` are either a factory or can have a singleton lifetime.
 
 
 ## Consequences
 
 - The `OutboxProducerMediator` will remain a static singleton, as we want to ensure that there is only one instance of the outbox/producer for the application.
-- The `IAmABoxTransactionProvider`will be scoped to the `CommandProcessor` instance, allowing it to work with a `DbContext` that is also scoped per request.
-- This change will require updates to the documentation to reflect the new lifetime of the `IAmABoxTransactionProvider`.
+- The `IAmABoxTransactionProvider`will be scoped to the `IHandleRequests` instance, allowing it to work with a `DbContext` that is also scoped per request.
+- The `CommandProcessor` can be configured as a singleton, as it no longer holds a reference to a scoped `IAmABoxTransactionProvider`.
 - Testing will still be possible, as the `ClearServiceBus` method will still be available to reset the static fields for testing purposes.
-- We will need to ensure that the `IAmABoxTransactionProvider` is properly disposed of when the `CommandProcessor` is disposed of, to avoid memory leaks.
