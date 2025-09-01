@@ -94,8 +94,11 @@ public class DispatcherResolutionScopedDependencyTests
                     binaryMessagePayload: false
                     );
                 
+                //We need this as it is a dependency of the SqliteConnectionProvider
+                services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
+                
                 configure.Outbox = new SqliteOutbox(outboxConfiguration, new SqliteConnectionProvider(outboxConfiguration));
-                configure.TransactionProvider = typeof(SqliteEntityFrameworkTransactionProvider<>);
+                configure.TransactionProvider = typeof(SqliteEntityFrameworkTransactionProvider<Discography>);
                 configure.ConnectionProvider = typeof(SqliteConnectionProvider);
                 configure.MaxOutStandingMessages = 5;
                 configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
