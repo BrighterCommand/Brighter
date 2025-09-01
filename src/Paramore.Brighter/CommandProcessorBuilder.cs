@@ -98,7 +98,7 @@ namespace Paramore.Brighter
 
         private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private IAmAnOutboxProducerMediator? _bus;
-        private IAmABoxTransactionProvider? _transactionProvider;
+        private Type? _transactionType = null;
         private bool _useRequestReplyQueues;
         private IAmAChannelFactory? _responseChannelFactory;
         private IEnumerable<Subscription>? _replySubscriptions;
@@ -193,7 +193,7 @@ namespace Paramore.Brighter
         public INeedInstrumentation ExternalBus(
             ExternalBusType busType,
             IAmAnOutboxProducerMediator bus,
-            IAmABoxTransactionProvider? transactionProvider = null,
+            Type? transactionType = null,
             IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
             InboxConfiguration? inboxConfiguration = null)
@@ -206,11 +206,11 @@ namespace Paramore.Brighter
                     break;
                 case ExternalBusType.FireAndForget:
                     _bus = bus;
-                    _transactionProvider = transactionProvider;
+                    _transactionType = transactionType;   
                     break;
                 case ExternalBusType.RPC:
                     _bus = bus;
-                    _transactionProvider = transactionProvider;
+                    _transactionType = transactionType;
                     _useRequestReplyQueues = true;
                     _replySubscriptions = subscriptions;
                     _responseChannelFactory = responseChannelFactory;
@@ -324,7 +324,7 @@ namespace Paramore.Brighter
                     policyRegistry: _policyRegistry,
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     bus: _bus,
-                    transactionType: CommandProcessor.GetTransactionTypeFromTransactionProvider(_transactionProvider),
+                    transactionType: _transactionType,
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
@@ -340,7 +340,7 @@ namespace Paramore.Brighter
                     policyRegistry: _policyRegistry,
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     bus: _bus,
-                    transactionType: CommandProcessor.GetTransactionTypeFromTransactionProvider(_transactionProvider),
+                    transactionType: _transactionType,
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     replySubscriptions: _replySubscriptions,
@@ -410,7 +410,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
-        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
+        /// <param name="transactionType">The type of the transaction provider</param>
         /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
         /// <param name="inboxConfiguration">What is the inbox configuration</param>
@@ -418,7 +418,7 @@ namespace Paramore.Brighter
         INeedInstrumentation ExternalBus(
             ExternalBusType busType,
             IAmAnOutboxProducerMediator bus,
-            IAmABoxTransactionProvider? transactionProvider = null,
+            Type? transactionType = null,
             IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
             InboxConfiguration? inboxConfiguration = null);
