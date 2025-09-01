@@ -12,7 +12,7 @@ namespace Paramore.Brighter
     /// It manages the creation, commitment, and rollback of transactions, as well as handling
     /// the current transaction context.
     /// </remarks>
-    public class CommittableTransactionProvider : IAmABoxTransactionProvider<CommittableTransaction>
+    public class InMemoryTransactionProvider : IAmABoxTransactionProvider<CommittableTransaction>
     {
         private CommittableTransaction? _transaction;
         private Transaction? _existingTransaction;
