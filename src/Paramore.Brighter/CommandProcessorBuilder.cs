@@ -23,15 +23,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
-using Paramore.Brighter.FeatureSwitch.Providers;
 using Paramore.Brighter.Observability;
-using Polly;
-using Polly.CircuitBreaker;
 using Polly.Registry;
-using Polly.Retry;
 
 namespace Paramore.Brighter
 {
