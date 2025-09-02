@@ -12,7 +12,7 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
     /// A connection provider that uses the same connection as EF Core
     /// </summary>
     /// <typeparam name="T">The Db Context to take the connection from</typeparam>
-    public class PostgreSqlEntityFrameworkConnectionProvider<T> : RelationalDbTransactionProvider where T : DbContext
+    public class PostgreSqlEntityFrameworkTransactionProvider<T> : RelationalDbTransactionProvider where T : DbContext
     {
         private readonly T _context;
 
@@ -20,7 +20,7 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
         /// Constructs and instance from a database context
         /// </summary>
         /// <param name="context">The database context to use</param>
-        public PostgreSqlEntityFrameworkConnectionProvider(T context)
+        public PostgreSqlEntityFrameworkTransactionProvider(T context)
         {
             _context = context;
         }

@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MySql
     /// <summary>
     /// A connection provider that uses the connection string to create a connection
     /// </summary>
-    public class MySqlUnitOfWork : RelationalDbTransactionProvider 
+    public class MySqlTransactionProvider : RelationalDbTransactionProvider 
     {
         private readonly string _connectionString;
 
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MySql
         /// Initialise a new instance of MySql Connection provider from a connection string
         /// </summary>
         /// <param name="configuration">MySql Configuration</param>
-        public MySqlUnitOfWork(IAmARelationalDatabaseConfiguration configuration)
+        public MySqlTransactionProvider(IAmARelationalDatabaseConfiguration configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));

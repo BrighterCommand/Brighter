@@ -32,8 +32,8 @@ namespace Tests
         }
 
         [Theory]
-        [InlineData(typeof(SomeSqlConnectionProvider), typeof(SomeSqlUnitOfBox))]
-        [InlineData(typeof(SomeSqlUnitOfBox), typeof(SomeSqlUnitOfBox))]
+        [InlineData(typeof(SomeSqlConnectionProvider), typeof(StubSqlTransactionProvider))]
+        [InlineData(typeof(StubSqlTransactionProvider), typeof(StubSqlTransactionProvider))]
         public void WithExternalBus(Type connectionProvider, Type transactionProvider)
         {
             var serviceCollection = new ServiceCollection();
@@ -127,7 +127,7 @@ namespace Tests
         }
         
         
-        public class SomeSqlUnitOfBox :  RelationalDbTransactionProvider
+        public class StubSqlTransactionProvider :  RelationalDbTransactionProvider
         {
             public override DbConnection GetConnection()
             {
