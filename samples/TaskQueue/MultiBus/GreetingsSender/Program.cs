@@ -119,9 +119,12 @@ var host = Host.CreateDefaultBuilder(args)
             })
             .AddProducers((configure) =>
             {
-                configure.ProducerRegistry = new CombinedProducerRegistryFactory(rmqMessageProducerFactory, kafkaMessageProducerFactory).Create();
+                configure.ProducerRegistry = new CombinedProducerRegistryFactory(
+                    rmqMessageProducerFactory, 
+                    kafkaMessageProducerFactory)
+                    .Create();
             })
-            .MapperRegistryFromAssemblies([typeof(GreetingEvent).Assembly]);
+            .AutoFromAssemblies();
 
         services.AddHostedService<TimedMessageGenerator>();
     })
