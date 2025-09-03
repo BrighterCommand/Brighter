@@ -1,4 +1,4 @@
-# 33. Optimise reads and write from Dynamo outbox
+# 33. Optimise reads/writes from/to Dynamo outbox
 
 Date: 2025-09-03
 
