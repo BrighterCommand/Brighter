@@ -86,7 +86,6 @@ namespace GreetingsServer
                     })    
                     .AutoFromAssemblies();
 
-
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })
                 .UseConsoleLifetime()

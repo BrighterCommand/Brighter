@@ -63,6 +63,7 @@ namespace GreetingsSender
                             new RmqPublication
                             {
                                 Topic = new RoutingKey("Greeting.Request"),
+                                RequestType = typeof(GreetingRequest)
                             }
                         ]).Create();
                     configure.UseRpc = true;
