@@ -101,7 +101,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? sweepUncommittedOffsetsInterval = null,
             TimeSpan? readCommittedOffsetsTimeout = null,
             int numPartitions = 1,
-            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
             short replicationFactor = 1,
             TimeSpan? topicFindTimeout = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,

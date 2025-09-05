@@ -143,7 +143,7 @@ public static class SchemaCreation
             return;
         
         //The migration does not create the Db, so we need to create it sot that it will add it
-        conn.Open();
+        if (conn.State != ConnectionState.Open)conn.Open();
         using DbCommand command = conn.CreateCommand();
 
         command.CommandText = rdbms switch
@@ -294,15 +294,19 @@ public static class SchemaCreation
 
         try
         {
-            (Rdbms databaseType, string? connectionString) connectionString =
+            (Rdbms databaseType, string? serverConnectionString) connectionString =
                 ConnectionResolver.ServerConnectionString(config, applicationType);
-            if (connectionString.connectionString == null)
+            if (connectionString.serverConnectionString == null)
                 throw new InvalidOperationException(
-                    "Could not resolve connection string; did you set a connection string?");
+                    "Could not resolve connection string; did you set a server connection string?");
+            string? dbConnectionString = ConnectionResolver.DbConnectionString(config, applicationType);
+            if (dbConnectionString == null)
+                throw new InvalidOperationException(
+                    "Could not resolve connection string; did you set a db connection string?");
 
             CreateOutboxProduction(
                 DbResolver.GetDatabaseType(dbType),
-                connectionString,
+                (connectionString.databaseType, dbConnectionString),
                 hasBinaryPayload
             );
         }
@@ -325,23 +329,23 @@ public static class SchemaCreation
 
     private static void CreateOutboxProduction(
         Rdbms rdbms,
-        (Rdbms databaseType, string? connectionString) db,
+        (Rdbms databaseType, string? serverConnectionString) db,
         bool hasBinaryPayload
     )
     {
         switch (rdbms)
         {
             case Rdbms.MySql:
-                CreateOutboxMySql(db.connectionString, hasBinaryPayload);
+                CreateOutboxMySql(db.serverConnectionString, hasBinaryPayload);
                 break;
             case Rdbms.MsSql:
-                CreateOutboxMsSql(db.connectionString, hasBinaryPayload);
+                CreateOutboxMsSql(db.serverConnectionString, hasBinaryPayload);
                 break;
             case Rdbms.Postgres:
-                CreateOutboxPostgres(db.connectionString, hasBinaryPayload);
+                CreateOutboxPostgres(db.serverConnectionString, hasBinaryPayload);
                 break;
             case Rdbms.Sqlite:
-                CreateOutboxSqlite(db.connectionString, hasBinaryPayload);
+                CreateOutboxSqlite(db.serverConnectionString, hasBinaryPayload);
                 break;
             default:
                 throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");

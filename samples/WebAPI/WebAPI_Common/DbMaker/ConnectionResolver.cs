@@ -21,9 +21,10 @@ public static class ConnectionResolver
            return GetSalutationsDbConnectionString(configuration, rdbms); 
     }
 
-    public static (Rdbms databaseType, string? connectionString) ServerConnectionString(
+    public static (Rdbms databaseType, string? serverConnectionString) ServerConnectionString(
         IConfiguration configuration,
-        ApplicationType applicationType)
+        ApplicationType applicationType
+    )
     {
         string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (string.IsNullOrWhiteSpace(dbType))

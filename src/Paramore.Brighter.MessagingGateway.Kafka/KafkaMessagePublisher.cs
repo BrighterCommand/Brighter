@@ -29,24 +29,15 @@ using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    internal sealed class KafkaMessagePublisher
+    internal sealed class KafkaMessagePublisher(
+        IProducer<string, byte[]> producer,
+        IKafkaMessageHeaderBuilder headerBuilder)
     {
-        private readonly IProducer<string, byte[]> _producer;
-
-        private readonly IKafkaMessageHeaderBuilder _headerBuilder;
-
-        public KafkaMessagePublisher(IProducer<string, byte[]> producer,
-            IKafkaMessageHeaderBuilder headerBuilder)
-        {
-            _producer = producer;
-            _headerBuilder = headerBuilder;
-        }
-
         public void PublishMessage(Message message, Action<DeliveryReport<string, byte[]>> deliveryReport)
         {
             var kafkaMessage = BuildMessage(message);
             
-            _producer.Produce(message.Header.Topic, kafkaMessage, deliveryReport);
+            producer.Produce(message.Header.Topic, kafkaMessage, deliveryReport);
         }
 
         public async Task PublishMessageAsync(Message message, Action<DeliveryResult<string, byte[]>> deliveryReport, CancellationToken cancellationToken = default)
@@ -55,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             try
             { 
-                var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage, cancellationToken);
+                var deliveryResult = await producer.ProduceAsync(message.Header.Topic, kafkaMessage, cancellationToken);
                 deliveryReport(deliveryResult);
             }
             catch (ProduceException<string, byte[]>)
@@ -74,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private Message<string, byte[]> BuildMessage(Message message)
         {
-            var headers = _headerBuilder.Build(message);
+            var headers = headerBuilder.Build(message);
 
             var kafkaMessage = new Message<string, byte[]>
             {

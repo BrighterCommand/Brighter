@@ -215,25 +215,25 @@ static void ConfigureDapperByHost(Rdbms databaseType, IServiceCollection service
 static void ConfigureDapperSqlite(IServiceCollection services)
 {
     services.AddScoped<IAmARelationalDbConnectionProvider, SqliteConnectionProvider>();
-    services.AddScoped<IAmATransactionConnectionProvider, SqliteUnitOfWork>();
+    services.AddScoped<IAmATransactionConnectionProvider, SqliteTransactionProvider>();
 }
 
 static void ConfigureDapperMySql(IServiceCollection services)
 {
     services.AddScoped<IAmARelationalDbConnectionProvider, MySqlConnectionProvider>();
-    services.AddScoped<IAmATransactionConnectionProvider, MySqlUnitOfWork>();
+    services.AddScoped<IAmATransactionConnectionProvider, MySqlTransactionProvider>();
 }
 
 static void ConfigureDapperMsSql(IServiceCollection services)
 {
     services.AddScoped<IAmARelationalDbConnectionProvider, MsSqlConnectionProvider>();
-    services.AddScoped<IAmATransactionConnectionProvider, MsSqlUnitOfWork>();
+    services.AddScoped<IAmATransactionConnectionProvider, MsSqlTransactionProvider>();
 }
 
 static void ConfigureDapperPostgreSql(IServiceCollection services)
 {
     services.AddScoped<IAmARelationalDbConnectionProvider, PostgreSqlConnectionProvider>();
-    services.AddScoped<IAmATransactionConnectionProvider, PostgreSqlUnitOfWork>();
+    services.AddScoped<IAmATransactionConnectionProvider, PostgreSqlTransactionProvider>();
 }
 
 static string? GetEnvironment()
