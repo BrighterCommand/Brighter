@@ -25,7 +25,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator.Extensions.Hosting\Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
 </Project>

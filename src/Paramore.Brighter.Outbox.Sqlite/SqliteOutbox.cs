@@ -47,8 +47,10 @@ public class SqliteOutbox : RelationDatabaseOutbox
     /// </summary>
     /// <param name="configuration">The configuration to connect to this data store</param>
     /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-    public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration,
-        IAmARelationalDbConnectionProvider connectionProvider)
+    public SqliteOutbox(
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmARelationalDbConnectionProvider connectionProvider
+    )
         : base(DbSystem.Sqlite, configuration, connectionProvider, 
             new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
     {

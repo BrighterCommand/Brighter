@@ -52,32 +52,32 @@ namespace GreetingsSender
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
-            var producer = new RmqMessageProducer(rmqConnection);
 
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
-            var replySubscriptions = new[]
-            {
-                new RmqSubscription(null, null, null, typeof(GreetingReply))
-            };
-
-            var producerRegistry = new RmqProducerRegistryFactory(
-                rmqConnection,
-                [
-                    new RmqPublication
-                    {
-                        Topic = new RoutingKey("Greeting.Request"),
-                    }
-                ]).Create();
-            
             serviceCollection
                 .AddBrighter()
                 .AddProducers((configure) =>
                 {
-                    configure.ProducerRegistry = producerRegistry;
+                    configure.ProducerRegistry = new RmqProducerRegistryFactory(
+                        rmqConnection,
+                        [
+                            new RmqPublication
+                            {
+                                Topic = new RoutingKey("Greeting.Request"),
+                                RequestType = typeof(GreetingRequest)
+                            }
+                        ]).Create();
                     configure.UseRpc = true;
-                    configure.ReplyQueueSubscriptions = replySubscriptions;
-                    configure.ResponseChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                    configure.ReplyQueueSubscriptions =
+                    [
+                        new RmqSubscription(
+                            new SubscriptionName("ReplySubscription"), 
+                            new ChannelName("ReplyChannel"), 
+                            new RoutingKey("Reply"), 
+                            typeof(GreetingReply),
+                            messagePumpType: MessagePumpType.Reactor
+                        )
+                    ];
+                    configure.ResponseChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
                 })
                 .AutoFromAssemblies();
 

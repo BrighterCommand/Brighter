@@ -10,7 +10,6 @@
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MessagePack" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />

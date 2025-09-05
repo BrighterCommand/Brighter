@@ -2,20 +2,25 @@
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using MySqlConnector;
 
-namespace Paramore.Brighter.MsSql.EntityFrameworkCore
+namespace Paramore.Brighter.MySql.EntityFrameworkCore
 {
-    public class MsSqlEntityFrameworkCoreConnectionProvider<T> : RelationalDbTransactionProvider where T : DbContext
+    /// <summary>
+    /// A connection provider that uses the same connection as EF Core
+    /// </summary>
+    /// <typeparam name="T">The Db Context to take the connection from</typeparam>
+    public class MySqlEntityFrameworkTransactionProvider<T> : RelationalDbTransactionProvider where T: DbContext
     {
         private readonly T _context;
-        
+
         /// <summary>
-        /// Initialise a new instance of Ms Sql Connection provider using the Database Connection from an Entity Framework Core DbContext.
+        /// Constructs and instance from a Db context
         /// </summary>
-        public MsSqlEntityFrameworkCoreConnectionProvider(T context)
+        /// <param name="context">The database context to use</param>
+        public MySqlEntityFrameworkTransactionProvider(T context)
         {
             _context = context;
         }
@@ -44,53 +49,45 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
             
             return Task.CompletedTask;
         }
+        
         /// <summary>
-        /// Gets a existing Connection; creates a new one if it does not exist
-        /// Opens the connection if it is not opened 
+        /// Get the current connection of the DB context
         /// </summary>
-        /// <returns>A database connection</returns>
+        /// <returns>The Sqlite Connection that is in use</returns>
         public override DbConnection GetConnection()
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             _context.Database.CanConnect();
-            var connection = _context.Database.GetDbConnection();
-            if (connection.State != System.Data.ConnectionState.Open) connection.Open();
-            return connection;
+            return _context.Database.GetDbConnection();
         }
 
         /// <summary>
-        /// Gets a existing Connection; creates a new one if it does not exist
-        /// The connection is not opened, you need to open it yourself.
-        /// The base class just returns a new or existing connection, but derived types may perform async i/o
+        /// Get the current connection of the DB context
         /// </summary>
-        /// <returns>A database connection</returns>
+        /// <param name="cancellationToken">A cancellation token</param>
+        /// <returns></returns>
         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             await _context.Database.CanConnectAsync(cancellationToken);
-            var connection = _context.Database.GetDbConnection();
-            if (connection.State != System.Data.ConnectionState.Open) await connection.OpenAsync(cancellationToken);
-            return connection;
+            return _context.Database.GetDbConnection();
         }
 
         /// <summary>
-        /// Gets an existing transaction; creates a new one from the connection if it does not exist.
-        /// You should use the commit transaction using the Commit method. 
+        /// Get the ambient EF Core Transaction
         /// </summary>
-        /// <returns>A database transaction</returns>
+        /// <returns>The Sqlite Transaction</returns>
         public override DbTransaction GetTransaction()
         {
             var currentTransaction = _context.Database.CurrentTransaction;
-            if (currentTransaction is null)
+            if (currentTransaction == null)
             {
                 // If there is no current transaction, we create a new one
-                _context.Database.BeginTransaction();
-                currentTransaction = _context.Database.CurrentTransaction;
+                currentTransaction = _context.Database.BeginTransaction();
             }
-
-            return currentTransaction!.GetDbTransaction();
+            return currentTransaction.GetDbTransaction();
         }
-
+        
         /// <summary>
         /// Rolls back a transaction
         /// </summary>
@@ -98,14 +95,12 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
         {
             if (HasOpenTransaction)
             {
-                try { await ((SqlTransaction)GetTransaction()).RollbackAsync(cancellationToken); } catch (Exception) { /* Ignore*/}
+                try { await ((MySqlTransaction)GetTransaction()).RollbackAsync(cancellationToken); } catch (Exception) { /* Ignore*/}
                 Transaction = null;
             }
         }
 
-
         public override bool HasOpenTransaction => _context.Database.CurrentTransaction != null;
-
         public override bool IsSharedConnection => true;
     }
 }

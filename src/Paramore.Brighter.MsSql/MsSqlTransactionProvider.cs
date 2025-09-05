@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MsSql
     /// <summary>
     /// A connection provider for Sqlite 
     /// </summary>
-    public class MsSqlUnitOfWork : RelationalDbTransactionProvider
+    public class MsSqlTransactionProvider : RelationalDbTransactionProvider
     {
         private readonly string _connectionString;
  
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.MsSql
         /// Create a connection provider for MSSQL using a connection string for Db access
         /// </summary>
         /// <param name="configuration">The configuration for this database</param>
-        public MsSqlUnitOfWork(IAmARelationalDatabaseConfiguration configuration)
+        public MsSqlTransactionProvider(IAmARelationalDatabaseConfiguration configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));

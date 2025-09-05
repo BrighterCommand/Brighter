@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Net.Mime;
+using System.Text.Json;
 using Greetings.Ports.Commands;
-using MessagePack;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
 
@@ -43,14 +43,14 @@ namespace Greetings.Ports.Mappers
                 messageType: request.RequestToMessageType(),
                 contentType: contentType);
 
-            var body = new MessageBody(MessagePackSerializer.Serialize(request), contentType);
+            var body = new MessageBody(JsonSerializer.Serialize(request), contentType);
             var message = new Message(header, body);
             return message;
         }
 
         public FarewellEvent MapToRequest(Message message)
         {
-            var farewellCommand = MessagePackSerializer.Deserialize<FarewellEvent>(message.Body.Bytes);
+            var farewellCommand = JsonSerializer.Deserialize<FarewellEvent>(message.Body.Bytes);
 
             return farewellCommand;
         }

@@ -77,7 +77,7 @@ var host = Host.CreateDefaultBuilder(args)
                 new KafkaMessageConsumerFactory(
                     new KafkaMessagingGatewayConfiguration
                     {
-                        Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
+                        Name = "paramore.brighter", BootStrapServers = ["localhost:9092"]
                     }
                 ));
         }).AutoFromAssemblies();

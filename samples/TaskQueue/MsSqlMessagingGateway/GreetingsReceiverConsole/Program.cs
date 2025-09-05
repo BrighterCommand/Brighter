@@ -50,26 +50,26 @@ namespace GreetingsReceiverConsole
                 .ConfigureServices((_, services) =>
 
                 {
-                    var subscriptions = new Subscription[]
-                    {
-                        new Subscription<GreetingEvent>(
-                            new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName("greeting.event"),
-                            new RoutingKey("greeting.event"),
-                            timeOut: TimeSpan.FromMilliseconds(200))
-                    };
-
-                    //create the gateway
-                    var messagingConfiguration =
-                        new RelationalDatabaseConfiguration(
-                            @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", 
-                            databaseName: "BrighterSqlQueue", 
-                            queueStoreTable: "QueueData");
-                    var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
                     services.AddConsumers(options =>
                     {
-                        options.Subscriptions = subscriptions;
-                        options.DefaultChannelFactory = new ChannelFactory(messageConsumerFactory);
+                        options.Subscriptions =
+                        [
+                            new Subscription<GreetingEvent>(
+                                new SubscriptionName("paramore.example.greeting"),
+                                new ChannelName("greeting.event"),
+                                new RoutingKey("greeting.event"),
+                                timeOut: TimeSpan.FromMilliseconds(200),
+                                messagePumpType: MessagePumpType.Reactor)
+                        ];
+                        options.DefaultChannelFactory = new ChannelFactory(
+                            new MsSqlMessageConsumerFactory(
+                                new RelationalDatabaseConfiguration(
+                            @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", 
+                                    databaseName: "BrighterSqlQueue", 
+                                    queueStoreTable: "QueueData"
+                                )
+                            )
+                        );
                     })
                     .AutoFromAssemblies();
 

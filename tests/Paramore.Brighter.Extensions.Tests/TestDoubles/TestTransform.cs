@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Extensions.Tests;
+namespace Paramore.Brighter.Extensions.Tests.TestDoubles;
 
 public class TestTransform : IAmAMessageTransformAsync, IAmAMessageTransform
 {

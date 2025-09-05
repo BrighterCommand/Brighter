@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Logging.Handlers;
 using Paramore.Brighter.Monitoring.Handlers;

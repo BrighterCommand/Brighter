@@ -29,7 +29,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.MessagingGateway.RMQ.Async;
+using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
@@ -49,51 +49,42 @@ namespace GreetingsServer
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var subscriptions = new Subscription[]
-                    {
-                        new RmqSubscription<GreetingRequest>(
-                            new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName("Greeting.Request"),
-                            new RoutingKey("Greeting.Request"),
-                            timeOut: TimeSpan.FromMilliseconds(2000),
-                            isDurable: true,
-                            highAvailability: true)
-                    };
-
                     var rmqConnection = new RmqMessagingGatewayConnection
                     {
                         AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                         Exchange = new Exchange("paramore.brighter.exchange")
                     };
 
-                    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-                    ChannelFactory amAChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                    var producer = new RmqMessageProducer(rmqConnection);
-
-                    var producerRegistry = new RmqProducerRegistryFactory(
-                        rmqConnection,
-                        new RmqPublication[]
-                        {
-                            new()
-                            {
-                                //TODO: We don't know the reply routing key, but need a topic name, we could make this simpler
-                                Topic = new RoutingKey("Reply"),
-                                RequestType = typeof(GreetingReply),
-                                MakeChannels = OnMissingChannel.Assume
-                            }
-                        }).Create();
-                    
                     services.AddConsumers(options =>
                     {
-                        options.Subscriptions = subscriptions;
-                        options.DefaultChannelFactory = amAChannelFactory;
+                        options.Subscriptions =
+                        [
+                            new RmqSubscription<GreetingRequest>(
+                                new SubscriptionName("paramore.example.greeting"),
+                                new ChannelName("Greeting.Request"),
+                                new RoutingKey("Greeting.Request"),
+                                timeOut: TimeSpan.FromMilliseconds(2000),
+                                isDurable: true,
+                                highAvailability: true,
+                                messagePumpType: MessagePumpType.Reactor)
+                        ];
+                        options.DefaultChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
                     })
-                        .AddProducers((configure) =>
-                        {
-                            configure.ProducerRegistry = producerRegistry;
-                        })    
+                    .AddProducers((configure) =>
+                    {
+                        configure.ProducerRegistry = new RmqProducerRegistryFactory(
+                            rmqConnection,
+                            [
+                                new()
+                                {
+                                    //TODO: We don't know the reply routing key, but need a topic name, we could make this simpler
+                                    Topic = new RoutingKey("Reply"),
+                                    RequestType = typeof(GreetingReply),
+                                    MakeChannels = OnMissingChannel.Assume
+                                }
+                            ]).Create();
+                    })    
                     .AutoFromAssemblies();
-
 
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })

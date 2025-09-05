@@ -1,7 +1,6 @@
 using System;
-using Paramore.Brighter;
 
-namespace Tests
+namespace Paramore.Brighter.Extensions.Tests.TestDoubles
 {
     public class TestEvent() : Event(Guid.NewGuid().ToString());
 }
