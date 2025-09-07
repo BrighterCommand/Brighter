@@ -89,7 +89,7 @@ public class Program
                             ];
                             options.DefaultChannelFactory = new ChannelFactory(awsConnection);
                         })
-                        .AutoFromAssemblies();
+                        .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
                 }
 
                 services.AddHostedService<ServiceActivatorHostedService>();
