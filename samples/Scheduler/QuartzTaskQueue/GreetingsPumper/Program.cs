@@ -61,14 +61,14 @@ static class Program
                             [
                                 new SnsPublication
                                 {
-                                    Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                                    Topic = new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                                     RequestType = typeof(GreetingEvent)
                                 },
                                 new SnsPublication
                                 {
-                                    Topic =
-                                        new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                                    TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                                    Topic = new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                                    TopicAttributes = new SnsAttributes { Type = SqsType.Fifo },
+                                    RequestType = typeof(FarewellEvent)
                                 }
                             ]
                         ).Create();

@@ -52,33 +52,6 @@ public class Program
             .ConfigureServices((_, services) =>
 
             {
-                var subscriptions = new Subscription[]
-                {
-                    new SqsSubscription<GreetingEvent>(
-                        subscriptionName: new SubscriptionName("paramore.example.greeting"),
-                        channelName: new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                        routingKey:new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                        channelType: ChannelType.PubSub,
-                        bufferSize: 10,
-                        timeOut: TimeSpan.FromMilliseconds(20),
-                        messagePumpType: MessagePumpType.Reactor,
-                        queueAttributes: new SqsAttributes(
-                            lockTimeout: TimeSpan.FromSeconds(30)
-                            )),
-                    new SqsSubscription<FarewellEvent>(
-                        subscriptionName:new SubscriptionName("paramore.example.farewell"),
-                        channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
-                        routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
-                        channelType: ChannelType.PubSub,
-                        bufferSize: 10,
-                        timeOut: TimeSpan.FromMilliseconds(20),
-                        messagePumpType: MessagePumpType.Reactor,
-                        queueAttributes: new SqsAttributes(
-                            lockTimeout: TimeSpan.FromSeconds(30),
-                            type: SqsType.Fifo
-                        ))
-                };
-
                 //create the gateway
                 if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                 {
@@ -86,6 +59,7 @@ public class Program
                     var region = string.IsNullOrWhiteSpace(serviceURL)
                         ? RegionEndpoint.EUWest1
                         : RegionEndpoint.USEast1;
+                    
                     var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
                         cfg =>
                         {
@@ -97,7 +71,34 @@ public class Program
 
                     services.AddConsumers(options =>
                         {
-                            options.Subscriptions = subscriptions;
+                            options.Subscriptions =
+                            [
+                                new SqsSubscription<GreetingEvent>(
+                                    subscriptionName: new SubscriptionName("paramore.example.greeting"),
+                                    channelName: new ChannelName(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
+                                    routingKey:new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
+                                    channelType: ChannelType.PubSub,
+                                    bufferSize: 10,
+                                    timeOut: TimeSpan.FromMilliseconds(20),
+                                    messagePumpType: MessagePumpType.Reactor,
+                                    queueAttributes: new SqsAttributes(
+                                        lockTimeout: TimeSpan.FromSeconds(30)
+                                    ),
+                                    topicAttributes: new SnsAttributes(type:SqsType.Standard)),
+                                new SqsSubscription<FarewellEvent>(
+                                    subscriptionName:new SubscriptionName("paramore.example.farewell"),
+                                    channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                                    routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
+                                    channelType: ChannelType.PubSub,
+                                    bufferSize: 10,
+                                    timeOut: TimeSpan.FromMilliseconds(20),
+                                    messagePumpType: MessagePumpType.Reactor,
+                                    queueAttributes: new SqsAttributes(
+                                        lockTimeout: TimeSpan.FromSeconds(30),
+                                        type: SqsType.Standard
+                                    ),
+                                    topicAttributes: new SnsAttributes(type: SqsType.Standard))
+                            ];
                             options.DefaultChannelFactory = new ChannelFactory(awsConnection);
                         })
                         .AutoFromAssemblies();
