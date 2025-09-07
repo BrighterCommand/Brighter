@@ -56,27 +56,20 @@ static class Program
                                 }
                             });
 
-                        var producerRegistry = new SnsProducerRegistryFactory(
-                            awsConnection,
-                            [
-                                new SnsPublication
-                                {
-                                    Topic = new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
-                                    RequestType = typeof(GreetingEvent)
-                                },
-                                new SnsPublication
-                                {
-                                    Topic = new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
-                                    TopicAttributes = new SnsAttributes { Type = SqsType.Fifo },
-                                    RequestType = typeof(FarewellEvent)
-                                }
-                            ]
-                        ).Create();
-
                         services.AddBrighter()
                             .AddProducers((configure) =>
                             {
-                                configure.ProducerRegistry = producerRegistry;
+                                configure.ProducerRegistry = new SnsProducerRegistryFactory(
+                                    awsConnection,
+                                    [
+                                        new SnsPublication
+                                        {
+                                            Topic = new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
+                                            RequestType = typeof(GreetingEvent),
+                                            MakeChannels = OnMissingChannel.Create
+                                        }
+                                    ]
+                                ).Create();
                             })
                             .UseScheduler(provider =>
                             {
@@ -108,7 +101,7 @@ static class Program
                 loop++;
 
                 logger.LogInformation("Scheduling message #{Loop}", loop);
-                commandProcessor.Post(TimeSpan.FromMinutes(1), new GreetingEvent($"Scheduler message Ian #{loop}"));
+                commandProcessor.Post(TimeSpan.FromMinutes(1), new GreetingEvent($"Scheduler message Greeting Event #{loop}"));
                 
                 if (loop % 100 != 0)
                 {

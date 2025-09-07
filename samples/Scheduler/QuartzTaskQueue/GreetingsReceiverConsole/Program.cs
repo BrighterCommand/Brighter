@@ -84,20 +84,8 @@ public class Program
                                     queueAttributes: new SqsAttributes(
                                         lockTimeout: TimeSpan.FromSeconds(30)
                                     ),
-                                    topicAttributes: new SnsAttributes(type:SqsType.Standard)),
-                                new SqsSubscription<FarewellEvent>(
-                                    subscriptionName:new SubscriptionName("paramore.example.farewell"),
-                                    channelName: new ChannelName(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
-                                    routingKey: new RoutingKey(typeof(FarewellEvent).FullName!.ToValidSNSTopicName(true)),
-                                    channelType: ChannelType.PubSub,
-                                    bufferSize: 10,
-                                    timeOut: TimeSpan.FromMilliseconds(20),
-                                    messagePumpType: MessagePumpType.Reactor,
-                                    queueAttributes: new SqsAttributes(
-                                        lockTimeout: TimeSpan.FromSeconds(30),
-                                        type: SqsType.Standard
-                                    ),
-                                    topicAttributes: new SnsAttributes(type: SqsType.Standard))
+                                    topicAttributes: new SnsAttributes(type:SqsType.Standard),
+                                    makeChannels: OnMissingChannel.Create)
                             ];
                             options.DefaultChannelFactory = new ChannelFactory(awsConnection);
                         })
