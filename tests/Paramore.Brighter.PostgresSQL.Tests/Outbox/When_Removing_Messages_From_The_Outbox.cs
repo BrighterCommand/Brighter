@@ -40,14 +40,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly Message _message2;
         private readonly Message _messageLatest;
         private IEnumerable<Message> _retrievedMessages;
-        private readonly PostgreSqlOutboxSync _sqlOutboxSync;
+        private readonly PostgreSqlOutbox _sqlOutbox;
 
         public SqlOutboxDeletingMessagesTests()
         {
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new PostgreSqlOutboxSync(_postgresSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
 
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
@@ -59,23 +59,23 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            _sqlOutboxSync.Add(_messageEarliest);
-            _sqlOutboxSync.Add(_message2);
-            _sqlOutboxSync.Add(_messageLatest);
+            _sqlOutbox.Add(_messageEarliest);
+            _sqlOutbox.Add(_message2);
+            _sqlOutbox.Add(_messageLatest);
             
-            _retrievedMessages = _sqlOutboxSync.Get();
+            _retrievedMessages = _sqlOutbox.Get();
 
-            _sqlOutboxSync.Delete(_retrievedMessages.First().Id);
+            _sqlOutbox.Delete(_retrievedMessages.First().Id);
 
-            var remainingMessages = _sqlOutboxSync.Get();
+            var remainingMessages = _sqlOutbox.Get();
 
             remainingMessages.Should().HaveCount(2);
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
             
-            _sqlOutboxSync.Delete(remainingMessages.Select(m => m.Id).ToArray());
+            _sqlOutbox.Delete(remainingMessages.Select(m => m.Id).ToArray());
 
-            var messages = _sqlOutboxSync.Get();
+            var messages = _sqlOutbox.Get();
 
             messages.Should().HaveCount(0);
         }

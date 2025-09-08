@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Sweeper Service is starting.");
+            s_logger.LogDebug("Outbox Sweeper Service is starting.");
 
             _timer = new Timer(Callback, null, TimeSpan.Zero, TimeSpan.FromSeconds(_options.TimerInterval));
 
@@ -42,14 +42,30 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private async Task DoWorkAsync()
         {
-            var lockId = _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None).Result; 
+            var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None);
             if (lockId != null)
             {
-                s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
+                s_logger.LogDebug("Outbox Sweeper looking for unsent messages");
 
-                var scope = _serviceScopeFactory.CreateScope();
+                var scope = _serviceScopeFactory.CreateAsyncScope();
                 try
                 {
+                    var outbox = scope.ServiceProvider.GetService<IAmAnOutbox<Message>>();
+                    if (outbox == null)
+                    {
+                        s_logger.LogWarning("No outbox found in the service provider.");
+                        return;
+                    }
+
+                    var outboxSync = outbox as IAmAnOutboxSync<Message>;
+                    var outboxAsync = outbox as IAmAnOutboxAsync<Message>;
+
+                    if (outboxSync == null && outboxAsync == null)
+                    {
+                        s_logger.LogWarning("Outbox does not implement IAmAnOutboxSync<Message> or IAmAnOutboxAsync<Message>.");
+                        return;
+                    }
+
                     IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
 
                     var outBoxSweeper = new OutboxSweeper(
@@ -60,9 +76,13 @@ namespace Paramore.Brighter.Extensions.Hosting
                         _options.Args);
 
                     if (_options.UseBulk)
-                        await outBoxSweeper.SweepAsyncOutboxAsync();
+                    {
+                        await SweepInBulk(outboxAsync, outBoxSweeper);
+                    }
                     else
-                        await outBoxSweeper.SweepAsync();
+                    {
+                        await SweepWithoutBulk(outboxAsync, outBoxSweeper);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -71,8 +91,8 @@ namespace Paramore.Brighter.Extensions.Hosting
                 }
                 finally
                 {
-                    _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None).Wait();
-                    scope.Dispose();
+                    await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None);
+                    await scope.DisposeAsync();
                 }
             }
             else
@@ -80,12 +100,36 @@ namespace Paramore.Brighter.Extensions.Hosting
                 s_logger.LogWarning("Outbox Sweeper is still running - abandoning attempt.");
             }
             
-            s_logger.LogInformation("Outbox Sweeper sleeping");
+            s_logger.LogDebug("Outbox Sweeper sleeping");
+        }
+
+        private static async Task SweepWithoutBulk(IAmAnOutboxAsync<Message> outboxAsync, OutboxSweeper outBoxSweeper)
+        {
+            if (outboxAsync != null)
+            {
+                await outBoxSweeper.SweepAsync();
+            }
+            else
+            {
+                outBoxSweeper.Sweep();
+            }
+        }
+
+        private static async Task SweepInBulk(IAmAnOutboxAsync<Message> outboxAsync, OutboxSweeper outBoxSweeper)
+        {
+            if (outboxAsync != null)
+            {
+                await outBoxSweeper.SweepAsyncOutboxAsync();
+            }
+            else
+            {
+                outBoxSweeper.SweepAsyncOutbox();
+            }
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Sweeper Service is stopping.");
+            s_logger.LogDebug("Outbox Sweeper Service is stopping.");
 
             _timer?.Change(Timeout.Infinite, 0);
 

@@ -4,7 +4,7 @@
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -13,7 +13,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
@@ -31,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgresSql")]
-    public class SqlOutboxWritingMessageTests : IDisposable
+    public class SqlOutboxWritingMessageAsyncTests : IDisposable
     {
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
 
-        public SqlOutboxWritingMessageTests()
+        public SqlOutboxWritingMessageAsyncTests()
         {
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
@@ -71,13 +72,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-            _sqlOutbox.Add(_messageEarliest);
         }
 
         [Fact]
-        public void When_Writing_A_Message_To_The_PostgreSql_Outbox()
+        public async Task When_Writing_A_Message_To_The_PostgreSql_Outbox_Async()
         {
-            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
+            await _sqlOutbox.AddAsync(_messageEarliest);
+            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
@@ -91,7 +92,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
              
-            
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
