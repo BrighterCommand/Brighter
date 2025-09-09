@@ -26,12 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
-using Paramore.Brighter.FeatureSwitch.Providers;
 using Paramore.Brighter.Observability;
-using Polly;
-using Polly.CircuitBreaker;
 using Polly.Registry;
-using Polly.Retry;
 
 namespace Paramore.Brighter
 {
@@ -98,7 +94,7 @@ namespace Paramore.Brighter
 
         private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private IAmAnOutboxProducerMediator? _bus;
-        private Type? _transactionType = null;
+        private System.Type? _transactionType = null;
         private bool _useRequestReplyQueues;
         private IAmAChannelFactory? _responseChannelFactory;
         private IEnumerable<Subscription>? _replySubscriptions;
@@ -185,7 +181,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The service bus that we need to use to send messages externally</param>
-        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
+        /// <param name="transactionType">The transaction type for the provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
         /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
@@ -193,7 +189,7 @@ namespace Paramore.Brighter
         public INeedInstrumentation ExternalBus(
             ExternalBusType busType,
             IAmAnOutboxProducerMediator bus,
-            Type? transactionType = null,
+            System.Type? transactionType = null,
             IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
             InboxConfiguration? inboxConfiguration = null)
@@ -418,7 +414,7 @@ namespace Paramore.Brighter
         INeedInstrumentation ExternalBus(
             ExternalBusType busType,
             IAmAnOutboxProducerMediator bus,
-            Type? transactionType = null,
+            System.Type? transactionType = null,
             IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
             InboxConfiguration? inboxConfiguration = null);
