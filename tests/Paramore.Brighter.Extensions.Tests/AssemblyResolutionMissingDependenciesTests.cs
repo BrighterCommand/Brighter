@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Xunit;
 
@@ -21,11 +22,19 @@ public class AssemblyResolutionMissingDependenciesTests
         services.AddConsumers().AutoFromAssemblies();
         
         //act
-        var provider = factory.CreateServiceProvider(services);
+        bool caught = false;
+        try
+        {
+            var provider = factory.CreateServiceProvider(services);
+        }
+        catch (AggregateException ae)
+        {
+            Assert.Contains("Some services are not able", ae.Message);
+            caught = true;
+        }
         
         //assert
-        //we will not get here, if we have a missing dependency
-        Assert.True(true);
+        Assert.True(caught);
         
     }
 }
