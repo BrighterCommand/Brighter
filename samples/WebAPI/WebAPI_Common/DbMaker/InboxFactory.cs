@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Inbox.DynamoDB;
+using Paramore.Brighter.Inbox.DynamoDB.V4;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Postgres;

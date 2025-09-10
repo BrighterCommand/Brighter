@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Observability;

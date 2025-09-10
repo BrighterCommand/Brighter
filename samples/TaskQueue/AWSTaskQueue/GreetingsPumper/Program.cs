@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Serilog;
 
 namespace GreetingsPumper

@@ -12,6 +12,7 @@ using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.DynamoDB;
+using Paramore.Brighter.Inbox.DynamoDB.V4;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.Outbox.DynamoDB;
