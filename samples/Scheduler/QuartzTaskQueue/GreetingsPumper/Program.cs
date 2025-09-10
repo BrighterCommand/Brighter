@@ -48,8 +48,7 @@ static class Program
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.USEast1,
                             cfg =>
                             {
-                                var serviceURL =
-                                    "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                                var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
                                 if (!string.IsNullOrWhiteSpace(serviceURL))
                                 {
                                     cfg.ServiceURL = serviceURL;

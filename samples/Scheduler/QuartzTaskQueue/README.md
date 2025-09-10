@@ -46,6 +46,24 @@ To run with LocalStack for AWS SQS/SNS emulation:
 
 - Ensure the service URL is set to `http://localhost:4566/` in your configuration.
 
+3. **Inspecting LocalStack**
+
+To inspect the queues and topics in LocalStack, you can use the LocalStack web UI or AWS CLI commands pointed to the LocalStack endpoint.
+
+- Download https://github.com/localstack/awscli-local
+- Ensure that you set the region to useast-1
+
+```sh
+ awslocal configure set region us-east-1
+```
+
+- Use the following commands to list queues and topics:
+
+  ```sh
+  awslocal sqs list-queues
+  awslocal sns list-topics
+  ```
+
 ## Resources
 
 - [Quartz.NET Documentation](https://www.quartz-scheduler.net/documentation/)
