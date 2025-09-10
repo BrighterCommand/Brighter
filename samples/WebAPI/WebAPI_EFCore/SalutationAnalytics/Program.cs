@@ -20,8 +20,8 @@ using TransportMaker;
 var host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
-host.CreateInbox();
-host.CreateOutbox(ApplicationType.Greetings, HasBinaryMessagePayload());
+host.CreateInbox("Salutations");
+host.CreateOutbox(ApplicationType.Greetings,  "Salutations", HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 

@@ -30,8 +30,8 @@ var host = builder.Build();
 
 host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
-host.CreateInbox();
-host.CreateOutbox(ApplicationType.Salutations, ConfigureTransport.HasBinaryMessagePayload());
+host.CreateInbox("Salutations");
+host.CreateOutbox(ApplicationType.Salutations, "Salutations", ConfigureTransport.HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
