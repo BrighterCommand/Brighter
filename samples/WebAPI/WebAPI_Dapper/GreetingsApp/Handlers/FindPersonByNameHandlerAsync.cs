@@ -16,7 +16,7 @@ using Paramore.Darker.QueryLogging;
 
 namespace GreetingsApp.Handlers;
 
-public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
+public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult?>
 {
     private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider;
 
@@ -27,7 +27,7 @@ public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, 
 
     [QueryLogging(0)]
     [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-    public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query,
+    public override async Task<FindPersonResult?> ExecuteAsync(FindPersonByName query,
         CancellationToken cancellationToken = new())
     {
         await using DbConnection connection =
@@ -37,7 +37,7 @@ public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, 
         Person? person = people.SingleOrDefault();
 
         if (person == null)
-            throw new InvalidOperationException($"Could not find person named {query.Name}");
+            return null;
 
         return new FindPersonResult(person);
     }

@@ -28,7 +28,7 @@ public class PeopleController : Controller
     {
         FindPersonResult foundPerson = await _queryProcessor.ExecuteAsync(new FindPersonByName(name));
 
-        if (foundPerson.Person == null) return new NotFoundResult();
+        if (foundPerson == null || foundPerson?.Person == null) return new NotFoundResult();
 
         return Ok(foundPerson);
     }

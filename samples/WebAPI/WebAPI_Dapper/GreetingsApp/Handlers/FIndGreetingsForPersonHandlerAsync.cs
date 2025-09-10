@@ -48,7 +48,7 @@ public class FIndGreetingsForPersonHandlerAsync : QueryHandlerAsync<FindGreeting
             new { name = query.Name },
             splitOn: "Id");
 
-        if (!people.Any()) return new FindPersonsGreetings { Name = query.Name, Greetings = Array.Empty<Salutation>() };
+        if (!people.Any()) return new FindPersonsGreetings { Name = String.Empty, Greetings = Array.Empty<Salutation>() };
 
         IEnumerable<Person> peopleGreetings = people.GroupBy(p => p.Id).Select(grp =>
         {
