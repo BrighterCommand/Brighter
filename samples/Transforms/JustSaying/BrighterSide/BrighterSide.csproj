@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="AWSSDK.SecurityToken" VersionOverride="4.0.2.1" />
       <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 
