@@ -9,6 +9,7 @@
     <AWSSecurityTokenV4>4.0.2.1</AWSSecurityTokenV4>
     <AWSSQSV4>4.0.0.22</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.0.21</AWSSDKSimpleNotificationServiceV4>
+    <AWSSDKExtensionsNETCoreSetup>4.0.2.2</AWSSDKExtensionsNETCoreSetup>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />

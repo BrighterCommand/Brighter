@@ -2,7 +2,7 @@
 using Paramore.Brighter.AWSScheduler.V4.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.AWS.V4;
-using Paramore.Brighter.MessagingGateway.AWS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 namespace Paramore.Brighter.AWSScheduler.V4.Tests.Scheduler.Messages.Sqs;
 

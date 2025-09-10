@@ -394,7 +394,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Transform
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Transformers.MongoGridFS", "src\Paramore.Brighter.Transformers.MongoGridFS\Paramore.Brighter.Transformers.MongoGridFS.csproj", "{7AA5B0BF-3520-45C4-9B8A-7F131EFDA227}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessagingGateway.AWS.V4", "src\Paramore.Brighter.MessagingGateway.AWS.V4\Paramore.Brighter.MessagingGateway.AWS.V4.csproj", "{B484C51B-4431-4895-B191-5702C9602521}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessagingGateway.AWSSQS.V4", "src\Paramore.Brighter.MessagingGateway.AWSSQS.V4\Paramore.Brighter.MessagingGateway.AWSSQS.V4.csproj", "{B484C51B-4431-4895-B191-5702C9602521}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.AWS.V4.Tests", "tests\Paramore.Brighter.AWS.V4.Tests\Paramore.Brighter.AWS.V4.Tests.csproj", "{12B65F6F-8FD2-4507-9DA0-5A84CE02AAD7}"
 EndProject

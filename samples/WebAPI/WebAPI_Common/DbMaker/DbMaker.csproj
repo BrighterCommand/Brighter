@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.DynamoDb.V4\Paramore.Brighter.DynamoDb.V4.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MsSql.EntityFrameworkCore\Paramore.Brighter.MsSql.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MySql.EntityFrameworkCore\Paramore.Brighter.MySql.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj" />
@@ -15,7 +15,7 @@
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj"/>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Inbox.DynamoDB\Paramore.Brighter.Inbox.DynamoDB.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Inbox.DynamoDB.V4\Paramore.Brighter.Inbox.DynamoDB.V4.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Inbox.MsSql\Paramore.Brighter.Inbox.MsSql.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Inbox.MySql\Paramore.Brighter.Inbox.MySql.csproj"/>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Inbox.Postgres\Paramore.Brighter.Inbox.Postgres.csproj" />
@@ -31,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" VersionOverride="$(AwsDynamoDbV4)" />
     <PackageReference Include="FluentMigrator.Runner.Core"/>
     <PackageReference Include="FluentMigrator.Runner.MySql"/>
     <PackageReference Include="FluentMigrator.Runner.Postgres"/>
