@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -93,7 +93,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -111,7 +111,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -129,7 +129,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -158,7 +158,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -183,7 +183,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -213,7 +213,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -278,7 +278,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: |
           8.0.x
@@ -308,7 +308,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -334,7 +334,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -362,7 +362,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -393,7 +393,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -427,7 +427,7 @@ jobs:
           filter: tree:0
           show-progress: false
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -459,7 +459,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -493,7 +493,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -519,7 +519,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -536,7 +536,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -568,7 +568,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
@@ -630,7 +630,7 @@ jobs:
 #          echo "RocketMQ should be ready now"
 #          
 #      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v4
+#        uses: actions/setup-dotnet@v5
 #        with:
 #          dotnet-version: |
 #            8.0.x
