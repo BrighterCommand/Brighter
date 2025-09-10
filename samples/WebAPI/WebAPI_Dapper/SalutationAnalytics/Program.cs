@@ -176,6 +176,7 @@ static void ConfigureObservability(IServiceCollection services)
         }) 
         .WithMetrics(builder => builder
             .AddAspNetCoreInstrumentation()
+            .AddBrighterInstrumentation()
             .AddConsoleExporter()
             .AddOtlpExporter()
         );

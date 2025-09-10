@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenTelemetry.Trace;
@@ -14,10 +15,13 @@ public static class BrighterTracerBuilderExtensions
         {
             var brighterTracer = new BrighterTracer(TimeProvider.System);
             services.TryAddSingleton<IAmABrighterTracer>(brighterTracer);
-
-        
             builder.AddSource(brighterTracer.ActivitySource.Name);
-            builder.AddProcessor<BrighterMetricsFromTracesProcessor>();
+            
+            var hasMessagingMeter = services.Any(sd => sd.ServiceType == typeof(IAmABrighterMessagingMeter));
+            var hasDbMeter = services.Any(sd => sd.ServiceType == typeof(IAmABrighterDbMeter));
+
+            if (hasMessagingMeter && hasDbMeter)
+                builder.AddProcessor<BrighterMetricsFromTracesProcessor>();
         });
         
         return builder;
