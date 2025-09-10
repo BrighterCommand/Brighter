@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using Amazon.IdentityManagement;
 using Amazon.S3;
-using Paramore.Brighter.MessagingGateway.AWS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Helpers;
 

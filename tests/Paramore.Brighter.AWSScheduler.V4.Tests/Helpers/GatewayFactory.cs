@@ -1,6 +1,6 @@
 ﻿using Amazon;
 using Amazon.Runtime;
-using Paramore.Brighter.MessagingGateway.AWS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 namespace Paramore.Brighter.AWSScheduler.V4.Tests.Helpers;
 

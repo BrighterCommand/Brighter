@@ -16,7 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessageScheduler.Aws\Paramore.Brighter.MessageScheduler.Aws.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessageScheduler.AWS.V4\Paramore.Brighter.MessageScheduler.AWS.V4.csproj" />
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
   </ItemGroup>
 
