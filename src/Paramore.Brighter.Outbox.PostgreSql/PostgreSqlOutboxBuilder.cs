@@ -83,7 +83,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             );
         ";
         
-        private const string OutboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{0}' AND TABLE_NAME = '{1}')";
+        private const string OutboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG = '{0}' AND TABLE_NAME = '{1}')";
 
         /// <summary>
         /// Get the DDL required to create the Outbox in Postgres
@@ -99,12 +99,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <summary>
         /// Get the SQL statements required to test for the existence of an Inbox in Postgres
         /// </summary>
-        /// <param name="tableSchema">The schema that we should check for the outbox</param>
+        /// <param name="tableCatalog">The Postgres table catalog that the table is in</param>
         /// <param name="outboxTableName">The name that was used for the Inbox table</param>
         /// <returns>The required SQL</returns>
-        public static string GetExistsQuery(string tableSchema, string outboxTableName)
+        public static string GetExistsQuery(string tableCatalog, string outboxTableName)
         {
-            return string.Format(OutboxExistsSQL, tableSchema, outboxTableName);
+            return string.Format(OutboxExistsSQL, tableCatalog, outboxTableName);
         }
     }
 }
