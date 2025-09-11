@@ -40,15 +40,23 @@ All of the inefficiencies above can be improved with non-breaking changes.
 
 ### `OutstandingMessages` operation
 
-Given that the `Outstanding` index is a sparse index, and we wish to pull out the entirety of that index when we perform the operation, this can be a `Scan` operation on the index instead of a `Query`. This removes the need to iterate over topics and shards, and can instead be done as a single HTTP call if the number of outstanding messages allows it (with paging if it doesn't).
+Introduce a new additional `Outstanding` GSI called `OutstandingAllTopics`. This index will use `OutstandingCreatedTime` as the hash key, and `MessageId` as the range key, making it a sparse, high cardinality index containing outstanding messages for all topics.
 
-The one downside of this is that we cannot specify the ordering of results from a `Scan` operation. If the results are paged, we will not be able to specify that the oldest messages should be retrieved first. Given the performance issues using `Query` operations, and the limitations of Dynamo DB as a storage platform, this feels like a reasonable comprompise to make.
+When requests are made to the outbox to fetch outstanding messages for all topics, scan the new index using a parallel `Scan` and fetch results up to the provided page size. Order the results by created time in memory before returning them to the calling function.
 
-If a specific topic is provided in the `args` dictionary when performing the `OutstandingMessages` operation, then a `Query` would still need to be used, iterating over the shards for that topic.
+Add a new configuration option to `DynamoDbConfiguration` called `ScanConcurrency` to allow configurability of how many parallel scan operations are performed concurrently.
+
+When requests are made to the outbox to fetch outstanding message for a specific topic, continue to use a `Query` operation on the existing index and iterate through shards, fetching results up to the page size.
+
+The one downside of this is that we cannot specify the ordering of results from a `Scan` operation. We try to get around this by ordering the results in memory, but if the number of outstanding messages in the outbox is greater than the page size, the ordering of messages returned by the operation cannot be guaranteed.
 
 ### `DispatchedMessages` operation
 
-As above - if no topic is provided in the `args` dictionary, use a `Scan` operation to fetch dispatched messages instead of a `Query` operation.
+As above:
+
+    * Introduce a new `Delivered` index called `DeliveredAllTopics`, which uses `DeliveryTime` as the hash key and `MessageId` as the range key
+    * Scan the new index when fetching delivered messages for all topics, using the `ScanConcurrency` option for parallel scan concurrency
+    * Continue to use a `Query` operation when fetching delivered messages for a specific topic, iterating through shards
 
 ### The `Delivered` GSI
 
@@ -64,7 +72,9 @@ Update `OutboxProducerMediator` to use the new `Get` methods.
 
 ### Marking messages as dispatched
 
-When marking a collection of messages as dispatched, us a `BatchWrite` operation to update all of them at once. If any of the updates fail, throw an exception.
+When marking a collection of messages as dispatched, use a `BatchWrite` operation to update all of them at once.
+
+By default, if any of the updates fail throw an exception. If, however, an option is passed in the `args` dictionary with the key `LogBatchErrors` and a value of `true`, then don't throw and instead log a warning message. When the method is invoked from the outbox sweeper, pass this new option to the method.
 
 Add a new overload of `MarkDispatched` which takes a collection of message IDs (currently the only bulk option is the async version).
 
@@ -85,7 +95,21 @@ This minimises the amount of data sent over the wire, minimises memory consumpti
 
 Other outbox implementations can continue to use their implementations of `OutstandingMessages` for now.
 
+### Deterministic shard assignment
+
+Make assignment of messages to shards for each topic deterministic. This makes it possible to preserve ordering of messages within a partition key by ensuring all messages with that key are assigned to the same shard. This can be done by hashing the partition key on the message:
+
+```c#
+var keyBytes = Encoding.UTF8.GetBytes(message.Header.PartitionKey);
+var sha256 = SHA256.Create();
+var keyHash = sha256.ComputeHash(keyBytes);
+var shardNumber = BitConverter.ToUInt32(keyHash, 0) % _configuration.NumberOfShards;
+```
+
+If the partition key isn't specified for a message, then fall back to random shard assignment.
+
 ## Consequences
 
-* We will no longer be able to sort results of the `OutstandingMessages` or `DispatchedMessages` operations (when performed for all topics) to ensure the retrieval of oldest messages first from a Dynamo DB outbox, but will support high throughput scenarios instead. The results can still be sorted if queried on a topic by topic basis.
+* When performing the `OutstandingMessages` or `DispatchedMessages` operations for all topics, we will only be able to guarantee the order of the returned messages if the number of outstanding messages is less than the page size for the operation.
+* Shards will be assigned to messages deterministically based on their partition key
 * The possibility of future improvements to other outbox implementations, to take advantage of the new bulk operation methods
