@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <value>The content type as a <see cref="string"/>. May be <c>null</c>.</value>
         [DynamoDBProperty]
-        public string? ContentType { get; set; } 
+        public string? ContentType { get; set; }
 
         ///<summary>
         /// The correlation id of the message
@@ -58,6 +58,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <value>The outstanding creation time as a <see cref="long"/> in ticks. May be <c>null</c>.</value>
         [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
+        [DynamoDBGlobalSecondaryIndexHashKey(indexName: "OutstandingAllTopics")]
         [DynamoDBProperty]
         public long? OutstandingCreatedTime { get; set; }
         
@@ -91,6 +92,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <value>The delivery time as a <see cref="long"/> in ticks. May be <c>null</c>.</value>
         [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Delivered")]
+        [DynamoDBGlobalSecondaryIndexHashKey(indexName: "DeliveredAllTopics")]
         [DynamoDBProperty]
         public long? DeliveryTime { get; set; }
         
@@ -115,6 +117,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <value>The message ID as a <see cref="string"/>. May be <c>null</c>.</value>
         [DynamoDBHashKey]
+        [DynamoDBGlobalSecondaryIndexRangeKey(indexNames: ["OutstandingAllTopics", "DeliveredAllTopics"])]
         [DynamoDBProperty]
         public string? MessageId { get; set; }
 
