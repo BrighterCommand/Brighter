@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Amazon;
+using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,68 +37,47 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
 
-namespace GreetingsReceiverConsole;
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateLogger();
 
-public class Program
-{
-    public static async Task Main(string[] args)
+var host = new HostBuilder()
+    .ConfigureServices((_, services) =>
     {
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .Enrich.FromLogContext()
-            .WriteTo.Console()
-            .CreateLogger();
+        var subscriptions = new Subscription[]
+        {
+            new SqsSubscription<GreetingEvent>(
+                subscriptionName: new SubscriptionName("paramore.example.greeting"),
+                channelName: new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                routingKey: new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                channelType: ChannelType.PubSub,
+                bufferSize: 10,
+                timeOut: TimeSpan.FromMilliseconds(20),
+                messagePumpType: MessagePumpType.Reactor,
+                queueAttributes: new SqsAttributes(lockTimeout: TimeSpan.FromSeconds(30)))
+        };
 
-        var host = new HostBuilder()
-            .ConfigureServices((_, services) =>
+        //create the gateway
+        var serviceURL = "http://localhost:4566/"; 
+        var region = RegionEndpoint.USEast1;
+        var awsConnection = new AWSMessagingGatewayConnection(new BasicAWSCredentials("test", "test"), region,
+            cfg => { cfg.ServiceURL = serviceURL; });
 
+        services.AddConsumers(options =>
             {
-                //create the gateway
-                if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
-                {
-                    var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
-                    var region = string.IsNullOrWhiteSpace(serviceURL)
-                        ? RegionEndpoint.EUWest1
-                        : RegionEndpoint.USEast1;
-                    
-                    var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
-                        cfg =>
-                        {
-                            if (!string.IsNullOrWhiteSpace(serviceURL))
-                            {
-                                cfg.ServiceURL = serviceURL;
-                            }
-                        });
-
-                    services.AddConsumers(options =>
-                        {
-                            options.Subscriptions =
-                            [
-                                new SqsSubscription<GreetingEvent>(
-                                    subscriptionName: new SubscriptionName("paramore.example.greeting"),
-                                    channelName: new ChannelName(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
-                                    routingKey:new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
-                                    channelType: ChannelType.PubSub,
-                                    bufferSize: 10,
-                                    timeOut: TimeSpan.FromMilliseconds(20),
-                                    messagePumpType: MessagePumpType.Reactor,
-                                    queueAttributes: new SqsAttributes(
-                                        lockTimeout: TimeSpan.FromSeconds(30)
-                                    ),
-                                    topicAttributes: new SnsAttributes(type:SqsType.Standard),
-                                    makeChannels: OnMissingChannel.Create)
-                            ];
-                            options.DefaultChannelFactory = new ChannelFactory(awsConnection);
-                        })
-                        .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
-                }
-
-                services.AddHostedService<ServiceActivatorHostedService>();
+                options.Subscriptions = subscriptions;
+                options.DefaultChannelFactory = new ChannelFactory(awsConnection);
             })
-            .UseConsoleLifetime()
-            .UseSerilog()
-            .Build();
+            .AutoFromAssemblies();
 
-        await host.RunAsync();
-    }
-}
+        services.AddHostedService<ServiceActivatorHostedService>();
+    })
+    .UseConsoleLifetime()
+    .UseSerilog()
+    .Build();
+
+Console.CancelKeyPress += (_, _) => host.StopAsync().Wait();
+
+await host.RunAsync();

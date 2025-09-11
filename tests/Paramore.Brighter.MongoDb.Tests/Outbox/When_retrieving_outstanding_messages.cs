@@ -23,6 +23,7 @@ public class MongoDbFetchOutStandingMessageTests : IDisposable
         _messageEarliest = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT)
             {
+                DataSchema = new Uri("data-schema", UriKind.Relative),
                 TimeStamp = DateTimeOffset.UtcNow.AddHours(-3)
             },
             new MessageBody("message body"));
