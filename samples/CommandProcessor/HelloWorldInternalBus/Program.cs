@@ -29,7 +29,6 @@ var host = Host.CreateDefaultBuilder()
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
-            options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
             options.CommandProcessorLifetime = ServiceLifetime.Scoped;

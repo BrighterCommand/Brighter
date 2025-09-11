@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
-using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -56,12 +55,6 @@ var host = new HostBuilder()
                     {
                         Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                         RequestType = typeof(GreetingEvent)
-                    },
-                    new SnsPublication
-                    {
-                        Topic =
-                            new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                        TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
                     }
                 ]
             ).Create();

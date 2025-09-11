@@ -21,13 +21,6 @@ namespace Paramore.Brighter
         IEnumerable<Subscription> Subscriptions { get; set; }
 
         /// <summary>
-        /// Ensures that we use a Command Processor with as scoped lifetime, to allow scoped handlers
-        /// to take a dependency on it alongside other scoped dependencies such as an EF Core DbContext
-        ///  Otherwise the CommandProcessor is a singleton.
-        /// </summary>
-        bool UseScoped { get; set; }
-
-        /// <summary>
         /// How detailed should the instrumentation of the Dispatcher operations be
         /// </summary>
         InstrumentationOptions InstrumentationOptions { get; set; }

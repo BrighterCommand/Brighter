@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 resiliencePipelineRegistry,
                 bus,
                 scheduler,
-                _transactionProvider
+                typeof(SpyTransaction)
             );
         }
 
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         public void When_depositing_a_message_in_the_outbox_with_a_transaction()
         {
             //act
-            var postedMessageId = _commandProcessor.DepositPost(_myCommand);
+            var postedMessageId = _commandProcessor.DepositPost(_myCommand, _transactionProvider);
 
             //assert
 

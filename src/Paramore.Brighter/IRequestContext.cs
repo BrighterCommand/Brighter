@@ -39,11 +39,6 @@ namespace Paramore.Brighter
     public interface IRequestContext
     {
         /// <summary>
-        /// Gets the Span [Activity] associated with the request
-        /// </summary>
-        Activity? Span { get; set; }
-        
-        /// <summary>
         /// The destination topic and cloud event type can be used to override the topic and cloud event type that the request is posted to.
         /// </summary>
         ProducerKey? Destination { get; set; }
@@ -53,6 +48,21 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The bag.</value>
         ConcurrentDictionary<string, object> Bag { get; }
+        
+        /// <summary>
+        /// Gets the Feature Switches
+        /// </summary>
+        IAmAFeatureSwitchRegistry? FeatureSwitches { get; }
+        
+        /// <summary>
+        /// When we pass a requestContext through a receiver pipeline, we may want to pass the original message that started the pipeline.
+        /// This is primarily useful for debugging - how did we get to this request?. But it is also useful for some request metadata that we
+        /// do not want to transfer to the Request.
+        /// This is not thread-safe; the assumption is that you set this from a single thread and access the message from multiple threads. It is
+        /// not intended to be set from multiple threads.
+        ///</summary>
+        /// <value>The originating message</value> 
+        public Message? OriginatingMessage { get; set; }
         
         /// <summary>
         /// [Obsolete] Gets the legacy policy registry.
@@ -80,14 +90,15 @@ namespace Paramore.Brighter
         ResiliencePipelineRegistry<string>? ResiliencePipeline { get; }
         
         /// <summary>
-        /// Gets the <see cref="ResilienceContext"/>
+        /// Gets the <see cref="ResilienceContext"/> associated with Polly-based resilience operations.
+        /// This context can be used to share data across different resilience policies during execution.
         /// </summary>
         ResilienceContext? ResilienceContext { get; }
         
         /// <summary>
-        /// Gets the Feature Switches
+        /// Gets the Span [Activity] associated with the request
         /// </summary>
-        IAmAFeatureSwitchRegistry? FeatureSwitches { get; }
+        Activity? Span { get; set; }
         
         /// <summary>
         /// Create a new copy of the Request Context

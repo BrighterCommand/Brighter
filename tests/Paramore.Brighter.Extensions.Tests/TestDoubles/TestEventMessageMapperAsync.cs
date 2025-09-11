@@ -1,8 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter;
 
-namespace Tests
+namespace Paramore.Brighter.Extensions.Tests.TestDoubles
 {
     public class TestEventMessageMapperAsync : IAmAMessageMapperAsync<TestEvent>
     {

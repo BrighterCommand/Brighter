@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Sqlite
     /// <summary>
     /// A connection provider for Sqlite 
     /// </summary>
-    public class SqliteUnitOfWork : RelationalDbTransactionProvider 
+    public class SqliteTransactionProvider : RelationalDbTransactionProvider 
     {
         private readonly string _connectionString;
 
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Sqlite
         /// Create a connection provider for Sqlite using a connection string for Db access
         /// </summary>
         /// <param name="configuration">The configuration of the Sqlite database</param>
-        public SqliteUnitOfWork(IAmARelationalDatabaseConfiguration configuration)
+        public SqliteTransactionProvider(IAmARelationalDatabaseConfiguration configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString)); 

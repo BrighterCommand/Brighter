@@ -22,21 +22,17 @@ namespace GreetingsSender
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
 
-            var messagingConfiguration = new RelationalDatabaseConfiguration(
-                @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-                databaseName: "BrighterSqlQueue",
-                queueStoreTable: "QueueData");
-
-            var producerRegistry = new MsSqlProducerRegistryFactory(
-                    messagingConfiguration,
-                    [new Publication()]
-                )
-                .Create();
-            
             serviceCollection.AddBrighter()
                 .AddProducers((configure) =>
                 {
-                    configure.ProducerRegistry = producerRegistry;
+                    configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
+                            new RelationalDatabaseConfiguration(
+                                @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+                                databaseName: "BrighterSqlQueue",
+                                queueStoreTable: "QueueData"),
+                            [new Publication{Topic = new RoutingKey("greeting.event"), RequestType = typeof(GreetingEvent)}]
+                        )
+                        .Create();
                 })
                 .AutoFromAssemblies();
 

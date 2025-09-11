@@ -67,7 +67,7 @@ builder.Services
     {
         configure.ProducerRegistry = producerRegistry;
         configure.Outbox = new MsSqlOutbox(outboxConfig);
-        configure.TransactionProvider = typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>);
+        configure.TransactionProvider = typeof(MsSqlEntityFrameworkCoreTransactionProvider<GreetingsDataContext>);
     });
 
 
