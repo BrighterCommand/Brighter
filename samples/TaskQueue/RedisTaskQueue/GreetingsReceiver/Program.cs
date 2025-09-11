@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,15 +25,14 @@ namespace GreetingsReceiver
 
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
-
                 {
                     var subscriptions = new Subscription[]
                     {
-                        new Subscription<GreetingEvent>(
+                        new RedisSubscription<GreetingEvent>(
                             new SubscriptionName("paramore.example.greeting"),
                             new ChannelName("greeting.event"),
                             new RoutingKey("greeting.event"),
-                            timeOut: TimeSpan.FromMilliseconds(200))
+                            timeOut: TimeSpan.FromSeconds(1))
                     };
 
                     //create the gateway
@@ -58,6 +58,7 @@ namespace GreetingsReceiver
                 .UseSerilog()
                 .Build();
 
+            Console.CancelKeyPress += (_, _) => host.StopAsync().Wait();
             await host.RunAsync();
         }
     }
