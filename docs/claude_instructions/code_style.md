@@ -1,0 +1,83 @@
+# Code Style
+
+- Follow .NET C# conventions
+  - Use Microsoft's C# naming conventions for identifiers
+    - Use PascalCase for public and protected members, including properties, methods, and classes.
+    - Use camelCase for private and internal members, including fields and parameters.
+    - Use PascalCase for namespaces.
+    - Use PascalCase for enum values.
+    - Use camelCase for local variables.
+  - For a const, use an All Caps naming convention, with underscores between words i.e. `public const int MAX_RETRY_COUNT = 5;` This replaces rules in the Microsoft C# naming convention.
+  - Follow Microsoft's C# coding conventions
+    - Use braces for all control statements, unless they are single-line.
+    - Use spaces around binary operators and after commas.
+    - Use a single blank line to separate methods and properties.
+    - Use a single blank line to separate logical sections of code within a method.
+    - Use a single blank line to separate using directives.
+  - DO NOT use Microsoft's Framework Design Guidelines. They are not idiomatic and outdated.
+- Prefer expression-bodied members for simple properties and methods.
+- Use readonly for fields that do not change after construction.
+- Enable nullable on projects:
+  - `<Nullable>enable</Nullable>` should be set in the project file, and that new code should use nullable reference types.
+  - Make types nullable to indicate optionality.
+- You may use marker interfaces. We find marker interfaces useful for a base type for async and sync interfaces.
+- Use assemblies to provide modularity. Separate into assemblies based on responsibilities.
+- We support both sync and async I/O
+  - Suffix async methods with async.
+  - For I/O, you should provide both sync and async implementations.
+  - Prefer explicit threads to using the thread pool.
+- Divide into responsibilities based on optionality. Required behaviors should exist in Paramore.Brighter and Paramore.Brighter.ServiceActivator.
+  - Other assemblies should add optional behaviors, allowing users to only take dependencies on the resulting NuGet packages if they require that functionality.
+  - There is a balance here. We want you to load as few dependencies as possible, without bringing in too many behaviors you do not need.
+  - As we support multiple message brokers (a.k.a. transports), these should always use their own assembly.
+  - As we support multiple outbox providers, these should always use their own assembly.
+  - As we support multiple inbox providers, these should always use their own assembly.
+  - As we support multiple schedulers, these should use their own assembly.
+  - As we support multiple locking providers, these should use their own assembly.  
+- Default to a class per source file approach, unless one class clearly exists as the details of another.
+
+## Design Principles
+
+- Use Responsibility Driven Design
+  - Focus on the responsibilities that a class has.
+  - "Responsibility-driven design specifies object behavior before object structure and other implementation considerations are determined. We have found that it minimizes the rework required for major design changes."
+  - Maximize Abstraction
+    - Elide the distinction between data and behavior.
+    - Think of responsibilities for "knowing", "doing", and "deciding"
+  - Distribute Behavior
+    - Promote a delegated control architecture
+    - Make objects smart— give them behaviors, not just data
+  - Preserve Flexibility
+    - Design objects so interior details can be readily changed
+  - Objects have roles.
+    - Common roles are stereotypes: information holder, structurer, service provider, coordinator, controller, interfacer
+- Support optionality through interfaces.
+  - If an interface describes a role that an implementor provides, use the naming convention IAmA* e.g. `public interface IAmAProducerRegistry { }`
+  - Consider if a user might wish to override our implementation of a public class with theirs, for TDD, or extension.
+  - If so, provide an interface for them to override.
+  - It is acceptable in that case to use an interface, even if we have one implementation.
+  - For internal classes, only provide an interface if there is optionality.
+- Avoid primitive obsession.
+  - Where a primitive (string, int, bool, double, float etc.) could be replaced with a more expressive type, use a class, struct or record.
+  - Only use int for numeric values that have no domain meaning; only use string for string values that have no domain meaning.
+  - Where we need to serialize, or for interoperability, you may use primitive types as part of that serialization, instead of writing convertors, for simplicity.
+- Principles
+  - Tidy is better than cluttered.
+  - Reveal intention; be explicit to support future readers.
+  - Prefer simplicity.
+  - Do not duplicate knowledge.
+  - Avoid having more than one level of indentation in a method.
+  - Do not add new types without necessity.
+  - There should be one-- and preferably only one --obvious way to do it.
+  - If the implementation is hard to explain, it's a bad idea.
+  - Keep methods small and focused on a single responsibility
+- Follow Beck's "Tidy First" approach by separating structural changes from behavioral changes
+  - Separate all changes into two distinct types:
+    - STRUCTURAL CHANGES: Rearranging code without changing behavior (renaming, extracting methods, moving code)
+    - BEHAVIORAL CHANGES: Adding or modifying actual functionality
+  - Never mix structural and behavioral changes in the same commit
+  - Always make structural changes first when both are needed
+  - Validate structural changes do not alter behavior by running tests before and after
+  - Not all of our code follows these conventions.
+    - Some of our older code uses older conventions.
+    - Follow the boy scout rule, and fix these, as part of your work.

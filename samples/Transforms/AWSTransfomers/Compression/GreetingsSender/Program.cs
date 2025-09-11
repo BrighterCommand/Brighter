@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Paramore.Brighter.Tranformers.AWS;
 using Serilog;
 using Serilog.Extensions.Logging;
