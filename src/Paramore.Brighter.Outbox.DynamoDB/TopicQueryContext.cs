@@ -23,16 +23,33 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Paramore.Brighter.Outbox.DynamoDB;
 
-internal sealed class DispatchedTopicQueryContext
+internal sealed class TopicQueryContext()
 {
-    public int NextPage { get; private set; }
-    public string LastEvaluatedKey { get; private set; }
+    public int NextPage { get; private set; } = 1;
+    public int ShardNumber { get; private set; } = 0;
+    public string? LastEvaluatedKey { get; private set; } = null;
 
-    public DispatchedTopicQueryContext(int nextPage, string lastEvaluatedKey)
+    private SemaphoreSlim _queryLock = new(1, 1);
+
+    public void SetPaginationState(int nextPage, int shardNumber, string? lastEvaluatedKey)
     {
         NextPage = nextPage;
+        ShardNumber = shardNumber;
         LastEvaluatedKey = lastEvaluatedKey;
     }
+
+    public void Reset()
+    {
+        NextPage = 1;
+        ShardNumber = 0;
+        LastEvaluatedKey = null;
+    }
+
+    public async Task Lock(CancellationToken cancellationToken) => await _queryLock.WaitAsync(cancellationToken);
+    public void Release() => _queryLock.Release();
 }

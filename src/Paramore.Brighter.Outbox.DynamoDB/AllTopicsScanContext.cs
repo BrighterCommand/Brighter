@@ -23,10 +23,39 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Paramore.Brighter.Outbox.DynamoDB;
 
-internal sealed class AllTopicsScanContext(int nextPage, string? lastEvaluatedKey)
+internal sealed class AllTopicsScanContext(int numSegments)
 {
-    public int NextPage { get; private set; } = nextPage;
-    public string? LastEvaluatedKey { get; private set; } = lastEvaluatedKey;
+    public int NextPage { get; private set; } = 1;
+
+    private string?[] _lastEvaluatedKeys = new string?[numSegments];
+
+    private SemaphoreSlim _scanLock = new(1, 1);
+
+    public void SetPagingToken(int segmentNumber, string? lastEvaluatedKey)
+    {
+        _lastEvaluatedKeys[segmentNumber] = lastEvaluatedKey;
+    }
+
+    public string? GetPagingToken(int segmentNumber) => _lastEvaluatedKeys[segmentNumber];
+
+    public void SetNextPage()
+    {
+        if (_lastEvaluatedKeys.Any(x => x != null))
+        {
+            NextPage++;
+        }
+        else
+        {
+            NextPage = 1;
+        }
+    }
+
+    public async Task Lock(CancellationToken cancellationToken) => await _scanLock.WaitAsync(cancellationToken);
+    public void Release() => _scanLock.Release();
 }

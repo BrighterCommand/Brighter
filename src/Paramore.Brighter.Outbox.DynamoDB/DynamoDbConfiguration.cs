@@ -44,14 +44,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// By default, messages will not expire
         /// </summary>
         public TimeSpan? TimeToLive { get; set; }
-    
+
+        /// <summary>
+        /// The number of concurrent scans to use in a parallel scan when looking for outstanding messages
+        /// </summary>
+        public int ScanConcurrency { get; set; }
+
         /// <summary>
         /// Create a DynamoDbConfiguration for Outbox support
         /// </summary>
         /// <param name="tableName">The name of the outbox table</param>
         /// <param name="timeout">The timeout when talking to DynamoDb</param>
         /// <param name="numberOfShards">The number of shards; use more than one shard for active topics to avoid hotspots</param>
-        public DynamoDbConfiguration(string? tableName = null, int timeout = 500, int numberOfShards = 3)
+        public DynamoDbConfiguration(string? tableName = null, int timeout = 500, int numberOfShards = 3, int scanConcurrency = 3)
         {
             TableName = tableName ?? "brighter_outbox";
             OutstandingIndexName = "Outstanding";
@@ -60,6 +65,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             DeliveredAllTopicsIndexName = "DeliveredAllTopics";
             Timeout = timeout;
             NumberOfShards = numberOfShards;
+            ScanConcurrency = scanConcurrency;
         }
     }
 }
