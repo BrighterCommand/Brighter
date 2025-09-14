@@ -4,7 +4,7 @@ A producer sends a message via middleware. It may be a [point-to-point](https://
 
 ## Implementation
 
-You MUST implement the `IAmAMessageProducer` interface and its derived sync interface `IAmAMessageProducerSync` and its derived async interface `IAmAMessageProducerAsync`.
+You MUST implement the `IAmAMessageProducer` interface and its derived sync interface `IAmAMessageProducerSync` and its derived async interface `IAmAMessageProducerAsync`. You SHOULD name the publisher `[XXXXX]MessageProducer` where `[XXXX]` is the name of the middleware or an abbreviation for it. For example we name the RabbitMQ publisher `RMQMessageProducer` and the Kafka publisher `KafkaMessageProducer`.
 
 - `IAmAMessageProducer` has the following properties and methods:
   - `Publication` a property to store the publication (see [Publication](./publication.md)).
@@ -16,12 +16,40 @@ You MUST implement the `IAmAMessageProducer` interface and its derived sync inte
 
   ### Publisher
 
-  You SHOULD use a publisher to create the message to be sent over middleware. The publisher typically works as follows (pseudocode):
+  You SHOULD use a publisher to create the message to be sent over middleware. You SHOULD name the publisher `[XXXXX]MessagePublisher` where `[XXXX]` is the name of the middleware or an abbreviation for it. For example we name the RabbitMQ publisher `RMQMessagePublisher` and the Kafka publisher `KafkaMessagePublisher`.
+  
+  The publisher has a `PublishMessage` or `PublishMessageAsync` as follows (pseudocode):
 
-  ```
+  ```pseudo
 
    create the middleware message
-   populate the 
-
+   populate the middleware's message headers from the Brighter `Message`'s `Header` property, which is of type `MessageHeader`
+   populate the middleware's message headers from the Brighter `Message`'s `Header` property's `Bag` property, which is of type `Dictionary<string, object>` and contains user-defined values
+   populate the middleware message's body from the `Brighter` `Message`'s `Body' property. //Depending on the format of the middleware's message you may need to access this as `Bytes()` or just as the `Value` property for a string.
+   publish the message to the middleware
 
   ```
+
+### Producer
+
+The producer's implementation of the `Send` or `SendAsync` methods uses the publisher. Typically we implement `SendWithDelay` or `SendWithDelayAsync` and then call those from `Send` and `SendAsync` with a `TimeSpan.Zero` to indicate no delay, for example:
+
+```csharp
+public void Send(Message message)
+{
+  SendWithDelay(message, TimeSpan.Zero);
+}
+```        
+
+We implement `SendWithDelayAsync` as follows:
+
+```pseudo
+ensure that we have a connection to the broker
+create an instance of the publisher - passing any connection information needed to send the message
+if the delay is `TimeSpan.Zero` or the broker natively supports a delayed publish, call the publisher's `PublishMessage` or `PublishMessageAsync`
+else
+  use the `Scheduler` set on the producer to schedule the message with the delay.
+endif
+
+```
+
