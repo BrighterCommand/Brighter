@@ -44,7 +44,7 @@
     <PackageVersion Include="GitHubActionsTestLogger" Version="2.4.1" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.21" />
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
-    <PackageVersion Include="JustSaying" Version="7.3.0" />
+    <PackageVersion Include="JustSaying" Version="8.0.0" />
     <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="7.3.0" />
     <PackageVersion Include="MassTransit" Version="8.5.2" />
     <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.2" />
