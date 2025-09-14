@@ -2,7 +2,7 @@
 
 A transport is an assembly that implements the required interfaces to expose specific messaging middleware to Brighter. For example, the assembly [Paramore.Brighter.MessagingGateway.Kafka](../../../src/Paramore.Brighter.MessagingGateway.Kafka/) exposes Kafka to Brighter.
 
-When using messaging, Brighter itself acts as a [Messaging Gateway](https://www.enterpriseintegrationpatterns.com/patterns/messaging/MessagingGateway.html). More correctly a transport is a [Channel Adapter](https://www.enterpriseintegrationpatterns.com/patterns/messaging/ChannelAdapter.html) as it abstracts a specific channel type (i.e. broker) to Brighter.
+When using messaging, Brighter itself acts as a [Messaging Gateway](https://www.enterpriseintegrationpatterns.com/patterns/messaging/MessagingGateway.html). Within the Gateway, a transport is a [Channel Adapter](https://www.enterpriseintegrationpatterns.com/patterns/messaging/ChannelAdapter.html) as it abstracts a specific channel type (i.e. broker) to Brighter.
 
 ## Naming of Assemblies
 
