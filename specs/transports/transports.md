@@ -17,9 +17,9 @@ The following section provides an overview of writing a transport, with links to
 The following interfaces are required to implement a transport.
 
 - `IAmAMessageProducer` allows us to send messages via the middleware. There are derived interfaces for sync and async producers. See [producers](./producers.md) for more information on how to implement.
-- You
+- You SHOULD derive a type from [`Publication`](../../../src/Paramore.Brighter/Publication.cs) to store any configuration details needed to integrate with your implementation of `IAmAMessageProducer`.
 - `IAmAMessageConsumer` allows us to read messages from the middleware (via a queue or stream). There are derived interfaces for sync and async producers. See [consumers](./consmers.md) for more information on how to implement.
-- You SHOULD derive a type from [`Publication`](../../../src/Paramore.Brighter/Publication.cs) to store any configuration details needed to integrate with your implementation of `IAmAMessageConsumer`
-- `IAmAChannelFactory` is a factory that allows Brighter to create instances of a `IAmAChannel` for a specific middleware. The channel factory injects a middleware specific instance of `IAmAMessageConsumer` into the channel.
+- You SHOULD derive a type from [`Subscription`](../../../src/Paramore.Brighter/Subscription.cs) to store any configuration details needed to integrate with your implementation of `IAmAMessageConsumer`
+- `IAmAChannelFactory` is a factory that allows Brighter to create instances of a `IAmAChannel` for a specific middleware. The channel factory injects a middleware-specific instance of `IAmAMessageConsumer` into the channel.
   - You MUST implement `IAmAChannelFactory` see [channel factory](./channelfactory.md) for more information on how to implement. 
-    - A channel factory returns a `Channel`, which implements`IAmAChannel`. The `IAmAChannel` interface allows our message pump to consume messages from a channel. There are derived interfaces for sync and async producers. See [channels](./channels.md) for more information on channels but you MUST NOT implement these as Brighter implements them for you in `Channel`.
+    - A channel factory returns a `Channel`, which implements`IAmAChannel`. The `IAmAChannel` interface allows our message pump to consume messages from a channel. There are derived interfaces for sync and async producers. See [channels](./channels.md) for more information on channels, but you MUST NOT implement these as Brighter implements them for you in `Channel`.
