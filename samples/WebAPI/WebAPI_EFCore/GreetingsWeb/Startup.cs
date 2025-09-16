@@ -60,6 +60,8 @@ namespace GreetingsWeb
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
             });
+            
+            GreetingsDbFactory.ConfigureMigration(_configuration, services);
 
             ConfigureEfCore(services);
             ConfigureBrighter(services);
