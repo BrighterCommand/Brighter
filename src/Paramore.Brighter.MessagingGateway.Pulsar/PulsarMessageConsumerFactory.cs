@@ -57,7 +57,6 @@ public class PulsarMessageConsumerFactory(PulsarMessagingGatewayConnection conne
 
         var consumer = builder.Create();
 
-        var maxBufferSize = pulsarSubscription.BufferSize * pulsarSubscription.NoOfPerformers;
-        return new PulsarBackgroundMessageConsumer(maxBufferSize, consumer);
+        return new PulsarBackgroundMessageConsumer(pulsarSubscription.NoOfPerformers, consumer);
     }
 }
