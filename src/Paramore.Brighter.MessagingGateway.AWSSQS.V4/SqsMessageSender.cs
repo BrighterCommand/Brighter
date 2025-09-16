@@ -23,19 +23,16 @@ public partial class SqsMessageSender
     private static readonly TimeSpan s_maxDelay = TimeSpan.FromSeconds(900);
     
     private readonly string _queueUrl;
-    private readonly SqsType _queueType;
     private readonly AmazonSQSClient _client;
 
     /// <summary>
     /// Initialize the <see cref="SqsMessageSender"/>
     /// </summary>
     /// <param name="queueUrl">The queue ARN</param>
-    /// <param name="queueType">The queue type</param>
     /// <param name="client">The SQS Client</param>
-    public SqsMessageSender(string queueUrl, SqsType queueType, AmazonSQSClient client)
+    public SqsMessageSender(string queueUrl, AmazonSQSClient client)
     {
         _queueUrl = queueUrl;
-        _queueType = queueType;
         _client = client;
     }
     
@@ -75,7 +72,7 @@ public partial class SqsMessageSender
         return request;
     }
 
-    private void SetMessageDelay(SendMessageRequest request, TimeSpan? delay)
+    private static void SetMessageDelay(SendMessageRequest request, TimeSpan? delay)
     {
         delay ??= TimeSpan.Zero;
         if (delay > TimeSpan.Zero)
@@ -90,9 +87,13 @@ public partial class SqsMessageSender
         }
     }
 
-    private void SetFifoQueueProperties(SendMessageRequest request, Message message)
+    private static void SetFifoQueueProperties(SendMessageRequest request, Message message)
     {
-        if (_queueType != SqsType.Fifo) return;
+        if (PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        {
+            return;
+        }
+        
         request.MessageGroupId = message.Header.PartitionKey;
         if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
         {
