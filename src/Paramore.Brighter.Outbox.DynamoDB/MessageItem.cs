@@ -225,8 +225,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Type = message.Header.Type;
             SpecVersion = message.Header.SpecVersion;
             Subject = message.Header.Subject;
-            Source = message.Header.Source.AbsoluteUri;
-            DataSchema = message.Header.DataSchema?.AbsoluteUri;
+            Source = message.Header.Source.ToString();
+            DataSchema = message.Header.DataSchema?.ToString();
             DataRef = message.Header.DataRef;
             TraceParent = message.Header.TraceParent?.Value;
             TraceState = message.Header.TraceState?.Value;
@@ -245,6 +245,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var baggage = new Baggage();
             baggage.LoadBaggage(Baggage);
             
+            Uri.TryCreate(DataSchema, UriKind.RelativeOrAbsolute, out var dataSchema);
+            if (!Uri.TryCreate(Source, UriKind.RelativeOrAbsolute, out var source))
+            {
+                source = new Uri(MessageHeader.DefaultSource);
+            }
+            
             var header = new MessageHeader(
                 messageId: Id.Create(messageId),
                 topic: Topic is not null ? new RoutingKey(Topic) :RoutingKey.Empty,
@@ -258,8 +264,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 delayed: TimeSpan.Zero,
                 type:new CloudEventsType(Type?? string.Empty),
                 subject: Subject,
-                source: !string.IsNullOrEmpty(Source) ? new Uri(Source) : new Uri("https://paramore.io"),
-                dataSchema: !string.IsNullOrEmpty(DataSchema) ? new Uri(DataSchema) : new Uri("https://goparamore.io"),
+                source: source,
+                dataSchema: dataSchema,
                 traceParent: !string.IsNullOrEmpty(TraceParent) ? new TraceParent(TraceParent!) : Brighter.TraceParent.Empty,
                 traceState: !string.IsNullOrEmpty(TraceState) ? new TraceState(TraceState!) : Brighter.TraceState.Empty,
                 baggage: baggage

@@ -67,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
             : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
-                noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                noOfPerformers, timeOut ?? TimeSpan.FromSeconds(1), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
     }

@@ -17,7 +17,7 @@ IHost host = CreateHostBuilder(args).Build();
 
 host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
-host.CreateOutbox(ApplicationType.Greetings, ConfigureTransport.HasBinaryMessagePayload());
+host.CreateOutbox(ApplicationType.Greetings, "Greetings", ConfigureTransport.HasBinaryMessagePayload());
 
 host.Run();
 return;

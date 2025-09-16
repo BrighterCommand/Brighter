@@ -27,7 +27,7 @@ public class GreetingsController : Controller
     {
         FindPersonsGreetings personsGreetings = await _queryProcessor.ExecuteAsync(new FindGreetingsForPerson(name));
 
-        if (personsGreetings == null) return new NotFoundResult();
+        if (personsGreetings == null || string.IsNullOrEmpty(personsGreetings.Name)) return new NotFoundResult();
 
         return Ok(personsGreetings);
     }
@@ -36,6 +36,10 @@ public class GreetingsController : Controller
     [HttpPost]
     public async Task<ActionResult<FindPersonsGreetings>> Post(string name, NewGreeting newGreeting)
     {
+        FindPersonResult foundPerson = await _queryProcessor.ExecuteAsync(new FindPersonByName(name));
+
+        if (foundPerson == null || foundPerson?.Person == null) return new NotFoundResult();
+        
         await _commandProcessor.SendAsync(new AddGreeting(name, newGreeting.Greeting));
 
         FindPersonsGreetings personsGreetings = await _queryProcessor.ExecuteAsync(new FindGreetingsForPerson(name));

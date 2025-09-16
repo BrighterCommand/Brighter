@@ -276,10 +276,10 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         }
     }
 
-    private Message CreateMessage(string topic)
+    private static Message CreateMessage(string topic)
     {
         return new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(topic), MessageType.MT_DOCUMENT),
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(topic), MessageType.MT_DOCUMENT, dataSchema: new Uri("data-schema", UriKind.Relative)),
             new MessageBody("message body")
         );
     }

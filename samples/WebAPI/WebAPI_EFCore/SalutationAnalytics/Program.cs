@@ -20,8 +20,8 @@ using TransportMaker;
 var host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
-host.CreateInbox();
-host.CreateOutbox(ApplicationType.Greetings, HasBinaryMessagePayload());
+host.CreateInbox("Salutations");
+host.CreateOutbox(ApplicationType.Greetings,  "Salutations", HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -114,7 +114,6 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-            options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
             options.CommandProcessorLifetime = ServiceLifetime.Scoped;

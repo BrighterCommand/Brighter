@@ -82,7 +82,7 @@ namespace GreetingsWeb
                 binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
             );
             
-            string dbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+            string? dbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
             if (string.IsNullOrWhiteSpace(dbType))
                 throw new InvalidOperationException("DbType is not set");
 

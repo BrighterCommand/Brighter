@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
