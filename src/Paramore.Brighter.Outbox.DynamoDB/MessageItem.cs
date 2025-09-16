@@ -163,7 +163,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// The Topic the message was published to
         /// </summary>
         /// <value>The topic as a <see cref="string"/>. May be <c>null</c>.</value>
-        [DynamoDBGlobalSecondaryIndexHashKey("Delivered")]
         [DynamoDBProperty]
         public string? Topic { get; set; }
         
@@ -171,7 +170,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// The Topic suffixed with the shard number
         /// </summary>
         /// <value>The topic shard as a <see cref="string"/>. May be <c>null</c>.</value>
-        [DynamoDBGlobalSecondaryIndexHashKey("Outstanding")]
+        [DynamoDBGlobalSecondaryIndexHashKey(["Outstanding", "Delivered"])]
         [DynamoDBProperty]
         public string? TopicShard { get; set; }
 

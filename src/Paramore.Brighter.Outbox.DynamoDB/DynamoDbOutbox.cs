@@ -706,11 +706,18 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 int initialShardNumber = 0;
                 if (pageNumber != 1)
                 {
-                    paginationToken = _outstandingTopicQueryContexts[topicName]!.LastEvaluatedKey;
-                    initialShardNumber = _outstandingTopicQueryContexts[topicName]!.ShardNumber;
+                    paginationToken = context.LastEvaluatedKey;
+                    initialShardNumber = context.ShardNumber;
                 }
 
-                var queryResult = await PageOutstandingMessagesToBatchSizeAsync(topicName, olderThan, pageSize, initialShardNumber, paginationToken, cancellationToken);
+                var queryResult = await PageIndexQueryToBatchSize(topicName, 
+                    olderThan, 
+                    pageSize, 
+                    initialShardNumber, 
+                    paginationToken, 
+                    _configuration.OutstandingIndexName, 
+                    new KeyTopicOutstandingCreatedTimeExpression(), 
+                    cancellationToken);
 
                 // Store the progress for this topic if there are further pages
                 if (!queryResult.QueryComplete)
@@ -764,8 +771,22 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 }
 
                 // Query as much as possible up to the max page (batch) size
-                var paginationToken = pageNumber == 1 ? null : context.LastEvaluatedKey;
-                var queryResult = await PageDispatchedMessagesToBatchSizeAsync(topicName, sinceTime, pageSize, paginationToken, cancellationToken);
+                string? paginationToken = null;
+                int initialShardNumber = 0;
+                if (pageNumber != 1)
+                {
+                    paginationToken = context.LastEvaluatedKey;
+                    initialShardNumber = context.ShardNumber;
+                }
+
+                var queryResult = await PageIndexQueryToBatchSize(topicName,
+                    sinceTime,
+                    pageSize,
+                    initialShardNumber,
+                    paginationToken,
+                    _configuration.DeliveredIndexName,
+                    new KeyTopicDeliveredTimeExpression(),
+                    cancellationToken);
 
                 // Store the progress for this topic if there are further pages
                 if (!queryResult.QueryComplete)
@@ -889,31 +910,33 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return segmentMessages;
         }
 
-        private async Task<OutstandingMessagesQueryResult> PageOutstandingMessagesToBatchSizeAsync(
-            string topicName, 
-            DateTimeOffset olderThan, 
+        private async Task<IndexQueryResult> PageIndexQueryToBatchSize(
+            string topicName,
+            DateTimeOffset sinceTime,
             int batchSize,
-            int initialShardNumber, 
+            int initialShardNumber,
             string? initialPaginationToken,
+            string indexName,
+            TopicQueryKeyExpression keyExpression,
             CancellationToken cancellationToken)
         {
             var numShards = _configuration.NumberOfShards <= 1 ? 1 : _configuration.NumberOfShards;
-            var results = new List<MessageItem>();
 
+            var results = new List<MessageItem>();
             var paginationToken = initialPaginationToken;
             var isDone = false;
             var shard = initialShardNumber;
+
             while (shard < numShards && results.Count < batchSize)
             {
                 do
                 {
                     var queryConfig = new QueryOperationConfig
                     {
-                        IndexName = _configuration.OutstandingIndexName,
-                        KeyExpression = new KeyTopicOutstandingCreatedTimeExpression().Generate(topicName, olderThan, shard),
+                        IndexName = indexName,
+                        KeyExpression = keyExpression.Generate(topicName, sinceTime, shard),
                         Limit = batchSize - results.Count,
-                        PaginationToken = paginationToken,
-                        ConsistentRead = false
+                        PaginationToken = paginationToken
                     };
 
                     var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
@@ -947,40 +970,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 queryComplete = false;
             }
 
-            return new OutstandingMessagesQueryResult(results, nextShardNumber, paginationToken, queryComplete);
+            return new IndexQueryResult(results, nextShardNumber, paginationToken, queryComplete);
         }
 
-        private async Task<DispatchedMessagesQueryResult> PageDispatchedMessagesToBatchSizeAsync(
-            string topicName,
-            DateTimeOffset sinceTime,
-            int batchSize,
-            string? initialPaginationToken,
-            CancellationToken cancellationToken)
-        {
-            var results = new List<MessageItem>();
-            var keyExpression = new KeyTopicDeliveredTimeExpression().Generate(topicName, sinceTime);
-            var paginationToken = initialPaginationToken;
-            var isDone = false;
-            do
-            {
-                var queryConfig = new QueryOperationConfig
-                {
-                    IndexName = _configuration.DeliveredIndexName,
-                    KeyExpression = keyExpression,
-                    Limit = batchSize - results.Count,
-                    PaginationToken = paginationToken
-                };
-
-                var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
-                results.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken));
-
-                paginationToken = asyncSearch.PaginationToken;
-                isDone = asyncSearch.IsDone;
-            } while (results.Count < batchSize && !isDone);
-
-            return new DispatchedMessagesQueryResult(results, paginationToken, isDone);
-        }
-        
         private async Task WriteMessageToOutbox(CancellationToken cancellationToken, MessageItem messageToStore)
         {
             await _context.SaveAsync(
