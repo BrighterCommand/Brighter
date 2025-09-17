@@ -350,29 +350,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return await DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize: pageSize, pageNumber: 1, outboxTimeout: -1, args: null, cancellationToken: cancellationToken);
         }
 
-        /// <summary>
-        ///  Finds a message with the specified identifier.
-        ///  Sync over async
-        /// </summary>
-        /// <param name="messageId">The identifier.</param>
-        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="args"></param>
-        /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
+        /// <inheritdoc/>
         public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
         {
             return GetAsync(messageId, requestContext, outBoxTimeout, args).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
-        /// <summary>
-        /// Finds a message with the specified identifier.
-        /// </summary>
-        /// <param name="messageId">The identifier.</param>
-        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
+        /// <inheritdoc/>
         public async Task<Message> GetAsync(
             Id messageId,
             RequestContext requestContext,
@@ -394,6 +378,46 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 var messageItem = await _context.LoadAsync<MessageItem>(messageId.Value, _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
                 return messageItem?.ConvertToMessage() ?? new Message();
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc/>
+        public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+        {
+            return GetAsync(messageIds, requestContext, outBoxTimeout, args).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
+        }
+
+        /// <inheritdoc/>
+        public async Task<IEnumerable<Message>> GetAsync(
+            IEnumerable<Id> messageIds,
+            RequestContext requestContext,
+            int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
+        {
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(x => x.ToString()))}
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Get, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var batchGet = _context.CreateBatchGet<MessageItem>(_dynamoOverwriteTableConfig);
+                foreach (var id in messageIds)
+                {
+                    batchGet.AddKey(id.Value);
+                }
+
+                await batchGet.ExecuteAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                return batchGet.Results.Select(x => x.ConvertToMessage());
             }
             finally
             {

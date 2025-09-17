@@ -106,7 +106,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">Timeout of sql call.</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        /// <returns>List of messages that need to be dispatched.</returns>
+        /// <returns>List of messages that have been dispatched.</returns>
         Task<IEnumerable<Message>> DispatchedMessagesAsync(
             TimeSpan dispatchedSince,
             RequestContext requestContext,
@@ -128,6 +128,23 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task{Message}"/>.</returns>
         Task<Message> GetAsync(
             Id messageId,
+            RequestContext requestContext,
+            int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
+        /// Awaitable Get messages with the specified identifiers.
+        /// </summary>
+        /// <param name="messageId">The message identifiers</param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
+        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; -1 for default timeout</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns><see cref="Task{Message}"/>.</returns>
+        Task<IEnumerable<Message>> GetAsync(
+            IEnumerable<Id> messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
