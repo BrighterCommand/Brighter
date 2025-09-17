@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GreetingsApp.Entities
 {
+    [Table("Person")]
     public class Person
     {
         private readonly List<Greeting> _greetings = new();

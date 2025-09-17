@@ -1,7 +1,9 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GreetingsApp.Entities
 {
+    [Table("Greeting")]
     public class Greeting
     {
         public long Id { get; set; }

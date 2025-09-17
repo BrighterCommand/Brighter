@@ -1,5 +1,5 @@
 ﻿using FluentMigrator.Runner;
-using Greetings_MySqlMigrations.Migrations;
+using GreetingsMigrations.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
