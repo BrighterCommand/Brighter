@@ -49,32 +49,36 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             new SnsPublication { MakeChannels = OnMissingChannel.Create });
     }
 
-    [Fact]
-    public async Task When_a_message_consumer_reads_multiple_messages_async()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_a_message_consumer_reads_multiple_messages_async(bool fairQueue)
     {
+        var partitionOne = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
+        var partitionTwo = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
         var routingKey = new RoutingKey(_topicName);
 
         var messageOne = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: partitionOne),
             new MessageBody("test content one")
         );
 
         var messageTwo = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: partitionOne),
             new MessageBody("test content two")
         );
 
         var messageThree = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: partitionTwo),
             new MessageBody("test content three")
         );
 
         var messageFour = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: partitionTwo),
             new MessageBody("test content four")
         );
 
