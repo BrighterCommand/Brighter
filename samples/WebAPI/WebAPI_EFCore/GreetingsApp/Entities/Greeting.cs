@@ -8,6 +8,9 @@ namespace GreetingsApp.Entities
     {
         public long Id { get; set; }
         public string Message { get; set; }
+        public int RecipientId { get; set; }
+        
+        [ForeignKey(nameof(RecipientId))]
         public Person Recipient { get; set; }
 
         public Greeting(string message)

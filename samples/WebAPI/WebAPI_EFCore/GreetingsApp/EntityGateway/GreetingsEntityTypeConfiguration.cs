@@ -11,7 +11,14 @@ namespace GreetingsApp.EntityGateway
             builder.HasKey("Id");
             builder.Property("Id");
             builder.Property(g => g.Message).IsRequired();
-            builder.HasOne(g => g.Recipient);
+            
+            builder.Property(g => g.RecipientId)
+                .HasColumnName("Recipient_Id");
+
+            builder
+                .HasOne(g => g.Recipient)
+                .WithMany()
+                .HasForeignKey(g => g.RecipientId);
         }
     }
 }
