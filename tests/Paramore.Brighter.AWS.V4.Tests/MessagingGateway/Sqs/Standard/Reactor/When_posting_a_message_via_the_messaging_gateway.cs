@@ -61,11 +61,14 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         );
     }
 
-    [Fact]
-    public async Task When_posting_a_message_via_the_producer()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_posting_a_message_via_the_producer(bool fairQueue)
     {
         //arrange
         _message.Header.Subject = "test subject";
+        _message.Header.PartitionKey = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
         _messageProducer.Send(_message);
 
         await Task.Delay(1000);
