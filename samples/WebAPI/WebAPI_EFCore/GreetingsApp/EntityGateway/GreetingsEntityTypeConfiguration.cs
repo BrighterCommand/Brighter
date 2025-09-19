@@ -8,17 +8,21 @@ namespace GreetingsApp.EntityGateway
     {
         public void Configure(EntityTypeBuilder<Greeting> builder)
         {
-            builder.HasKey("Id");
+            builder.ToTable("Greeting");
+            builder.HasKey("Id").HasName("PRIMARY");
             builder.Property("Id");
-            builder.Property(g => g.Message).IsRequired();
+            builder.Property(g => g.Message)
+                .HasMaxLength(255)
+                .IsRequired();
             
             builder.Property(g => g.RecipientId)
                 .HasColumnName("Recipient_Id");
 
             builder
                 .HasOne(g => g.Recipient)
-                .WithMany()
-                .HasForeignKey(g => g.RecipientId);
+                .WithMany(p => p.Greetings)
+                .HasForeignKey(g => g.RecipientId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
         }
     }
 }
