@@ -1,6 +1,6 @@
 ﻿using FluentMigrator;
 
-namespace Salutations_Migrations.Migrations;
+namespace SalutationsMigrations.Migrations;
 
 [Migration(1)]
 public class SqlInitialMigrations : Migration

@@ -1,4 +1,4 @@
-﻿namespace Greetings_MySqlMigrations.Migrations;
+﻿namespace GreetingsMigrations.Migrations;
 
 public interface IAmAMigrationConfiguration
 {

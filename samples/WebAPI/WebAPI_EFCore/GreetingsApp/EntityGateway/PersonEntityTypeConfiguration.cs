@@ -8,12 +8,14 @@ namespace GreetingsApp.EntityGateway
     {
         public void Configure(EntityTypeBuilder<Person> builder)
         {
-            builder.HasKey("Id");
+            builder.ToTable("Person");
+            builder.HasKey("Id").HasName("PRIMARY");
             builder.Property("Id");
-            builder.HasAlternateKey(p => p.Name);
+            
+            
             builder.Property(p => p.TimeStamp).IsRowVersion();
             builder.Property(p => p.Name).IsRequired();
-            builder.HasMany(p => p.Greetings);
+            builder.HasAlternateKey(p => p.Name);
         }
     }
 }

@@ -36,6 +36,10 @@ namespace GreetingsWeb.Controllers
         [HttpPost]
         public async Task<ActionResult<FindPersonsGreetings>> Post(string name, NewGreeting newGreeting)
         {
+            var foundPerson = await _queryProcessor.ExecuteAsync(new FindPersonByName(name));
+
+            if (foundPerson == null) return new NotFoundResult();
+            
             await _commandProcessor.SendAsync(new AddGreeting(name, newGreeting.Greeting));
 
             var personsGreetings = await _queryProcessor.ExecuteAsync(new FindGreetingsForPerson(name));

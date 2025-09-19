@@ -37,12 +37,14 @@ internal sealed class  BrighterSynchronizationContextScope :  SingleDisposable<o
     private BrighterSynchronizationContextScope(BrighterSynchronizationContext newContext, Task parentTask)
         : base(new object())
     {
+#if DEBUG_CONTEXT
         Debug.WriteLine(string.Empty);
         Debug.WriteLine("{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{");
         Debug.IndentLevel = 1;
         Debug.WriteLine($"Entering BrighterSynchronizationContext on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {parentTask.Id}");
         Debug.IndentLevel = 0;
+#endif
 
         
         _newContext = newContext;
@@ -61,11 +63,13 @@ internal sealed class  BrighterSynchronizationContextScope :  SingleDisposable<o
     /// </summary>
     protected override void Dispose(object context)
     {
+#if DEBUG_CONTEXT
         Debug.IndentLevel = 1;
         Debug.WriteLine($"Exiting BrighterSynchronizationContextScope for task {_newContext?.ParentTaskId}");
         Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {_newContext?.ParentTaskId}");
         Debug.IndentLevel = 0;
         Debug.WriteLine("}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}");
+#endif
 
         if (_newContext is not null)
         {

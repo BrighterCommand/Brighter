@@ -1,11 +1,14 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GreetingsApp.Entities
 {
+    [Table("Greeting")]
     public class Greeting
     {
         public long Id { get; set; }
         public string Message { get; set; }
+        public int RecipientId { get; set; }
         public Person Recipient { get; set; }
 
         public Greeting(string message)

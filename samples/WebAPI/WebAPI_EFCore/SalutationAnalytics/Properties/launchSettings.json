@@ -4,13 +4,17 @@
     "Development": {
       "commandName": "Project",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "BRIGHTER_GREETINGS_DATABASE": "Sqlite",
+        "BRIGHTER_TRANSPORT": "RabbitMQ"
       }
     },
       "Production": {
         "commandName": "Project",
         "environmentVariables": {
-          "ASPNETCORE_ENVIRONMENT": "Production"
+          "ASPNETCORE_ENVIRONMENT": "Production",
+          "BRIGHTER_GREETINGS_DATABASE": "MySQL",
+          "BRIGHTER_TRANSPORT": "RabbitMQ"
         }     
     }
   }
