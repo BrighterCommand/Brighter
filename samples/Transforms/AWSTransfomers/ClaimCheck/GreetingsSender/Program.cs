@@ -59,7 +59,7 @@ namespace GreetingsSender
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                var topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName());
+                var topic = new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName());
 
                 var producerRegistry = new SnsProducerRegistryFactory(
                     awsConnection,
