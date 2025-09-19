@@ -2,11 +2,11 @@ version: '3'
 
 services:
   localstack:
-    image: localstack/localstack
+    image: localstack/localstack:latest
     environment:
       # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
       - "SERVICES=s3,sqs,sns,sts,dynamodb,iam,scheduler"
-      - "DEFAULT_REGION=eu-west-1"
+      - "USE_SINGLE_REGION=1"
       - "DEBUG=1"
       - "PROVIDER_OVERRIDE_EVENTS=v2"
     ports:
