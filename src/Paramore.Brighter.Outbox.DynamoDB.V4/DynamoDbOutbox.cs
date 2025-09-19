@@ -44,6 +44,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
+        private readonly IAmazonDynamoDB _client;
         private readonly LoadConfig _loadConfig;
         private readonly BatchGetConfig _batchGetConfig;
         private readonly SaveConfig _saveConfig;
@@ -86,6 +87,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _configuration = configuration;
+            _client = client;
             _context = new DynamoDBContextBuilder().WithDynamoDBClient(() => client).Build();
             _timeProvider = timeProvider ?? TimeProvider.System;
             _loadConfig = new LoadConfig
@@ -113,41 +115,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             _dispatchedAllTopicsScanContext = new AllTopicsScanContext(_configuration.ScanConcurrency);
 
             _instrumentationOptions = instrumentationOptions;
-        }
-
-        /// <summary>
-        /// Initialises a new instance of the <see cref="DynamoDbOutbox"/> class. 
-        /// </summary>
-        /// <param name="context">An existing Dynamo Db Context</param>
-        /// <param name="configuration">The Configuration from the context - the config is internal, so we can't grab the settings from it.</param>
-        public DynamoDbOutbox(DynamoDBContext context, DynamoDbConfiguration configuration, TimeProvider timeProvider)
-        {
-            _context = context;
-            _configuration = configuration;
-            _timeProvider = timeProvider;
-            _loadConfig = new LoadConfig
-            {
-                OverrideTableName = _configuration.TableName,
-                ConsistentRead = true
-            };
-
-            _saveConfig = new SaveConfig { OverrideTableName = _configuration.TableName };
-            _deleteConfig = new DeleteConfig { OverrideTableName = _configuration.TableName, };
-            _fromQueryConfig = new FromQueryConfig { OverrideTableName = _configuration.TableName };
-            _fromScanConfig = new FromScanConfig { OverrideTableName = _configuration.TableName };
-            _toDocumentConfig = new ToDocumentConfig { OverrideTableName = _configuration.TableName, };
-            _batchGetConfig = new BatchGetConfig { OverrideTableName = _configuration.TableName };
-
-            if (_configuration.NumberOfShards > 20)
-            {
-                throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
-            }
-
-            _outstandingTopicQueryContexts = new ConcurrentDictionary<string, TopicQueryContext>();
-            _dispatchedTopicQueryContexts = new ConcurrentDictionary<string, TopicQueryContext>();
-
-            _outstandingAllTopicsScanContext = new AllTopicsScanContext(_configuration.ScanConcurrency);
-            _dispatchedAllTopicsScanContext = new AllTopicsScanContext(_configuration.ScanConcurrency);
         }
 
         /// <inheritdoc />
@@ -475,14 +442,29 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
 
             try
             {
-                var message = await _context.LoadAsync<MessageItem>(id.Value, _loadConfig, cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-                MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
+                var dispatchTime = dispatchedAt ?? _timeProvider.GetUtcNow();
+                var updateItemRequest = new UpdateItemRequest()
+                {
+                    TableName = _configuration.TableName,
+                    Key = new Dictionary<string, AttributeValue>
+                    {
+                        { "MessageId", new AttributeValue { S = id } }
+                    },
+                    // Remove the outstanding created time attribute to remove it from the outstanding index
+                    UpdateExpression = "SET DeliveryTime = :deliveryTime, DeliveredAt = :deliveredAt REMOVE OutstandingCreatedTime",
+                    ConditionExpression = "attribute_exists(MessageId)",
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>()
+                    {
+                        {":deliveryTime",  new AttributeValue { N = dispatchTime.Ticks.ToString() } },
+                        {":deliveredAt", new AttributeValue { S = dispatchTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ") } }
+                    }
+                };
 
-                await _context.SaveAsync(
-                    message,
-                    _saveConfig,
-                    cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                await _client.UpdateItemAsync(updateItemRequest, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (ConditionalCheckFailedException e)
+            {
+                throw new NullReferenceException($"The message with id {id.Value} could not be found in the outbox", e);
             }
             finally
             {
@@ -524,16 +506,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                 .ConfigureAwait(ContinueOnCapturedContext)
                 .GetAwaiter()
                 .GetResult();
-        }
-
-        private static void MarkMessageDispatched(DateTimeOffset dispatchedAt, MessageItem message)
-        {
-            message.DeliveryTime = dispatchedAt.Ticks;
-            message.DeliveredAt = dispatchedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-
-            // Set the outstanding created time to null to remove the attribute
-            // from the item in dynamo
-            message.OutstandingCreatedTime = null;
         }
 
         /// <summary>

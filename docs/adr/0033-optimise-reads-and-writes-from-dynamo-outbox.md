@@ -27,7 +27,6 @@ As the `Delivered` index isn't sharded, it can fall victim to hot partitions. Wh
 There are a few operations where the outbox is provided with a collection of messages or message IDs, and instead of performing batch operations with those IDs it iterates through them and performs individual operations sequentially:
 
 * When clearing a collection of message IDs from the outbox, it fetches each of these individually and tries to dispatch it before moving onto the next
-* When marking a collection of messages as dispatched, the messages are written to sequentially with seperate requests
 * When a collection of messages are deleted from the outbox they're worked through sequentially with separate requests
 
 ### Fetching outstanding message count
@@ -36,7 +35,7 @@ Every time one or more messages are cleared from the outbox, the `OutboxProducer
 
 ## Decision
 
-All of the inefficiencies above can be improved with non-breaking changes.
+Some of the inefficiencies above can be improved with non-breaking changes. There will, however, be breaking changes required to the delivered index.
 
 ### `OutstandingMessages` operation
 
@@ -72,11 +71,7 @@ Update `OutboxProducerMediator` to use the new `Get` methods.
 
 ### Marking messages as dispatched
 
-When marking a collection of messages as dispatched, use a `BatchWrite` operation to update all of them at once.
-
-By default, if any of the updates fail throw an exception. If, however, an option is passed in the `args` dictionary with the key `LogBatchErrors` and a value of `true`, then don't throw and instead log a warning message. When the method is invoked from the outbox sweeper, pass this new option to the method.
-
-Add a new overload of `MarkDispatched` which takes a collection of message IDs (currently the only bulk option is the async version).
+When marking a message as dispatched, use an `UpdateExpression` to only update the attributes we need to instead of reading the whole message out and then writing it all back in again.
 
 ### Deleting messages from the outbox
 
