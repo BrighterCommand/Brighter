@@ -33,7 +33,7 @@ using Amazon.SecurityToken;
 using Paramore.Brighter.Transforms.Storage;
 using Polly.Retry;
 
-namespace Paramore.Brighter.Tranformers.AWS.V4;
+namespace Paramore.Brighter.Transformers.AWS;
 
 /// <summary>
 /// Configuration Options for an S3 backed luggage store

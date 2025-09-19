@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
-using Paramore.Brighter.Tranformers.AWS.V4;
+using Paramore.Brighter.Transformers.AWS.V4;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
