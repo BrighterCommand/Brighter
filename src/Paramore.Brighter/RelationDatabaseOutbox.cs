@@ -573,18 +573,12 @@ namespace Paramore.Brighter
             }
         }
 
-        /// <summary>
-        /// Returns messages specified by the Ids
-        /// </summary>
-        /// <param name="messageIds">The Ids of the messages</param>
-        /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-        /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
-        /// <param name="cancellationToken">Cancellation Token.</param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public async Task<IEnumerable<Message>> GetAsync(
             IEnumerable<Id> messageIds,
             RequestContext requestContext,
             int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         )
         {

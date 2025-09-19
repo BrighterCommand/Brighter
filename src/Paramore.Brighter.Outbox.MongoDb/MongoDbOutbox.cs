@@ -102,6 +102,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         IEnumerable<Id> messageIds,
         RequestContext? requestContext,
         int outBoxTimeout = -1,
+        Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -558,17 +559,12 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         }
     }
 
-    /// <summary>
-    /// Returns messages specified by the Ids
-    /// </summary>
-    /// <param name="messageIds">The Ids of the messages</param>
-    /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-    /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
-    /// <returns></returns>
+    /// <inheritdoc />
     public IEnumerable<Message> Get(
         IEnumerable<Id> messageIds,
         RequestContext? requestContext = null,
-        int outBoxTimeout = -1
+        int outBoxTimeout = -1,
+        Dictionary<string, object>? args = null
     )
     {
         var ids = messageIds.Select(id => id.Value).ToArray();

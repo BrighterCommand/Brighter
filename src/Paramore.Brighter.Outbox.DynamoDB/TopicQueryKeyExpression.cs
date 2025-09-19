@@ -1,7 +1,7 @@
 ﻿#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
+Copyright © 2025 Dominic Hickie <dominichickie@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,13 +23,18 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
+using System;
+using Amazon.DynamoDBv2.DocumentModel;
 
-namespace Paramore.Brighter.Outbox.DynamoDB.V4;
-
-internal sealed class DispatchedAllTopicsQueryContext(int nextPage, string? lastEvaluatedKey, List<string> remainingTopics)
+namespace Paramore.Brighter.Outbox.DynamoDB;
+internal abstract class TopicQueryKeyExpression
 {
-    public int NextPage { get; private set; } = nextPage;
-    public string? LastEvaluatedKey { get; private set; } = lastEvaluatedKey;
-    public List<string> RemainingTopics { get; private set; } = remainingTopics;
+    internal Expression Expression { get; } = new();
+
+    public override string ToString()
+    {
+        return Expression.ExpressionStatement;
+    }
+
+    public abstract Expression Generate(string topicName, DateTimeOffset sinceTime, int shard);
 }
