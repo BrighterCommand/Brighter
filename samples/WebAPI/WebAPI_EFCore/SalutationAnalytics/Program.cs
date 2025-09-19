@@ -7,6 +7,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -18,7 +21,7 @@ using SalutationApp.Requests;
 using TransportMaker;
 
 var host = CreateHostBuilder(args).Build();
-host.CheckDbIsUp(ApplicationType.Greetings);
+host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
 host.CreateInbox("Salutations");
 host.CreateOutbox(ApplicationType.Greetings,  "Salutations", HasBinaryMessagePayload());
@@ -54,8 +57,10 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
         })
         .ConfigureServices((hostContext, services) =>
         {
+            SalutationsDbFactory.ConfigureMigration(hostContext, services);
             ConfigureEFCore(hostContext, services);
             ConfigureBrighter(hostContext, services);
+            ConfigureObservability(services);
         })
         .UseConsoleLifetime();
 
@@ -86,7 +91,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
     Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
-    (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+    (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider)  makeOutbox =
         OutboxFactory.MakeEfOutbox<SalutationsEntityGateway>(rdbms, outboxConfiguration);
 
     IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
@@ -204,4 +209,21 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
 
     return producerRegistry;
 }
+
+static void ConfigureObservability(IServiceCollection services)
+{
+    services.AddLogging(loggingBuilder =>
+    {
+        loggingBuilder.AddConsole();
+        loggingBuilder.AddOpenTelemetry(options =>
+        {
+            options.IncludeScopes = true;
+            options.AddOtlpExporter((exporterOptions, processorOptions) =>
+                {
+                    exporterOptions.Protocol = OtlpExportProtocol.Grpc;
+                })
+                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Salutation Analytics"))
+                .IncludeScopes = true;
+        });
+    });
 
