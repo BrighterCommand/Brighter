@@ -4,7 +4,7 @@ using Amazon.IdentityManagement.Model;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tasks;
 
-namespace Paramore.Brighter.MessageScheduler.Aws;
+namespace Paramore.Brighter.MessageScheduler.AWS;
 
 /// <summary>
 /// The Aws message Scheduler factory

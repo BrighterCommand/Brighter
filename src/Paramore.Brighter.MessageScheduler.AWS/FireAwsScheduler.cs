@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 
-namespace Paramore.Brighter.MessageScheduler.Aws;
+namespace Paramore.Brighter.MessageScheduler.AWS;
 
 /// <summary>
 /// The command to fire scheduler (message and request) on AWS scheduler.

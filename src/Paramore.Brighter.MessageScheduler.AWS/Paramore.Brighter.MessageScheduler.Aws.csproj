@@ -4,6 +4,7 @@
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>Paramore.Brighter.MessageScheduler.AWS</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
 ﻿using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
 
-namespace Paramore.Brighter.MessageScheduler.Aws;
+namespace Paramore.Brighter.MessageScheduler.AWS;
 
 /// <summary>
 /// The AWS scheduler attributes.
