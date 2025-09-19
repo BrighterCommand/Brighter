@@ -218,12 +218,8 @@ static void ConfigureObservability(IServiceCollection services)
         loggingBuilder.AddOpenTelemetry(options =>
         {
             options.IncludeScopes = true;
-            options.AddOtlpExporter((exporterOptions, processorOptions) =>
-                {
-                    exporterOptions.Protocol = OtlpExportProtocol.Grpc;
-                })
-                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Salutation Analytics"))
-                .IncludeScopes = true;
+            options.AddConsoleExporter();
         });
     });
+}
 

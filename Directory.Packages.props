@@ -82,6 +82,7 @@
     </PackageVersion>
     <PackageVersion Include="NUnit3TestAdapter" Version="5.1.0" />
     <PackageVersion Include="OpenTelemetry" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.12.0" />
