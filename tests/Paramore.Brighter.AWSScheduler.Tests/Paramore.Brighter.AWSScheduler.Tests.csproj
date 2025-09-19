@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageScheduler.Aws\Paramore.Brighter.MessageScheduler.Aws.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageScheduler.AWS\Paramore.Brighter.MessageScheduler.AWS.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.csproj" />
   </ItemGroup>
 

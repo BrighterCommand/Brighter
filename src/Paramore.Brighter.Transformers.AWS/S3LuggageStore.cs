@@ -44,7 +44,7 @@ using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
 using Tag = Amazon.S3.Model.Tag;
 
-namespace Paramore.Brighter.Tranformers.AWS;
+namespace Paramore.Brighter.Transformers.AWS;
 
 /// <summary>
 /// Implements a storage provider for the Brighter Claim Check pattern using Amazon S3.

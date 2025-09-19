@@ -8,7 +8,7 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tasks;
 using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundException;
 
-namespace Paramore.Brighter.MessageScheduler.Aws;
+namespace Paramore.Brighter.MessageScheduler.AWS;
 
 /// <summary>
 /// The AWS Scheduler implementation

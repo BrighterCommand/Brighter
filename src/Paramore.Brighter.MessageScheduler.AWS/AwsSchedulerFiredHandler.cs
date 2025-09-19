@@ -1,6 +1,6 @@
 ﻿using Paramore.Brighter.Scheduler.Events;
 
-namespace Paramore.Brighter.MessageScheduler.Aws;
+namespace Paramore.Brighter.MessageScheduler.AWS;
 
 /// <summary>
 /// The <see cref="FireAwsScheduler"/> handler

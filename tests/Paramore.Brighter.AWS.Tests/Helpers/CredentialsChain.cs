@@ -3,7 +3,7 @@ using System.Linq;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
-using Paramore.Brighter.Tranformers.AWS;
+using Paramore.Brighter.Transformers.AWS;
 
 namespace Paramore.Brighter.AWS.Tests.Helpers;
 

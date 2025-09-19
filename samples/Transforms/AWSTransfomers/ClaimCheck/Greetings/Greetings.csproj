@@ -5,7 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.csproj" />
     <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-    <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.Tranformers.AWS\Paramore.Brighter.Tranformers.AWS.csproj" />
+    <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.Transformers.AWS\Paramore.Brighter.Transformers.AWS.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />

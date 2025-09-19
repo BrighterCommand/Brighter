@@ -2,7 +2,7 @@
 using Amazon.Scheduler;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
-namespace Paramore.Brighter.MessageScheduler.Aws;
+namespace Paramore.Brighter.MessageScheduler.AWS;
 
 /// <summary>
 /// The AWS Client Factory
