@@ -7,9 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
-using OpenTelemetry.Resources;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -24,7 +22,7 @@ var host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
 host.CreateInbox("Salutations");
-host.CreateOutbox(ApplicationType.Greetings,  "Salutations", HasBinaryMessagePayload());
+host.CreateOutbox(ApplicationType.Salutations,  "Salutations", HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -121,7 +119,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
-            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+            options.CommandProcessorLifetime = ServiceLifetime.Singleton;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
                 InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),
