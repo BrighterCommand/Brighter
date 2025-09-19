@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -19,26 +19,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-namespace Paramore.Brighter.Observability;
+using System.Text.Json;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.JsonConverters;
 
-/// <summary>
-/// The messaging system used to send a message
-/// </summary>
-public enum MessagingSystem
+namespace Paramore.Brighter.Pulsar.Tests.TestDoubles;
+
+internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
 {
-    ActiveMQ = 0,
-    AWSSQS,
-    EventGrid,
-    EventHubs,
-    InternalBus,
-    JMS,
-    Kafka,
-    PubSub,
-    RabbitMQ,
-    RocketMQ,
-    ServiceBus,
-    Pulsar
-}
+    public IRequestContext Context { get; set; }
 
+    public Message MapToMessage(MyEvent request, Publication publication)
+    {
+        var header = new MessageHeader(request.Id, topic:publication.Topic, request.RequestToMessageType());
+        var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
+        var message = new Message(header, body);
+        return message;
+    }
+
+    public MyEvent MapToRequest(Message message)
+    {
+        return JsonSerializer.Deserialize<MyEvent>(message.Body.Value, JsonSerialisationOptions.Options);
+    }
+}
