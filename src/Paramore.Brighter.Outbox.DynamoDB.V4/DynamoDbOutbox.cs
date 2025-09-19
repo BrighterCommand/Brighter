@@ -247,9 +247,55 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            foreach (var messageId in messageIds)
+            var dbAttributes = new Dictionary<string, string>()
             {
-                await DeleteAsync(messageId, requestContext, args, cancellationToken);
+                { "db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.ToString())) }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Delete, _configuration.TableName, dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                // Batch writes can only do 25 items at a time
+                var batches = messageIds
+                    .Select((id, index) => new { id, index })
+                    .GroupBy(x => x.index / 25)
+                    .Select(g => g.Select(x => x.id).ToList())
+                    .ToList();
+
+                foreach (var batch in batches)
+                {
+                    var writeRequests = batch.Select(id =>
+                    new WriteRequest
+                    {
+                        DeleteRequest = new DeleteRequest
+                        {
+                            Key = new Dictionary<string, AttributeValue>
+                            {
+                                { "MessageId", new AttributeValue { S = id.Value } }
+                            }
+                        }
+                    }).ToList();
+                    var request = new BatchWriteItemRequest
+                    {
+                        RequestItems = new Dictionary<string, List<WriteRequest>>()
+                        {
+                            { _configuration.TableName, writeRequests }
+                        }
+                    };
+
+                    var response = await _client.BatchWriteItemAsync(request, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                    if (response.UnprocessedItems.Any())
+                    {
+                        throw new NullReferenceException($"The messages with ids {string.Join(",", messageIds.Select(id => id.ToString()))} could not be found in the outbox");
+                    }
+                }
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
             }
         }
 
@@ -571,31 +617,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
 
                 span?.AddTag("db.response.returned_rows", result.Count());
                 return result;
-            }
-            finally
-            {
-                Tracer?.EndSpan(span);
-            }
-        }
-
-        private async Task DeleteAsync(
-            Id messageId,
-            RequestContext? requestContext,
-            Dictionary<string, object>? args,
-            CancellationToken cancellationToken)
-        {
-            var dbAttributes = new Dictionary<string, string>()
-            {
-                {"db.operation.parameter.message.id", messageId}
-            };
-            var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Delete, _configuration.TableName, dbAttributes: dbAttributes),
-                requestContext?.Span,
-                options: _instrumentationOptions);
-
-            try
-            {
-                await _context.DeleteAsync<MessageItem>(messageId.Value, _deleteConfig, cancellationToken);
             }
             finally
             {
