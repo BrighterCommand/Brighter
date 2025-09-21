@@ -111,7 +111,6 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport);
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
-            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
                 InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),

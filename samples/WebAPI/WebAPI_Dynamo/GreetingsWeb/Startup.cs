@@ -95,7 +95,6 @@ namespace GreetingsWeb
              {
                  //we want to use scoped, so make sure everything understands that which needs to
                  options.HandlerLifetime = ServiceLifetime.Scoped;
-                 options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                  options.MapperLifetime = ServiceLifetime.Singleton;
                  options.PolicyRegistry = new GreetingsPolicy();
              })

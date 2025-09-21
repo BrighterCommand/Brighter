@@ -119,7 +119,6 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
-            options.CommandProcessorLifetime = ServiceLifetime.Singleton;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
                 InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),

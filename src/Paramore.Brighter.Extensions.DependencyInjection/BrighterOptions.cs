@@ -9,11 +9,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public class BrighterOptions : IBrighterOptions
     {
         /// <summary>
-        ///  Configures the life time of the Command Processor. Defaults to Transient.
-        /// </summary>
-        public ServiceLifetime CommandProcessorLifetime { get; set; } = ServiceLifetime.Transient;
-
-        /// <summary>
         /// Do we support feature switching? In which case please supply an initialized feature switch registry
         /// </summary>
         /// <returns></returns>
@@ -59,11 +54,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
     public interface IBrighterOptions
     {
-        /// <summary>
-        /// Configures the life time of the Command Processor.
-        /// </summary>
-        ServiceLifetime CommandProcessorLifetime { get; set; }
-
         /// <summary>
         /// Do we support feature switching? In which case please supply an initialized feature switch registry
         /// </summary>

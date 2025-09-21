@@ -107,7 +107,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var policyRegistry = options.PolicyRegistry == null ? new DefaultPolicy() : AddDefaults(options.PolicyRegistry);
 #pragma warning restore CS0618 // Type or member is obsolete
 
-            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
+            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, ServiceLifetime.Singleton));
 
             var builder =  new ServiceCollectionBrighterBuilder(
                 services,
