@@ -10,7 +10,7 @@ namespace GreetingsApp.Entities
         public int Id { get; set; }
         public string Name { get; }
         public byte[] TimeStamp { get; set; }
-        public ICollection<Greeting> Greetings => new List<Greeting>();
+        public ICollection<Greeting> Greetings { get; set; } = new List<Greeting>();
 
         public Person(string name)
         {
