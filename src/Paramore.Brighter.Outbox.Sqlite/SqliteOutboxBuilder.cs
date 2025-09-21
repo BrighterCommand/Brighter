@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [TraceState] TEXT NULL,
                                         [Baggage] TEXT NULL,
                                         [DataRef] TEXT NULL,
-                                        [SpevcVersion] TEXT NULL
+                                        [SpecVersion] TEXT NULL
                                     );";
         
         const string BinaryOutboxDdl = @"CREATE TABLE {0} 
