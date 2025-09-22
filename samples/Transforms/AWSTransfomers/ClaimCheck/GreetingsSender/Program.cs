@@ -35,7 +35,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.Tranformers.AWS;
+using Paramore.Brighter.Transformers.AWS;
 using Paramore.Brighter.Transforms.Storage;
 using Serilog;
 using Serilog.Extensions.Logging;
@@ -59,7 +59,7 @@ namespace GreetingsSender
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                var topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName());
+                var topic = new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName());
 
                 var producerRegistry = new SnsProducerRegistryFactory(
                     awsConnection,

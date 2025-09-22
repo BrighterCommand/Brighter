@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Tranformers.AWS.V4;
+using Paramore.Brighter.Transformers.AWS.V4;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
