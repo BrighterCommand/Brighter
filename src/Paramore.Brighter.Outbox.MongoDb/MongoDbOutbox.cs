@@ -888,4 +888,16 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             Tracer?.EndSpan(span);
         }
     }
+
+    /// <inheritdoc/>
+    public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+    {
+        return OutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, args).Count();
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    {
+        return (await OutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, args, cancellationToken)).Count();
+    }
 }

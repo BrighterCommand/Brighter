@@ -599,7 +599,49 @@ namespace Paramore.Brighter
 
             return tcs.Task;
         }
-        
+
+        /// <inheritdoc/>
+        public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+        {
+            ClearExpiredMessages();
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.OutStandingMessageCount,
+                    InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var now = _timeProvider.GetUtcNow();
+                var sentBefore = now - dispatchedSince;
+                var outstandingMessageCount = Requests.Values
+                    .OrderBy(oe => oe.Message.Header.TimeStamp)
+                    .Where(oe =>
+                        oe.TimeFlushed == DateTimeOffset.MinValue
+                        && oe.WriteTime <= sentBefore.DateTime)
+                    .Take(maxCount)
+                    .Count();
+                return outstandingMessageCount;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc/>
+        public Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            //NOTE: We don't create a span here as we just call the sync method
+
+            var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            tcs.SetResult(GetOutstandingMessageCount(dispatchedSince, requestContext, maxCount, args));
+
+            return tcs.Task;
+        }
+
         private void Delete(Id messageId, RequestContext? requestContext = null)
         {
             var span = Tracer?.CreateDbSpan(

@@ -1016,13 +1016,26 @@ namespace Paramore.Brighter
             {
                 if (_outBox != null)
                 {
-                    _outStandingCount = _outBox
-                        .OutstandingMessages(
-                            _maxOutStandingCheckInterval,
-                            requestContext,
-                            args: _outBoxBag
-                        )
-                        .Count();
+                    if (_maxOutStandingMessages >= 0)
+                    {
+                        _outStandingCount = _outBox
+                            .GetOutstandingMessageCount(
+                                _maxOutStandingCheckInterval,
+                                requestContext,
+                                _maxOutStandingMessages + 1,
+                                args: _outBoxBag
+                            );
+                    }
+                    else
+                    {
+                        _outStandingCount = _outBox
+                            .GetOutstandingMessageCount(
+                                _maxOutStandingCheckInterval,
+                                requestContext,
+                                args: _outBoxBag
+                            );
+                    }
+
                     return;
                 }
 
@@ -1030,8 +1043,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                //if we can't talk to the outbox, we would swallow the exception on this thread
-                //by setting the _outstandingCount to -1, we force an exception
+                //if we can't talk to the outbox, swallow the exception on this thread
                 Log.ErrorGettingOutstandingMessageCount(s_logger, ex);
                 _outStandingCount = 0;
             }

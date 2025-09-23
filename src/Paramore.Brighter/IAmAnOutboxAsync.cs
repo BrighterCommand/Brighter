@@ -200,5 +200,21 @@ namespace Paramore.Brighter
             IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the current count of outstanding messages in the Outbox
+        /// </summary>
+        /// <param name="dispatchedSince">The age a message must be before it's considered to be outstanding</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="maxCount">For outbox implementations that have to scan through messages, the maximum number of messages to scan before returning a value</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Async Cancellation Token</param>
+        /// <returns>The number of outstanding messages in the outbox</returns>
+        Task<int> GetOutstandingMessageCountAsync(
+            TimeSpan dispatchedSince,
+            RequestContext? requestContext,
+            int maxCount = 100,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default);
     }
 }

@@ -79,14 +79,12 @@ When deleting a collection of messages from the outbox, do so using a `BatchWrit
 
 ### Outstanding item count
 
-It feels useful to have the number of outstanding messages available in a metric. Dynamo DB doesn't have a `Count` operation, but we can get this information without having to pull all messages into memory:
+It feels useful to have the number of outstanding messages available in a metric. Dynamo DB doesn't have a `Count` operation, but it does allow `Scan` operations that return only the count of items scanned, minimising the amount of data sent over the wire. As this is still a scan, we still need to specify a page size when this method is invoked:
 
-1. When messages are added to the Dynamo DB outbox, add a new binary attribute containing a single bit of data.
-2. Add new methods to the outbox interfaces for `GetOutstandingMessageCount` and `GetOutstandingMessageCountAsync`.
-3. In the Dynamo DB implementation, perform a `Scan` operation on the `Outstanding` index, with configuration to only retrieve the new binary attribute.
-4. Page through results as required, and sum the total number of records returned.
+* If the outbox has a maximum outstanding message count configured, then the page size should be 1 larger than the maximum to ensure the count retreived is at least as big as the configured maximum
+* If the outbox does _not_ have a maximum outstanding message count configured, use the default value
 
-This minimises the amount of data sent over the wire, minimises memory consumption, and maximises the number of records returned in each page.
+Add a new method to the outbox interfaces called called `GetOutstandingMessageCount` and `GetOutstandingMessageCountAsync` that is called from the `OutboxProducerMediator`.
 
 Other outbox implementations can continue to use their implementations of `OutstandingMessages` for now.
 

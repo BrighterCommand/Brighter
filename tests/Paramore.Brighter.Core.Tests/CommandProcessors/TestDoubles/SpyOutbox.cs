@@ -122,6 +122,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             return Task.FromResult(OutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber));
         }
+
+        public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+        {
+            return OutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, args).Count();
+        }
+
+        public Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(GetOutstandingMessageCount(dispatchedSince, requestContext, maxCount, args));
+        }
     }
 
     public class SpyOutboxEntry

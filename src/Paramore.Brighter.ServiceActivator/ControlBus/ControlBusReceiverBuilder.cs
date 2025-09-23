@@ -290,6 +290,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             {
                return []; 
             }
+
+            public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+            {
+                return 0;
+            }
         }
     }
 

@@ -624,6 +624,90 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             }
         }
 
+        /// <inheritdoc/>
+        public int GetOutstandingMessageCount(
+            TimeSpan dispatchedSince,
+            RequestContext? requestContext,
+            int maxCount = 100,
+            Dictionary<string, object>? args = null)
+        {
+            return GetOutstandingMessageCountAsync(dispatchedSince, requestContext, maxCount, args)
+                .ConfigureAwait(ContinueOnCapturedContext)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetOutstandingMessageCountAsync(
+            TimeSpan dispatchedSince,
+            RequestContext? requestContext,
+            int maxCount = 100,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
+        {
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.OutStandingMessageCount, _configuration.TableName),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var olderThan = _timeProvider.GetUtcNow() - dispatchedSince;
+
+                // Spin off requests to scan each segment
+                var tasks = new List<Task<int>>();
+                var segmentMaxCount = maxCount / _configuration.ScanConcurrency;
+                for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
+                {
+                    tasks.Add(ScanOutstandingIndexSegmentForCount(olderThan, segmentMaxCount, segmentNumber, cancellationToken));
+                }
+
+                await Task.WhenAll(tasks);
+
+                var totalCount = tasks.Sum(t => t.Result);
+                span?.AddTag("db.response.returned_rows", totalCount);
+                return totalCount;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        private async Task<int> ScanOutstandingIndexSegmentForCount(DateTimeOffset olderThan,
+            int maxCount,
+            int segmentNumber,
+            CancellationToken cancellationToken)
+        {
+            var segmentCount = 0;
+            Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+            do
+            {
+                var request = new ScanRequest
+                {
+                    TableName = _configuration.TableName,
+                    IndexName = _configuration.OutstandingAllTopicsIndexName,
+                    ConsistentRead = true,
+                    Limit = maxCount - segmentCount,
+                    ExclusiveStartKey = lastEvaluatedKey,
+                    Segment = segmentNumber,
+                    TotalSegments = _configuration.ScanConcurrency,
+                    Select = Select.COUNT,
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                        {":olderThan", new AttributeValue { N = olderThan.Ticks.ToString() } }
+                    },
+                    FilterExpression = "OutstandingCreatedTime <= :olderThan"
+                };
+                ScanResponse response = await _client.ScanAsync(request, cancellationToken);
+
+                lastEvaluatedKey = response.LastEvaluatedKey;
+                segmentCount += response.Count ?? 0;
+            } while (lastEvaluatedKey != null && lastEvaluatedKey.Keys.Any() && segmentCount < maxCount);
+
+            return segmentCount;
+        }
+
         private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber, CancellationToken cancellationToken)
         {
             // Only allow one outstanding messages scan at a time to ensure consistency of pagination tokens
@@ -645,7 +729,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                 var segmentPageSize = pageSize / _configuration.ScanConcurrency;
                 for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
                 {
-                    tasks.Add(ScanOutstandingIndexSegment(olderThan, segmentPageSize, pageNumber, segmentNumber, cancellationToken));
+                    tasks.Add(ScanOutstandingIndexSegmentForMessages(olderThan, segmentPageSize, pageNumber, segmentNumber, cancellationToken));
                 }
 
                 await Task.WhenAll(tasks);
@@ -664,7 +748,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             }
         }
 
-        private async Task<List<MessageItem>> ScanOutstandingIndexSegment(DateTimeOffset olderThan, 
+        private async Task<List<MessageItem>> ScanOutstandingIndexSegmentForMessages(DateTimeOffset olderThan, 
             int pageSize, 
             int pageNumber, 
             int segmentNumber,
