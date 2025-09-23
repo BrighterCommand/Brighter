@@ -27,6 +27,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -182,7 +183,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
 
             try
             {
-                var shard = GetShardNumber();
+                var shard = GetShardNumber(message.Header.PartitionKey);
                 var expiresAt = GetExpirationTime();
                 var messageToStore = new MessageItem(message, shard, expiresAt);
 
@@ -1107,10 +1108,18 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        private int GetShardNumber()
+        private int GetShardNumber(string? partitionKey)
         {
             if (_configuration.NumberOfShards <= 1)
                 return 0;
+
+            if (partitionKey != null)
+            {
+                var keyBytes = Encoding.UTF8.GetBytes(partitionKey);
+                var sha256 = SHA256.Create();
+                var hash = sha256.ComputeHash(keyBytes);
+                return BitConverter.ToInt32(hash, 0) % _configuration.NumberOfShards;
+            }
 
             //The range is inclusive of 0 but exclusive of NumberOfShards i.e. 0, 4 produces values in range 0-3
             return _random.Next(0, _configuration.NumberOfShards);
