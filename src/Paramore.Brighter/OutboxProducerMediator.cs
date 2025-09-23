@@ -74,7 +74,6 @@ namespace Paramore.Brighter
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
             
-        //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
         private bool _disposed;
         private readonly int _maxOutStandingMessages;
