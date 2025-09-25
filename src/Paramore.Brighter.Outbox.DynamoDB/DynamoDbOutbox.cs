@@ -645,10 +645,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
                 // Spin off requests to scan each segment
                 var tasks = new List<Task<int>>();
-                var segmentMaxCount = maxCount / _configuration.ScanConcurrency;
+                var segmentMaxCounts = GetSegmentPageSizes(maxCount);
                 for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
                 {
-                    tasks.Add(ScanOutstandingIndexSegmentForCount(olderThan, segmentMaxCount, segmentNumber, cancellationToken));
+                    tasks.Add(ScanOutstandingIndexSegmentForCount(olderThan, segmentMaxCounts[segmentNumber], segmentNumber, cancellationToken));
                 }
 
                 await Task.WhenAll(tasks);
@@ -676,7 +676,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 {
                     TableName = _configuration.TableName,
                     IndexName = _configuration.OutstandingAllTopicsIndexName,
-                    ConsistentRead = true,
+                    ConsistentRead = false,
                     Limit = maxCount - segmentCount,
                     ExclusiveStartKey = lastEvaluatedKey,
                     Segment = segmentNumber,
