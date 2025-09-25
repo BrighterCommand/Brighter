@@ -11,6 +11,7 @@
       <PackageReference Include="JustSaying" />
       <PackageReference Include="JustSaying.Extensions.DependencyInjection.Microsoft" />
       <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Newtonsoft.Json" />
     </ItemGroup>
 
 </Project>
