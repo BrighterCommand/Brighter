@@ -743,15 +743,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             int segmentNumber,
             CancellationToken cancellationToken)
         {
-            string? paginationToken = null;
+            var paginationToken = _outstandingAllTopicsScanContext.GetPagingToken(segmentNumber);
             if (pageNumber != 1 && paginationToken == null)
             {
                 // It may be that this segment is done but other segments have more results
                 return new List<MessageItem>();
-            }
-            else if (pageNumber != 1)
-            {
-                paginationToken = _outstandingAllTopicsScanContext.GetPagingToken(segmentNumber);
             }
             
             var segmentMessages = new List<MessageItem>();
@@ -781,7 +777,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
                 segmentMessages.AddRange(await scan.GetNextSetAsync(cancellationToken));
 
-                paginationToken = scan.PaginationToken;
+                paginationToken = scan.IsDone ? null : scan.PaginationToken;
             } while (paginationToken != null && segmentMessages.Count < pageSize);
 
             // If there are more results, store the context for retrieving the next page
@@ -905,7 +901,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 // Store the progress for this topic if there are further pages
                 if (!queryResult.QueryComplete)
                 {
-                    context.SetPaginationState(pageNumber + 1, 0, queryResult.PaginationToken);
+                    context.SetPaginationState(pageNumber + 1, queryResult.ShardNumber, queryResult.PaginationToken);
                 }
                 else
                 {
@@ -970,15 +966,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             int segmentNumber,
             CancellationToken cancellationToken)
         {
-            string? paginationToken = null;
+            string? paginationToken = _dispatchedAllTopicsScanContext.GetPagingToken(segmentNumber);
             if (pageNumber != 1 && paginationToken == null)
             {
                 // It may be that this segment is done but other segments have more results
                 return new List<MessageItem>();
-            }
-            else if (pageNumber != 1)
-            {
-                paginationToken = _dispatchedAllTopicsScanContext.GetPagingToken(segmentNumber);
             }
 
             var segmentMessages = new List<MessageItem>();
@@ -1008,7 +1000,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
                 segmentMessages.AddRange(await scan.GetNextSetAsync(cancellationToken));
 
-                paginationToken = scan.PaginationToken;
+                paginationToken = scan.IsDone ? null : scan.PaginationToken;
             } while (paginationToken != null && segmentMessages.Count < pageSize);
 
             // If there are more results, store the context for retrieving the next page
