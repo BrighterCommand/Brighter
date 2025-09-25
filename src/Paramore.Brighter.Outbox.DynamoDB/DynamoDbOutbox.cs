@@ -715,10 +715,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
                 // Spin off requests to scan each segment
                 var tasks = new List<Task<List<MessageItem>>>();
-                var segmentPageSize = pageSize / _configuration.ScanConcurrency;
+                var segmentPageSizes = GetSegmentPageSizes(pageSize);
                 for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
                 {
-                    tasks.Add(ScanOutstandingIndexSegmentForMessages(olderThan, segmentPageSize, pageNumber, segmentNumber, cancellationToken));
+                    tasks.Add(ScanOutstandingIndexSegmentForMessages(olderThan, segmentPageSizes[segmentNumber], pageNumber, segmentNumber, cancellationToken));
                 }
 
                 await Task.WhenAll(tasks);
@@ -735,6 +735,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 _outstandingAllTopicsScanContext.Release();
             }
+        }
+
+        private int[] GetSegmentPageSizes(int pageSize)
+        {
+            if (pageSize % _configuration.ScanConcurrency == 0)
+            {
+                return Enumerable.Repeat(pageSize / _configuration.ScanConcurrency, _configuration.ScanConcurrency).ToArray();
+            }
+
+            var remainder = pageSize % _configuration.ScanConcurrency;
+            var segmentPageSizes = Enumerable.Repeat((pageSize / _configuration.ScanConcurrency) + 1, remainder).ToList();
+            segmentPageSizes.AddRange(Enumerable.Repeat(pageSize / _configuration.ScanConcurrency, _configuration.ScanConcurrency - remainder));
+            return segmentPageSizes.ToArray();
         }
 
         private async Task<List<MessageItem>> ScanOutstandingIndexSegmentForMessages(DateTimeOffset olderThan, 
@@ -938,10 +951,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
                 // Spin off requests to scan each segment
                 var tasks = new List<Task<List<MessageItem>>>();
-                var segmentPageSize = pageSize / _configuration.ScanConcurrency;
+                var segmentPageSizes = GetSegmentPageSizes(pageSize);
                 for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
                 {
-                    tasks.Add(ScanDispatchedIndexSegment(dispatchedBefore, segmentPageSize, pageNumber, segmentNumber, cancellationToken));
+                    tasks.Add(ScanDispatchedIndexSegment(dispatchedBefore, segmentPageSizes[segmentNumber], pageNumber, segmentNumber, cancellationToken));
                 }
 
                 await Task.WhenAll(tasks);
