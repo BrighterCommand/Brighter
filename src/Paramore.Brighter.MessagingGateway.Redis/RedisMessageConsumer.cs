@@ -428,6 +428,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 Log.TimeoutWithoutReceivingMessage(s_logger, _queueName, Topic);
             }
+            catch (RedisException re) when (re.InnerException is OperationCanceledException)
+            {
+                Log.TimeoutWithoutReceivingMessage(s_logger, _queueName, Topic);
+            }
             
             return (latestId, msg);
         }

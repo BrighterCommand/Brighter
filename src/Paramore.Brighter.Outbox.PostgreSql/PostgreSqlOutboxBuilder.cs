@@ -52,7 +52,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 Subject character varying (255) NULL,
                 TraceParent character varying (255) NULL,
                 TraceState character varying (255) NULL,
-                Baggage text NULL
+                Baggage text NULL,
+                DataRef character varying (255) NULL,
+                SpecVersion character varying (255) NULL
             );
         ";
         
@@ -79,7 +81,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 Subject character varying (255) NULL,
                 TraceParent character varying (255) NULL,
                 TraceState character varying (255) NULL,
-                Baggage text NULL
+                Baggage text NULL,
+                DataRef character varying (255) NULL,
+                SpecVersion character varying (255) NULL
             );
         ";
         

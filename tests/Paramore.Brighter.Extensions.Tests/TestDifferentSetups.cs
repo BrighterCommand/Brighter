@@ -106,10 +106,10 @@ namespace Tests
         {
             var serviceCollection = new ServiceCollection();
             
-            serviceCollection.AddBrighter(options => options.CommandProcessorLifetime = ServiceLifetime.Scoped
+            serviceCollection.AddBrighter(
                 ).AutoFromAssemblies();
 
-            Assert.Equal( ServiceLifetime.Scoped, serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime);
+            Assert.Equal( ServiceLifetime.Singleton, serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime);
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 

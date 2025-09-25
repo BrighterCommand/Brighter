@@ -55,6 +55,8 @@ namespace Paramore.Brighter.Outbox.MsSql
               [TraceParent] NVARCHAR(255) NULL,
               [TraceState] NVARCHAR(255) NULL,
               [Baggage] NVARCHAR(MAX) NULL,
+              [DataRef] NVARCHAR(255) NULL,
+              [SpecVersion] NVARCHAR(255) NULL
               PRIMARY KEY ( [Id] )
             );
         ";
@@ -83,6 +85,8 @@ namespace Paramore.Brighter.Outbox.MsSql
               [TraceParent] NVARCHAR(255) NULL,
               [TraceState] NVARCHAR(255) NULL,
               [Baggage] NVARCHAR(MAX) NULL,
+              [DataRef] NVARCHAR(255) NULL,
+              [SpecVersion] NVARCHAR(255) NULL
               PRIMARY KEY ( [Id] )
             );
         ";

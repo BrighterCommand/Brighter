@@ -22,7 +22,7 @@ namespace Tests
         {
             _services = new ServiceCollection();
 
-            _services.AddConsumers(options => { options.CommandProcessorLifetime = ServiceLifetime.Scoped; })
+            _services.AddConsumers()
                 .AutoFromAssemblies();
 
             _provider = _services.BuildServiceProvider();
@@ -31,7 +31,7 @@ namespace Tests
         [Fact]
         public void ShouldHaveCommandProcessorRegisteredCorrectly()
         {
-            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Scoped);
+            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Singleton);
         }
 
         [Fact]
