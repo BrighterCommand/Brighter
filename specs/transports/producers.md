@@ -4,13 +4,13 @@ A producer sends a message via middleware. It may be a [point-to-point](https://
 
 ## Implementation
 
-You MUST implement the `IAmAMessageProducer` interface and its derived sync interface `IAmAMessageProducerSync` and its derived async interface `IAmAMessageProducerAsync`. You SHOULD name the publisher `[XXXXX]MessageProducer` where `[XXXX]` is the name of the middleware or an abbreviation for it. For example we name the RabbitMQ publisher `RMQMessageProducer` and the Kafka publisher `KafkaMessageProducer`.
+You MUST implement the `IAmAMessageProducer` interface and its derived sync interface `IAmAMessageProducerSync` and its derived async interface `IAmAMessageProducerAsync`. You SHOULD name the publisher `[XXXXX]MessageProducer` where `[XXXX]` is the name of the middleware or an abbreviation for it. For example we name the RabbitMQ publisher `RMQMessageProducer` and we name the Kafka publisher `KafkaMessageProducer`.
 
 - `IAmAMessageProducer` has the following properties and methods:
   - `Publication` a property to store the publication (see [Publication](./publication.md)).
   - `Span` a property that enables us to set the `Activity` on an `IAmAMessageProducer`to participate in Open Telemetry.
   - `Scheduler` the scheduler that we will use for delayed publication.
-- `IAmAMessageProducerSync` and `IAmAMessageProducerAsync` derive from `IAmAMessageProducer` and are used to send messages to middleware.
+- `IAmAMessageProducerSync` and `IAmAMessageProducerAsync` derive from `IAmAMessageProducer` and are used to send messages to middleware. The separated interfaces allows clients to depend on either the sync or async operations. We use the `Async` suffix for async interfaces or methods.
   - `Send` and `SendAsync` are used to send a message to middleware.
   - `SendWithDelay` and `SendWithDelayAsync` are used to send a message to middleware with a delay. Either the middleware natively supports a delayed message send, or the consumer should use the scheduler to delay sending.
 
@@ -18,7 +18,7 @@ You MUST implement the `IAmAMessageProducer` interface and its derived sync inte
 
   You SHOULD use a publisher to create the message to be sent over middleware. You SHOULD name the publisher `[XXXXX]MessagePublisher` where `[XXXX]` is the name of the middleware or an abbreviation for it. For example we name the RabbitMQ publisher `RMQMessagePublisher` and the Kafka publisher `KafkaMessagePublisher`.
   
-  The publisher has a `PublishMessage` or `PublishMessageAsync` as follows (pseudocode):
+  The publisher has a `PublishMessage` or `PublishMessageAsync` method, which is implemented as follows:
 
   ```pseudo
 
@@ -53,3 +53,4 @@ endif
 
 ```
 
+When the message has been sent, e need to mark it as dispatched in the Outbox. Some middleware will asynchronously confirm delivery of the message via a callback. For example, RabbitMQ has [Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and Kafka. Other middleware, for example SQS, returns a value indicating whether we successfully published. In the latter case, the `OutboxProducerMediator` handles marking the message as dispatched in the `Outbox` and you MUST NOT handle this in the producer. In the former case, you should hook up the callback to 
