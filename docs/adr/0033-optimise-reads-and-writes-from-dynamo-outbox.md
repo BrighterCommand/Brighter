@@ -106,3 +106,10 @@ If the partition key isn't specified for a message, then fall back to random sha
 * When performing the `OutstandingMessages` or `DispatchedMessages` operations for all topics, we will only be able to guarantee the order of the returned messages if the number of outstanding messages is less than the page size for the operation.
 * Shards will be assigned to messages deterministically based on their partition key
 * The possibility of future improvements to other outbox implementations, to take advantage of the new bulk operation methods
+* Users of the Dynamo DB outbox implementation in Brighter v9 will need to update their table as part of their migration to v10:
+    * Add a new GSI called `OutstandingAllTopics`, that uses `OutstandingCreatedTime` as its HASH key and `MessageId` as its RANGE key
+    * Add a new GSI called `DeliveredAllTopics`, that uses `DeliveryTime` as its HASH key and `MessageId` as its RANGE key
+    * Change the HASH key used by the `Delivered` index. This can be achieved by:
+        * Adding a _new_ GSI, which for the sake of example we'll call `DeliveredV10`, which uses `TopicShard` as its HASH key and `DeliveryTime` as its RANGE key
+        * When performing the Brighter v10 upgrade, customise the `DynamoDbConfiguration` during configuration to set `DeliveredIndexName` to `DeliveredV10`
+        * Once the v10 upgrade is complete, the old `Delivered` index can be removed if desired
