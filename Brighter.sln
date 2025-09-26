@@ -147,7 +147,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI_Dynamo", "WebAPI_Dyn
 		samples\WebAPI\WebAPI_Dynamo\tests.http = samples\WebAPI\WebAPI_Dynamo\tests.http
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Tranformers.AWS", "src\Paramore.Brighter.Tranformers.AWS\Paramore.Brighter.Tranformers.AWS.csproj", "{D8D94678-0480-4D2B-AA7D-C65BAE59B288}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Transformers.AWS", "src\Paramore.Brighter.Transformers.AWS\Paramore.Brighter.Transformers.AWS.csproj", "{D8D94678-0480-4D2B-AA7D-C65BAE59B288}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Transforms", "Transforms", "{D8176160-F1B4-49E0-927F-04E997A55292}"
 EndProject
@@ -320,7 +320,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageSc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Quartz.Tests", "tests\Paramore.Brighter.Quartz.Tests\Paramore.Brighter.Quartz.Tests.csproj", "{4469AEE3-B460-4948-A0A5-B9480EE70EA4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageScheduler.Aws", "src\Paramore.Brighter.MessageScheduler.Aws\Paramore.Brighter.MessageScheduler.Aws.csproj", "{28C2529C-EF15-4C86-A2CC-9EE326423A77}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageScheduler.AWS", "src\Paramore.Brighter.MessageScheduler.AWS\Paramore.Brighter.MessageScheduler.AWS.csproj", "{28C2529C-EF15-4C86-A2CC-9EE326423A77}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scheduler", "Scheduler", "{8E414D7F-8DF0-4608-B47C-19213DB7E2B0}"
 EndProject
@@ -398,7 +398,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Messaging
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.AWS.V4.Tests", "tests\Paramore.Brighter.AWS.V4.Tests\Paramore.Brighter.AWS.V4.Tests.csproj", "{12B65F6F-8FD2-4507-9DA0-5A84CE02AAD7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Tranformers.AWS.V4", "src\Paramore.Brighter.Tranformers.AWS.V4\Paramore.Brighter.Tranformers.AWS.V4.csproj", "{AAE8061D-31A2-461A-BACA-DCA9451D4E7E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Transformers.AWS.V4", "src\Paramore.Brighter.Transformers.AWS.V4\Paramore.Brighter.Transformers.AWS.V4.csproj", "{AAE8061D-31A2-461A-BACA-DCA9451D4E7E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageScheduler.AWS.V4", "src\Paramore.Brighter.MessageScheduler.AWS.V4\Paramore.Brighter.MessageScheduler.AWS.V4.csproj", "{BB9D4401-44A7-49B0-AC17-A0ACE2E70592}"
 EndProject
@@ -2534,6 +2534,16 @@ Global
 		{24360989-A956-45E9-BF07-7FD9E7553C7D}.Release|x86.Build.0 = Release|Any CPU
 		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Debug|x86.Build.0 = Debug|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|x86.ActiveCfg = Release|Any CPU
+		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|x86.Build.0 = Release|Any CPU
 		{9063F17B-5636-4AD5-999B-C894517DB5FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9063F17B-5636-4AD5-999B-C894517DB5FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9063F17B-5636-4AD5-999B-C894517DB5FD}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU

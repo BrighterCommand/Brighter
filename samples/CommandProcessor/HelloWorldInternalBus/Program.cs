@@ -31,7 +31,6 @@ var host = Host.CreateDefaultBuilder()
             options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
-            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.InboxConfiguration = new InboxConfiguration(new InMemoryInbox(TimeProvider.System));
         })
         .AddProducers((config) =>

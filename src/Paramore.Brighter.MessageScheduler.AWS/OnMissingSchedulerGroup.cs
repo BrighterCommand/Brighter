@@ -1,4 +1,4 @@
-﻿namespace Paramore.Brighter.MessageScheduler.Aws;
+﻿namespace Paramore.Brighter.MessageScheduler.AWS;
 
 /// <summary>
 /// Action to be performed about scheduler group

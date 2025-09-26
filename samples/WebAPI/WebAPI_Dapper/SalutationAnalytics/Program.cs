@@ -111,7 +111,6 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport);
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
-            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
                 InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),
@@ -145,12 +144,7 @@ static void ConfigureObservability(IServiceCollection services)
         loggingBuilder.AddOpenTelemetry(options =>
         {
             options.IncludeScopes = true;
-            options.AddOtlpExporter((exporterOptions, processorOptions) =>
-                {
-                    exporterOptions.Protocol = OtlpExportProtocol.Grpc;
-                })
-                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Salutation Analytics"))
-                .IncludeScopes = true;
+            options.AddConsoleExporter();
         });
     });
 

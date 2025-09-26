@@ -28,7 +28,7 @@ using System;
 using Amazon;
 using Amazon.Runtime;
 
-namespace Paramore.Brighter.Tranformers.AWS;
+namespace Paramore.Brighter.Transformers.AWS;
 
 /// <summary>
 /// Used to create an AWS Client

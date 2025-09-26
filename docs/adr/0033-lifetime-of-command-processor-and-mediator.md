@@ -55,6 +55,7 @@ Given we want to control the scope of V10, we need to remove errors caused by th
 
 Because we remove the static `IAmABoxTransactionProvider`, we can also safely still remove the `Func<IAmACommandProcessorProvider>` from the `Dispatcher`. A singletone instance of `CommandProcessor' does not cause an issue as the dependency on the scoped transaction provider is only in the `IHandleRequests` type. This simplifies the design and makes it easier to understand. 
 These changes allow us to revert to a model where the `CommandProcessor` can be a Singleton, because it no longer holds a reference to a scoped `IAmABoxTransactionProvider`. All of the other dependencies of `CommandProcessor` are either a factory or can have a singleton lifetime.
+Because we have moved CommandProcessor to be a singleton we can also removed the `CommandProcessorLifetime` from `BrighterOptions`, as it is no longer needed, and in fact would cause confusion if it was set to something other than singleton.
 
 
 ## Consequences

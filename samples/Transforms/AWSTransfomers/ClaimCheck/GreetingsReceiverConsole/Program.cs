@@ -27,7 +27,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
-using Amazon.S3;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -36,7 +35,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-using Paramore.Brighter.Tranformers.AWS;
+using Paramore.Brighter.Transformers.AWS.V4;
 using Paramore.Brighter.Transforms.Storage;
 using Serilog;
 

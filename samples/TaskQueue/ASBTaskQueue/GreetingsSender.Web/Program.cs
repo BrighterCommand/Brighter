@@ -55,7 +55,6 @@ builder.Services
     .AddBrighter(opt =>
     {
         opt.PolicyRegistry = new DefaultPolicy();
-        opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
     .MapperRegistry(r =>
     {

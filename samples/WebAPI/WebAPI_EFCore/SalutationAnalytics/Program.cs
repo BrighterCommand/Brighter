@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Logs;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -18,10 +19,10 @@ using SalutationApp.Requests;
 using TransportMaker;
 
 var host = CreateHostBuilder(args).Build();
-host.CheckDbIsUp(ApplicationType.Greetings);
+host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
 host.CreateInbox("Salutations");
-host.CreateOutbox(ApplicationType.Greetings,  "Salutations", HasBinaryMessagePayload());
+host.CreateOutbox(ApplicationType.Salutations,  "Salutations", HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -54,8 +55,10 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
         })
         .ConfigureServices((hostContext, services) =>
         {
+            SalutationsDbFactory.ConfigureMigration(hostContext, services);
             ConfigureEFCore(hostContext, services);
             ConfigureBrighter(hostContext, services);
+            ConfigureObservability(services);
         })
         .UseConsoleLifetime();
 
@@ -86,7 +89,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
     Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
-    (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+    (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider)  makeOutbox =
         OutboxFactory.MakeEfOutbox<SalutationsEntityGateway>(rdbms, outboxConfiguration);
 
     IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
@@ -116,7 +119,6 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
-            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
                 InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),
@@ -203,5 +205,18 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
     ).Create();
 
     return producerRegistry;
+}
+
+static void ConfigureObservability(IServiceCollection services)
+{
+    services.AddLogging(loggingBuilder =>
+    {
+        loggingBuilder.AddConsole();
+        loggingBuilder.AddOpenTelemetry(options =>
+        {
+            options.IncludeScopes = true;
+            options.AddConsoleExporter();
+        });
+    });
 }
 

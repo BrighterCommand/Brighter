@@ -2,7 +2,7 @@
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
-using Paramore.Brighter.Tranformers.AWS.V4;
+using Paramore.Brighter.Transformers.AWS.V4;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Helpers;
 

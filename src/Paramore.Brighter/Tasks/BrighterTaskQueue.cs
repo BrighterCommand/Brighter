@@ -57,17 +57,21 @@ internal sealed class BrighterTaskQueue : IDisposable
     {
         try
         {
+#if DEBUG_CONTEXT
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterTaskQueue; Adding task: {item.Id} to queue");
             Debug.IndentLevel = 0;
+#endif
             
             return _queue.TryAdd(Tuple.Create(item, propagateExceptions));
         }
         catch (InvalidOperationException)
         {
+#if DEBUG_CONTEXT
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterTaskQueue; TaskQueue is already marked as complete for adding. Failed to add task: {item.Id}");
             Debug.IndentLevel = 0;
+#endif
             
             return false;
         }
@@ -78,9 +82,11 @@ internal sealed class BrighterTaskQueue : IDisposable
     /// </summary>
     public void CompleteAdding()
     {
+#if DEBUG_CONTEXT
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterTaskQueue; Complete adding to queue");
         Debug.IndentLevel = 0;
+#endif
         
         _queue.CompleteAdding();
     }
