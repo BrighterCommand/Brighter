@@ -83,7 +83,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             Dictionary<string, object> headers = AddCloudEventHeaders(message);
 
-            AddUserDefinedHeaders(message, delay, headers, deliveryTag);
+            AddUserDefinedHeaders(message, headers);
 
             AddDeliveryHeaders(delay, headers, deliveryTag);
 
