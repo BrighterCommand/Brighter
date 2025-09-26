@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// the package Paramore.Brighter.MessagingGateway.RMQ.Async.
     /// </remarks>
     /// </summary>
-    public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync
+    public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
@@ -139,6 +140,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             _maxQueueLength = maxQueueLength;
         }
 
+        /// <inheritdoc />
+        public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            Acknowledge(message);
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
@@ -158,6 +166,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 Log.ErrorAcknowledgingMessage(s_logger, exception, message.Id, deliveryTag);
                 throw;
             }
+        }
+        
+        /// <inheritdoc />
+        public Task PurgeAsync(CancellationToken cancellationToken = default)
+        {
+            Purge();
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -186,6 +201,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 throw;
             }
         }
+        
+        /// <inheritdoc />
+        public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Requeue(message));
 
         /// <summary>
         /// Requeues the specified message.
@@ -229,6 +248,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 return false;
             }
         }
+        
+        /// <inheritdoc />
+        public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
+            => Task.FromResult(Reject(message));
 
         /// <summary>
         /// Rejects the specified message.
@@ -250,6 +273,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 throw;
             }
         }
+        
+        /// <inheritdoc />
+        public Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default) 
+            => Task.FromResult(Receive(timeOut));
 
         /// <summary>
         /// Receives the specified queue name.
@@ -491,6 +518,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             CancelConsumer();
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+        
+        /// <inheritdoc />
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return new ValueTask();
         }
 
         ~RmqMessageConsumer()
