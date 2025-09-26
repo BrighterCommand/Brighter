@@ -59,14 +59,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             Log.ResettingManagementClientWrapper(s_logger);
             Initialise();
         }
-         
+
         /// <summary>
         /// Create a Queue
-        /// Sync over async but alright in the context of creating a queue
         /// </summary>
         /// <param name="queueName">The name of the Queue</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
-        public async Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null)
+        /// <param name="maxMessageSizeInKilobytes">Ma message size in kilobytes : Only available in premium</param>
+        public async Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null, long? maxMessageSizeInKilobytes = default)
         {
             Log.CreatingTopic(s_logger, queueName);
 
@@ -74,7 +74,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             {
                 await _administrationClient.CreateQueueAsync(new CreateQueueOptions(queueName)
                 {
-                    AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
+                    AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue,
+                    MaxMessageSizeInKilobytes = maxMessageSizeInKilobytes
                 });
             }
             catch (Exception e)
@@ -128,14 +129,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             Log.SubscriptionForTopicCreated(s_logger, subscriptionName, topicName);
         }
 
-        
+
         /// <summary>
         /// Create a Topic
         /// Sync over async but runs in the context of creating a topic
         /// </summary>
         /// <param name="topicName">The name of the Topic</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
-        public async Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null)
+        /// <param name="maxMessageSizeInKilobytes">Ma message size in kilobytes : Only available in premium</param>
+        public async Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null, long? maxMessageSizeInKilobytes = default)
         {
             Log.CreatingTopic(s_logger, topicName);
 
@@ -143,7 +145,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             {
                 await _administrationClient.CreateTopicAsync(new CreateTopicOptions(topicName)
                 {
-                    AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
+                    AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue,
+                    MaxMessageSizeInKilobytes = maxMessageSizeInKilobytes
                 });
             }
             catch (Exception e)

@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Policies.Handlers
     public class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private bool _initialized = false;
-        private List<Policy> _policies = new List<Policy>();
+        private readonly List<Policy> _policies = new();
 
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry"/> from the <see cref="IRequestContext"/> and query it for the

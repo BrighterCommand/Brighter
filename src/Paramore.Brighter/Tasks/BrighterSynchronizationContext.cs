@@ -99,13 +99,15 @@ namespace Paramore.Brighter.Tasks
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(BrighterSynchronizationContext));
-            
+
+#if DEBUG_CONTEXT
             Debug.WriteLine(string.Empty);
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterSynchronizationContext: OperationCompleted on thread {Thread.CurrentThread.ManagedThreadId}");
             Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
             Debug.IndentLevel = 0;
-
+            
+#endif
             AsyncContext.OperationCompleted();
         }
 
@@ -116,12 +118,14 @@ namespace Paramore.Brighter.Tasks
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(BrighterSynchronizationContext));
-            
+
+#if DEBUG_CONTEXT
             Debug.WriteLine(string.Empty);
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterSynchronizationContext: OperationStarted on thread {Thread.CurrentThread.ManagedThreadId}");
             Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
             Debug.IndentLevel = 0;
+#endif
 
             AsyncContext.OperationStarted();
         }
@@ -137,12 +141,14 @@ namespace Paramore.Brighter.Tasks
                 throw new ObjectDisposedException(nameof(BrighterSynchronizationContext));
             
             if (callback == null) throw new ArgumentNullException(nameof(callback));
-            
+
+#if DEBUG_CONTEXT
             Debug.WriteLine(string.Empty);
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterSynchronizationContext: Post {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
             Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
             Debug.IndentLevel = 0;
+#endif
             
             AsyncContext.Enqueue(AsyncContext.Factory.Run(() => callback(state)), true);
         }
@@ -156,12 +162,14 @@ namespace Paramore.Brighter.Tasks
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(BrighterSynchronizationContext));
-            
+
+#if DEBUG_CONTEXT
             Debug.WriteLine(string.Empty);
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterSynchronizationContext: Send {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
             Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
             Debug.IndentLevel = 0;
+#endif
             
             // current thread already owns the context, so just execute inline to prevent deadlocks
             if (BrighterAsyncContext.Current == AsyncContext)

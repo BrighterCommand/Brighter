@@ -74,7 +74,6 @@ builder.Services.AddConsumers(options =>
     {
         options.Subscriptions = subscriptions;
         options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-        options.UseScoped = true;
         
     })
     .AutoFromAssemblies();

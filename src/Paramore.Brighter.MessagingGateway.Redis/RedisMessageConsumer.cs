@@ -156,7 +156,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Get the next message off the Redis list, within a timeout
         /// </summary>
-        /// <param name="timeOut">The period to await a message. Defaults to 300ms.</param>
+        /// <param name="timeOut">The period to await a message. Defaults to 1s.</param>
         /// <returns>The message read from the list</returns>
         public Message[] Receive(TimeSpan? timeOut = null)
         {
@@ -168,12 +168,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 throw new ChannelFailureException($"Unacked message still in flight with id: {_inflight.Keys.First()}");   
             }
             
-            Message message;
-            IRedisClient? client = null;
-            timeOut ??= TimeSpan.FromMilliseconds(300);
+            if (timeOut == null || timeOut.GetValueOrDefault().TotalSeconds < 1)
+            {
+                timeOut = TimeSpan.FromSeconds(1);
+            }
+            
             try
             {
-                client = GetClient();
+                var client = GetClient();
                 if (client == null)
                     throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
                 
@@ -182,11 +184,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (redisMessage.msgId == null || string.IsNullOrEmpty(redisMessage.rawMsg))
                     return [];
                 
-                message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
+                var message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
                     _inflight.Add(message.Id, redisMessage.msgId);
                 }
+                
+                return [message];
             }
             catch (TimeoutException te)
             {
@@ -198,17 +202,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 Log.CouldNotConnectToRedis(s_logger, re.Message);
                 throw new ChannelFailureException("Could not connect to Redis client - see inner exception for details", re);
             }
-            finally
-            {
-                client?.Dispose();
-            }
-            return [message];
         }
 
         /// <summary>
         /// Get the next message off the Redis list, within a timeout
         /// </summary>
-        /// <param name="timeOut">The period to await a message. Defaults to 300ms.</param>
+        /// <param name="timeOut">The period to await a message. Defaults to 1s.</param>
         /// <param name="cancellationToken">Cancel the receive operation</param>
         /// <returns>The message read from the list</returns>
         public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
@@ -220,9 +219,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 Log.UnackedMessageInFlight(s_logger, _queueName);
                 throw new ChannelFailureException($"Unacked message still in flight with id: {_inflight.Keys.First()}");   
             }
-            
-            Message message;
-            timeOut ??= TimeSpan.FromMilliseconds(300);
+
+            timeOut ??= TimeSpan.FromSeconds(1);
             try
             {
                 await using IRedisClientAsync? client = await GetClientAsync(cancellationToken);
@@ -234,12 +232,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (redisMessage.msgId == null || string.IsNullOrEmpty(redisMessage.rawMsg))
                     return [];
                 
-                message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
+                var message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
                 
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
                     _inflight.Add(message.Id, redisMessage.msgId);
                 }
+                
+                return [message];
             }
             catch (TimeoutException te)
             {
@@ -251,9 +251,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 Log.CouldNotConnectToRedis(s_logger, re.Message);
                 throw new ChannelFailureException("Could not connect to Redis client - see inner exception for details", re);
             }
-            return [message];
         }
-
 
         /// <summary>
         /// This a 'do nothing operation' as we have already popped
@@ -414,17 +412,27 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private async Task<(string? msgId, string rawMsg)> ReadMessageAsync(IRedisClientAsync client, TimeSpan timeOut)
         {
             var msg = string.Empty;
-            var latestId = await client.BlockingRemoveStartFromListAsync(_queueName, timeOut);
-            if (latestId != null)
+            string? latestId = null;
+            try
             {
-                var key = Topic + "." + latestId;
-                msg = await client.GetValueAsync(key);
-                Log.ReceivedMessageFromQueue(s_logger, _queueName, Topic, JsonSerializer.Serialize(msg, JsonSerialisationOptions.Options));
+                using var cts = new CancellationTokenSource(timeOut);
+                latestId = await client.BlockingRemoveStartFromListAsync(_queueName, timeOut, cts.Token);
+                if (latestId != null)
+                {
+                    var key = Topic + "." + latestId;
+                    msg = await client.GetValueAsync(key);
+                    Log.ReceivedMessageFromQueue(s_logger, _queueName, Topic, JsonSerializer.Serialize(msg, JsonSerialisationOptions.Options));
+                }
             }
-            else
+            catch (OperationCanceledException)
             {
                 Log.TimeoutWithoutReceivingMessage(s_logger, _queueName, Topic);
             }
+            catch (RedisException re) when (re.InnerException is OperationCanceledException)
+            {
+                Log.TimeoutWithoutReceivingMessage(s_logger, _queueName, Topic);
+            }
+            
             return (latestId, msg);
         }
 

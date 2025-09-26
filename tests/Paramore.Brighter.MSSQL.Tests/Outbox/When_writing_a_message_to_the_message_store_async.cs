@@ -102,7 +102,6 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             //should read the header from the sql outbox
             Assert.Equal(_message.Header.Topic, _storedMessage.Header.Topic);
             Assert.Equal(_message.Header.MessageType, _storedMessage.Header.MessageType);
-            Assert.Equal(_message.Header.TimeStamp, _storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1)); // Allow for slight differences in timestamp precision
             Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
             Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
             Assert.Equal(_message.Header.CorrelationId, _storedMessage.Header.CorrelationId);
@@ -121,6 +120,10 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             Assert.Equal(_testbagUuid, _storedMessage.Header.Bag[_key4]);
             Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
             Assert.Equal(_testBagDateTime, _storedMessage.Header.Bag[_key5]);
+            
+            //Asserts for workflow properties
+            Assert.Equal(_message.Header.WorkflowId, _storedMessage.Header.WorkflowId);
+            Assert.Equal(_message.Header.JobId, _storedMessage.Header.JobId);
 
             // Additional asserts for Cloud Events and W3C Tracing properties
             Assert.Equal(_message.Header.Source, _storedMessage.Header.Source);

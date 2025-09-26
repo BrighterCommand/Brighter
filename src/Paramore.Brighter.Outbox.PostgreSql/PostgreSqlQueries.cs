@@ -10,14 +10,14 @@
         public string AddCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
-            ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\") " +
+            ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\") " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body" +
-            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage)";
+            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId)";
 
         public string BulkAddCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
-            ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\") " +
+            ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\") " +
             "VALUES {1}";
         public string MarkDispatchedCommand { get; } = "UPDATE {0} SET \"dispatched\" = @DispatchedAt WHERE \"messageid\" = @MessageId";
         public string MarkMultipleDispatchedCommand { get; } = "UPDATE {0} SET \"dispatched\" = @DispatchedAt WHERE \"messageid\" IN ( {1} )";

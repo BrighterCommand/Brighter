@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
@@ -17,7 +19,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         private readonly IAmAChannelSync _topicChannel;
         private readonly IAmAChannelSync _queueChannel;
         private readonly IAmAProducerRegistry _producerRegistry;
-        private readonly ASBTestCommand _command;
+        private ASBTestCommand _command;
         private readonly string _correlationId;
         private readonly ContentType _contentType;
         private readonly string _topicName;
@@ -95,6 +97,47 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 ? new RoutingKey(_queueName) : new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
 
             await producer.SendAsync(commandMessage);
+
+            var channel = testQueues ? _queueChannel : _topicChannel;
+
+            var message = channel.Receive(TimeSpan.FromMilliseconds(5000));
+
+            //clear the queue
+            channel.Acknowledge(message);
+
+            Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+            Assert.Equal(_command.Id, message.Id);
+            Assert.False(message.Redelivered);
+            Assert.Equal(_command.Id, message.Header.MessageId);
+            Assert.Contains(testQueues ? _queueName : _topicName, message.Header.Topic.Value);
+            Assert.Equal(_correlationId, message.Header.CorrelationId);
+            Assert.Equal(_contentType, message.Header.ContentType);
+            Assert.Equal(0, message.Header.HandledCount);
+            //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
+            Assert.True(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
+            Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
+            //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
+            Assert.Equal(commandMessage.Body.Value, message.Body.Value);
+            Assert.Contains(testHeader, message.Header.Bag.Keys);
+            Assert.Equal(testHeaderValue, message.Header.Bag[testHeader]);
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task When_posting_a_message_via_the_bulk_producer(bool testQueues)
+        {
+            //arrange
+            string testHeader = "TestHeader";
+            string testHeaderValue = "Blah!!!";
+            var commandMessage = GenerateMessage(testQueues ? _queueName : _topicName);
+            commandMessage.Header.Bag.Add(testHeader, testHeaderValue);
+
+            var producer = _producerRegistry.LookupBy(testQueues
+                ? new RoutingKey(_queueName) : new RoutingKey(_topicName)) as IAmABulkMessageProducerAsync;
+
+            var batches = await producer.CreateBatchesAsync([commandMessage], CancellationToken.None);
+            await producer.SendAsync(batches.Single(), CancellationToken.None);
 
             var channel = testQueues ? _queueChannel : _topicChannel;
 

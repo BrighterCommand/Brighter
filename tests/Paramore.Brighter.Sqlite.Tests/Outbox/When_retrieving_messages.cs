@@ -45,7 +45,7 @@ public class SqliteFetchMessageTests : IAsyncDisposable
         var messages = _sqlOutbox.Get(null);
 
         //Assert
-        Assert.Equal(3, messages.Count());
+        Assert.Equal(3, messages.Count);
     }
 
     [Fact]

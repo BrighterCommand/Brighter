@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             {
                 do
                 {
-                    var command = new MyCommand{Value = $"Hello World: {sentList.Count() + 1}"};
+                    var command = new MyCommand{Value = $"Hello World: {sentList.Count + 1}"};
                     _commandProcessor.Post(command);
                     sentList.Add(command.Id);
                     

@@ -40,6 +40,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [ReplyTo] TEXT NULL,
                                         [ContentType] TEXT NULL,  
                                         [PartitionKey] TEXT NULL,
+                                        [WorkflowId] TEXT NULL,
+                                        [JobId] TEXT NULL,
                                         [Dispatched] TEXT NULL,
                                         [HeaderBag] TEXT NULL,
                                         [Body] TEXT NULL,
@@ -49,7 +51,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [Subject] TEXT NULL,
                                         [TraceParent] TEXT NULL,
                                         [TraceState] TEXT NULL,
-                                        [Baggage] TEXT NULL
+                                        [Baggage] TEXT NULL,
+                                        [DataRef] TEXT NULL,
+                                        [SpecVersion] TEXT NULL
                                     );";
         
         const string BinaryOutboxDdl = @"CREATE TABLE {0} 
@@ -62,6 +66,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [ReplyTo] TEXT NULL,
                                         [ContentType] TEXT NULL,  
                                         [PartitionKey] TEXT NULL,
+                                        [WorkflowId] TEXT NULL,
+                                        [JobId] TEXT NULL,
                                         [Dispatched] TEXT NULL,
                                         [HeaderBag] TEXT NULL,
                                         [Body] BLOB NULL,
@@ -71,7 +77,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [Subject] TEXT NULL,
                                         [TraceParent] TEXT NULL,
                                         [TraceState] TEXT NULL,
-                                        [Baggage] TEXT NULL
+                                        [Baggage] TEXT NULL,
+                                        [DataRef] TEXT NULL,
+                                        [SpecVersion] TEXT NULL
                                     );";
          
 

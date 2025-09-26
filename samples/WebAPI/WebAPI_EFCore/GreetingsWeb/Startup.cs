@@ -60,6 +60,8 @@ namespace GreetingsWeb
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
             });
+            
+            GreetingsDbFactory.ConfigureMigration(_configuration, services);
 
             ConfigureEfCore(services);
             ConfigureBrighter(services);
@@ -82,7 +84,7 @@ namespace GreetingsWeb
                 binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
             );
             
-            string dbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+            string? dbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
             if (string.IsNullOrWhiteSpace(dbType))
                 throw new InvalidOperationException("DbType is not set");
 
@@ -98,7 +100,6 @@ namespace GreetingsWeb
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
                     options.HandlerLifetime = ServiceLifetime.Scoped;
-                    options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
                 })

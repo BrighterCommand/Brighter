@@ -2,8 +2,8 @@
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
-using Paramore.Brighter.MessagingGateway.AWS.V4;
-using Paramore.Brighter.Tranformers.AWS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
+using Paramore.Brighter.Transformers.AWS.V4;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Helpers;
 

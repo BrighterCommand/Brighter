@@ -1,6 +1,3 @@
 ﻿namespace Paramore.Brighter.MessagingGateway.Postgres;
 
-public static class PostgresQueries
-{
-    
-}
+public static class PostgresQueries;

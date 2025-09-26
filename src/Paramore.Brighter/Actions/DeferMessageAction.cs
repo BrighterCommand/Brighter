@@ -32,7 +32,5 @@ namespace Paramore.Brighter.Actions
     /// It's purpose is to allow messages received out of order to be delayed until
     /// missing messages have been processed
     /// </summary>
-    public class DeferMessageAction : Exception
-    {
-    }
+    public class DeferMessageAction : Exception;
 }

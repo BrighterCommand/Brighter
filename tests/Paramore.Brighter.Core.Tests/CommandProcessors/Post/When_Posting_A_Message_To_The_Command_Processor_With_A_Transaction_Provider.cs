@@ -25,9 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -56,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication  {Topic = routingKey, RequestType = typeof(MyCommand)});
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Application.Json) {CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}), 
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -93,14 +95,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new ResiliencePipelineRegistry<string>(),
                 bus,
                 scheduler,
-                _transactionProvider
+                typeof(SpyTransaction)
             );
         }
 
         [Fact]
         public void When_Posting_A_Message_To_The_Command_Processor_With_A_Transaction_Provider_Configured()
         {
-            _commandProcessor.Post(_myCommand);
+            var requestContext = new RequestContext();
+            _commandProcessor.Post(_myCommand, requestContext);
 
             //message should not be in the current transaction
             var transaction = _transactionProvider.GetTransaction();
@@ -110,7 +113,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
             
             //message should be in the outbox
-            var message = _spyOutbox.Get(_myCommand.Id, new RequestContext());
+            var message = _spyOutbox.Get(_myCommand.Id, requestContext);
             Assert.NotNull(message);
             Assert.Equal(_message, message);
         }

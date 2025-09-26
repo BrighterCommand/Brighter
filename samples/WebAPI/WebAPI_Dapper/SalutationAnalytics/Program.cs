@@ -30,8 +30,8 @@ var host = builder.Build();
 
 host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
-host.CreateInbox();
-host.CreateOutbox(ApplicationType.Salutations, ConfigureTransport.HasBinaryMessagePayload());
+host.CreateInbox("Salutations");
+host.CreateOutbox(ApplicationType.Salutations, "Salutations", ConfigureTransport.HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -109,10 +109,8 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport);
-            options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
-            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
                 InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),
@@ -146,12 +144,7 @@ static void ConfigureObservability(IServiceCollection services)
         loggingBuilder.AddOpenTelemetry(options =>
         {
             options.IncludeScopes = true;
-            options.AddOtlpExporter((exporterOptions, processorOptions) =>
-                {
-                    exporterOptions.Protocol = OtlpExportProtocol.Grpc;
-                })
-                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Salutation Analytics"))
-                .IncludeScopes = true;
+            options.AddConsoleExporter();
         });
     });
 
@@ -177,6 +170,7 @@ static void ConfigureObservability(IServiceCollection services)
         }) 
         .WithMetrics(builder => builder
             .AddAspNetCoreInstrumentation()
+            .AddBrighterInstrumentation()
             .AddConsoleExporter()
             .AddOtlpExporter()
         );
@@ -216,25 +210,25 @@ static void ConfigureDapperByHost(Rdbms databaseType, IServiceCollection service
 static void ConfigureDapperSqlite(IServiceCollection services)
 {
     services.AddScoped<IAmARelationalDbConnectionProvider, SqliteConnectionProvider>();
-    services.AddScoped<IAmATransactionConnectionProvider, SqliteUnitOfWork>();
+    services.AddScoped<IAmATransactionConnectionProvider, SqliteTransactionProvider>();
 }
 
 static void ConfigureDapperMySql(IServiceCollection services)
 {
     services.AddScoped<IAmARelationalDbConnectionProvider, MySqlConnectionProvider>();
-    services.AddScoped<IAmATransactionConnectionProvider, MySqlUnitOfWork>();
+    services.AddScoped<IAmATransactionConnectionProvider, MySqlTransactionProvider>();
 }
 
 static void ConfigureDapperMsSql(IServiceCollection services)
 {
     services.AddScoped<IAmARelationalDbConnectionProvider, MsSqlConnectionProvider>();
-    services.AddScoped<IAmATransactionConnectionProvider, MsSqlUnitOfWork>();
+    services.AddScoped<IAmATransactionConnectionProvider, MsSqlTransactionProvider>();
 }
 
 static void ConfigureDapperPostgreSql(IServiceCollection services)
 {
     services.AddScoped<IAmARelationalDbConnectionProvider, PostgreSqlConnectionProvider>();
-    services.AddScoped<IAmATransactionConnectionProvider, PostgreSqlUnitOfWork>();
+    services.AddScoped<IAmATransactionConnectionProvider, PostgreSqlTransactionProvider>();
 }
 
 static string? GetEnvironment()

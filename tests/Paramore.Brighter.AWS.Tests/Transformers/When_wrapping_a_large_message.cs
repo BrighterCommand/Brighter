@@ -8,7 +8,7 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Tranformers.AWS;
+using Paramore.Brighter.Transformers.AWS;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 

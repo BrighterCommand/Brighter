@@ -30,7 +30,7 @@ using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
-using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
@@ -55,10 +55,10 @@ namespace GreetingsReceiverConsole
                     var subscriptions = new Subscription[]
                     {
                         new SqsSubscription<GreetingEvent>(
-                            new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            subscriptionName:new SubscriptionName("paramore.example.greeting"),
+                            channelName:new ChannelName(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                             channelType: ChannelType.PubSub,
-                            routingKey: new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            routingKey: new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                             queueAttributes: queueAttributes,
                             bufferSize: 10,
                             timeOut: TimeSpan.FromMilliseconds(20), 

@@ -9,14 +9,14 @@
         public string AddCommand { get; } =
             "INSERT INTO {0} ([MessageId],[MessageType],[Topic],[Timestamp],[CorrelationId]," +
             "[ReplyTo],[ContentType],[PartitionKey],[HeaderBag],[Body]," +
-            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage]) " +
+            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage], [WorkflowId], [JobId]) " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId," +
             "@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body," +
-            "@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage)";
+            "@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId, @JobId)";
         public string BulkAddCommand { get; } =
             "INSERT INTO {0} ([MessageId],[MessageType],[Topic],[Timestamp],[CorrelationId]," +
             "[ReplyTo],[ContentType],[PartitionKey],[HeaderBag],[Body]," +
-            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage]) " +
+            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage],[WorkflowId],[JobId]) " +
             "VALUES {1}";
         public string MarkDispatchedCommand { get; } = "UPDATE {0} SET [Dispatched] = @DispatchedAt WHERE [MessageId] = @MessageId";
         public string MarkMultipleDispatchedCommand { get; } = "UPDATE {0} SET [Dispatched] = @DispatchedAt WHERE [MessageId] IN ( {1} )";

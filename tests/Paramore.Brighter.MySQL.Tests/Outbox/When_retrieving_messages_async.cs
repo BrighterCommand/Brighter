@@ -45,7 +45,7 @@ public class MySqlFetchMessageAsyncTests : IDisposable
         var messages = await _sqlOutbox.GetAsync(null);
 
         //Assert
-        Assert.Equal(3, messages.Count());
+        Assert.Equal(3, messages.Count);
     }
 
     [Fact]

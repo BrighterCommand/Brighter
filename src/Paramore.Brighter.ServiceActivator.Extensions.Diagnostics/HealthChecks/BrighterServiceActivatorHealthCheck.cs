@@ -40,7 +40,7 @@ public class BrighterServiceActivatorHealthCheck : IHealthCheck
         {
             var sub = _dispatcher.Consumers.Where(c => c.Subscription.Name == cfg.Name).ToArray();
             if (sub.Length != cfg.NoOfPerformers)
-                unhealthyHosts.Add($"{cfg.Name} has {sub.Count()} of {cfg.NoOfPerformers} expected consumers");
+                unhealthyHosts.Add($"{cfg.Name} has {sub.Length} of {cfg.NoOfPerformers} expected consumers");
         }
 
         return string.Join(";", unhealthyHosts);

@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Inbox.DynamoDB\Paramore.Brighter.Inbox.DynamoDB.csproj" />
+      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Inbox.DynamoDB.V4\Paramore.Brighter.Inbox.DynamoDB.V4.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ.Async\Paramore.Brighter.MessagingGateway.RMQ.Async.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.DynamoDB\Paramore.Brighter.Outbox.DynamoDB.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj" />

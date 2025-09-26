@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly bool _isSingleton;
-        private readonly Dictionary<IAmALifetime, IServiceScope> _scopes = new Dictionary<IAmALifetime, IServiceScope>();
+        private readonly ConcurrentDictionary<IAmALifetime, IServiceScope> _scopes = new();
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return (IHandleRequests?)_serviceProvider.GetService(handlerType);
 
             if (!_scopes.ContainsKey(lifetime))
-                _scopes.Add(lifetime, _serviceProvider.CreateScope());
+                _scopes.TryAdd(lifetime, _serviceProvider.CreateScope());
             
             return (IHandleRequests?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
         }
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return (IHandleRequestsAsync?)_serviceProvider.GetService(handlerType);
             
             if (!_scopes.ContainsKey(lifetime))
-                _scopes.Add(lifetime, _serviceProvider.CreateScope());
+                _scopes.TryAdd(lifetime, _serviceProvider.CreateScope());
             
             return (IHandleRequestsAsync?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
         }
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return;
             
             scope.Dispose();
-            _scopes.Remove(lifetime);
+            _scopes.TryRemove(lifetime, out _);
         }
     }
 }

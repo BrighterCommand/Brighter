@@ -4,7 +4,7 @@ using Amazon;
 using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.MessagingGateway.AWS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Paramore.Brighter.Tasks;
 using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundException;
 
@@ -244,8 +244,7 @@ public class AwsScheduler(
             {
                 RoleArn = roleArn,
                 Arn = "arn:aws:scheduler:::aws-sdk:sns:publish",
-                Input = JsonSerializer.Serialize(ToPublishRequest(messageSchedulerTopicArn!,
-                    schedulerMessage))
+                Input = JsonSerializer.Serialize(ToPublishRequest(messageSchedulerTopicArn!, schedulerMessage))
             };
         }
 
@@ -320,7 +319,7 @@ public class AwsScheduler(
         }
     }
 
-    private static object ToPublishRequest(string topicArn, Message message)
+    private static Dictionary<string, object?> ToPublishRequest(string topicArn, Message message)
     {
         if (Id.IsNullOrEmpty(message.Header.CorrelationId))
         {
@@ -329,128 +328,93 @@ public class AwsScheduler(
 
         var messageAttributes = new Dictionary<string, object>
         {
-            [HeaderNames.Id] = new { StringValue = message.Header.MessageId, DataType = "String" },
+            [HeaderNames.Id] = new { StringValue = message.Header.MessageId.Value, DataType = "String" },
             [HeaderNames.Topic] = new { StringValue = topicArn, DataType = "String" },
-            [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.HandledCount] =
-                new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
-            [HeaderNames.MessageType] =
-                new { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new
-            {
-                StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
-            },
-            [HeaderNames.CorrelationId] = new
-            {
-                StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String"
-            }
+            [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType.ToString(), DataType = "String" },
+            [HeaderNames.HandledCount] = new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
+            [HeaderNames.MessageType] = new { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+            [HeaderNames.Timestamp] = new { StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String" },
+            [HeaderNames.CorrelationId] = new { StringValue = message.Header.CorrelationId.Value, DataType = "String" }
         };
 
         if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
         {
-            messageAttributes.Add(HeaderNames.ReplyTo,
-                new { StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String" });
+            messageAttributes.Add(HeaderNames.ReplyTo, new { StringValue = Convert.ToString(message.Header.ReplyTo.Value), DataType = "String" });
         }
 
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new { StringValue = Convert.ToString(bagJson), DataType = "String" };
 
-        if (!topicArn.EndsWith(".fifo"))
+        var request = new Dictionary<string, object?>
         {
-            return new
-            {
-                TopicArn = topicArn,
-                message.Header.Subject,
-                Message = message.Body.Value,
-                MessageAttributes = messageAttributes
-            };
+            ["TopicArn"] = topicArn, 
+            ["Subject"] = message.Header.Subject,
+            ["Message"] = message.Body.Value,
+            ["MessageAttributes"] = messageAttributes
+        };
+
+        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        {
+            request["MessageGroupId"] = message.Header.PartitionKey.Value;
         }
 
         if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
         {
-            return new
-            {
-                TopicArn = topicArn,
-                message.Header.Subject,
-                Message = message.Body.Value,
-                MessageAttributes = messageAttributes,
-                MessageGroupId = message.Header.PartitionKey,
-                MessageDeduplicationId = deduplicationId
-            };
+            request["MessageDeduplicationId"] = deduplicationId;
         }
 
-        return new
-        {
-            TopicArn = topicArn,
-            message.Header.Subject,
-            Message = message.Body.Value,
-            MessageAttributes = messageAttributes,
-            MessageGroupId = message.Header.PartitionKey,
-        };
+        return request;
     }
 
-    private static object ToSendMessageRequest(string queueUrl, Message message)
+    private static Dictionary<string, object?> ToSendMessageRequest(string queueUrl, Message message)
     {
         var messageAttributes = new Dictionary<string, object>
         {
-            [HeaderNames.Id] = new { StringValue = message.Header.MessageId, DataType = "String" },
+            [HeaderNames.Id] = new { StringValue = message.Header.MessageId.Value, DataType = "String" },
             [HeaderNames.Topic] = new { StringValue = queueUrl, DataType = "String" },
-            [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.HandledCount] =
-                new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
-            [HeaderNames.MessageType] =
-                new { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new
-            {
-                StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
-            }
+            [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType.ToString(), DataType = "String" },
+            [HeaderNames.HandledCount] = new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
+            [HeaderNames.MessageType] = new { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+            [HeaderNames.Timestamp] = new { StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String" }
         };
 
         if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
         {
-            messageAttributes.Add(HeaderNames.ReplyTo,
-                new { StringValue = message.Header.ReplyTo, DataType = "String" });
+            messageAttributes.Add(HeaderNames.ReplyTo, new { StringValue = message.Header.ReplyTo.Value, DataType = "String" });
         }
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
         {
-            messageAttributes.Add(HeaderNames.Subject,
-                new { StringValue = message.Header.Subject, DataType = "String" });
+            messageAttributes.Add(HeaderNames.Subject, new { StringValue = message.Header.Subject, DataType = "String" });
         }
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
         {
-            messageAttributes.Add(HeaderNames.CorrelationId,
-                new { StringValue = message.Header.CorrelationId, DataType = "String" });
+            messageAttributes.Add(HeaderNames.CorrelationId, new { StringValue = message.Header.CorrelationId.Value, DataType = "String" });
         }
 
         // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new { StringValue = bagJson, DataType = "String" };
-        if (!queueUrl.EndsWith(".fifo"))
+
+        var request = new Dictionary<string, object?>
         {
-            return new { QueueUrl = queueUrl, MessageAttributes = messageAttributes, MessageBody = message.Body.Value };
+            ["QueueUrl"] = queueUrl,
+            ["MessageAttributes"] = messageAttributes, 
+            ["MessageBody"] = message.Body.Value
+        };
+
+        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        {
+            request["MessageGroupId"] = message.Header.PartitionKey.Value;
         }
 
         if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
         {
-            return new
-            {
-                QueueUrl = queueUrl,
-                MessageAttributes = messageAttributes,
-                MessageBody = message.Body.Value,
-                MessageGroupId = message.Header.PartitionKey,
-                MessageDeduplicationId = deduplicationId
-            };
+            request["MessageDeduplicationId"] = deduplicationId;
         }
 
-        return new
-        {
-            QueueUrl = queueUrl,
-            MessageAttributes = messageAttributes,
-            MessageBody = message.Body.Value,
-            MessageGroupId = message.Header.PartitionKey,
-        };
+        return request;
     }
 
     private async Task<string> ScheduleAsync(

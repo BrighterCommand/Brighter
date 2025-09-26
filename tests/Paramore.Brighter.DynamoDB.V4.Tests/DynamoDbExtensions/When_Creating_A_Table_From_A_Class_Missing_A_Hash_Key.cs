@@ -21,5 +21,5 @@ public class DynanmoDbMissingHashKeyTests
     }
 
     [DynamoDBTable("DnyamoDbEntity")]
-    private sealed class DynamoDbEntity{}
+    private sealed class DynamoDbEntity;
 }

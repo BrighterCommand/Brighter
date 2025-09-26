@@ -22,8 +22,8 @@ public class MessageBatch : IAmAMessageBatch<IEnumerable<Message>>
     public IEnumerable<Id> Ids() => _messages.Select(x => x.Id);
 
     /// <inheritdoc/>
-    public IEnumerable<Message> Messages => _messages;
+    public IEnumerable<Message> Content => _messages;
 
     /// <inheritdoc/>
-    public RoutingKey RoutingKey => Messages.Select(x => x.Header.Topic).Distinct().Single();
+    public RoutingKey RoutingKey => Content.Select(x => x.Header.Topic).Distinct().Single();
 }

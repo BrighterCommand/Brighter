@@ -2,6 +2,4 @@
 
 namespace Paramore.Brighter.DynamoDb.V4;
 
-public interface IAmADynamoDbTransactionProvider : IAmADynamoDbConnectionProvider, IAmABoxTransactionProvider<TransactWriteItemsRequest>
-{
-}
+public interface IAmADynamoDbTransactionProvider : IAmADynamoDbConnectionProvider, IAmABoxTransactionProvider<TransactWriteItemsRequest>;

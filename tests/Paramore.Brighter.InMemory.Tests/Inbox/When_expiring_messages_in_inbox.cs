@@ -21,7 +21,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var inbox = new InMemoryInbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
-                EntryTimeToLive = TimeSpan.FromMilliseconds(50),
+                EntryTimeToLive = TimeSpan.FromSeconds(1),
                 ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
             };
 
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Act
             await inbox.AddAsync(command, contextKey, null);
             
-            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
+            timeProvider.Advance(TimeSpan.FromSeconds(1));
             
             //Trigger a cache clean
             SimpleCommand foundCommand = null;
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var inbox = new InMemoryInbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
-                EntryTimeToLive = TimeSpan.FromMilliseconds(1),
+                EntryTimeToLive = TimeSpan.FromSeconds(1),
                 ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
             };
 
@@ -73,11 +73,12 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
                 await inbox.AddAsync(command, contextKey, null);
             }
             
-            //allow any sweeper to expire
-            await Task.Delay(1000);
-            
             //expire these and allow another expiration to run
             timeProvider.Advance(TimeSpan.FromSeconds(5));
+            
+            inbox.ClearExpiredMessages();
+            
+            await Task.Delay(500); //Give the sweep time to run
 
             //add live entries
             var lateCommands = new[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
@@ -85,8 +86,6 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             {
                 await inbox.AddAsync(command, contextKey, null);
             }
-            
-            await Task.Delay(500); //Give the sweep time to run and clear the old entries
             
             //Assert
             Assert.Equal(3, inbox.EntryCount);

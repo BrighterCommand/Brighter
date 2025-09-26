@@ -75,49 +75,48 @@ public static class OutboxFactory
     private static (IAmAnOutbox, Type, Type) MakeDapperPostgresSqlOutbox(RelationalDatabaseConfiguration configuration)
     {
         return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlConnectionProvider),
-            typeof(PostgreSqlUnitOfWork));
+            typeof(PostgreSqlTransactionProvider));
     }
     
     private static (IAmAnOutbox, Type, Type) MakeEfPostgreSqlOutbox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlConnectionProvider), 
-                typeof(PostgreSqlEntityFrameworkConnectionProvider<T>)
-            );
+        return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlEntityFrameworkTransactionProvider<T>), 
+        typeof(PostgreSqlConnectionProvider));
     }
 
     private static (IAmAnOutbox, Type, Type) MakeDapperMsSqlOutbox(RelationalDatabaseConfiguration configuration)
     {
         return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration), typeof(MsSqlConnectionProvider),
-            typeof(MsSqlUnitOfWork));
+            typeof(MsSqlTransactionProvider));
     }
     
     private static (IAmAnOutbox, Type, Type) MakeEfMsSqlOutbox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration), typeof(MsSqlConnectionProvider),
-            typeof(MsSqlEntityFrameworkCoreConnectionProvider<T>));
+        return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration), typeof(MsSqlEntityFrameworkCoreTransactionProvider<T>),  
+            typeof(MsSqlConnectionProvider));
     }
 
     private static (IAmAnOutbox, Type, Type) MakeDapperMySqlOutbox(RelationalDatabaseConfiguration configuration)
     {
-        return (new MySqlOutbox(configuration), typeof(MySqlConnectionProvider), typeof(MySqlUnitOfWork));
+        return (new MySqlOutbox(configuration), typeof(MySqlConnectionProvider), typeof(MySqlTransactionProvider));
     }
     
     private static (IAmAnOutbox, Type, Type) MakeEfMySqlOutbox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return (new MySqlOutbox(configuration), typeof(MySqlConnectionProvider), typeof(MySqlEntityFrameworkConnectionProvider<T>));
+        return (new MySqlOutbox(configuration),typeof(MySqlEntityFrameworkTransactionProvider<T>), typeof(MySqlConnectionProvider));
     }
 
     private static (IAmAnOutbox, Type, Type) MakeDapperSqliteOutBox(RelationalDatabaseConfiguration configuration)
     {
-        return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteUnitOfWork));
+        return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteTransactionProvider));
     }
     
     private static (IAmAnOutbox, Type, Type) MakeEfSqliteOutBox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteEntityFrameworkConnectionProvider<T>));
+        return (new SqliteOutbox(configuration), typeof(SqliteEntityFrameworkTransactionProvider<T>), typeof(SqliteConnectionProvider));
     }
 }

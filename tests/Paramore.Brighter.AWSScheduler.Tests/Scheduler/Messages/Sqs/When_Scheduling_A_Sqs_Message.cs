@@ -1,7 +1,7 @@
 ﻿using System.Net.Mime;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
-using Paramore.Brighter.MessageScheduler.Aws;
+using Paramore.Brighter.MessageScheduler.AWS;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Messages.Sqs;

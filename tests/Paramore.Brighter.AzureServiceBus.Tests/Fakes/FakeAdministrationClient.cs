@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -39,14 +39,14 @@ public class FakeAdministrationClient : IAdministrationClientWrapper
         return Task.FromResult(Queues.Any(q => q.Equals(queueName, StringComparison.InvariantCultureIgnoreCase)));
     }
 
-    public Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null)
+    public Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null, long? maxMessageSizeInKilobytes = default)
     {
         CreateCount++;
         Queues.Add(queueName);   
         return Task.CompletedTask;
     }
 
-    public Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null)
+    public Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null, long? maxMessageSizeInKilobytes = default)
     {
         CreateCount++;
         Topics.Add(topicName, []);

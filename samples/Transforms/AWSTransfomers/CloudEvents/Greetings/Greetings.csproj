@@ -3,9 +3,9 @@
     <TargetFramework>net9.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.csproj" />
     <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-    <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.Tranformers.AWS\Paramore.Brighter.Tranformers.AWS.csproj" />
+    <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS.V4\Paramore.Brighter.MessagingGateway.AWSSQS.V4.csproj" />
+    <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.Transformers.AWS.V4\Paramore.Brighter.Transformers.AWS.V4.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />

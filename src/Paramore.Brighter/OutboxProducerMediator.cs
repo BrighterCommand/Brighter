@@ -63,8 +63,6 @@ namespace Paramore.Brighter
         private readonly IAmAnOutboxCircuitBreaker? _outboxCircuitBreaker;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
-        private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
-
         private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new(1, 1);
 
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
@@ -306,7 +304,6 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("No outbox defined.");
 
             // Only allow a single Clear to happen at a time
-            s_clearSemaphoreToken.Wait();
             var parentSpan = requestContext.Span;
 
             var childSpans = new ConcurrentDictionary<string, Activity>();
@@ -337,7 +334,6 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
-                s_clearSemaphoreToken.Release();
             }
 
             CheckOutstandingMessages(requestContext);
@@ -364,7 +360,6 @@ namespace Paramore.Brighter
             if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            await s_clearSemaphoreToken.WaitAsync(cancellationToken);
             var parentSpan = requestContext.Span;
 
             var childSpans = new ConcurrentDictionary<string, Activity>();
@@ -394,7 +389,6 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
-                s_clearSemaphoreToken.Release();
             }
 
             CheckOutstandingMessages(requestContext);
@@ -597,18 +591,10 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken
         )
         {
-            WaitHandle[] clearTokens = new WaitHandle[2];
-            clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
-            clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
             _outboxCircuitBreaker?.CoolDown();
 
-            if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
+            if ( await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero, cancellationToken))
             {
-                //NOTE: The wait handle only signals availability, still need to increment the counter:
-                // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
-                await s_backgroundClearSemaphoreToken.WaitAsync(cancellationToken);
-                await s_clearSemaphoreToken.WaitAsync(cancellationToken);
-                
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
@@ -626,7 +612,7 @@ namespace Paramore.Brighter
 
                     requestContext.Span = parentSpan;
 
-                    Log.FoundMessagesToClear(s_logger, messages.Count(), amountToClear);
+                    Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
 
                     if (useBulk)
                     {
@@ -648,7 +634,6 @@ namespace Paramore.Brighter
                 finally
                 {
                     _tracer?.EndSpan(span);
-                    s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
 
@@ -852,7 +837,7 @@ namespace Paramore.Brighter
 
                         Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key);
 
-                        foreach (var batch in bulkMessageProducer.CreateBatches(messages))
+                        foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
                             var sent = await ExecuteWithResiliencePipelineAsync(
                                     async _ => await bulkMessageProducer.SendAsync(batch, cancellationToken)
@@ -1084,7 +1069,7 @@ namespace Paramore.Brighter
                 }
                 else
                 {
-                    await resiliencePipeline.ExecuteAsync(async _ => await send(cancellationToken), cancellationToken)
+                    await resiliencePipeline.ExecuteAsync(async ct => await send(ct), cancellationToken)
                         .ConfigureAwait(continueOnCapturedContext);
                 }
                 
