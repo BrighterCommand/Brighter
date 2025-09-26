@@ -44,7 +44,7 @@ internal sealed partial class RmqMessagePublisher
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessagePublisher>();
 
-    private static readonly string[] _headersToReset =
+    private static readonly HashSet<string> _headersToReset =
     [
         HeaderNames.DELAY_MILLISECONDS,
         HeaderNames.MESSAGE_TYPE,
@@ -138,7 +138,7 @@ internal sealed partial class RmqMessagePublisher
         AddUserDefinedHeaders(message, headers);
 
         AddDeliveryHeaders(TimeSpan.Zero, deliveryTag, headers);
-        
+
         AddOriginalMessageIdOnRepublish(message, headers);
 
         // To send it to the right queue use the default (empty) exchange
@@ -186,32 +186,36 @@ internal sealed partial class RmqMessagePublisher
 
         if (message.Header.CorrelationId != string.Empty)
             headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.Value);
-        
+
         if (!string.IsNullOrEmpty(message.Header.TraceParent?.Value))
             headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent?.Value!);
-            
+
         if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
             headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState?.Value!);
-            
+
         if (message.Header.Baggage.Any())
             headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString());
         return headers;
     }
-    
+
     private static void AddDeliveryHeaders(TimeSpan? delay, string? deliveryTag, Dictionary<string, object?> headers)
     {
         if (!string.IsNullOrEmpty(deliveryTag))
-            headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag!);
+        {
+            headers[HeaderNames.DELIVERY_TAG] = deliveryTag!;
+        }
 
         if (delay > TimeSpan.Zero)
-            headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.TotalMilliseconds);
+        {
+            headers[HeaderNames.DELAY_MILLISECONDS] = delay.Value.TotalMilliseconds;
+        }
     }
 
     private static void AddOriginalMessageIdOnRepublish(Message message, Dictionary<string, object?> headers)
     {
         if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
         {
-            headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id.Value);
+            headers[HeaderNames.ORIGINAL_MESSAGE_ID] = message.Id.Value;
         }
     }
 
@@ -219,7 +223,10 @@ internal sealed partial class RmqMessagePublisher
     {
         message.Header.Bag.Each(header =>
         {
-            if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
+            if (!_headersToReset.Contains(header.Key))
+            {
+                headers[header.Key] = header.Value;
+            }
         });
     }
 
