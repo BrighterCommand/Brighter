@@ -23,7 +23,9 @@ public class SpannerOutboxBuilder
           `Subject` STRING(255),
           `TraceParent` STRING(255),
           `TraceState` STRING(255),
-          `Baggage` STRING(MAX)
+          `Baggage` STRING(MAX),
+          `WorkflowId` STRING(255),
+          `JobId` STRING(255)
         ) PRIMARY KEY (`MessageId`)
         """;
 
@@ -48,7 +50,9 @@ public class SpannerOutboxBuilder
           `Subject` STRING(255),
           `TraceParent` STRING(255),
           `TraceState` STRING(255),
-          `Baggage` STRING(MAX)
+          `Baggage` STRING(MAX),
+          `WorkflowId` STRING(255),
+          `JobId` STRING(255)
         ) PRIMARY KEY (`MessageId`)
         """;
         

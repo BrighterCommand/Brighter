@@ -10,7 +10,7 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "GCP")]
-public class PubSubBufferedConsumerTestsAsync : IAsyncDisposable
+public class PubSubBufferedConsumerTestsAsync : IDisposable
 {
     private readonly ContentType _contentType = new("text/plain");
     private readonly GcpMessageProducer _messageProducer;
@@ -117,10 +117,10 @@ public class PubSubBufferedConsumerTestsAsync : IAsyncDisposable
         Assert.Equal(4, messagesReceivedCount);
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await _channelFactory.DeleteSubscriptionAsync(_subscription);
-        await _channelFactory.DeleteTopicAsync(_subscription);
-        await _messageProducer.DisposeAsync();
+       _channelFactory.DeleteSubscription(_subscription);
+       _channelFactory.DeleteTopic(_subscription);
+       _messageProducer.Dispose();
     }
 }

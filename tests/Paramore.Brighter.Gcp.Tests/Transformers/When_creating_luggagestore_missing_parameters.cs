@@ -4,6 +4,7 @@ using Paramore.Brighter.Tranformers.Gcp;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
+[Trait("Category", "GCS")]
 public class LuggageUploadMissingParametersTests
 {
     private readonly string _bucketName = $"brightertestbucket-{Guid.NewGuid()}";

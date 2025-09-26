@@ -18,14 +18,14 @@ public class SpannerQueries : IRelationDatabaseOutboxQueries
     public string AddCommand => 
         "INSERT INTO `{0}` " +
         "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
-        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`) " +
-        "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body,@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage)";
-    
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`) " +
+        "VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @PartitionKey, @HeaderBag, @Body, " +
+            "@Source, @Type, @DataSchema, @Subject, @TraceParent, @TraceState, @Baggage, @WorkflowId, @JobId)";
     /// <inheritdoc />
     public string BulkAddCommand => 
         "INSERT INTO `{0}` " +
         "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
-        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`) " +
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`) " +
         "VALUES {1}";
     
     /// <inheritdoc />

@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "GCP")]
 [Trait("Fragile", "CI")]
-public class MessageProducerDlqTestsAsync : IAsyncDisposable
+public class MessageProducerDlqTestsAsync : IDisposable
 {
     private const int MaxDeliveryAttempts = 5;
     private readonly GcpMessageProducer _sender;
@@ -98,9 +98,9 @@ public class MessageProducerDlqTestsAsync : IAsyncDisposable
        return messages.ReceivedMessages.Count;
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await _channelFactory.DeleteTopicAsync(_subscription);
-        await _channelFactory.DeleteSubscriptionAsync(_subscription);
+        _channelFactory.DeleteTopic(_subscription);
+        _channelFactory.DeleteSubscription(_subscription);
     }
 }

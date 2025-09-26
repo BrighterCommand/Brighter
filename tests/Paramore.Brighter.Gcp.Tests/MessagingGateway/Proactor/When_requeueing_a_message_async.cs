@@ -10,7 +10,7 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "GCP")]
-public class MessageProducerRequeueTestsAsync : IAsyncDisposable
+public class MessageProducerRequeueTestsAsync : IDisposable
 {
     private readonly IAmAMessageProducerAsync _sender;
     private Message? _requeuedMessage;
@@ -71,9 +71,9 @@ public class MessageProducerRequeueTestsAsync : IAsyncDisposable
         Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await _channelFactory.DeleteTopicAsync(_subscription);
-        await _channelFactory.DeleteSubscriptionAsync(_subscription);
+        _channelFactory.DeleteTopic(_subscription);
+        _channelFactory.DeleteSubscription(_subscription);
     }
 }

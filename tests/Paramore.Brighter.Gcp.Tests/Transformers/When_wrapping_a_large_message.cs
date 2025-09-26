@@ -8,7 +8,8 @@ using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-public class LargeMessagePayloadWrapTests : IAsyncDisposable 
+[Trait("Category", "GCS")] 
+public class LargeMessagePayloadWrapTests : IDisposable 
 {
     private string? _id;
     private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
@@ -67,15 +68,15 @@ public class LargeMessagePayloadWrapTests : IAsyncDisposable
         Assert.True(await _luggageStore.HasClaimAsync(_id));
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
          //We have to empty objects from a bucket before deleting it
          if (_id != null)
          {
-             await _luggageStore.DeleteAsync(_id);
+             _luggageStore.Delete(_id);
          }
 
-         var client = await _luggageStoreOptions.CreateStorageClientAsync();
-         await client.DeleteBucketAsync(_bucketName);
+         var client = _luggageStoreOptions.CreateStorageClient();
+         client.DeleteBucket(_bucketName);
     }
 }

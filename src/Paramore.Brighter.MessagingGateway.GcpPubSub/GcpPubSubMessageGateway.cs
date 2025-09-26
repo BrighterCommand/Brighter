@@ -195,7 +195,8 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
                 projectId: subscription.ProjectId,
                 ackDeadlineSeconds: subscription.DeadLetter.AckDeadlineSeconds,
                 makeChannels: OnMissingChannel.Create,
-                messagePumpType: MessagePumpType.Proactor));
+                messagePumpType: MessagePumpType.Proactor,
+                requestType: subscription.RequestType));
 
             await UpdateIAmRoleForDeadLetterAsync(projectId, subscription);
         }

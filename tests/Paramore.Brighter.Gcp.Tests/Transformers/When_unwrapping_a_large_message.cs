@@ -10,9 +10,8 @@ using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-[Trait("Category", "GCP")]
-[Trait("Fragile", "CI")]
-public class LargeMessagePaylodUnwrapTests : IAsyncDisposable 
+[Trait("Category", "GCS")]
+public class LargeMessagePaylodUnwrapTests : IDisposable 
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly string _bucketName;
@@ -93,9 +92,9 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
         Assert.False(await _luggageStore.HasClaimAsync(id));
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        var client = await _luggageStoreOptions.CreateStorageClientAsync();
-        await client.DeleteBucketAsync(_bucketName);
+        var client = _luggageStoreOptions.CreateStorageClient();
+        client.DeleteBucket(_bucketName);
     }
 }

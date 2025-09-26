@@ -7,7 +7,7 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "GCP")]
-public class ValidateQueuesTestsAsync : IAsyncDisposable
+public class ValidateQueuesTestsAsync : IDisposable
 {
     private readonly GcpMessagingGatewayConnection _connection;
     private readonly GcpSubscription<MyCommand> _subscription;
@@ -54,12 +54,12 @@ public class ValidateQueuesTestsAsync : IAsyncDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await _channelFactory.CreateAsyncChannelAsync(_subscription));
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (_channelFactory != null)
         {
-            await _channelFactory.DeleteTopicAsync(_subscription);
-            await _channelFactory.DeleteSubscriptionAsync(_subscription);
+            _channelFactory.DeleteTopic(_subscription);
+            _channelFactory.DeleteSubscription(_subscription);
         }
     }
 }

@@ -6,8 +6,7 @@ using Paramore.Brighter.Transforms.Storage;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-[Trait("Category", "GCP")] 
-[Trait("Fragile", "CI")]
+[Trait("Category", "GCS")] 
 public class LuggageStoreExistsTests 
 {
     [Fact]

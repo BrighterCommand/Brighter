@@ -6,7 +6,8 @@ using Paramore.Brighter.Tranformers.Gcp;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-public class LuggageUploadTests : IAsyncDisposable
+[Trait("Category", "GCS")]
+public class LuggageUploadTests : IDisposable
 {
     private readonly string _bucketName;
     private readonly GcsLuggageOptions _luggageStoreOptions;
@@ -57,9 +58,9 @@ public class LuggageUploadTests : IAsyncDisposable
 
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        var client = await _luggageStoreOptions.CreateStorageClientAsync();
-        await client.DeleteBucketAsync(_bucketName);
+        var client = _luggageStoreOptions.CreateStorageClient();
+        client.DeleteBucket(_bucketName);
     }
 }
