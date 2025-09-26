@@ -577,6 +577,44 @@ jobs:
         run: dotnet restore
       - name: MongoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+    
+  gcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    if: |
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+    steps:
+      - uses: actions/checkout@v5
+        with: 
+          fetch-depth: 0 # Required to fetch the Git tags
+          filter: tree:0
+          show-progress: false 
+          
+      - name: GCP auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          version: '>= 363.0.0'
+      
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            
+      - name: Install dependencies
+        run: dotnet restore
+        
+      - name: GCP Tests
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner" --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
 #  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
