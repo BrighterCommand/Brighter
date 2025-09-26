@@ -27,6 +27,7 @@ using System.Net.Mime;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
@@ -89,6 +90,7 @@ public class RmqMessageProducerRequeuingMessageTests : IDisposable
                 subscriptionName: new SubscriptionName("rmq-requeuing"),
                 channelName: queueName,
                 routingKey: _message.Header.Topic,
+                requestType: typeof(MyCommand),
                 messagePumpType: MessagePumpType.Reactor);
 
         _messageProducer = new RmqMessageProducer(rmqConnection);
@@ -116,7 +118,7 @@ public class RmqMessageProducerRequeuingMessageTests : IDisposable
         Assert.Equal(_message.Body.Value, result.Body.Value);
 
         // Assert header values
-        Assert.Equal(_message.Header.MessageId, result.Header.MessageId);
+        Assert.Equal(_message.Header.MessageId.ToString(), result.Header.Bag[HeaderNames.ORIGINAL_MESSAGE_ID]);
         Assert.Equal(_message.Header.Topic, result.Header.Topic);
         Assert.Equal(_message.Header.MessageType, result.Header.MessageType);
         Assert.Equal(_message.Header.Source, result.Header.Source);

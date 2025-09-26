@@ -24,20 +24,21 @@ THE SOFTWARE. */
 
 using System;
 using System.Net.Mime;
+using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.MessagingGateway.RMQ.Sync;
+using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
+using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RMQ")]
-public class RmqMessageProducerRequeuingMessageTests : IDisposable
+public class RmqMessageProducerRequeuingMessageTests : IAsyncDisposable 
 {
-    private readonly IAmAMessageProducerSync _messageProducer;
+    private readonly IAmAMessageProducerAsync _messageProducer;
     private readonly Message _message;
-    private readonly IAmAChannelSync _channel;
+    private readonly IAmAChannelAsync _channel;
 
     public RmqMessageProducerRequeuingMessageTests()
     {
@@ -96,21 +97,23 @@ public class RmqMessageProducerRequeuingMessageTests : IDisposable
         _messageProducer = new RmqMessageProducer(rmqConnection);
 
         _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
-            .CreateSyncChannel(subscription);
+            .CreateAsyncChannel(subscription);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic))
-            .Create(TimeSpan.FromSeconds(1));
+            .CreateAsync()
+            .GetAwaiter()
+            .GetResult();
     }
 
     [Fact]
-    public void When_posting_a_message_via_the_messaging_gateway()
+    public async Task When_posting_a_message_via_the_messaging_gateway_async()
     {
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
-        var result = _channel.Receive(TimeSpan.FromMilliseconds(10000));
-        _channel.Requeue(result);
+        var result = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+        await _channel.RequeueAsync(result);
 
-        result = _channel.Receive(TimeSpan.FromMilliseconds(10000));
+        result = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
 
         // Assert message body
         Assert.Equal(_message.Body.Value, result.Body.Value);
@@ -134,8 +137,8 @@ public class RmqMessageProducerRequeuingMessageTests : IDisposable
         Assert.Equal(_message.Header.Baggage, result.Header.Baggage);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _messageProducer.Dispose();
+        await _messageProducer.DisposeAsync();
     }
 }
