@@ -2,14 +2,14 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AwsDynamoDbV4>4.0.6.1</AwsDynamoDbV4>
-    <AWSSDKIdentityManagementV4>4.0.3.2</AWSSDKIdentityManagementV4>
-    <AWSSDKSchedulerV4>4.0.1.1</AWSSDKSchedulerV4>
-    <AWSSDKV4>4.0.7</AWSSDKV4>
-    <AWSSecurityTokenV4>4.0.2.1</AWSSecurityTokenV4>
-    <AWSSQSV4>4.0.1.2</AWSSQSV4>
-    <AWSSDKSimpleNotificationServiceV4>4.0.0.21</AWSSDKSimpleNotificationServiceV4>
-    <AWSSDKExtensionsNETCoreSetup>4.0.2.2</AWSSDKExtensionsNETCoreSetup>
+    <AwsDynamoDbV4>4.0.6.2</AwsDynamoDbV4>
+    <AWSSDKIdentityManagementV4>4.0.3.3</AWSSDKIdentityManagementV4>
+    <AWSSDKSchedulerV4>4.0.1.2</AWSSDKSchedulerV4>
+    <AWSSDKV4>4.0.7.2</AWSSDKV4>
+    <AWSSecurityTokenV4>4.0.2.2</AWSSecurityTokenV4>
+    <AWSSQSV4>4.0.1.4</AWSSQSV4>
+    <AWSSDKSimpleNotificationServiceV4>4.0.1.2</AWSSDKSimpleNotificationServiceV4>
+    <AWSSDKExtensionsNETCoreSetup>4.0.3</AWSSDKExtensionsNETCoreSetup>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
@@ -20,7 +20,7 @@
     <PackageVersion Include="AWSSDK.Scheduler" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.SQS" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="Azure.Identity" Version="1.14.2" />
+    <PackageVersion Include="Azure.Identity" Version="1.16.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.11.1" />
@@ -49,7 +49,6 @@
     <PackageVersion Include="MassTransit" Version="8.5.2" />
     <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.2" />
     <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
-    <PackageVersion Include="MessagePack" Version="3.1.4" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.1" />
@@ -70,12 +69,12 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.9.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.4.3" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.5.0" />
     <PackageVersion Include="MQTTnet" Version="4.3.7.1207" />
     <PackageVersion Include="MySqlConnector" Version="2.4.0" />
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageVersion Include="NJsonSchema" Version="11.4.0" />
-    <PackageVersion Include="NJsonSchema.NewtonsoftJson" Version="11.4.0" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageVersion Include="NJsonSchema" Version="11.5.0" />
+    <PackageVersion Include="NJsonSchema.NewtonsoftJson" Version="11.5.0" />
     <PackageVersion Include="NUnit" Version="4.4.0" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.10.0">
       <PrivateAssets>all</PrivateAssets>
@@ -83,6 +82,7 @@
     </PackageVersion>
     <PackageVersion Include="NUnit3TestAdapter" Version="5.1.0" />
     <PackageVersion Include="OpenTelemetry" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.12.0" />
@@ -141,8 +141,8 @@
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />

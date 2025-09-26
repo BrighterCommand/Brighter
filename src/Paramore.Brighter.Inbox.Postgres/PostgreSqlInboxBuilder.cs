@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                             PRIMARY KEY (CommandId, ContextKey)
                         );";
         
-        private const string InboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{0}')";
+        private const string InboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{0}' AND TABLE_NAME = '{1}')";
  
         /// <summary>
         /// Get the DDL statements to create an Inbox in Postgres
@@ -52,15 +52,16 @@ namespace Paramore.Brighter.Inbox.Postgres
         {
             return string.Format(OutboxDDL, inboxTableName);
         }
-        
+
         /// <summary>
         /// Get the SQL statements required to test for the existence of an Inbox in Postgres
         /// </summary>
+        /// <param name="tableSchema">What is the schema under which we should query for the inbox</param>
         /// <param name="inboxTableName">The name that was used for the Inbox table</param>
         /// <returns>The required SQL</returns>
-        public static string GetExistsQuery(string inboxTableName)
+        public static string GetExistsQuery(string tableSchema, string inboxTableName)
         {
-            return string.Format(InboxExistsSQL, inboxTableName);
+            return string.Format(InboxExistsSQL, tableSchema, inboxTableName);
         }
     }
 }

@@ -38,11 +38,8 @@ public class Startup
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
-        if (env.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "GreetingsAPI v1"));
-        }
+        app.UseSwagger();
+        app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "GreetingsAPI v1"));
 
         app.UseHttpsRedirection();
         app.UseRouting();
@@ -104,7 +101,6 @@ public class Startup
             {
                 //we want to use scoped, so make sure everything understands that which needs to
                 options.HandlerLifetime = ServiceLifetime.Scoped;
-                options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                 options.MapperLifetime = ServiceLifetime.Singleton;
                 options.PolicyRegistry = new GreetingsPolicy();
             })
@@ -140,44 +136,37 @@ public class Startup
             loggingBuilder.AddOpenTelemetry(options =>
             {
                 options.IncludeScopes = true;
-                options.AddOtlpExporter((exporterOptions, _) =>
-                    {
-                        exporterOptions.Protocol = OtlpExportProtocol.Grpc;
-                    })
-                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("GreetingsWeb"))
-                    .IncludeScopes = true;
+                options.AddConsoleExporter();
             });
-        });
 
-        services.AddOpenTelemetry()
-            .ConfigureResource(builder =>
-            {
-                builder.AddService(
-                    serviceName: "GreetingsWeb",
-                    serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
-                    serviceInstanceId: Environment.MachineName);
-            })
-            .WithTracing(builder =>
-            {
-                builder
-                    .AddBrighterInstrumentation()
-                    .AddSource("RabbitMQ.Client.*")
-                    .SetTailSampler<AlwaysOnSampler>()
+            services.AddOpenTelemetry()
+                .ConfigureResource(builder =>
+                {
+                    builder.AddService(
+                        serviceName: "GreetingsWeb",
+                        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+                        serviceInstanceId: Environment.MachineName);
+                })
+                .WithTracing(builder =>
+                {
+                    builder
+                        .AddBrighterInstrumentation()
+                        .AddSource("RabbitMQ.Client.*")
+                        .SetTailSampler<AlwaysOnSampler>()
+                        .AddAspNetCoreInstrumentation()
+                        .AddConsoleExporter()
+                        .AddOtlpExporter(options =>
+                        {
+                            options.Protocol = OtlpExportProtocol.Grpc;
+                        });
+                })
+                .WithMetrics(builder => builder
                     .AddAspNetCoreInstrumentation()
                     .AddConsoleExporter()
-                    .AddOtlpExporter(options =>
-                    {
-                        options.Protocol = OtlpExportProtocol.Grpc;
-                    });
-            }) 
-            .WithMetrics(builder => builder
-                .AddAspNetCoreInstrumentation()
-                .AddConsoleExporter()
-                .AddPrometheusExporter()
-                .AddOtlpExporter()
-                .AddBrighterInstrumentation()
-            ); 
+                    .AddPrometheusExporter()
+                    .AddOtlpExporter()
+                    .AddBrighterInstrumentation()
+                );
+        });
     }
-
-
 }

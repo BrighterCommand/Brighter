@@ -2,6 +2,7 @@
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Namotion.Reflection;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.Extensions;
@@ -60,11 +61,14 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         });
     }
 
-    [Fact]
-    public async Task When_posting_a_message_via_the_producer_async()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_posting_a_message_via_the_producer_async(bool fairQueue)
     {
         // arrange
         _message.Header.Subject = "test subject";
+        _message.Header.PartitionKey = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
         await _messageProducer.SendAsync(_message);
 
         await Task.Delay(1000);
@@ -92,7 +96,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         // {"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
         Assert.Equal(_message.Body.Value, message.Body.Value);
     }
-        
+    
     public void Dispose()
     {
         //Clean up resources that we have created

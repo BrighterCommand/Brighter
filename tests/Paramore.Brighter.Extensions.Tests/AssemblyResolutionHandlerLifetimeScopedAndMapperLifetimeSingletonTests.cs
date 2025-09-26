@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Logging.Handlers;
 using Paramore.Brighter.Monitoring.Handlers;
@@ -21,7 +22,7 @@ namespace Tests
         {
             _services = new ServiceCollection();
 
-            _services.AddConsumers(options => { options.CommandProcessorLifetime = ServiceLifetime.Scoped; })
+            _services.AddConsumers()
                 .AutoFromAssemblies();
 
             _provider = _services.BuildServiceProvider();
@@ -30,7 +31,7 @@ namespace Tests
         [Fact]
         public void ShouldHaveCommandProcessorRegisteredCorrectly()
         {
-            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Scoped);
+            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Singleton);
         }
 
         [Fact]

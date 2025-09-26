@@ -52,7 +52,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 Subject character varying (255) NULL,
                 TraceParent character varying (255) NULL,
                 TraceState character varying (255) NULL,
-                Baggage text NULL
+                Baggage text NULL,
+                DataRef character varying (255) NULL,
+                SpecVersion character varying (255) NULL
             );
         ";
         
@@ -79,11 +81,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 Subject character varying (255) NULL,
                 TraceParent character varying (255) NULL,
                 TraceState character varying (255) NULL,
-                Baggage text NULL
+                Baggage text NULL,
+                DataRef character varying (255) NULL,
+                SpecVersion character varying (255) NULL
             );
         ";
         
-        private const string OutboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{0}')";
+        private const string OutboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG = '{0}' AND TABLE_NAME = '{1}')";
 
         /// <summary>
         /// Get the DDL required to create the Outbox in Postgres
@@ -95,15 +99,16 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             return binaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDdl, outboxTableName);
         }
-        
+
         /// <summary>
         /// Get the SQL statements required to test for the existence of an Inbox in Postgres
         /// </summary>
-        /// <param name="inboxTableName">The name that was used for the Inbox table</param>
+        /// <param name="tableCatalog">The Postgres table catalog that the table is in</param>
+        /// <param name="outboxTableName">The name that was used for the Inbox table</param>
         /// <returns>The required SQL</returns>
-        public static string GetExistsQuery(string inboxTableName)
+        public static string GetExistsQuery(string tableCatalog, string outboxTableName)
         {
-            return string.Format(OutboxExistsSQL, inboxTableName);
+            return string.Format(OutboxExistsSQL, tableCatalog, outboxTableName);
         }
     }
 }

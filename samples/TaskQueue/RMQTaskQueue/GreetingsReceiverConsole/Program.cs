@@ -58,6 +58,7 @@ namespace GreetingsReceiverConsole
                             timeOut: TimeSpan.FromMilliseconds(2000),
                             isDurable: true,
                             highAvailability: true,
+                            messagePumpType: MessagePumpType.Reactor,
                             makeChannels: OnMissingChannel.Create),   //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
                         new RmqSubscription<FarewellEvent>(
                             new SubscriptionName("paramore.example.farewell"), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere

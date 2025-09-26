@@ -60,40 +60,9 @@ namespace Paramore.Brighter
         public ConcurrentDictionary<string, object> Bag { get; } = new();
 
         /// <summary>
-        /// Gets or sets the registry of resilience pipelines.
-        /// </summary>
-        /// <value>
-        /// The registry containing named resilience pipeline instances. Returns <c>null</c> if no pipelines are configured.
-        /// </value>
-        /// <remarks>
-        /// Use this registry to retrieve pre-configured resilience pipelines by name. 
-        /// This replaces the obsolete <see cref="Policies"/> property for modern resilience implementations.
-        /// </remarks> 
-        public ResiliencePipelineRegistry<string>? ResiliencePipeline { get; set; }
-
-        /// <inheritdoc />
-        public ResilienceContext? ResilienceContext { get; set; }
-
-        /// <summary>
         /// Gets the Feature Switches
         /// </summary>
         public IAmAFeatureSwitchRegistry? FeatureSwitches { get; set; }
-
-        /// <summary>
-        /// Create a new instance of the Request Context
-        /// </summary>
-        /// <returns>New Instance of the message</returns>
-        public IRequestContext CreateCopy()
-            => new RequestContext(Bag)
-            {
-                Span = Span,
-#pragma warning disable CS0618 // Type or member is obsolete
-                Policies = Policies,
-#pragma warning restore CS0618 // Type or member is obsolete
-                ResiliencePipeline = ResiliencePipeline,
-                FeatureSwitches = FeatureSwitches,
-                OriginatingMessage = OriginatingMessage
-            };
 
         /// <summary>
         /// When we pass a requestContext through a receiver pipeline, we may want to pass the original message that started the pipeline.
@@ -117,6 +86,24 @@ namespace Paramore.Brighter
         /// </remarks>  
         [Obsolete("Migrate to ResiliencePipeline")]
         public IPolicyRegistry<string>? Policies { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the registry of resilience pipelines.
+        /// </summary>
+        /// <value>
+        /// The registry containing named resilience pipeline instances. Returns <c>null</c> if no pipelines are configured.
+        /// </value>
+        /// <remarks>
+        /// Use this registry to retrieve pre-configured resilience pipelines by name. 
+        /// This replaces the obsolete <see cref="Policies"/> property for modern resilience implementations.
+        /// </remarks> 
+        public ResiliencePipelineRegistry<string>? ResiliencePipeline { get; set; }
+
+        /// <summary>
+        /// Gets the <see cref="ResilienceContext"/> associated with Polly-based resilience operations.
+        /// This context can be used to share data across different resilience policies during execution.
+        /// </summary>
+        public ResilienceContext? ResilienceContext { get; set; }
 
         /// <summary>
         /// Gets the Span [Activity] associated with the request
@@ -136,5 +123,21 @@ namespace Paramore.Brighter
                     _spans.AddOrUpdate(System.Threading.Thread.CurrentThread.ManagedThreadId, value, (key, oldValue) => value);
             }
         }
+        
+        /// <summary>
+        /// Create a new instance of the Request Context
+        /// </summary>
+        /// <returns>New Instance of the message</returns>
+        public IRequestContext CreateCopy()
+            => new RequestContext(Bag)
+            {
+                Span = Span,
+#pragma warning disable CS0618 // Type or member is obsolete
+                Policies = Policies,
+#pragma warning restore CS0618 // Type or member is obsolete
+                ResiliencePipeline = ResiliencePipeline,
+                FeatureSwitches = FeatureSwitches,
+                OriginatingMessage = OriginatingMessage
+            };
     }
 }

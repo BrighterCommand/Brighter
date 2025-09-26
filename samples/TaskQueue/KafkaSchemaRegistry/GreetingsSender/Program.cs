@@ -59,32 +59,30 @@ var host = Host.CreateDefaultBuilder(args)
         var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
         services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
-        var producerRegistry = new KafkaProducerRegistryFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
-                },
-                [
-                    new KafkaPublication
-                    {
-                        Topic = new RoutingKey("greeting.event"),
-                        RequestType = typeof(GreetingEvent),
-                        MessageSendMaxRetries = 3,
-                        MessageTimeoutMs = 1000,
-                        MaxInFlightRequestsPerConnection = 1
-                    }
-                ])
-            .Create();
-
         services.AddBrighter(options =>
             {
                 options.PolicyRegistry = RegisterPolicies();
             })
             .AddProducers((configure) =>
             {
-                configure.ProducerRegistry = producerRegistry;
+                configure.ProducerRegistry = new KafkaProducerRegistryFactory(
+                        new KafkaMessagingGatewayConfiguration
+                        {
+                            Name = "paramore.brighter.greetingsender", BootStrapServers = ["localhost:9092"]
+                        },
+                        [
+                            new KafkaPublication
+                            {
+                                Topic = new RoutingKey("greeting.event"),
+                                RequestType = typeof(GreetingEvent),
+                                MessageSendMaxRetries = 3,
+                                MessageTimeoutMs = 1000,
+                                MaxInFlightRequestsPerConnection = 1
+                            }
+                        ])
+                    .Create();
             })
-            .MapperRegistryFromAssemblies([typeof(GreetingEvent).Assembly]);
+            .AutoFromAssemblies();
 
         services.AddHostedService<TimedMessageGenerator>();
     })

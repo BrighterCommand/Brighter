@@ -55,7 +55,6 @@ builder.Services
     .AddBrighter(opt =>
     {
         opt.PolicyRegistry = new DefaultPolicy();
-        opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
     .MapperRegistry(r =>
     {
@@ -67,7 +66,7 @@ builder.Services
     {
         configure.ProducerRegistry = producerRegistry;
         configure.Outbox = new MsSqlOutbox(outboxConfig);
-        configure.TransactionProvider = typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>);
+        configure.TransactionProvider = typeof(MsSqlEntityFrameworkCoreTransactionProvider<GreetingsDataContext>);
     });
 
 

@@ -41,8 +41,13 @@ namespace Paramore.Brighter.Inbox.MsSql
                             PRIMARY KEY ( [Id] )
                         );";
 
-        private const string InboxExistsSQL = @"IF EXISTS (SELECT 1  FROM sys.tables WHERE  name = '{0}')  SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
-        
+        private const string INBOX_EXISTS_SQL = @"IF EXISTS (
+            SELECT 1
+            FROM sys.tables t
+            INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+            WHERE t.name = '{0}' AND s.name = '{1}'
+        ) SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
+
         /// <summary>
         /// Get the DDL statements to create an Inbox in MSSQL
         /// </summary>
@@ -54,13 +59,13 @@ namespace Paramore.Brighter.Inbox.MsSql
         }
         
         /// <summary>
-        /// Get the SQL statements required to test for the existence of an Inbox in MSSQL
+        /// Get the SQL statements required to test for the existence of an Inbox in MSSQL.
         /// </summary>
-        /// <param name="inboxTableName">The name that was used for the Inbox table</param>
-        /// <returns>The required SQL</returns>
-        public static string GetExistsQuery(string inboxTableName)
-        {
-            return string.Format(InboxExistsSQL, inboxTableName);
-        }
+        /// <param name="inboxTableName">The name that was used for the Inbox table.</param>
+        /// <param name="schemaName">The schema name for the Inbox table. Defaults to 'dbo'.</param>
+        /// <returns>The required SQL.</returns>
+        public static string GetExistsQuery(string inboxTableName, string schemaName = "dbo") =>
+            string.Format(INBOX_EXISTS_SQL, inboxTableName, schemaName);
+
     }
 }

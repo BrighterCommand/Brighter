@@ -48,7 +48,7 @@ public class SnsMessageProducerFactory : IAmAMessageProducerFactory
     }
 
     /// <summary>
-    /// Creates a dictionary of in-memory message producers.
+    /// Creates a dictionary of message producers.
     /// </summary>
     /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
     /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>

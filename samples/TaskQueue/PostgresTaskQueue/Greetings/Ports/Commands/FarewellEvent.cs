@@ -1,10 +1,7 @@
-﻿using System;
-using MessagePack;
-using Paramore.Brighter;
+﻿using Paramore.Brighter;
 
 namespace Greetings.Ports.Commands
 {
-    [MessagePackObject(keyAsPropertyName: true)]
     public class FarewellEvent : Event
     {
         public FarewellEvent() : base(Id.Random())
@@ -16,6 +13,6 @@ namespace Greetings.Ports.Commands
             Farewell = farewell;
         }
 
-        public string Farewell { get; set; }
+        public string? Farewell { get; set; }
     }
 }

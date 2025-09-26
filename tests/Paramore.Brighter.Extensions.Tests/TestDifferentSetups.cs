@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -31,8 +32,8 @@ namespace Tests
         }
 
         [Theory]
-        [InlineData(typeof(SomeSqlConnectionProvider), typeof(SomeSqlUnitOfBox))]
-        [InlineData(typeof(SomeSqlUnitOfBox), typeof(SomeSqlUnitOfBox))]
+        [InlineData(typeof(SomeSqlConnectionProvider), typeof(StubSqlTransactionProvider))]
+        [InlineData(typeof(StubSqlTransactionProvider), typeof(StubSqlTransactionProvider))]
         public void WithExternalBus(Type connectionProvider, Type transactionProvider)
         {
             var serviceCollection = new ServiceCollection();
@@ -105,10 +106,10 @@ namespace Tests
         {
             var serviceCollection = new ServiceCollection();
             
-            serviceCollection.AddBrighter(options => options.CommandProcessorLifetime = ServiceLifetime.Scoped
+            serviceCollection.AddBrighter(
                 ).AutoFromAssemblies();
 
-            Assert.Equal( ServiceLifetime.Scoped, serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime);
+            Assert.Equal( ServiceLifetime.Singleton, serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime);
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
@@ -126,7 +127,7 @@ namespace Tests
         }
         
         
-        public class SomeSqlUnitOfBox :  RelationalDbTransactionProvider
+        public class StubSqlTransactionProvider :  RelationalDbTransactionProvider
         {
             public override DbConnection GetConnection()
             {
