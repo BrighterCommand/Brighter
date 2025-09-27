@@ -1,6 +1,7 @@
 # Build and Development Commands
 
 ## Building the Solution
+
 ```bash
 # Build entire solution
 dotnet build Brighter.sln
@@ -13,6 +14,7 @@ dotnet build Brighter.sln -c Release
 ```
 
 ## Running Tests
+
 ```bash
 # Run all tests
 dotnet test
@@ -28,6 +30,7 @@ dotnet test --filter "When_Handling_A_Command"
 ```
 
 ## Docker Development Environment
+
 ```bash
 # Start all infrastructure services
 docker-compose up -d --build --scale redis-slave=2 --scale redis-sentinel=3
