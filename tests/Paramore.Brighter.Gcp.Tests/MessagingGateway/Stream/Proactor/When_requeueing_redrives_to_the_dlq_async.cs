@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
-using System.Threading;
+using System.Threading.Tasks;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
@@ -9,21 +9,20 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetterPolicy;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
 [Trait("Category", "GCP")]
-[Trait("Fragile", "CI")]
-public class MessageProducerDlqTestsAsync : IDisposable
+public class StreamMessageProducerDlqTestsAsync : IDisposable
 {
     private const int MaxDeliveryAttempts = 5;
     private readonly GcpMessageProducer _sender;
-    private readonly IAmAChannelSync _channel;
+    private readonly IAmAChannelAsync _channel;
     private readonly GcpPubSubChannelFactory _channelFactory;
     private readonly Message _message;
     private readonly GcpMessagingGatewayConnection _connection;
     private readonly GcpSubscription<MyCommand> _subscription;
 
-    public MessageProducerDlqTestsAsync()
+    public StreamMessageProducerDlqTestsAsync()
     {
         const string replyTo = "http:\\queueUrl";
         MyCommand myCommand = new() { Value = "Test" };
@@ -46,7 +45,8 @@ public class MessageProducerDlqTestsAsync : IDisposable
                 AckDeadlineSeconds = 60,
                 MaxDeliveryAttempts = MaxDeliveryAttempts
             },
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            subscriptionMode: SubscriptionMode.Stream
         );
 
         _message = new Message(
@@ -65,31 +65,31 @@ public class MessageProducerDlqTestsAsync : IDisposable
             });
 
         _channelFactory = new GcpPubSubChannelFactory(_connection);
-        _channel = _channelFactory.CreateSyncChannel(_subscription);
+        _channel = _channelFactory.CreateAsyncChannel(_subscription);
     }
 
     [Fact]
-    public void When_requeueing_redrives_to_the_queue()
+    public async Task When_requeueing_redrives_to_the_queue_async()
     {
-        _sender.Send(_message);
+        await _sender.SendAsync(_message);
         for (var i = 0; i <= MaxDeliveryAttempts; i++)
         {
-            var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            _channel.Requeue(receivedMessage);
+            var receivedMessage = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+            await _channel.RequeueAsync(receivedMessage);
         }
         
-        Thread.Sleep(5000);
+        await Task.Delay(5000);
 
-        var dlqCount = GetDLQCount();
+        int dlqCount = await GetDLQCountAsync();
         Assert.Equal(1, dlqCount);
     }
 
-    private int GetDLQCount()
+    private async Task<int> GetDLQCountAsync()
     {
-        var client = _connection.CreateSubscriberServiceApiClient();
+        var client = await _connection.CreateSubscriberServiceApiClientAsync();
         var subName = Google.Cloud.PubSub.V1.SubscriptionName.FormatProjectSubscription(_connection.ProjectId,
             _subscription.DeadLetter!.Subscription!);
-        var messages = client.Pull(new PullRequest
+        var messages = await client.PullAsync(new PullRequest
         {
             MaxMessages = 10, 
             Subscription = subName

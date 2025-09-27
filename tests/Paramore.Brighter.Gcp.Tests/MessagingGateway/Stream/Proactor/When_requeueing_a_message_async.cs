@@ -1,25 +1,26 @@
 ﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
 [Trait("Category", "GCP")]
-public class MessageProducerRequeueTestsAsync : IDisposable
+public class StreamMessageProducerRequeueTestsAsync : IDisposable
 {
-    private readonly IAmAMessageProducerSync _sender;
+    private readonly IAmAMessageProducerAsync _sender;
     private Message? _requeuedMessage;
     private Message? _receivedMessage;
-    private readonly IAmAChannelSync _channel;
+    private readonly IAmAChannelAsync _channel;
     private readonly GcpPubSubChannelFactory _channelFactory;
     private readonly GcpSubscription<MyCommand> _subscription;
     private readonly Message _message;
 
-    public MessageProducerRequeueTestsAsync()
+    public StreamMessageProducerRequeueTestsAsync()
     {
         const string replyTo = "http:\\queueUrl";
         MyCommand myCommand = new() { Value = "Test" };
@@ -34,7 +35,8 @@ public class MessageProducerRequeueTestsAsync : IDisposable
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            subscriptionMode: SubscriptionMode.Stream
         );
 
         _message = new Message(
@@ -53,19 +55,19 @@ public class MessageProducerRequeueTestsAsync : IDisposable
             });
 
         _channelFactory = new GcpPubSubChannelFactory(connection);
-        _channel = _channelFactory.CreateSyncChannel(_subscription);
+        _channel = _channelFactory.CreateAsyncChannel(_subscription);
     }
 
     [Fact]
-    public void When_requeueing_a_message()
+    public async Task When_requeueing_a_message_async()
     {
-        _sender.Send(_message);
-        _receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-        _channel.Requeue(_receivedMessage);
+        await _sender.SendAsync(_message);
+        _receivedMessage = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        await _channel.RequeueAsync(_receivedMessage);
 
-        _requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        _requeuedMessage = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
-        _channel.Acknowledge(_requeuedMessage);
+        await _channel.AcknowledgeAsync(_requeuedMessage);
 
         Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
     }

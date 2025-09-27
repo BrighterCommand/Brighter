@@ -25,6 +25,52 @@ internal static class Parser
         HeaderNames.DataSchema
     };
 
+
+    public static Message ToBrighterMessage(GcpStreamMessage receivedMessage)
+    {
+        var partitionKey = receivedMessage.Message.OrderingKey;
+        var topic = ReadTopic(receivedMessage.Message.Attributes);
+        var messageId = ReadMessageId(receivedMessage.Message.Attributes);
+        var handleCount = ReadHandleCount(receivedMessage.Message.Attributes);
+        var contentType = ReadContentType(receivedMessage.Message.Attributes);
+        var messageType = ReadMessageType(receivedMessage.Message.Attributes);
+        var timestamp = ReadTimestamp(receivedMessage.Message.Attributes);
+        var replyTo = ReadReplyTo(receivedMessage.Message.Attributes);
+        var correlationId = ReadCorrelationId(receivedMessage.Message.Attributes);
+        var subject = ReadSubject(receivedMessage.Message.Attributes);
+        var type = ReadType(receivedMessage.Message.Attributes);
+        var source = ReadSource(receivedMessage.Message.Attributes);
+        var dataSchema = ReadDataSchema(receivedMessage.Message.Attributes);
+
+        var messageHeader = new MessageHeader(
+            messageId: messageId,
+            topic: topic,
+            messageType: messageType,
+            source: source,
+            type: type,
+            timeStamp: timestamp,
+            correlationId: correlationId,
+            replyTo: replyTo,
+            contentType: contentType,
+            handledCount: handleCount,
+            dataSchema: dataSchema,
+            subject: subject,
+            delayed: TimeSpan.Zero,
+            partitionKey: partitionKey
+        );
+
+        foreach (var header in receivedMessage.Message.Attributes
+                     .Where(x => !s_ignoreHeaders.Contains(x.Key)))
+        {
+            messageHeader.Bag[header.Key] = header.Value;
+        }
+
+        messageHeader.Bag["ReceiptHandle"] = receivedMessage;
+
+        var body = new MessageBody(receivedMessage.Message.Data.ToByteArray());
+        return new Message(messageHeader, body);
+    }
+    
     public static Message ToBrighterMessage(ReceivedMessage receivedMessage)
     {
         var receiptHandle = receivedMessage.AckId;

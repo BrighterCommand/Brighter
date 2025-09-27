@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -26,7 +27,7 @@ public class GcpConsumerFactory : GcpPubSubMessageGateway, IAmAMessageConsumerFa
                 "We are expecting a PubSubSubscription or PubSubSubscription<T> as parameter");
         }
 
-        return BrighterAsyncContext.Run(async () => await CreateAsync(pubSubSubscription));
+        return BrighterAsyncContext.Run(async () => (IAmAMessageConsumerSync) await CreateAsync(pubSubSubscription));
     }
 
     /// <inheritdoc />
@@ -38,18 +39,27 @@ public class GcpConsumerFactory : GcpPubSubMessageGateway, IAmAMessageConsumerFa
                 "We are expecting a PubSubSubscription or PubSubSubscription<T> as parameter");
         }
 
-        return BrighterAsyncContext.Run(async () => await CreateAsync(pubSubSubscription));
+        return BrighterAsyncContext.Run(async () => (IAmAMessageConsumerAsync) await CreateAsync(pubSubSubscription));
     }
 
-    private async Task<GcpPullMessageConsumer> CreateAsync(GcpSubscription subscription)
+    private static readonly ConcurrentDictionary<GcpSubscription, GcpStreamConsumer> s_consumers = new(); 
+    private async Task<object> CreateAsync(GcpSubscription subscription)
     {
         await EnsureSubscriptionExistsAsync(subscription);
 
-        return new GcpPullMessageConsumer(_connection,
-            Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(
-                subscription.ProjectId ?? _connection.ProjectId, subscription.ChannelName.Value),
-            subscription.BufferSize,
-            subscription.DeadLetter != null,
+        var subscriptionName = Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(subscription.ProjectId ?? _connection.ProjectId, subscription.ChannelName.Value);
+        if(subscription.SubscriptionMode == SubscriptionMode.Pull)
+        {
+            return new GcpPullMessageConsumer(_connection, subscriptionName,
+                subscription.BufferSize, subscription.DeadLetter != null, subscription.TimeProvider);
+        }
+
+        var consumer = s_consumers.GetOrAdd(subscription, sub => new GcpStreamConsumer(_connection, subscriptionName, sub));
+        consumer.Start();
+        return new GcpStreamMessageConsumer(
+            _connection,
+            consumer,
+            subscriptionName,
             subscription.TimeProvider);
     }
 }

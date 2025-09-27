@@ -4,13 +4,9 @@ using Google.Protobuf.Collections;
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 /// <summary>
-/// Provides configuration specific to a Google Cloud Pub/Sub pull subscription for use with the Brighter framework.
+/// Represents the configuration settings for a Google Cloud Pub/Sub subscription, 
+/// extending the core Brighter <see cref="Subscription"/> with GCP-specific properties.
 /// </summary>
-/// <remarks>
-/// This class extends the base Brighter <see cref="Subscription"/> with properties that map directly to
-/// Google Cloud Pub/Sub subscription settings. Configure these properties after creating an instance
-/// to define the desired Pub/Sub behavior when the subscription is provisioned or used.
-/// </remarks>
 public class GcpSubscription : Subscription
 {
     /// <summary>
@@ -122,49 +118,49 @@ public class GcpSubscription : Subscription
     /// </summary>
     /// <value>Defaults to <see cref="TimeProvider.System"/>.</value>
     public TimeProvider TimeProvider { get; } 
+    
+    /// <summary>
+    /// Gets or sets the message delivery mechanism to use for this subscription.
+    /// </summary>
+    /// <value>A <see cref="SubscriptionMode"/> value, typically <c>Stream</c> for high-performance consumption.</value>
+    public SubscriptionMode SubscriptionMode { get; }
 
     /// <inheritdoc />
     public override Type ChannelFactoryType => typeof(GcpConsumerFactory);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="GcpSubscription"/> class, configuring base Brighter subscription properties.
+    /// Initializes a new instance of the <see cref="GcpSubscription"/> class with specific Pub/Sub and Brighter settings.
     /// </summary>
-    /// <param name="subscriptionName">The name of the subscription (logical name in Brighter).</param>
-    /// <param name="channelName">The name of the channel (often corresponds to the physical Pub/Sub subscription ID).</param>
-    /// <param name="routingKey">The routing key (often corresponds to the Pub/Sub topic ID).</param>
-    /// <param name="bufferSize">The size of the buffer for messages read from the channel.</param>
-    /// <param name="requestType">The <see cref="Type"/> of the data that this subscription handles.</param>
-    /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="requestType"/> if null</param>
-    /// <param name="noOfPerformers">The number of parallel performers (message processors) to run.</param>
-    /// <param name="timeOut">The timeout for channel operations (in milliseconds).</param>
-    /// <param name="requeueCount">The number of times to requeue a message before discarding (handled by Brighter, distinct from Pub/Sub dead-lettering).</param>
-    /// <param name="requeueDelay">The delay before requeuing a message (handled by Brighter).</param>
-    /// <param name="unacceptableMessageLimit">The number of unacceptable messages allowed before stopping the performer.</param>
-    /// <param name="messagePumpType">The type of message pump to use (use Unknown or specific if applicable).</param>
-    /// <param name="channelFactory">An optional custom channel factory.</param>
-    /// <param name="makeChannels">Specifies whether Brighter should attempt to create (provision) the channel if it's missing.</param>
-    /// <param name="emptyChannelDelay">The delay before re-polling an empty channel.</param>
-    /// <param name="channelFailureDelay">The delay before retrying after a channel failure.</param>
-    /// <param name="projectId"></param>
-    /// <param name="topicAttributes"></param>
-    /// <param name="ackDeadlineSeconds"></param>
-    /// <param name="retainAckedMessages"></param>
-    /// <param name="messageRetentionDuration"></param>
-    /// <param name="labels"></param>
-    /// <param name="enableMessageOrdering"></param>
-    /// <param name="enableExactlyOnceDelivery"></param>
-    /// <param name="storage"></param>
-    /// <param name="expirationPolicy"></param>
-    /// <param name="maxRequeueDelay"></param>
-    /// <param name="timeProvider"></param>
-    /// <param name="deadLetter"></param>
-    /// <remarks>
-    /// This constructor initializes the standard Brighter subscription properties.
-    /// Google Cloud Pub/Sub specific settings (like <see cref="ProjectId"/>, <see cref="AckDeadlineSeconds"/>, <see cref="EnableMessageOrdering"/>, etc.)
-    /// must be configured by setting the corresponding properties on the instance after creation. These settings are typically used
-    /// during channel provisioning (<paramref name="makeChannels"/>  = <see cref="OnMissingChannel.Create"/> or <see cref="OnMissingChannel.Validate"/>)
-    /// or by the <see cref="GcpConsumerFactory"/> when creating the consumer.
-    /// </remarks>
+    /// <param name="subscriptionName">The name of the Pub/Sub subscription.</param>
+    /// <param name="channelName">The name of the Brighter channel.</param>
+    /// <param name="routingKey">The topic name/routing key.</param>
+    /// <param name="requestType">The type of the request expected on this subscription (optional).</param>
+    /// <param name="getRequestType">A function to dynamically determine the request type from the message (optional).</param>
+    /// <param name="bufferSize">The number of messages to buffer per performer (for internal channel control).</param>
+    /// <param name="noOfPerformers">The number of concurrent performers (threads/tasks) processing messages.</param>
+    /// <param name="timeOut">The timeout for a single receive operation.</param>
+    /// <param name="requeueCount">The number of times a message should be redelivered before being considered unacceptable.</param>
+    /// <param name="requeueDelay">The initial delay for requeueing a message after rejection.</param>
+    /// <param name="unacceptableMessageLimit">The limit for unacceptable messages before the pump shuts down.</param>
+    /// <param name="messagePumpType">The type of message pump to use.</param>
+    /// <param name="channelFactory">A custom channel factory (optional).</param>
+    /// <param name="makeChannels">Defines whether to create the channel if missing.</param>
+    /// <param name="emptyChannelDelay">The delay when the channel is empty.</param>
+    /// <param name="channelFailureDelay">The delay when the channel fails.</param>
+    /// <param name="projectId">The Google Cloud Project ID where the subscription resides.</param>
+    /// <param name="topicAttributes">Attributes to be applied to the associated Pub/Sub Topic upon creation.</param>
+    /// <param name="ackDeadlineSeconds">The acknowledgment deadline in seconds (10 to 600).</param>
+    /// <param name="retainAckedMessages">Whether to retain acknowledged messages.</param>
+    /// <param name="messageRetentionDuration">The duration for message retention.</param>
+    /// <param name="labels">Key-value labels to apply to the subscription resource.</param>
+    /// <param name="enableMessageOrdering">Whether to enable message ordering.</param>
+    /// <param name="enableExactlyOnceDelivery">Whether to enable exactly-once delivery.</param>
+    /// <param name="storage">Configuration for exporting acknowledged messages to Google Cloud Storage.</param>
+    /// <param name="expirationPolicy">Policy governing automatic subscription deletion based on inactivity.</param>
+    /// <param name="deadLetter">Policy for dead-lettering messages that fail delivery too many times.</param>
+    /// <param name="maxRequeueDelay">The maximum delay for exponential backoff retries.</param>
+    /// <param name="timeProvider">The time provider used for time-related calculations.</param>
+    /// <param name="subscriptionMode">The delivery mechanism to use (Stream or Pull).</param>
     public GcpSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey, 
         Type? requestType = null, Func<Message, Type>? getRequestType = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
@@ -175,7 +171,7 @@ public class GcpSubscription : Subscription
         bool retainAckedMessages = false, TimeSpan? messageRetentionDuration = null, MapField<string, string>? labels = null, 
         bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
         ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null, TimeSpan? maxRequeueDelay = null,
-        TimeProvider? timeProvider = null) 
+        TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream) 
         : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
         noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
         makeChannels, emptyChannelDelay, channelFailureDelay)
@@ -193,75 +189,65 @@ public class GcpSubscription : Subscription
         ProjectId = projectId;
         TopicAttributes = topicAttributes;
         AckDeadlineSeconds = ackDeadlineSeconds;
+        SubscriptionMode = subscriptionMode;
     }
 }
 
 /// <summary>
-/// Provides a generic version of <see cref="GcpSubscription"/> for configuring a Google Cloud Pub/Sub
-/// pull subscription for a specific message type <typeparamref name="T"/>.
+/// Represents a Google Cloud Pub/Sub subscription specific to a request type <typeparamref name="T"/>.
 /// </summary>
-/// <typeparam name="T">The type of the message (<see cref="IRequest"/>) that this subscription handles. Must be a reference type.</typeparam>
-/// <remarks>
-/// This class simplifies subscription configuration by automatically setting the <c>DataType</c> property based on <typeparamref name="T"/>.
-/// Like its base class, configure Google Cloud Pub/Sub specific properties on the instance after creation.
-/// </remarks>
+/// <typeparam name="T">The type of the request message expected to be consumed from this subscription.</typeparam>
 public class GcpSubscription<T> : GcpSubscription
     where T : class, IRequest
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="GcpSubscription{T}"/> class, configuring base Brighter subscription properties.
+    /// Initializes a new instance of the <see cref="GcpSubscription{T}"/> class, inheriting parameters from the base class 
+    /// but strongly typing the expected request type to <typeparamref name="T"/>.
     /// </summary>
-    /// <param name="subscriptionName">The name of the subscription (logical name in Brighter).</param>
-    /// <param name="channelName">The name of the channel (often corresponds to the physical Pub/Sub subscription ID).</param>
-    /// <param name="routingKey">The routing key (often corresponds to the Pub/Sub topic ID).</param>
-    /// <param name="getRequestType">The <see cref="Func{T,TResult}"/> that determines how we map a message to a type. Defaults to returning the <see cref="requestType"/> if null</param>
-    /// <param name="bufferSize">The size of the buffer for messages read from the channel.</param>
-    /// <param name="noOfPerformers">The number of parallel performers (message processors) to run.</param>
-    /// <param name="timeOut">The timeout for channel operations (in milliseconds).</param>
-    /// <param name="requeueCount">The number of times to requeue a message before discarding (handled by Brighter, distinct from Pub/Sub dead-lettering).</param>
-    /// <param name="requeueDelay">The delay before requeuing a message (handled by Brighter).</param>
-    /// <param name="unacceptableMessageLimit">The number of unacceptable messages allowed before stopping the performer.</param>
-    /// <param name="messagePumpType">The type of message pump to use (use Unknown or specific if applicable).</param>
-    /// <param name="channelFactory">An optional custom channel factory.</param>
-    /// <param name="makeChannels">Specifies whether Brighter should attempt to create (provision) the channel if it's missing.</param>
-    /// <param name="emptyChannelDelay">The delay before re-polling an empty channel.</param>
-    /// <param name="channelFailureDelay">The delay before retrying after a channel failure.</param>
-    /// <param name="projectId"></param>
-    /// <param name="topicAttributes"></param>
-    /// <param name="ackDeadlineSeconds"></param>
-    /// <param name="retainAckedMessages"></param>
-    /// <param name="messageRetentionDuration"></param>
-    /// <param name="labels"></param>
-    /// <param name="enableMessageOrdering"></param>
-    /// <param name="enableExactlyOnceDelivery"></param>
-    /// <param name="storage"></param>
-    /// <param name="expirationPolicy"></param>
-    /// <param name="deadLetter"></param>
-    /// <param name="maxRequeueDelay"></param>
-    /// <param name="timeProvider"></param>
-    /// <remarks>
-    /// This constructor initializes the standard Brighter subscription properties.
-    /// Google Cloud Pub/Sub specific settings (like <see cref="ProjectId"/>, <see cref="AckDeadlineSeconds"/>, <see cref="EnableMessageOrdering"/>, etc.)
-    /// must be configured by setting the corresponding properties on the instance after creation. These settings are typically used
-    /// during channel provisioning (<paramref name="makeChannels"/>  = <see cref="OnMissingChannel.Create"/> or <see cref="OnMissingChannel.Validate"/>)
-    /// or by the <see cref="GcpConsumerFactory"/> when creating the consumer.
-    /// </remarks>
+    /// <param name="subscriptionName">The name of the Pub/Sub subscription.</param>
+    /// <param name="channelName">The name of the Brighter channel.</param>
+    /// <param name="routingKey">The topic name/routing key.</param>
+    /// <param name="getRequestType">A function to dynamically determine the request type from the message (optional).</param>
+    /// <param name="bufferSize">The number of messages to buffer per performer (for internal channel control).</param>
+    /// <param name="noOfPerformers">The number of concurrent performers (threads/tasks) processing messages.</param>
+    /// <param name="timeOut">The timeout for a single receive operation.</param>
+    /// <param name="requeueCount">The number of times a message should be redelivered before being considered unacceptable.</param>
+    /// <param name="requeueDelay">The initial delay for requeueing a message after rejection.</param>
+    /// <param name="unacceptableMessageLimit">The limit for unacceptable messages before the pump shuts down.</param>
+    /// <param name="messagePumpType">The type of message pump to use.</param>
+    /// <param name="channelFactory">A custom channel factory (optional).</param>
+    /// <param name="makeChannels">Defines whether to create the channel if missing.</param>
+    /// <param name="emptyChannelDelay">The delay when the channel is empty.</param>
+    /// <param name="channelFailureDelay">The delay when the channel fails.</param>
+    /// <param name="projectId">The Google Cloud Project ID where the subscription resides.</param>
+    /// <param name="topicAttributes">Attributes to be applied to the associated Pub/Sub Topic upon creation.</param>
+    /// <param name="ackDeadlineSeconds">The acknowledgment deadline in seconds (10 to 600).</param>
+    /// <param name="retainAckedMessages">Whether to retain acknowledged messages.</param>
+    /// <param name="messageRetentionDuration">The duration for message retention.</param>
+    /// <param name="labels">Key-value labels to apply to the subscription resource.</param>
+    /// <param name="enableMessageOrdering">Whether to enable message ordering.</param>
+    /// <param name="enableExactlyOnceDelivery">Whether to enable exactly-once delivery.</param>
+    /// <param name="storage">Configuration for exporting acknowledged messages to Google Cloud Storage.</param>
+    /// <param name="expirationPolicy">Policy governing automatic subscription deletion based on inactivity.</param>
+    /// <param name="deadLetter">Policy for dead-lettering messages that fail delivery too many times.</param>
+    /// <param name="maxRequeueDelay">The maximum delay for exponential backoff retries.</param>
+    /// <param name="timeProvider">The time provider used for time-related calculations.</param>
+    /// <param name="subscriptionMode">The delivery mechanism to use (Stream or Pull).</param>
     public GcpSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey, 
         Func<Message, Type>? getRequestType = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
-        TimeSpan? channelFailureDelay = null,
-        string? projectId = null, TopicAttributes? topicAttributes = null, int ackDeadlineSeconds = 30,
+        TimeSpan? channelFailureDelay = null, string? projectId = null, TopicAttributes? topicAttributes = null, int ackDeadlineSeconds = 30,
         bool retainAckedMessages = false, TimeSpan? messageRetentionDuration = null, MapField<string, string>? labels = null, 
         bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
         ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null, TimeSpan? maxRequeueDelay = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream)
         : base(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, projectId, topicAttributes,
             ackDeadlineSeconds, retainAckedMessages, messageRetentionDuration, labels, enableMessageOrdering, 
-            enableExactlyOnceDelivery, storage, expirationPolicy, deadLetter, maxRequeueDelay, timeProvider)
+            enableExactlyOnceDelivery, storage, expirationPolicy, deadLetter, maxRequeueDelay, timeProvider, subscriptionMode: subscriptionMode)
     {
     }
 }

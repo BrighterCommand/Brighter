@@ -15,7 +15,7 @@ public static class GatewayFactory
         {
             cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
         },
-        SubscribeConfiguration = cfg =>
+        PullConfiguration = cfg =>
         {
             cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
         }

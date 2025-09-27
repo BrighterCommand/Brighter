@@ -316,7 +316,7 @@ public class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
         }
 
         gpcSubscription.Labels.Add("source", "brighter");
-        foreach (var label in subscription.TopicAttributes.Labels)
+        foreach (var label in subscription.Labels)
         {
             gpcSubscription.Labels[label.Key] = label.Value;
         }

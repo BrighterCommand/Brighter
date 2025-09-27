@@ -329,12 +329,12 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Information,
-            "PullPubSubConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
+            "GcpPullMessageConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
         public static partial void AcknowledgeSuccess(ILogger logger, string id, string receiptHandle,
             string subscriptionName);
 
         [LoggerMessage(LogLevel.Error,
-            "PullPubSubConsumer: Error during acknowledging the message {Id} with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
+            "GcpPullMessageConsumer: Error during acknowledging the message {Id} with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
         public static partial void AcknowledgeError(ILogger logger, Exception ex, string id, string receiptHandle,
             string subscriptionName);
 

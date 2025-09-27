@@ -7,7 +7,7 @@ using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Reactor;
 
 [Trait("Category", "GCP")]
 public class PubSubBufferedConsumerTestsAsync : IDisposable
@@ -38,7 +38,8 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable
             routingKey: routingKey,
             bufferSize: BufferSize,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            subscriptionMode: SubscriptionMode.Pull
         )).GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel

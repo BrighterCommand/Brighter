@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
-using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Proactor;
 
 [Trait("Category", "GCP")]
 public class MessageProducerSendAsyncTests : IDisposable
 {
     private readonly Message _message;
-    private readonly IAmAChannelSync _channel;
+    private readonly IAmAChannelAsync _channel;
     private readonly GcpMessageProducer _messageProducer;
     private readonly GcpPubSubChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
@@ -37,7 +37,8 @@ public class MessageProducerSendAsyncTests : IDisposable
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor
+            messagePumpType: MessagePumpType.Proactor,
+            subscriptionMode: SubscriptionMode.Stream
         );
 
         _message = new Message(
@@ -49,7 +50,7 @@ public class MessageProducerSendAsyncTests : IDisposable
         var connection = GatewayFactory.CreateFactory();
 
         _channelFactory = new GcpPubSubChannelFactory(connection);
-        _channel = _channelFactory.CreateSyncChannel(_subscription);
+        _channel = _channelFactory.CreateAsyncChannel(_subscription);
 
         _messageProducer = new GcpMessageProducer(
             connection, 
@@ -61,18 +62,18 @@ public class MessageProducerSendAsyncTests : IDisposable
     }
 
     [Fact]
-    public void When_posting_a_message_via_the_producer()
+    public async Task When_posting_a_message_via_the_producer_async()
     {
         // arrange
         _message.Header.Subject = "test subject";
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
-        Thread.Sleep(1000);
+        await Task.Delay(1000);
 
-        var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         // clear the queue
-        _channel.Acknowledge(message);
+        await _channel.AcknowledgeAsync(message);
 
         // should_send_the_message_to_aws_sqs
         Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
@@ -97,7 +98,7 @@ public class MessageProducerSendAsyncTests : IDisposable
     {
         _channelFactory.DeleteTopic(_subscription);
         _channelFactory.DeleteSubscription(_subscription);
-         _messageProducer.Dispose();
+        _messageProducer.Dispose();
     }
 
     private static DateTime RoundToSeconds(DateTime dateTime)

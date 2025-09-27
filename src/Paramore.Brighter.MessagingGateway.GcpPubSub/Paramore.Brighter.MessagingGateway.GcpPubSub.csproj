@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Google.Cloud.PubSub.V1" />
     <PackageReference Include="Google.Cloud.ResourceManager.V3" />
+    <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
 
   <ItemGroup>

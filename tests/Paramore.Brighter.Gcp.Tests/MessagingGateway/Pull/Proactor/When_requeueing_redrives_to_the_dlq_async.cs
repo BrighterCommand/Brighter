@@ -9,7 +9,7 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetterPolicy;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Proactor;
 
 [Trait("Category", "GCP")]
 [Trait("Fragile", "CI")]
@@ -46,7 +46,8 @@ public class MessageProducerDlqTestsAsync : IDisposable
                 AckDeadlineSeconds = 60,
                 MaxDeliveryAttempts = MaxDeliveryAttempts
             },
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            subscriptionMode: SubscriptionMode.Pull
         );
 
         _message = new Message(

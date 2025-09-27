@@ -7,7 +7,7 @@ using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Proactor;
 
 [Trait("Category", "GCP")]
 public class MessageProducerRequeueTestsAsync : IDisposable
@@ -35,7 +35,8 @@ public class MessageProducerRequeueTestsAsync : IDisposable
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            subscriptionMode: SubscriptionMode.Pull
         );
 
         _message = new Message(

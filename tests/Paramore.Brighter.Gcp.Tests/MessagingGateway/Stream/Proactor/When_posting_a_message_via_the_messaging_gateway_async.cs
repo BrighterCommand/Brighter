@@ -7,10 +7,10 @@ using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Proactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
 [Trait("Category", "GCP")]
-public class MessageProducerSendAsyncTests : IDisposable
+public class StreamMessageProducerSendAsyncTests : IDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelAsync _channel;
@@ -23,7 +23,7 @@ public class MessageProducerSendAsyncTests : IDisposable
     private readonly string _topicName;
     private readonly GcpSubscription<MyCommand> _subscription;
 
-    public MessageProducerSendAsyncTests()
+    public StreamMessageProducerSendAsyncTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         _correlationId = Id.Random();
@@ -37,7 +37,8 @@ public class MessageProducerSendAsyncTests : IDisposable
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor
+            messagePumpType: MessagePumpType.Proactor,
+            subscriptionMode: SubscriptionMode.Stream
         );
 
         _message = new Message(
