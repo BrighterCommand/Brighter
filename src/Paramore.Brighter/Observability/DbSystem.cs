@@ -83,4 +83,5 @@ public enum DbSystem
     Teradata,
     Trino,
     Vertica,
+    Firestore,
 }
