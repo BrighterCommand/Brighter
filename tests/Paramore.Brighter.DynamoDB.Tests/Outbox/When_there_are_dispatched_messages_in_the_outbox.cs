@@ -33,7 +33,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
-        var messages = await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 100, 1, args: args);
+        var messages = await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 1000, 1, args: args);
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
@@ -52,7 +52,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
-        var messages = _dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 100, 1, args: args);
+        var messages = _dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 1000, 1, args: args);
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
@@ -76,7 +76,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
-        var dispatchedMessages = await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 100, 1);
+        var dispatchedMessages = await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 1000, 1);
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -89,7 +89,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_dispatched_messages_for_multiple_topics()
+    public void When_there_are_dispatched_messages_for_multiple_topics()
     {
         var messages = new List<Message>();
         var context = new RequestContext();
@@ -104,7 +104,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
-        var dispatchedMessages = _dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 100, 1);
+        var dispatchedMessages = _dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 1000, 1);
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -141,7 +141,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         var dispatchedMessages = (await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 5, 1, args: args)).ToList();
         Assert.Equal(5, dispatchedMessages.Count);
         // Get the remainder
-        dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 100, 2, args: args));
+        dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 1000, 2, args: args));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -177,7 +177,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         var dispatchedMessages = (_dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 5, 1, args: args)).ToList();
         Assert.Equal(5, dispatchedMessages.Count);
         // Get the remainder
-        dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 100, 2, args: args));
+        dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 1000, 2, args: args));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -220,7 +220,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
             dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 5, i));
         }
         // Do a last page in case other tests have added more messages
-        dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 100, 5));
+        dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 1000, 5));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -233,7 +233,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_multiple_topics()
+    public void When_there_are_multiple_pages_of_dispatched_messages_for_multiple_topics()
     {
         var context = new RequestContext();
         var messages = new List<Message>();
@@ -264,7 +264,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
             dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 5, i));
         }
         // Do a last page in case other tests have added more messages
-        dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 100, 5));
+        dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 1000, 5));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)

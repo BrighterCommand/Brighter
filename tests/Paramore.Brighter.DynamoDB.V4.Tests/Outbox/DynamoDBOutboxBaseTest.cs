@@ -31,7 +31,9 @@ public class DynamoDBOutboxBaseTest : IDisposable
                 new Dictionary<string, ProvisionedThroughput>
                 {
                     {"Outstanding", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
-                    {"Delivered", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}}
+                    {"OutstandingAllTopics", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
+                    {"Delivered", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
+                    {"DeliveredAllTopics", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}}
                 }
             ));
         OutboxTableName = createTableRequest.TableName;

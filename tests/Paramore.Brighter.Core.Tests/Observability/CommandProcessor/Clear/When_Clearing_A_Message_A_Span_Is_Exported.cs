@@ -80,6 +80,36 @@ public class CommandProcessorClearObservabilityTests
         Assert.NotNull(createActivity);
         Assert.Equal(parentActivity?.Id, createActivity.ParentId);
 
+        var events = createActivity.Events.ToList();
+
+        //retrieving the message batch should be an event
+        var message = _internalBus.Stream(new RoutingKey("MyEvent")).Single();
+        var getEvent = events.Single(e => e.Name == BoxDbOperation.Get.ToSpanName());
+
+        if (options == InstrumentationOptions.None)
+            Assert.Empty(getEvent.Tags);
+
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+            Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageBody && a.Value as string == message.Body.Value);
+        if (options.HasFlag(InstrumentationOptions.Brighter))
+        {
+            Assert.Contains(getEvent.Tags, a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false);
+            Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.OutboxType && a.Value as string == "sync");
+        }
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageId && a.Value as string == message.Id.Value);
+            Assert.Contains(getEvent.Tags,
+                a => a.Key == BrighterSemanticConventions.MessagingDestination && a.Value?.ToString() == message.Header.Topic.Value);
+            Assert.Contains(getEvent.Tags,
+                a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length);
+            Assert.Contains(getEvent.Tags,
+                a => a.Key == BrighterSemanticConventions.MessageType && a.Value as string == message.Header.MessageType.ToString());
+            Assert.Contains(getEvent.Tags,
+                a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && a.Value as string == message.Header.PartitionKey.Value);
+        }
+
         //there should be a clear span for each message id
         var clearActivity = _exportedActivities.Single(a =>
             a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
@@ -97,36 +127,6 @@ public class CommandProcessorClearObservabilityTests
             Assert.DoesNotContain(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.Operation);
             Assert.DoesNotContain(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessagingOperationType);
             Assert.DoesNotContain(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId);
-        }
-
-        var events = clearActivity.Events.ToList();
-
-        //retrieving the message should be an event
-        var message = _internalBus.Stream(new RoutingKey("MyEvent")).Single();
-        var depositEvent = events.Single(e => e.Name == BoxDbOperation.Get.ToSpanName());
-
-        if (options == InstrumentationOptions.None)
-            Assert.Empty(depositEvent.Tags);
-
-        if (options.HasFlag(InstrumentationOptions.RequestBody))
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageBody && a.Value as string == message.Body.Value);
-        if (options.HasFlag(InstrumentationOptions.Brighter))
-        {
-            Assert.Contains(depositEvent.Tags, a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false);
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.OutboxType && a.Value as string == "sync");
-        }
-
-        if (options.HasFlag(InstrumentationOptions.Messaging))
-        {
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageId && a.Value as string == message.Id.Value);
-            Assert.Contains(depositEvent.Tags,
-                a => a.Key == BrighterSemanticConventions.MessagingDestination && a.Value?.ToString() == message.Header.Topic.Value);
-            Assert.Contains(depositEvent.Tags,
-                a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length);
-            Assert.Contains(depositEvent.Tags,
-                a => a.Key == BrighterSemanticConventions.MessageType && a.Value as string == message.Header.MessageType.ToString());
-            Assert.Contains(depositEvent.Tags,
-                a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && a.Value as string == message.Header.PartitionKey.Value);
         }
 
         if (options.HasFlag(InstrumentationOptions.DatabaseInformation))

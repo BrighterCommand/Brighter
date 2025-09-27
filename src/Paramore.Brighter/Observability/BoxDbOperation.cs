@@ -29,11 +29,12 @@ namespace Paramore.Brighter.Observability;
 /// </summary>
 public enum BoxDbOperation
 {
-    Add = 0,                //Add a message to the inbox/outbox
-    Delete,                 //Delete a message from the outbox
-    DispatchedMessages,     //Retrieve a set of messages marked as dispatched
-    Get,                    //Get a message from the inbox/outbox by id
-    MarkDispatched,         //Mark one or more messages as dispatched
-    OutStandingMessages,    //Retrieve a set of messages that are still outstanding
-    Exists                  //Check whether a message exists in the inbox
+    Add = 0,                 //Add a message to the inbox/outbox
+    Delete,                  //Delete a message from the outbox
+    DispatchedMessages,      //Retrieve a set of messages marked as dispatched
+    Get,                     //Get a message from the inbox/outbox by id
+    MarkDispatched,          //Mark one or more messages as dispatched
+    OutStandingMessages,     //Retrieve a set of messages that are still outstanding
+    OutStandingMessageCount, //Count how many outstanding messages are in the outbox
+    Exists                   //Check whether a message exists in the inbox
 }

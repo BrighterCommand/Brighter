@@ -75,9 +75,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Messages.First(m => m.Message.Id == messageId).Message;
         }
 
+        public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+        {
+            return messageIds.Select(id => Get(id, requestContext, outBoxTimeout, args));
+        }
+
         public Task<Message> GetAsync(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Get(messageId, requestContext, outBoxTimeout, args));
+        }
+
+        public Task<IEnumerable<Message>> GetAsync(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Get(messageIds, requestContext, outBoxTimeout, args));
         }
 
         public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
@@ -111,6 +121,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             int pageSize = 100, int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(OutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber));
+        }
+
+        public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+        {
+            return OutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, args).Count();
+        }
+
+        public Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(GetOutstandingMessageCount(dispatchedSince, requestContext, maxCount, args));
         }
     }
 

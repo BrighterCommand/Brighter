@@ -81,7 +81,7 @@ namespace Paramore.Brighter
         /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
         /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
         /// </summary>
-        public int? MaxOutStandingMessages { get; set; } 
+        public int MaxOutStandingMessages { get; set; } 
 
         /// <summary>
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
@@ -192,7 +192,7 @@ namespace Paramore.Brighter
         /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
         /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
         /// </summary>
-        public int? MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingMessages { get; set; } = -1;
 
         /// <summary>
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
