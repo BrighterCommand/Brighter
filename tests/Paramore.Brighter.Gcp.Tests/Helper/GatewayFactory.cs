@@ -7,22 +7,21 @@ namespace Paramore.Brighter.Gcp.Tests.Helper;
 
 public static class GatewayFactory
 {
-    public static GcpMessagingGatewayConnection CreateFactory()
+    private static readonly GcpMessagingGatewayConnection s_connection = new()
     {
-        return new GcpMessagingGatewayConnection
+        Credential = GetCredential(),
+        ProjectId = GetProjectId(),
+        PublishConfiguration = cfg =>
         {
-            Credential = GetCredential(),
-            ProjectId = GetProjectId(),
-            PublishConfiguration = cfg =>
-            {
-                cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
-            },
-            SubscribeConfiguration = cfg =>
-            {
-                cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
-            }
-        };
-    }
+            cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
+        },
+        SubscribeConfiguration = cfg =>
+        {
+            cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
+        }
+    };
+    
+    public static GcpMessagingGatewayConnection CreateFactory() => s_connection;
 
     public static string GetProjectId()
     {
