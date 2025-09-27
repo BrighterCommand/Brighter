@@ -35,39 +35,151 @@ public class GcpMessagingGatewayConnection
     /// </summary>
     public Action<ProjectsClientBuilder>? ProjectsConfiguration { get; set; }
     
+    private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
+    private PublisherServiceApiClient? _publisherServiceApiClient;
+    
+    /// <summary>
+    /// Creates and returns a thread-safe, lazily initialized <see cref="PublisherServiceApiClient"/>.
+    /// The client is created only once on the first call.
+    /// </summary>
+    /// <returns>A configured <see cref="PublisherServiceApiClient"/> instance.</returns>
     public PublisherServiceApiClient CreatePublisherServiceApiClient()
     {
-        var builder = new PublisherServiceApiClientBuilder { Credential = Credential };
-        PublishConfiguration?.Invoke(builder);
-        return builder.Build();
+        if (_publisherServiceApiClient == null)
+        {
+            _semaphoreSlim.Wait();
+            try
+            {
+                if (_publisherServiceApiClient == null)
+                {
+                    var builder = new PublisherServiceApiClientBuilder { Credential = Credential };
+                    PublishConfiguration?.Invoke(builder);
+                    _publisherServiceApiClient = builder.Build();
+                }
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
+            }
+        }
+
+        return _publisherServiceApiClient;
     }
 
+    /// <summary>
+    /// Asynchronously creates and returns a thread-safe, lazily initialized <see cref="PublisherServiceApiClient"/>.
+    /// The client is created only once on the first call.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation. The result is a configured <see cref="PublisherServiceApiClient"/> instance.</returns>
     public async Task<PublisherServiceApiClient> CreatePublisherServiceApiClientAsync()
     {
-        var builder = new PublisherServiceApiClientBuilder { Credential = Credential };
-        PublishConfiguration?.Invoke(builder);
-        return await builder.BuildAsync();
+        if (_publisherServiceApiClient == null)
+        {
+            await _semaphoreSlim.WaitAsync();
+            try
+            {
+
+                if (_publisherServiceApiClient == null)
+                {
+                    var builder = new PublisherServiceApiClientBuilder { Credential = Credential };
+                    PublishConfiguration?.Invoke(builder);
+                    _publisherServiceApiClient = await builder.BuildAsync();
+                }
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
+            }
+        }
+        
+        return _publisherServiceApiClient;
     }
+
+    private SubscriberServiceApiClient? _subscriberServiceApiClient;
     
+    /// <summary>
+    /// Creates and returns a thread-safe, lazily initialized <see cref="SubscriberServiceApiClient"/>.
+    /// The client is created only once on the first call.
+    /// </summary>
+    /// <returns>A configured <see cref="SubscriberServiceApiClient"/> instance.</returns>
     public SubscriberServiceApiClient CreateSubscriberServiceApiClient()
     {
-        var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
-        SubscribeConfiguration?.Invoke(builder);
-        return builder.Build();
+        if (_subscriberServiceApiClient == null)
+        {
+            _semaphoreSlim.Wait();
+            try
+            {
+                if (_subscriberServiceApiClient == null)
+                {
+                    var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
+                    SubscribeConfiguration?.Invoke(builder);
+                    _subscriberServiceApiClient = builder.Build();
+                }
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
+            }
+        }
+        
+        return _subscriberServiceApiClient;
     }
     
+    /// <summary>
+    /// Asynchronously creates and returns a thread-safe, lazily initialized <see cref="SubscriberServiceApiClient"/>.
+    /// The client is created only once on the first call.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation. The result is a configured <see cref="SubscriberServiceApiClient"/> instance.</returns>
     public async Task<SubscriberServiceApiClient> CreateSubscriberServiceApiClientAsync()
     {
-        var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
-        SubscribeConfiguration?.Invoke(builder);
-        return await builder.BuildAsync();
+        if (_subscriberServiceApiClient == null)
+        {
+            await _semaphoreSlim.WaitAsync();
+            try
+            {
+                if (_subscriberServiceApiClient == null)
+                {
+                    var builder = new SubscriberServiceApiClientBuilder { Credential = Credential };
+                    SubscribeConfiguration?.Invoke(builder);
+                    _subscriberServiceApiClient = await builder.BuildAsync();
+                }
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
+            }
+        }
+
+        return _subscriberServiceApiClient;
     }
 
-
+    private ProjectsClient? _projectsClient;
+    
+    /// <summary>
+    /// Asynchronously creates and returns a thread-safe, lazily initialized <see cref="Google.Cloud.ResourceManager.V3.ProjectsClient"/>.
+    /// The client is created only once on the first call.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation. The result is a configured <see cref="ProjectsClient"/> instance.</returns>
     public async Task<ProjectsClient> CreateProjectsClientAsync()
     {
-        var  builder = new ProjectsClientBuilder { Credential = Credential };
-        ProjectsConfiguration?.Invoke(builder);
-        return await builder.BuildAsync();
+        if (_projectsClient == null)
+        {
+            await _semaphoreSlim.WaitAsync();
+            try
+            {
+                if (_projectsClient == null)
+                {
+                    var  builder = new ProjectsClientBuilder { Credential = Credential };
+                    ProjectsConfiguration?.Invoke(builder);
+                    _projectsClient = await builder.BuildAsync();
+                }
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
+            }
+        }
+
+        return _projectsClient;
     }
 }
