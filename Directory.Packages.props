@@ -46,7 +46,7 @@
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
     <PackageVersion Include="JustSaying" Version="7.3.0" />
     <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="7.3.0" />
-    <PackageVersion Include="MassTransit" Version="8.5.2" />
+    <PackageVersion Include="MassTransit" Version="8.5.3" />
     <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.2" />
     <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
