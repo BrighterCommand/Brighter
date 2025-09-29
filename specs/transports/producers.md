@@ -30,6 +30,8 @@ You MUST implement the `IAmAMessageProducer` interface and its derived sync inte
 
   ```
 
+  You SHOULD break these steps up into separate methods to reduce the cyclomatic complexity.
+
 ### Producer
 
 The producer's implementation of the `Send` or `SendAsync` methods uses the publisher. Typically we implement `SendWithDelay` or `SendWithDelayAsync` and then call those from `Send` and `SendAsync` with a `TimeSpan.Zero` to indicate no delay, for example:
