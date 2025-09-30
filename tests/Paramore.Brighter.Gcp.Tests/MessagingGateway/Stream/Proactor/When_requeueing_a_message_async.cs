@@ -10,17 +10,17 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
 [Trait("Category", "GCP")]
-public class StreamMessageProducerRequeueTestsAsync : IDisposable
+public class MessageProducerRequeueTestsAsync : IDisposable
 {
     private readonly IAmAMessageProducerAsync _sender;
     private Message? _requeuedMessage;
     private Message? _receivedMessage;
     private readonly IAmAChannelAsync _channel;
     private readonly GcpPubSubChannelFactory _channelFactory;
-    private readonly GcpSubscription<MyCommand> _subscription;
+    private readonly GcpPubSubSubscription<MyCommand> _pubSubSubscription;
     private readonly Message _message;
 
-    public StreamMessageProducerRequeueTestsAsync()
+    public MessageProducerRequeueTestsAsync()
     {
         const string replyTo = "http:\\queueUrl";
         MyCommand myCommand = new() { Value = "Test" };
@@ -30,7 +30,7 @@ public class StreamMessageProducerRequeueTestsAsync : IDisposable
         string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
-        _subscription = new GcpSubscription<MyCommand>(
+        _pubSubSubscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
@@ -42,20 +42,18 @@ public class StreamMessageProducerRequeueTestsAsync : IDisposable
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
-            new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
         );
 
-        var connection = GatewayFactory.CreateFactory();
-
-        _sender = new GcpMessageProducer(connection, 
+        _sender = GatewayFactory.CreateProducer(
             new GcpPublication
             {
                 Topic = routingKey,
                 MakeChannels = OnMissingChannel.Create
             });
 
-        _channelFactory = new GcpPubSubChannelFactory(connection);
-        _channel = _channelFactory.CreateAsyncChannel(_subscription);
+        _channelFactory = GatewayFactory.CreateChannelFactory();
+        _channel = _channelFactory.CreateAsyncChannel(_pubSubSubscription);
     }
 
     [Fact]
@@ -74,7 +72,7 @@ public class StreamMessageProducerRequeueTestsAsync : IDisposable
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopic(_subscription);
-        _channelFactory.DeleteSubscription(_subscription);
+        _channelFactory.DeleteTopic(_pubSubSubscription);
+        _channelFactory.DeleteSubscription(_pubSubSubscription);
     }
 }

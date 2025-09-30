@@ -7,13 +7,10 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// Manages the lifecycle of the Google Cloud Pub/Sub streaming consumer (<see cref="SubscriberClient"/>)
 /// and funnels received messages into a local thread-safe channel for processing.
 /// </summary>
-public class GcpStreamConsumer(GcpMessagingGatewayConnection connection,
-    Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-    GcpSubscription subscription)
+public class GcpStreamConsumer(SubscriberClient client)
 {
     private int _handlers;
-    private SubscriberClient? _subscriberClient;
-
+    
     private readonly Channel<GcpStreamMessage> _channel =
         System.Threading.Channels.Channel.CreateUnbounded<GcpStreamMessage>(new UnboundedChannelOptions
         {
@@ -37,7 +34,6 @@ public class GcpStreamConsumer(GcpMessagingGatewayConnection connection,
             return;
         }
         
-        var client = GetOrCreateSubscriberClient();
         client.StartAsync(new BrighterStreamHandler(_channel.Writer));
     }
 
@@ -50,21 +46,9 @@ public class GcpStreamConsumer(GcpMessagingGatewayConnection connection,
         var decrement = Interlocked.Decrement(ref _handlers);
         if (decrement == 0)
         {
-            var client = GetOrCreateSubscriberClient();
             await client.StopAsync(CancellationToken.None);
             await client.DisposeAsync();
         }
-    }
-
-    private SubscriberClient GetOrCreateSubscriberClient()
-    {
-        if (_subscriberClient != null)
-        {
-            return _subscriberClient;
-        }
-        
-        _subscriberClient = connection.CreateSubscriberClient(subscriptionName, subscription.NoOfPerformers * subscription.BufferSize);
-        return _subscriberClient;
     }
 }
 

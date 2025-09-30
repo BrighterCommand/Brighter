@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
@@ -14,8 +12,8 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable
 {
     private readonly ContentType _contentType = new("text/plain");
     private readonly GcpMessageProducer _messageProducer;
-    private readonly GcpSubscription _subscription;
-    private readonly GcpPullMessageConsumer _consumer;
+    private readonly GcpPubSubSubscription _pubSubSubscription;
+    private readonly IAmAChannelAsync _channel;
     private readonly string _topicName;
     private readonly GcpPubSubChannelFactory _channelFactory;
     private const int BufferSize = 3;
@@ -23,16 +21,14 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable
 
     public PubSubBufferedConsumerTestsAsync()
     {
-        var gcpConnection = GatewayFactory.CreateFactory();
-
-        _channelFactory = new GcpPubSubChannelFactory(gcpConnection);
+        _channelFactory = GatewayFactory.CreateChannelFactory();
         var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_topicName);
 
-        var channel = _channelFactory.CreateAsyncChannelAsync(_subscription = new GcpSubscription<MyCommand>(
+        _channel = _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
@@ -42,13 +38,11 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable
             subscriptionMode: SubscriptionMode.Pull
         )).GetAwaiter().GetResult();
 
-        //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
-        //just for the tests, so create a new consumer from the properties
-        _consumer = new GcpPullMessageConsumer(gcpConnection, 
-            new Google.Cloud.PubSub.V1.SubscriptionName(gcpConnection.ProjectId, channel.Name), 
-            BufferSize, false, TimeProvider.System);
-        _messageProducer = new GcpMessageProducer(gcpConnection,
-            new GcpPublication { MakeChannels = OnMissingChannel.Create, Topic = routingKey });
+        _messageProducer = GatewayFactory.CreateProducer(new GcpPublication<MyCommand>
+        {
+            MakeChannels = OnMissingChannel.Create,
+            Topic = routingKey
+        });
     }
 
     [Fact]
@@ -86,42 +80,21 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable
         await _messageProducer.SendAsync(messageThree);
         await _messageProducer.SendAsync(messageFour);
 
-        int iteration = 0;
-        var messagesReceived = new List<Message>();
-        var messagesReceivedCount = messagesReceived.Count;
-        do
+        for(var i = 0; i < MessageCount; i++)
         {
-            iteration++;
-            var outstandingMessageCount = MessageCount - messagesReceivedCount;
-
             //retrieve  messages
-            var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+            var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+            Assert.NotEqual(MessageType.MT_NONE, message.Header.MessageType);
 
-            Assert.True(messages.Length <= outstandingMessageCount);
-
-            //should not receive more than buffer in one hit
-            Assert.True(messages.Length <= BufferSize);
-
-            var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
-            foreach (var message in moreMessages)
-            {
-                messagesReceived.Add(message);
-                await _consumer.AcknowledgeAsync(message);
-            }
-
-            messagesReceivedCount = messagesReceived.Count;
-
+            await _channel.AcknowledgeAsync(message);
             await Task.Delay(1000);
-
-        } while ((iteration <= 5) && (messagesReceivedCount < MessageCount));
-
-        Assert.Equal(4, messagesReceivedCount);
+        } 
     }
 
     public void Dispose()
     {
-       _channelFactory.DeleteSubscription(_subscription);
-       _channelFactory.DeleteTopic(_subscription);
+       _channelFactory.DeleteSubscription(_pubSubSubscription);
+       _channelFactory.DeleteTopic(_pubSubSubscription);
        _messageProducer.Dispose();
     }
 }

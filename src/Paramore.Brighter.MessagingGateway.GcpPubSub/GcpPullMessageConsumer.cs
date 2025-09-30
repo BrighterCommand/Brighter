@@ -6,42 +6,26 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
+
 /// <summary>
-/// The pull-based implementation of Pub/Sub
+/// A Brighter message consumer implementation for Google Cloud Pub/Sub using the **Pull** message delivery model.
+/// This consumer polls the Pub/Sub service for messages.
 /// </summary>
-public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+public partial class GcpPullMessageConsumer(
+    GcpMessagingGatewayConnection connection,
+    Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
+    int batchSize,
+    TimeProvider timeProvider)
+    : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private readonly GcpMessagingGatewayConnection _connection;
-    private readonly Google.Cloud.PubSub.V1.SubscriptionName _subscriptionName;
-    private readonly int _batchSize;
-    private readonly bool _hasDql;
-    private readonly TimeProvider _timeProvider;
-
-    /// <summary>
-    /// The Pull based implementation of Pub/Sub
-    /// </summary>
-    /// <param name="connection">The <see cref="GcpMessagingGatewayConnection"/>.</param>
-    /// <param name="subscriptionName">The subscription name</param>
-    /// <param name="batchSize">The pull batch size</param>
-    /// <param name="hasDql">flag indicating it has a dead letter queue</param>
-    /// <param name="timeProvider">The <see cref="System.TimeProvider"/></param>
-    public GcpPullMessageConsumer(
-        GcpMessagingGatewayConnection connection,
-        Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-        int batchSize = 1,
-        bool hasDql = false,
-        TimeProvider? timeProvider = null)
-    {
-        _connection = connection;
-        _subscriptionName = subscriptionName;
-        _batchSize = batchSize;
-        _hasDql = hasDql;
-        _timeProvider = timeProvider ?? TimeProvider.System;
-    }
-
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously acknowledges a message, deleting it from the subscription.
+    /// </summary>
+    /// <param name="message">The message to acknowledge.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
@@ -51,18 +35,23 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
 
         try
         {
-            var client = await _connection.CreateSubscriberServiceApiClientAsync();
-            await client.AcknowledgeAsync(_subscriptionName, [ackId], cancellationToken);
-            Log.AcknowledgeSuccess(s_logger, message.Id, ackId, _subscriptionName.ToString());
+            var client = await connection.CreateSubscriberServiceApiClientAsync();
+            await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
+            Log.AcknowledgeSuccess(s_logger, message.Id, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.AcknowledgeError(s_logger, ex, message.Id, ackId, _subscriptionName.ToString());
+            Log.AcknowledgeError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             throw;
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously rejects a message.
+    /// </summary>
+    /// <param name="message">The message to reject.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that returns true if the message was successfully rejected/acknowledged, otherwise false.</returns>
     public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
@@ -72,60 +61,63 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
 
         try
         {
-            var client = await _connection.CreateSubscriberServiceApiClientAsync();
-            Log.RejectMessage(s_logger, message.Id, ackId, _subscriptionName.ToString());
-            if (_hasDql)
-            {
-                await client.ModifyAckDeadlineAsync(_subscriptionName, [ackId], 0, cancellationToken);
-            }
-            else
-            {
-                await client.AcknowledgeAsync(_subscriptionName, [ackId], cancellationToken);
-            }
+            var client = await connection.CreateSubscriberServiceApiClientAsync();
+            Log.RejectMessage(s_logger, message.Id, ackId, subscriptionName.ToString());
+            await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
         }
         catch (Exception ex)
         {
-            Log.RejectError(s_logger, ex, message.Id, ackId, _subscriptionName.ToString());
+            Log.RejectError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             throw;
         }
 
         return true;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously purges all unacknowledged messages from the subscription.
+    /// This is done by seeking the subscription to a point in time one minute in the future.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var client = await _connection.CreateSubscriberServiceApiClientAsync();
+            var client = await connection.CreateSubscriberServiceApiClientAsync();
 
-            Log.PurgeStart(s_logger, _subscriptionName.ToString());
+            Log.PurgeStart(s_logger, subscriptionName.ToString());
 
             await client.SeekAsync(
-                new SeekRequest { Time = Timestamp.FromDateTimeOffset(_timeProvider.GetUtcNow().AddMinutes(1)) },
+                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) },
                 cancellationToken);
 
-            Log.PurgeComplete(s_logger, _subscriptionName.ToString());
+            Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, _subscriptionName.ToString());
+            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously receives a batch of messages from the subscription using the Pull API.
+    /// </summary>
+    /// <param name="timeOut">A timeout value (not strictly used by the underlying Google Pub/Sub client, but part of the Brighter interface).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that returns an array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         PullResponse response;
         try
         {
-            var client = await _connection.CreateSubscriberServiceApiClientAsync();
+            var client = await connection.CreateSubscriberServiceApiClientAsync();
             response = await client.PullAsync(
                 new PullRequest
                 {
-                    SubscriptionAsSubscriptionName = _subscriptionName, 
-                    MaxMessages = _batchSize,
+                    SubscriptionAsSubscriptionName = subscriptionName, 
+                    MaxMessages = batchSize,
                 },
                 cancellationToken);
 
@@ -142,14 +134,21 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
         }
         catch (Exception e)
         {
-            Log.ReceiveError(s_logger, e, _subscriptionName.ToString());
+            Log.ReceiveError(s_logger, e, subscriptionName.ToString());
             throw;
         }
 
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously requeues a message by setting its acknowledgment deadline to zero seconds.
+    /// This tells Pub/Sub to immediately redeliver the message according to the subscription's retry policy.
+    /// </summary>
+    /// <param name="message">The message to requeue.</param>
+    /// <param name="delay">An optional delay (not used by Pub/Sub, as requeue delay is set by the subscription's RetryPolicy).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that returns true if the message was successfully requeued, otherwise false.</returns>
     public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
         CancellationToken cancellationToken = default)
     {
@@ -160,14 +159,14 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
 
         try
         {
-            var client = await _connection.CreateSubscriberServiceApiClientAsync();
+            var client = await connection.CreateSubscriberServiceApiClientAsync();
 
             Log.RequeueStart(s_logger, message.Id);
 
             // The requeue policy is defined by subscription, during its creation
             await client.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest
             {
-                SubscriptionAsSubscriptionName = _subscriptionName,
+                SubscriptionAsSubscriptionName = subscriptionName,
                 AckIds = { ackId },
                 AckDeadlineSeconds = 0
             }, cancellationToken);
@@ -177,12 +176,15 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
         }
         catch (Exception ex)
         {
-            Log.RequeueError(s_logger, ex, message.Id, ackId, _subscriptionName.ToString());
+            Log.RequeueError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             return false;
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Synchronously acknowledges a message.
+    /// </summary>
+    /// <param name="message">The message to acknowledge.</param>
     public void Acknowledge(Message message)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
@@ -192,18 +194,22 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
 
         try
         {
-            var client = _connection.CreateSubscriberServiceApiClient();
-            client.Acknowledge(_subscriptionName, [ackId]);
-            Log.AcknowledgeSuccess(s_logger, message.Id, ackId, _subscriptionName.ToString());
+            var client = connection.GetOrCreateSubscriberServiceApiClient();
+            client.Acknowledge(subscriptionName, [ackId]);
+            Log.AcknowledgeSuccess(s_logger, message.Id, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.AcknowledgeError(s_logger, ex, message.Id, ackId, _subscriptionName.ToString());
+            Log.AcknowledgeError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             throw;
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Synchronously rejects a message.
+    /// </summary>
+    /// <param name="message">The message to reject.</param>
+    /// <returns>True if the message was successfully rejected/acknowledged, otherwise false.</returns>
     public bool Reject(Message message)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
@@ -213,56 +219,53 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
 
         try
         {
-            var client = _connection.CreateSubscriberServiceApiClient();
+            var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.RejectMessage(s_logger, message.Id, ackId, _subscriptionName.ToString());
-            if (_hasDql)
-            {
-                client.ModifyAckDeadline(_subscriptionName, [ackId], 0);
-            }
-            else
-            {
-                client.Acknowledge(_subscriptionName, [ackId]);
-            }
+            Log.RejectMessage(s_logger, message.Id, ackId, subscriptionName.ToString());
+            client.Acknowledge(subscriptionName, [ackId]);
         }
         catch (Exception ex)
         {
-            Log.RejectError(s_logger, ex, message.Id, ackId, _subscriptionName.ToString());
+            Log.RejectError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             throw;
         }
 
         return true;
     }
 
-    /// <inheritdoc />
     public void Purge()
     {
         try
         {
-            var client = _connection.CreateSubscriberServiceApiClient();
+            var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.PurgeStart(s_logger, _subscriptionName.ToString());
+            Log.PurgeStart(s_logger, subscriptionName.ToString());
             client.Seek(
-                new SeekRequest { Time = Timestamp.FromDateTimeOffset(_timeProvider.GetUtcNow().AddMinutes(1)) });
-            Log.PurgeComplete(s_logger, _subscriptionName.ToString());
+                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) });
+            Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, _subscriptionName.ToString());
+            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Synchronously receives a batch of messages from the subscription using the Pull API.
+    /// </summary>
+    /// <param name="timeOut">A timeout value (not strictly used by the underlying Google Pub/Sub client).</param>
+    /// <returns>An array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
+
     public Message[] Receive(TimeSpan? timeOut = null)
     {
         PullResponse response;
         try
         {
-            var client = _connection.CreateSubscriberServiceApiClient();
+            var client = connection.GetOrCreateSubscriberServiceApiClient();
             response = client.Pull(new PullRequest
             {
-                SubscriptionAsSubscriptionName = _subscriptionName, MaxMessages = _batchSize
+                SubscriptionAsSubscriptionName = subscriptionName, MaxMessages = batchSize
             });
 
             if (response.ReceivedMessages.Count == 0)
@@ -278,14 +281,19 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
         }
         catch (Exception e)
         {
-            Log.ReceiveError(s_logger, e, _subscriptionName.ToString());
+            Log.ReceiveError(s_logger, e, subscriptionName.ToString());
             throw;
         }
 
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Synchronously requeues a message by setting its acknowledgment deadline to zero seconds.
+    /// </summary>
+    /// <param name="message">The message to requeue.</param>
+    /// <param name="delay">An optional delay (not used by Pub/Sub).</param>
+    /// <returns>True if the message was successfully requeued, otherwise false.</returns>
     public bool Requeue(Message message, TimeSpan? delay = null)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
@@ -295,37 +303,33 @@ public partial class GcpPullMessageConsumer : IAmAMessageConsumerAsync, IAmAMess
 
         try
         {
-            var client = _connection.CreateSubscriberServiceApiClient();
+            var client = connection.GetOrCreateSubscriberServiceApiClient();
 
             Log.RequeueStart(s_logger, message.Id);
 
             // The requeue policy is defined by subscription, during its creation
-            client.ModifyAckDeadline(_subscriptionName, [ackId], 0);
+            client.ModifyAckDeadline(subscriptionName, [ackId], 0);
 
             Log.RequeueComplete(s_logger, message.Id);
             return true;
         }
         catch (Exception ex)
         {
-            Log.RequeueError(s_logger, ex, message.Id, ackId, _subscriptionName.ToString());
+            Log.RequeueError(s_logger, ex, message.Id, ackId, subscriptionName.ToString());
             return false;
         }
     }
 
-    /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
         return new ValueTask();
     }
 
-    /// <inheritdoc />
     public void Dispose()
     {
     }
 
-    /// <summary>
-    /// Internal logging class
-    /// </summary>
+
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Information,

@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Reactor;
 public class ValidateQueuesTestsAsync : IDisposable
 {
     private readonly GcpMessagingGatewayConnection _connection;
-    private readonly GcpSubscription<MyCommand> _subscription;
+    private readonly GcpPubSubSubscription<MyCommand> _pubSubSubscription;
     private GcpPubSubChannelFactory? _channelFactory;
 
     public ValidateQueuesTestsAsync()
@@ -18,7 +18,7 @@ public class ValidateQueuesTestsAsync : IDisposable
         var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
-        _subscription = new GcpSubscription<MyCommand>(
+        _pubSubSubscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
@@ -35,8 +35,8 @@ public class ValidateQueuesTestsAsync : IDisposable
     {
         // We have no topic so we should throw
         // We need to do this manually in a test - will create the channel from subscriber parameters
-        _channelFactory = new GcpPubSubChannelFactory(_connection);
-        Assert.Throws<InvalidOperationException>(() => _channelFactory.CreateSyncChannel(_subscription));
+        _channelFactory = GatewayFactory.CreateChannelFactory();
+        Assert.Throws<InvalidOperationException>(() => _channelFactory.CreateSyncChannel(_pubSubSubscription));
     }
     
 
@@ -44,8 +44,8 @@ public class ValidateQueuesTestsAsync : IDisposable
     {
         if (_channelFactory != null)
         {
-            _channelFactory.DeleteTopic(_subscription);
-            _channelFactory.DeleteSubscription(_subscription);
+            _channelFactory.DeleteTopic(_pubSubSubscription);
+            _channelFactory.DeleteSubscription(_pubSubSubscription);
         }
     }
 }

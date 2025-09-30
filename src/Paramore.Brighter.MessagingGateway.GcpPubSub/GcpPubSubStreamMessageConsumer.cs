@@ -2,6 +2,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -14,14 +15,14 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// low-level client for management operations like Purge, and uses an internal
 /// channel reader for message reception.
 /// </remarks>
-public partial class GcpStreamMessageConsumer(
+public partial class GcpPubSubStreamMessageConsumer(
     GcpMessagingGatewayConnection connection,
     GcpStreamConsumer consumer,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     TimeProvider timeProvider) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpStreamMessageConsumer>();
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPubSubStreamMessageConsumer>();
     
     /// <summary>
     /// Synchronously acknowledges a message, signalling the Pub/Sub service that the message
@@ -91,7 +92,7 @@ public partial class GcpStreamMessageConsumer(
     {
         try
         {
-            var client = connection.CreateSubscriberServiceApiClient();
+            var client = connection.GetOrCreateSubscriberServiceApiClient();
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
 
@@ -145,23 +146,7 @@ public partial class GcpStreamMessageConsumer(
     /// <returns>An array containing one message if available, or an array with a default message if a timeout occurs.</returns>
     public Message[] Receive(TimeSpan? timeOut = null)
     {
-        using var cts = new CancellationTokenSource();
-        if (timeOut.HasValue)
-        {
-            cts.CancelAfter(timeOut.Value);
-        }
-
-        var reader = consumer.Reader;
-        
-        while (!cts.IsCancellationRequested)
-        {
-            if (reader.TryRead(out var message))
-            {
-                return [Parser.ToBrighterMessage(message)];
-            }
-        }
-            
-        return [new Message()];
+        return BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
     }
     
     /// <summary>
@@ -232,12 +217,18 @@ public partial class GcpStreamMessageConsumer(
         return Task.FromResult(Requeue(message, delay));
     }
     
-    
+    /// <summary>
+    /// Disposes of the consumer's resources synchronously.
+    /// </summary>
     public void Dispose()
     {
         consumer.StopAsync().GetAwaiter().GetResult();
     }
-
+    
+    /// <summary>
+    /// Disposes of the consumer's resources asynchronously.
+    /// </summary>
+    /// <returns>A <see cref="ValueTask"/> that represents the asynchronous disposal operation.</returns>
     public async ValueTask DisposeAsync()
     {
         await consumer.StopAsync();

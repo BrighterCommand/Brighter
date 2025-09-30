@@ -12,7 +12,7 @@ using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetter
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Reactor;
 
 [Trait("Category", "GCP")]
-public class StreamMessageProducerDlqTestsAsync : IDisposable
+public class MessageProducerDlqTestsAsync : IDisposable
 {
     private const int MaxDeliveryAttempts = 5;
     private readonly GcpMessageProducer _sender;
@@ -20,9 +20,9 @@ public class StreamMessageProducerDlqTestsAsync : IDisposable
     private readonly GcpPubSubChannelFactory _channelFactory;
     private readonly Message _message;
     private readonly GcpMessagingGatewayConnection _connection;
-    private readonly GcpSubscription<MyCommand> _subscription;
+    private readonly GcpPubSubSubscription<MyCommand> _pubSubSubscription;
 
-    public StreamMessageProducerDlqTestsAsync()
+    public MessageProducerDlqTestsAsync()
     {
         const string replyTo = "http:\\queueUrl";
         MyCommand myCommand = new() { Value = "Test" };
@@ -34,7 +34,7 @@ public class StreamMessageProducerDlqTestsAsync : IDisposable
         var routingKey = new RoutingKey(topicName);
         var channelName = new ChannelName(queueName);
         
-         _subscription = new GcpSubscription<MyCommand>(
+         _pubSubSubscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             routingKey: routingKey,
@@ -52,20 +52,20 @@ public class StreamMessageProducerDlqTestsAsync : IDisposable
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
-            new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
         );
 
         _connection = GatewayFactory.CreateFactory();
 
-        _sender = new GcpMessageProducer(_connection, 
-            new GcpPublication
+        _sender =  GatewayFactory.CreateProducer( 
+            new GcpPublication<MyCommand>
             {
                 Topic = routingKey,
                 MakeChannels = OnMissingChannel.Create
             });
 
-        _channelFactory = new GcpPubSubChannelFactory(_connection);
-        _channel = _channelFactory.CreateSyncChannel(_subscription);
+        _channelFactory = GatewayFactory.CreateChannelFactory();
+        _channel = _channelFactory.CreateSyncChannel(_pubSubSubscription);
     }
 
     [Fact]
@@ -86,9 +86,9 @@ public class StreamMessageProducerDlqTestsAsync : IDisposable
 
     private int GetDLQCount()
     {
-        var client = _connection.CreateSubscriberServiceApiClient();
+        var client = _connection.GetOrCreateSubscriberServiceApiClient();
         var subName = Google.Cloud.PubSub.V1.SubscriptionName.FormatProjectSubscription(_connection.ProjectId,
-            _subscription.DeadLetter!.Subscription!);
+            _pubSubSubscription.DeadLetter!.Subscription!);
         var messages = client.Pull(new PullRequest
         {
             MaxMessages = 10, 
@@ -100,7 +100,7 @@ public class StreamMessageProducerDlqTestsAsync : IDisposable
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopic(_subscription);
-        _channelFactory.DeleteSubscription(_subscription);
+        _channelFactory.DeleteTopic(_pubSubSubscription);
+        _channelFactory.DeleteSubscription(_pubSubSubscription);
     }
 }

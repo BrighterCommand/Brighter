@@ -1,6 +1,9 @@
 ﻿namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-public class HeaderNames
+/// <summary>
+/// The header names
+/// </summary>
+public static class HeaderNames
 {
     /// <summary>
     /// The message type
