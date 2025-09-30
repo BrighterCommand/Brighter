@@ -11,6 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" VersionOverride="$(AWSSDKExtensionsNETCoreSetup)"/>
+    <PackageReference Include="AWSSDK.IdentityManagement" VersionOverride="4.0.3.5" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
