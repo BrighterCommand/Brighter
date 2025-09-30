@@ -14,5 +14,6 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.IdentityManagement" VersionOverride="$(AWSSDKIdentityManagementV4)" />
     <PackageReference Include="AWSSDK.Scheduler" VersionOverride="$(AWSSDKSchedulerV4)" />
+  <PackageReference Include="AWSSDK.SecurityToken" />
   </ItemGroup>
 </Project>
