@@ -2,11 +2,11 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AwsDynamoDbV4>4.0.6.2</AwsDynamoDbV4>
-    <AWSSDKIdentityManagementV4>4.0.3.3</AWSSDKIdentityManagementV4>
+    <AwsDynamoDbV4>4.0.6.3</AwsDynamoDbV4>
+    <AWSSDKIdentityManagementV4>4.0.3.4</AWSSDKIdentityManagementV4>
     <AWSSDKSchedulerV4>4.0.1.2</AWSSDKSchedulerV4>
     <AWSSDKV4>4.0.7.2</AWSSDKV4>
-    <AWSSecurityTokenV4>4.0.2.2</AWSSecurityTokenV4>
+    <AWSSecurityTokenV4>4.0.2.3</AWSSecurityTokenV4>
     <AWSSQSV4>4.0.1.4</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.1.2</AWSSDKSimpleNotificationServiceV4>
     <AWSSDKExtensionsNETCoreSetup>4.0.3</AWSSDKExtensionsNETCoreSetup>
@@ -22,7 +22,7 @@
     <PackageVersion Include="AWSSDK.SQS" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="Azure.Identity" Version="1.16.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.1" />
     <PackageVersion Include="Confluent.Kafka" Version="2.11.1" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.11.1" />
     <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.11.1" />
@@ -51,10 +51,10 @@
     <PackageVersion Include="Grpc.Core.Api" Version="2.71.0" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.21" />
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
-    <PackageVersion Include="JustSaying" Version="7.3.0" />
-    <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="7.3.0" />
-    <PackageVersion Include="MassTransit" Version="8.5.2" />
-    <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.2" />
+    <PackageVersion Include="JustSaying" Version="8.0.0" />
+    <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="8.0.0" />
+    <PackageVersion Include="MassTransit" Version="8.5.3" />
+    <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.3" />
     <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.9" />
