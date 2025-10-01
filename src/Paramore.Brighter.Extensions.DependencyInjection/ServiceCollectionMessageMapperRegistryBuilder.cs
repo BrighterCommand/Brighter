@@ -78,7 +78,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void Add(Type message, Type mapper)
         {
             serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, lifetime));
-            Mappers.Add(message, mapper);
+            bool canAddMapper = !Mappers.ContainsKey(message);
+            if (canAddMapper)
+                Mappers.Add(message, mapper);
+            else
+            {
+                var conflictingMapper = Mappers[message];
+                throw new ArgumentException(
+                    $"A mapper for message type {message.FullName} has already been registered. Mappers {conflictingMapper.FullName} and {mapper.FullName} are in conflict");
+            }
         }
 
         /// <summary>
@@ -89,7 +97,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void AddAsync(Type message, Type mapper)
         {
             serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, lifetime));
-            AsyncMappers.Add(message, mapper);
+            bool canAddAsyncMapper = !AsyncMappers.ContainsKey(message);
+            if (canAddAsyncMapper)
+                AsyncMappers.Add(message, mapper);
+            else
+            {
+                var conflictingMapper = AsyncMappers[message];
+                throw new ArgumentException(
+                    $"An async mapper for message type {message.FullName} has already been registered. Mappers {conflictingMapper.FullName} and {mapper.FullName} are in conflict");
+            }
         }
  
         /// <summary>
@@ -97,8 +113,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         public void EnsureDefaultMessageMapperIsRegistered()
         {
-                serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapper, DefaultMessageMapper, lifetime));
-                serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapperAsync, DefaultMessageMapperAsync, lifetime));
+            serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapper, DefaultMessageMapper, lifetime));
+            serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapperAsync, DefaultMessageMapperAsync, lifetime));
         }
         
         

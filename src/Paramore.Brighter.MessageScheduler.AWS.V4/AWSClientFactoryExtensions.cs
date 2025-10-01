@@ -1,6 +1,6 @@
 ﻿using Amazon.IdentityManagement;
 using Amazon.Scheduler;
-using Paramore.Brighter.MessagingGateway.AWS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 namespace Paramore.Brighter.MessageScheduler.AWS.V4;
 

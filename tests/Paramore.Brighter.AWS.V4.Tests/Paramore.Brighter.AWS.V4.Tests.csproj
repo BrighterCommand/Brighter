@@ -26,9 +26,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageScheduler.AWS.V4\Paramore.Brighter.MessageScheduler.AWS.V4.csproj" />
-    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWS.V4\Paramore.Brighter.MessagingGateway.AWS.V4.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS.V4\Paramore.Brighter.MessagingGateway.AWSSQS.V4.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
-    <ProjectReference Include="..\..\src\Paramore.Brighter.Tranformers.AWS.V4\Paramore.Brighter.Tranformers.AWS.V4.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.AWS.V4\Paramore.Brighter.Transformers.AWS.V4.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 

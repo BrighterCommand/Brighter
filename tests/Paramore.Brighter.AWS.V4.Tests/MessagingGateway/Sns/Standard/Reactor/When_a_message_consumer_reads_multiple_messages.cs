@@ -5,7 +5,7 @@ using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
-using Paramore.Brighter.MessagingGateway.AWS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Reactor;
@@ -53,32 +53,37 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
             });
     }
             
-    [Fact]
-    public async Task When_a_message_consumer_reads_multiple_messages()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_a_message_consumer_reads_multiple_messages(bool fairQueue)
     {
+        var partitionOne = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
+        var partitionTwo = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
+        
         var routingKey = new RoutingKey(_topicName);
             
         var messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
-                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: partitionOne),
             new MessageBody("test content one")
         );
             
         var messageTwo= new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
-                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: partitionOne),
             new MessageBody("test content two")
         );
            
         var messageThree= new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
-                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: partitionTwo),
             new MessageBody("test content three")
         );
              
         var messageFour= new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
-                correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                correlationId: Guid.NewGuid().ToString(), contentType: _contentType, partitionKey: partitionTwo),
             new MessageBody("test content four")
         );
              

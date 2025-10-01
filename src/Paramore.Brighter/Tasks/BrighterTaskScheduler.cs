@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks;
@@ -52,9 +53,11 @@ internal sealed class BrighterTaskScheduler : TaskScheduler
     /// <param name="task">The task to be queued.</param>
     protected override void QueueTask(Task task)
     {
+#if DEBUG_CONTEXT
         Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterTaskScheduler: QueueTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.WriteLine($"BrighterTaskScheduler: QueueTask on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
+#endif
         
        _asyncContext.Enqueue((Task)task, false);
        
@@ -69,9 +72,11 @@ internal sealed class BrighterTaskScheduler : TaskScheduler
     /// <returns>True if the task was executed; otherwise, false.</returns>
     protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
     {
+#if DEBUG_CONTEXT
         Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterTaskScheduler: TryExecuteTaskInline on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.WriteLine($"BrighterTaskScheduler: TryExecuteTaskInline on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
+#endif
 
         return BrighterAsyncContext.Current == _asyncContext && TryExecuteTask(task);
     }
@@ -90,9 +95,11 @@ internal sealed class BrighterTaskScheduler : TaskScheduler
     /// <param name="task">The task to be executed.</param>
     public void DoTryExecuteTask(Task task)
     {
+#if DEBUG_CONTEXT
         Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterTaskScheduler: DoTryExecuteTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.WriteLine($"BrighterTaskScheduler: DoTryExecuteTask on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
+#endif
         
         TryExecuteTask(task);
     }
@@ -113,10 +120,12 @@ internal sealed class BrighterTaskScheduler : TaskScheduler
         {
             throw new ArgumentNullException(nameof(obj));
         }
-        
+
+#if DEBUG_CONTEXT
         Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterTaskScheduler: Use TryExecuteNewThread for {task} on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.WriteLine($"BrighterTaskScheduler: Use TryExecuteNewThread for {task} on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
+#endif
         
         TryExecuteTask(task);
     }

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.MessagingGateway.AWS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Proactor;
@@ -62,11 +62,14 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
             });
     }
 
-    [Fact]
-    public async Task When_posting_a_message_via_the_producer_async()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_posting_a_message_via_the_producer_async(bool fairQueue)
     {
         // arrange
         _message.Header.Subject = "test subject";
+        _message.Header.PartitionKey = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
         await _messageProducer.SendAsync(_message);
 
         await Task.Delay(1000);

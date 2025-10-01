@@ -45,7 +45,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
         Source = message.Header.Source.ToString();
         EventType = message.Header.Type;
         SpecVersion = message.Header.SpecVersion;
-        DataSchema = message.Header.DataSchema?.AbsoluteUri;
+        DataSchema = message.Header.DataSchema?.ToString();
         DataRef = message.Header.DataRef;
         Baggage = message.Header.Baggage.ToString();
         TraceParent = message.Header.TraceParent?.Value;
@@ -236,7 +236,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
 
         if (!string.IsNullOrEmpty(ContentType))
         {
-            header.ContentType = new ContentType(ContentType);
+            header.ContentType = new ContentType(ContentType!);
         }
 
         if (!string.IsNullOrEmpty(HeaderBag))
@@ -248,18 +248,33 @@ public class OutboxMessage : IMongoDbCollectionTTL
                 header.Bag.Add(keyValue.Key, keyValue.Value);
             }
         }
+        
+        if (!Uri.TryCreate(Source, UriKind.RelativeOrAbsolute, out var source))
+        {
+            source = new Uri(MessageHeader.DefaultSource);
+        }
+        header.Source = source;
 
-        // restore additional header fields
-        if (!string.IsNullOrEmpty(Source))
-            header.Source = new Uri(Source!);
         if (!string.IsNullOrEmpty(EventType))
+        {
             header.Type = new CloudEventsType(EventType!);
+        }
+
         if (!string.IsNullOrEmpty(SpecVersion))
+        {
             header.SpecVersion = SpecVersion;
-        if (!string.IsNullOrEmpty(DataSchema))
-            header.DataSchema = new Uri(DataSchema!);
+        }
+
+        if (Uri.TryCreate(DataSchema, UriKind.RelativeOrAbsolute, out var dataSchema))
+        {
+            header.DataSchema = dataSchema;
+        }
+
         if (!string.IsNullOrEmpty(DataRef))
+        {
             header.DataRef = DataRef;
+        }
+        
         header.Delayed = TimeSpan.Zero;
         header.HandledCount = 0;
         if (!string.IsNullOrEmpty(Baggage))
@@ -268,15 +283,23 @@ public class OutboxMessage : IMongoDbCollectionTTL
             baggage.LoadBaggage(Baggage);
             header.Baggage = baggage;
         }
+
         if (!string.IsNullOrEmpty(TraceParent))
+        {
             header.TraceParent = new TraceParent(TraceParent!);
+        }
+
         if (!string.IsNullOrEmpty(TraceState))
+        {
             header.TraceState = new TraceState(TraceState!);
+        }
+
         if (!string.IsNullOrEmpty(Subject))
+        {
             header.Subject = Subject;
+        }
 
         var bodyContentType = new ContentType(BodyContentType) { CharSet = nameof(characterEncoding) };
-
         var body = new MessageBody(Body, bodyContentType, characterEncoding);
 
         return new Message(header, body);

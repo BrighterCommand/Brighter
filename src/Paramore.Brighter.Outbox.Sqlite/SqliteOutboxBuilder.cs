@@ -51,7 +51,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [Subject] TEXT NULL,
                                         [TraceParent] TEXT NULL,
                                         [TraceState] TEXT NULL,
-                                        [Baggage] TEXT NULL
+                                        [Baggage] TEXT NULL,
+                                        [DataRef] TEXT NULL,
+                                        [SpecVersion] TEXT NULL
                                     );";
         
         const string BinaryOutboxDdl = @"CREATE TABLE {0} 
@@ -75,7 +77,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [Subject] TEXT NULL,
                                         [TraceParent] TEXT NULL,
                                         [TraceState] TEXT NULL,
-                                        [Baggage] TEXT NULL
+                                        [Baggage] TEXT NULL,
+                                        [DataRef] TEXT NULL,
+                                        [SpecVersion] TEXT NULL
                                     );";
          
 

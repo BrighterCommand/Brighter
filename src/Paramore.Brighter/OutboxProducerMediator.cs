@@ -691,8 +691,15 @@ namespace Paramore.Brighter
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
             foreach (var producer in _producerRegistry.Producers)
             {
-                if (!ConfigurePublisherCallbackMaybe(producer, requestContext))
-                    ConfigureAsyncPublisherCallbackMaybe(producer, requestContext);
+                switch (producer)
+                {
+                    case IAmAMessageProducerAsync producerAsync:
+                        ConfigureAsyncPublisherCallbackMaybe(producerAsync, requestContext);
+                        break;
+                    case IAmAMessageProducerSync producerSync:
+                        ConfigurePublisherCallbackMaybe(producerSync, requestContext);
+                        break;
+                }
             }
         }
 
@@ -703,7 +710,7 @@ namespace Paramore.Brighter
         /// <param name="producer">The producer to add a callback for</param>
         /// <param name="requestContext">The request context for the pipeline</param>        
         /// <returns></returns>
-        private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducer producer, RequestContext requestContext)
+        private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducerAsync producer, RequestContext requestContext)
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
@@ -730,7 +737,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="producer">The producer to add a callback for</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-        private bool ConfigurePublisherCallbackMaybe(IAmAMessageProducer producer, RequestContext requestContext)
+        private bool ConfigurePublisherCallbackMaybe(IAmAMessageProducerSync producer, RequestContext requestContext)
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {

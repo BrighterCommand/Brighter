@@ -13,7 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
-    <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.Tranformers.AWS\Paramore.Brighter.Tranformers.AWS.csproj" />
+    <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.Transformers.AWS\Paramore.Brighter.Transformers.AWS.csproj" />
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
   </ItemGroup>
 </Project>
