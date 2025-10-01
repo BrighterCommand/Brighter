@@ -9,7 +9,7 @@
     }
   },
   "profiles": {
-    "http": {
+    "Development": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
@@ -21,24 +21,16 @@
         "BRIGHTER_TRANSPORT": "RabbitMQ"
       }
     },
-    "https": {
+    "MySql": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "launchUrl": "swagger",
-      "applicationUrl": "https://localhost:7068;http://localhost:5256",
+      "applicationUrl": "http://localhost:5256",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "BRIGHTER_GREETINGS_DATABASE": "Sqlite",
+        "BRIGHTER_GREETINGS_DATABASE": "MySQL",
         "BRIGHTER_TRANSPORT": "RabbitMQ"
-      }
-    },
-    "IIS Express": {
-      "commandName": "IISExpress",
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   }
