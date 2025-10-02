@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,7 +11,8 @@ namespace Paramore.Brighter
     {
         private bool _disposed = false;
         protected DbConnection? Connection;
-        protected DbTransaction? Transaction;
+        
+        protected DbTransaction? Transaction { get; set; }
         
         /// <summary>
         /// Close any open connection or transaction
@@ -34,7 +36,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                Transaction?.Commit();
+                Transaction!.Commit();
                 Transaction = null;
             }
         }
@@ -47,7 +49,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                Transaction?.Commit();
+                Transaction!.Commit();
                 Transaction = null;
             }
             
@@ -108,12 +110,15 @@ namespace Paramore.Brighter
         /// <summary>
         /// Is there a transaction open?
         /// </summary>
-        public virtual bool HasOpenTransaction { get { return Transaction != null; } }
+#if !NETSTANDARD
+        [MemberNotNullWhen(true,  nameof(Transaction))]
+#endif
+        public virtual bool HasOpenTransaction  => Transaction != null;
 
         /// <summary>
         /// Is there a shared connection? (Do we maintain state of just create anew)
         /// </summary>
-        public virtual bool IsSharedConnection { get => true; }
+        public virtual bool IsSharedConnection => true;
         
         /// <summary>
         /// Rolls back a transaction
@@ -122,7 +127,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                try { Transaction?.Rollback(); } catch(Exception) { /*ignore*/ }
+                try { Transaction!.Rollback(); } catch(Exception) { /*ignore*/ }
                 Transaction = null;
             }
         }
@@ -134,7 +139,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                try { Transaction?.Rollback(); } catch(Exception) { /*ignore*/ }
+                try { Transaction!.Rollback(); } catch(Exception) { /*ignore*/ }
                 Transaction = null;
             }
             

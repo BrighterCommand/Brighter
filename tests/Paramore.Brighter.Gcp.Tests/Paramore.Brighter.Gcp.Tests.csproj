@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="GitHubActionsTestLogger">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+    <PackageReference Include="System.Text.Json"/>
+    <PackageReference Include="xunit"/>
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Polly.Extensions.Http"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Firestore\Paramore.Brighter.Inbox.Firestore.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Spanner\Paramore.Brighter.Inbox.Spanner.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.Firestore\Paramore.Brighter.Locking.Firestore.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.GcpPubSub\Paramore.Brighter.MessagingGateway.GcpPubSub.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Firestore\Paramore.Brighter.Outbox.Firestore.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Spanner\Paramore.Brighter.Outbox.Spanner.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Tranformers.Gcp\Paramore.Brighter.Tranformers.Gcp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="MessagingGateway\Pull\" />
+  </ItemGroup>
+
+</Project>
