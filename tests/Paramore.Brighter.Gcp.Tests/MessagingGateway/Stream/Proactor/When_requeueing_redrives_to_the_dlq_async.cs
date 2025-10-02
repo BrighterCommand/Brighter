@@ -29,9 +29,9 @@ public class MessageProducerDlqTestsAsync : IDisposable
         MyCommand myCommand = new() { Value = "Test" };
         var correlationId = Guid.NewGuid().ToString();
         var contentType = new ContentType(MediaTypeNames.Text.Plain);  
-        var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var dlQueue = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}";
+        var dlQueue = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}";
+        var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}";
         var routingKey = new RoutingKey(topicName);
         var channelName = new ChannelName(queueName);
         
@@ -76,8 +76,6 @@ public class MessageProducerDlqTestsAsync : IDisposable
             await _channel.RequeueAsync(receivedMessage);
         }
         
-        await Task.Delay(5000);
-
         int dlqCount = await GetDLQCountAsync();
         Assert.Equal(1, dlqCount);
     }

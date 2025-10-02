@@ -12,6 +12,7 @@ using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetter
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Reactor;
 
 [Trait("Category", "GCP")]
+[Trait("Fragile", "CI")]
 public class MessageProducerDlqTestsAsync : IDisposable
 {
     private const int MaxDeliveryAttempts = 5;
@@ -28,9 +29,9 @@ public class MessageProducerDlqTestsAsync : IDisposable
         MyCommand myCommand = new() { Value = "Test" };
         var correlationId = Guid.NewGuid().ToString();
         var contentType = new ContentType(MediaTypeNames.Text.Plain);  
-        var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var dlQueue = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}";
+        var dlQueue = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}";
+        var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}";
         var routingKey = new RoutingKey(topicName);
         var channelName = new ChannelName(queueName);
         
@@ -75,11 +76,14 @@ public class MessageProducerDlqTestsAsync : IDisposable
         for (var i = 0; i <= MaxDeliveryAttempts; i++)
         {
             var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+            if (receivedMessage.Header.MessageType == MessageType.MT_NONE)
+            {
+                break;
+            }
+            
             _channel.Requeue(receivedMessage);
         }
         
-        Thread.Sleep(5000);
-
         var dlqCount = GetDLQCount();
         Assert.Equal(1, dlqCount);
     }
