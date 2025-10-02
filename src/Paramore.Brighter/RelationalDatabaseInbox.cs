@@ -425,8 +425,8 @@ namespace Paramore.Brighter
             where T : class, IRequest
         {
             var body = DatabaseConfiguration.BinaryMessagePayload
-                ? CreateSqlParameter("@CommandBody", JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
-                : CreateSqlParameter("@CommandBody", JsonSerializer.SerializeToUtf8Bytes(command, JsonSerialisationOptions.Options));
+                ? CreateSqlParameter("@CommandBody", JsonSerializer.SerializeToUtf8Bytes(command, JsonSerialisationOptions.Options))
+                : CreateSqlParameter("@CommandBody", JsonSerializer.Serialize(command, JsonSerialisationOptions.Options));
 
             return
             [
