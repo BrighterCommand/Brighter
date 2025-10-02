@@ -262,7 +262,7 @@ namespace Paramore.Brighter
             {
                 command.ExecuteNonQuery();
             }
-            catch (DbException exception)
+            catch (Exception exception)
             {
                 if (!IsExceptionUniqueOrDuplicateIssue(exception))
                 {
@@ -298,7 +298,7 @@ namespace Paramore.Brighter
                     .ExecuteNonQueryAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
             }
-            catch (DbException exception)
+            catch (Exception exception)
             {
                 if (!IsExceptionUniqueOrDuplicateIssue(exception))
                 {
