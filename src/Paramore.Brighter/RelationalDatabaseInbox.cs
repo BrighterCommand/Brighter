@@ -490,8 +490,16 @@ namespace Paramore.Brighter
             {
                 if (await dr.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                 {
-                    var body = dr.GetString(dr.GetOrdinal(CommandBodyColumnName));
-                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    if (DatabaseConfiguration.BinaryMessagePayload)
+                    {
+                        var body = dr.GetFieldValue<byte[]>(dr.GetOrdinal(CommandBodyColumnName));
+                        return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    }
+                    else
+                    {
+                        var body = dr.GetString(dr.GetOrdinal(CommandBodyColumnName));
+                        return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    }
                 }
             }
             finally
