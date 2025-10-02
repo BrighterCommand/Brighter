@@ -31,9 +31,9 @@ namespace Paramore.Brighter.Inbox.MySql
     /// </summary>
     public class MySqlInboxBuilder
     {
-        private const string TextOutboxDDL =
+        private const string TextInboxDDL =
             """
-            CREATE TABLE IF NOT EXITS {0} 
+            CREATE TABLE IF NOT EXISTS {0}
             ( 
                 `CommandId` VARCHAR(255) NOT NULL,
                 `CommandType` VARCHAR(256) NOT NULL,
@@ -44,9 +44,9 @@ namespace Paramore.Brighter.Inbox.MySql
             ) ENGINE = InnoDB;
             """;
 
-        private const string BinaryOutboxDDL =
+        private const string BinaryInboxxDDL =
             """
-            CREATE TABLE IF NOT EXITS {0} 
+            CREATE TABLE IF NOT EXISTS {0}
             ( 
                 `CommandId` VARCHAR(255) NOT NULL,
                 `CommandType` VARCHAR(256) NOT NULL,
@@ -68,10 +68,10 @@ namespace Paramore.Brighter.Inbox.MySql
         {
             if (binaryMessage)
             {
-                return string.Format(BinaryOutboxDDL, inboxTableName);
+                return string.Format(BinaryInboxxDDL, inboxTableName);
             }
 
-            return string.Format(TextOutboxDDL, inboxTableName);
+            return string.Format(TextInboxDDL, inboxTableName);
         }
 
         /// <summary>
