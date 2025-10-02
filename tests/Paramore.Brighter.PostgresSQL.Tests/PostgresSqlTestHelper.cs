@@ -20,7 +20,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
             => new(_postgreSqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
         
         public RelationalDatabaseConfiguration InboxConfiguration 
-            => new(_postgreSqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+            => new(_postgreSqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
 
         public PostgresSqlTestHelper(bool binaryMessagePayload = false)
         {
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
         {
             using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
             _tableName = $"command_{_tableName}";
-            var createTableSql = PostgreSqlInboxBuilder.GetDDL(_tableName);
+            var createTableSql = PostgreSqlInboxBuilder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
 
             connection.Open();
             using var command = connection.CreateCommand();

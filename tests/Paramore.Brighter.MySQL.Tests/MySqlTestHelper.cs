@@ -17,7 +17,8 @@ namespace Paramore.Brighter.MySQL.Tests
         public IAmARelationalDbConnectionProvider ConnectionProvider => _connectionProvider;
 
         public RelationalDatabaseConfiguration InboxConfiguration =>
-            new(_mysqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+            new(_mysqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName,
+                    binaryMessagePayload: _binaryMessagePayload);
 
         public RelationalDatabaseConfiguration OutboxConfiguration =>
             new(_mysqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName,
@@ -86,7 +87,7 @@ namespace Paramore.Brighter.MySQL.Tests
         {
             using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
             _tableName = $"`command_{_tableName}`";
-            var createTableSql = MySqlInboxBuilder.GetDDL(_tableName);
+            var createTableSql = MySqlInboxBuilder.GetDDL(_tableName, _binaryMessagePayload);
 
             connection.Open();
             using var command = connection.CreateCommand();

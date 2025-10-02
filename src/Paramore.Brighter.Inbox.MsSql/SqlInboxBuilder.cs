@@ -29,17 +29,35 @@ namespace Paramore.Brighter.Inbox.MsSql
     /// </summary>
     public class SqlInboxBuilder
     {
-        private const string InboxDDL = @"
-                    CREATE TABLE {0}
-                        (
-                            [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
-                            [CommandId] [NVARCHAR](256) NOT NULL ,
-                            [CommandType] [NVARCHAR](256) NULL ,
-                            [CommandBody] [NVARCHAR](MAX) NULL ,
-                            [Timestamp] [DATETIME] NULL ,
-                            [ContextKey] [NVARCHAR](256) NULL,
-                            PRIMARY KEY ( [Id] )
-                        );";
+        private const string TextInboxDDL =
+            """
+            CREATE TABLE {0}
+            (
+                [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
+                [CommandId] [NVARCHAR](256) NOT NULL ,
+                [CommandType] [NVARCHAR](256) NULL ,
+                [CommandBody] [NVARCHAR](MAX) NULL ,
+                [Timestamp] [DATETIME] NULL ,
+                [ContextKey] [NVARCHAR](256) NULL,
+                PRIMARY KEY ( [Id] )
+            );
+            """;
+
+        private const string BinaryInboxDDL =
+            """
+            CREATE TABLE {0}
+            (
+                [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
+                [CommandId] [NVARCHAR](256) NOT NULL ,
+                [CommandType] [NVARCHAR](256) NULL ,
+                [CommandBody] [VARBINARY](MAX) NULL ,
+                [Timestamp] [DATETIME] NULL ,
+                [ContextKey] [NVARCHAR](256) NULL,
+                PRIMARY KEY ( [Id] )
+            );
+            """;
+
+
 
         private const string INBOX_EXISTS_SQL = @"IF EXISTS (
             SELECT 1
@@ -53,11 +71,16 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// </summary>
         /// <param name="inboxTableName">The name you want to use for the table</param>
         /// <returns>The required DDL</returns>
-         public static string GetDDL(string inboxTableName)
+        public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false)
         {
-            return string.Format(InboxDDL, inboxTableName);
+            if (binaryMessagePayload)
+            {
+                return string.Format(BinaryInboxDDL, inboxTableName);
+            }
+
+            return string.Format(TextInboxDDL, inboxTableName);
         }
-        
+
         /// <summary>
         /// Get the SQL statements required to test for the existence of an Inbox in MSSQL.
         /// </summary>
@@ -66,6 +89,5 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <returns>The required SQL.</returns>
         public static string GetExistsQuery(string inboxTableName, string schemaName = "dbo") =>
             string.Format(INBOX_EXISTS_SQL, inboxTableName, schemaName);
-
     }
 }
