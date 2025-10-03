@@ -60,7 +60,7 @@ jobs:
           dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d
           dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --no-build --verbosity d
           dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
-          
+
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -84,12 +84,12 @@ jobs:
           name: nuget packages
       - name: Push generated package to NuGet
         run: dotnet nuget push **/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_KEY }} --skip-duplicate
-    
+
   memory:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [build]
-    
+
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
@@ -102,7 +102,7 @@ jobs:
         run: dotnet restore
       - name: In Memory Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n  
-        
+
   hangfire:
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -120,7 +120,7 @@ jobs:
         run: dotnet restore
       - name: Hangfire Tests
         run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-  
+
   quartz:
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -138,12 +138,12 @@ jobs:
         run: dotnet restore
       - name: Quartz Tests
         run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-  
+
   redis-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-    
+
     services:
       redis:  
         image: redis:latest
@@ -154,7 +154,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5             
-      
+
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
@@ -172,13 +172,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-    
+
     services:
       mosquitto:  
         image: efrecon/mosquitto:latest
         ports:
         - 1883:1883
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -224,7 +224,7 @@ jobs:
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
       - name: RMQ Sync Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-        
+
   kafka-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -287,12 +287,12 @@ jobs:
       run: dotnet restore
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&Category!=Confluent&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
- 
+
   postgres-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-  
+
     services:
       postgres:
         image: postgres
@@ -317,12 +317,12 @@ jobs:
         run: dotnet restore
       - name: Postgres Tests
         run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-        
+
   sqlserver-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-  
+
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server
@@ -343,12 +343,12 @@ jobs:
         run: dotnet restore
       - name: MSSQL Tests
         run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-        
+
   mysql-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-  
+
     services:
       mariadb:
         image: mariadb:latest
@@ -383,13 +383,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-  
+
     services:
       dynamo:
         image: dwmkerr/dynamodb
         ports: 
           - 8000:8000
-      
+
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
@@ -411,7 +411,7 @@ jobs:
     needs: build
     env:
       LOCALSTACK_SERVICE_URL: http://localhost.localstack.cloud:4566
-    
+
     services: 
       localstack: 
         image: localstack/localstack    
@@ -419,7 +419,7 @@ jobs:
           - 4566:4566
         env: 
           SERVICES: s3,sqs,sns,sts,dynamodb,iam,scheduler
-    
+
     steps:
       - uses: actions/checkout@v5
         with:
@@ -455,7 +455,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: us-west-2
       AWS_DEFAULT_OUTPUT: json    
-      
+
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet 
@@ -476,7 +476,7 @@ jobs:
         run: |
           dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
           dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-  
+
   aws-scheduler-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -489,7 +489,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: us-west-2
       AWS_DEFAULT_OUTPUT: json
-    
+
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
@@ -510,7 +510,7 @@ jobs:
         run: |
           dotnet test ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
           dotnet test ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-       
+
   sqlite-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -545,7 +545,7 @@ jobs:
         run: dotnet restore
       - name: Azure Tests
         run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-        
+
   mongodb-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -576,7 +576,44 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: MongoDB Tests
-        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+    
+  gcp-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    if: |
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+    steps:
+      - uses: actions/checkout@v5
+        with: 
+          fetch-depth: 0 # Required to fetch the Git tags
+          filter: tree:0
+          show-progress: false 
+          
+      - name: Google Cloud auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+            
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          version: '>= 363.0.0'
+      
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            
+      - name: Install dependencies
+        run: dotnet restore
+        
+      - name: GCP Tests
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
         
 #  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
@@ -595,7 +632,7 @@ jobs:
 #          --health-interval 20s
 #          --health-timeout 10s
 #          --health-retries 10
-#          
+#
 #      rocketmq-broker:
 #        image: apache/rocketmq
 #        ports:

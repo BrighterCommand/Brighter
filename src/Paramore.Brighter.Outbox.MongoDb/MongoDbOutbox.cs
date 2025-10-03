@@ -573,6 +573,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         {
             {"db.operation.parameter.message.ids", string.Join(",", ids)}
         };
+        
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,

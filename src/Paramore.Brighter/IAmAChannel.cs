@@ -41,14 +41,15 @@ public interface IAmAChannel : IDisposable
     RoutingKey RoutingKey { get; }
 
     /// <summary>
+    /// Adds a message to the queue
+    /// </summary>
+    /// <param name="message"></param>
+    void Enqueue(params Message[] message);
+
+    /// <summary>
     /// Stops this instance.
     /// <param name="topic">The topic to post the MT_QUIT message too</param>
     /// </summary>
     void Stop(RoutingKey topic);
 
-    /// <summary>
-    /// Adds a message to the queue
-    /// </summary>
-    /// <param name="message"></param>
-    void Enqueue(params Message[] message);
 }

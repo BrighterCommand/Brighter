@@ -37,10 +37,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// <summary>
     /// Class RmqMessagePublisher.
     /// </summary>
-internal sealed partial class RmqMessagePublisher
+    internal sealed partial class RmqMessagePublisher
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessagePublisher>();
-        private static readonly string[] _headersToReset =
+        private static readonly HashSet<string> _headersToReset =
         [
             HeaderNames.DELAY_MILLISECONDS,
             HeaderNames.MESSAGE_TYPE,
@@ -63,13 +63,13 @@ internal sealed partial class RmqMessagePublisher
         /// or
         /// exchangeName
         /// </exception>
-        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection) 
+        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection)
         {
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _channel = channel ?? throw new ArgumentNullException(nameof(channel));
-       }
+        }
 
-       /// <summary>
+        /// <summary>
         /// Publishes the message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -83,22 +83,22 @@ internal sealed partial class RmqMessagePublisher
 
             Dictionary<string, object> headers = AddCloudEventHeaders(message);
 
-            AddUserDefinedHeaders(message, delay, headers, deliveryTag);
-            
+            AddUserDefinedHeaders(message, headers);
+
             AddDeliveryHeaders(delay, headers, deliveryTag);
 
             var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
-            var bodyContentType = message.Body.ContentType ?? contentType; 
-            
+            var bodyContentType = message.Body.ContentType ?? contentType;
+
             _channel.BasicPublish(
                 _connection.Exchange.Name,
                 message.Header.Topic,
                 false,
                 CreateBasicProperties(
-                    message.Id, 
-                    message.Header.TimeStamp, 
+                    message.Id,
+                    message.Header.TimeStamp,
                     bodyContentType.ToString(),
-                    contentType.ToString(), 
+                    contentType.ToString(),
                     message.Header.ReplyTo ?? string.Empty,
                     message.Persist,
                     headers),
@@ -120,12 +120,12 @@ internal sealed partial class RmqMessagePublisher
 
             Dictionary<string, object> headers = AddCloudEventHeaders(message);
 
-            AddUserDefinedHeaders(message, timeOut, headers, deliveryTag);
-            
+            AddUserDefinedHeaders(message, headers);
+
             AddDeliveryHeaders(TimeSpan.Zero, headers, deliveryTag);
 
             AddOriginalMessageIdOnRepublish(message, headers);
-            
+
             var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
             var bodyContentType = message.Body.ContentType ?? contentType;
 
@@ -135,16 +135,16 @@ internal sealed partial class RmqMessagePublisher
                 queueName.Value,
                 false,
                 CreateBasicProperties(
-                    messageId, 
-                    message.Header.TimeStamp, 
+                    messageId,
+                    message.Header.TimeStamp,
                     bodyContentType.ToString(),
-                    contentType.ToString(), 
+                    contentType.ToString(),
                     message.Header.ReplyTo ?? string.Empty,
                     message.Persist,
                     headers),
                 message.Body.Bytes);
         }
- 
+
         private static Dictionary<string, object> AddCloudEventHeaders(Message message)
         {
             var headers = new Dictionary<string, object>
@@ -161,49 +161,57 @@ internal sealed partial class RmqMessagePublisher
                 [HeaderNames.TOPIC] = message.Header.Topic.Value,
                 [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
             };
-            
+
             if (!string.IsNullOrEmpty(message.Header.Subject))
                 headers.Add(HeaderNames.CLOUD_EVENTS_SUBJECT, message.Header.Subject!);
-        
+
             if (message.Header.DataSchema != null)
                 headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
 
             if (message.Header.CorrelationId != string.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId?.Value!);
-            
+
             if (!string.IsNullOrEmpty(message.Header.TraceParent?.Value))
                 headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, message.Header.TraceParent?.Value!);
-            
+
             if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
                 headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState?.Value!);
-            
+
             if (message.Header.Baggage.Any())
                 headers.Add(HeaderNames.W3C_BAGGAGE, message.Header.Baggage.ToString());
             return headers;
         }
-        
+
         private static void AddOriginalMessageIdOnRepublish(Message message, Dictionary<string, object> headers)
         {
             if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
-                headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id.Value);
+            {
+                headers[HeaderNames.ORIGINAL_MESSAGE_ID] = message.Id.Value;
+            }
         }
-        
-        private static void AddUserDefinedHeaders(Message message, TimeSpan? delay, Dictionary<string, object> headers, string? deliveryTag)
+
+        private static void AddUserDefinedHeaders(Message message, Dictionary<string, object> headers)
         {
             message.Header.Bag.Each(header =>
             {
-                if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
+                if (_headersToReset.Contains(header.Key))
+                {
+                    headers[header.Key] = header.Value;
+                }
             });
-
         }
 
         private static void AddDeliveryHeaders(TimeSpan? delay, Dictionary<string, object> headers, string? deliveryTag)
         {
             if (!string.IsNullOrEmpty(deliveryTag))
-                headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag!);
+            {
+                headers[HeaderNames.DELIVERY_TAG] = deliveryTag!;
+            }
 
             if (delay > TimeSpan.Zero)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.TotalMilliseconds);
+            {
+                headers[HeaderNames.DELAY_MILLISECONDS] = delay.Value.TotalMilliseconds;
+            }
         }
 
         private IBasicProperties CreateBasicProperties(string id, DateTimeOffset timeStamp, string type, string contentType,
@@ -211,7 +219,7 @@ internal sealed partial class RmqMessagePublisher
         {
             var basicProperties = _channel.CreateBasicProperties();
 
-            basicProperties.DeliveryMode = (byte) (persistMessage ? 2 : 1); // delivery mode set to 2 if message is persistent or 1 if non-persistent
+            basicProperties.DeliveryMode = (byte)(persistMessage ? 2 : 1); // delivery mode set to 2 if message is persistent or 1 if non-persistent
             basicProperties.ContentType = contentType;
             basicProperties.Type = type;
             basicProperties.MessageId = id;
@@ -223,7 +231,7 @@ internal sealed partial class RmqMessagePublisher
             {
                 foreach (var header in headers)
                 {
-                    if(!IsAnAmqpType(header.Value))
+                    if (!IsAnAmqpType(header.Value))
                         throw new ConfigurationException($"The value {header.Value} is type {header.Value.GetType()} for header {header.Key} value only supports the AMQP 0-8/0-9 standard entry types S, I, D, T and F, as well as the QPid-0-8 specific b, d, f, l, s, t, x and V types and the AMQP 0-9-1 A type.");
                 }
 
@@ -232,7 +240,7 @@ internal sealed partial class RmqMessagePublisher
 
             return basicProperties;
         }
-        
+
         /// <summary>
         /// Supports the AMQP 0-8/0-9 standard entry types S, I, D, T
         /// and F, as well as the QPid-0-8 specific b, d, f, l, s, t
@@ -245,7 +253,7 @@ internal sealed partial class RmqMessagePublisher
             return value switch
             {
                 null or string _ or byte[] _ or int _ or uint _ or decimal _ or AmqpTimestamp _ or IDictionary _
-                    or IList _ or byte _ or sbyte _ or double _ or float _ or long _ or short _ or bool _  => true,
+                    or IList _ or byte _ or sbyte _ or double _ or float _ or long _ or short _ or bool _ => true,
                 _ => false
             };
         }
