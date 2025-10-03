@@ -106,7 +106,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">Timeout of sql call.</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        /// <returns>List of messages that need to be dispatched.</returns>
+        /// <returns>List of messages that have been dispatched.</returns>
         Task<IEnumerable<Message>> DispatchedMessagesAsync(
             TimeSpan dispatchedSince,
             RequestContext requestContext,
@@ -128,6 +128,23 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task{Message}"/>.</returns>
         Task<Message> GetAsync(
             Id messageId,
+            RequestContext requestContext,
+            int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
+        /// Awaitable Get messages with the specified identifiers.
+        /// </summary>
+        /// <param name="messageId">The message identifiers</param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
+        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; -1 for default timeout</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns><see cref="Task{Message}"/>.</returns>
+        Task<IEnumerable<Message>> GetAsync(
+            IEnumerable<Id> messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
@@ -181,6 +198,22 @@ namespace Paramore.Brighter
             int pageSize = 100,
             int pageNumber = 1,
             IEnumerable<RoutingKey>? trippedTopics = null,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the current count of outstanding messages in the Outbox
+        /// </summary>
+        /// <param name="dispatchedSince">The age a message must be before it's considered to be outstanding</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="maxCount">For outbox implementations that have to scan through messages, the maximum number of messages to scan before returning a value</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Async Cancellation Token</param>
+        /// <returns>The number of outstanding messages in the outbox</returns>
+        Task<int> GetOutstandingMessageCountAsync(
+            TimeSpan dispatchedSince,
+            RequestContext? requestContext,
+            int maxCount = 100,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
     }

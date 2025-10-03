@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+      <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
+      <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Google.Cloud.Spanner.Data" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    </ItemGroup>
+
+</Project>

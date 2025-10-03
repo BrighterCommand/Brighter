@@ -28,6 +28,8 @@ namespace Paramore.Brighter
 
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
 
+        protected IRelationDatabaseOutboxQueries Queries => queries;
+
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
         ///     synchronization context.
@@ -573,18 +575,12 @@ namespace Paramore.Brighter
             }
         }
 
-        /// <summary>
-        /// Returns messages specified by the Ids
-        /// </summary>
-        /// <param name="messageIds">The Ids of the messages</param>
-        /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-        /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
-        /// <param name="cancellationToken">Cancellation Token.</param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public async Task<IEnumerable<Message>> GetAsync(
             IEnumerable<Id> messageIds,
             RequestContext requestContext,
             int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         )
         {
@@ -924,7 +920,7 @@ namespace Paramore.Brighter
         /// <returns>Outstanding Messages</returns>
         public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
             TimeSpan dispatchedSince,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             IEnumerable<RoutingKey>? trippedTopics = null,
@@ -957,6 +953,19 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <inheritdoc/>
+        public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+        {
+            return OutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, args).Count();
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            return (await OutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, args, cancellationToken))
+                .Count();
+        }
+
         protected virtual void WriteToStore(
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
@@ -975,7 +984,7 @@ namespace Paramore.Brighter
 
                 command.ExecuteNonQuery();
             }
-            catch (DbException exception)
+            catch (Exception exception)
             {
                 if (!IsExceptionUniqueOrDuplicateIssue(exception))
                 {
@@ -1019,7 +1028,7 @@ namespace Paramore.Brighter
                     .ExecuteNonQueryAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
             }
-            catch (DbException exception)
+            catch (Exception exception)
             {
                 if (!IsExceptionUniqueOrDuplicateIssue(exception))
                 {
@@ -1187,7 +1196,7 @@ namespace Paramore.Brighter
                 insertClause.parameters);
         }
 
-        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Id messageId, DateTimeOffset? dispatchedAt)
+        protected virtual DbCommand InitMarkDispatchedCommand(DbConnection connection, Id messageId, DateTimeOffset? dispatchedAt)
             => CreateCommand(connection, GenerateSqlText(queries.MarkDispatchedCommand), 0,
                 CreateSqlParameter("MessageId", messageId.Value),
                 CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()));
@@ -1215,7 +1224,7 @@ namespace Paramore.Brighter
                 inClause.parameters);
         }
 
-        private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
+        protected virtual string GenerateSqlText(string sqlFormat, params string[] orderedParams)
             => string.Format(sqlFormat, orderedParams.Prepend(DatabaseConfiguration.OutBoxTableName).ToArray());
 
         private DbCommand InitDeleteDispatchedCommand(DbConnection connection, IEnumerable<string> messageIds)
@@ -1251,7 +1260,6 @@ namespace Paramore.Brighter
 
         protected virtual IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize, int pageNumber)
         {
-            
             var parameters = new IDbDataParameter[3];
             parameters[0] = CreateSqlParameter("@Skip", Math.Max(pageNumber - 1, 0) * pageSize);
             parameters[1] = CreateSqlParameter("@Take", pageSize);
@@ -1381,21 +1389,21 @@ namespace Paramore.Brighter
             return outstandingMessages;
         }
 
-        private (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(
+        protected virtual (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(
             List<string> messageIds)
         {
-            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
+            var paramNames = messageIds.Select((_, i) => "@p" + i).ToArray();
 
             var parameters = new IDbDataParameter[messageIds.Count];
             for (int i = 0; i < paramNames.Length; i++)
             {
-                parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
+                parameters[i] = CreateSqlParameter(paramNames[i], DbType.String, messageIds[i]);
             }
 
             return (string.Join(",", paramNames), parameters);
         }
 
-        private (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(List<Message> messages)
+        protected virtual (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(List<Message> messages)
         {
             var messageParams = new List<string>();
             var parameters = new List<IDbDataParameter>();

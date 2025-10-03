@@ -51,9 +51,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Asynchronously creates an in-memory producer registry.
         /// </summary>
-        /// <param name="ct">A cancellation token to cancel the operation</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains an instance of <see cref="IAmAProducerRegistry"/></returns>
-        public Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
+        public Task<IAmAProducerRegistry> CreateAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Create());
         }

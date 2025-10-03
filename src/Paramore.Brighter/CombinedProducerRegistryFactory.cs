@@ -68,7 +68,7 @@ public class CombinedProducerRegistryFactory : IAmAProducerRegistryFactory
     /// Generally the async calls are where creation of a producer needs to interrogate a remote service
     /// </remarks>
     /// <returns>A <see cref="IAmAProducerRegistry"/> registry of producers</returns>
-    public async Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
+    public async Task<IAmAProducerRegistry> CreateAsync(CancellationToken cancellationToken = default)
     {
         var keyedProducerTasks = _messageProducerFactories.Select(x => x.CreateAsync());
         var keyedProducers = await Task.WhenAll(keyedProducerTasks);
