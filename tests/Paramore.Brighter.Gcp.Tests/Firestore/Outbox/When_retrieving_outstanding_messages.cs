@@ -38,14 +38,14 @@ public class FetchOutStandingMessageTests
         _outbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
         _outbox.MarkDispatched(_messageDispatched.Id, context);
         
-        var total = _outbox.GetNumberOfOutstandingMessages();
+        var total = _outbox.GetOutstandingMessageCount(TimeSpan.Zero, null);
 
         var allUnDispatched = _outbox.OutstandingMessages(TimeSpan.Zero, context);
         var messagesOverAnHour = _outbox.OutstandingMessages(TimeSpan.FromHours(1), context);
         var messagesOver4Hours = _outbox.OutstandingMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-       Assert.True(total >= 2);
+        Assert.True(total >= 2);
 
         allUnDispatched = allUnDispatched.ToList();
         Assert.True(allUnDispatched.Count() > 2);
