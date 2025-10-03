@@ -320,6 +320,77 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     }
 
     /// <inheritdoc />
+    public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+    {
+        var ids = messageIds.Select(id => id.Value).ToArray();
+
+        var dbAttributes = new Dictionary<string, string>()
+        {
+            {"db.operation.parameter.message.ids", string.Join(",", ids)}
+        };
+
+        var span = Tracer?.CreateDbSpan(
+             new BoxSpanInfo(DbSystem.Firestore,
+                 _configuration.Database,
+                 BoxDbOperation.Get,
+                 _outboxCollection.Name,
+                 dbAttributes: dbAttributes),
+             requestContext?.Span,
+             options: _configuration.Instrumentation);
+
+        var arrayOfIds = new ArrayValue();
+        arrayOfIds.Values.AddRange(ids.Select(id => new Value { StringValue = id }));
+        try
+        {
+            var query = new StructuredQuery
+            {
+                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _outboxCollection.Name } },
+                Where = new StructuredQuery.Types.Filter
+                {
+                    FieldFilter = new StructuredQuery.Types.FieldFilter
+                    {
+                        Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.MessageId) },
+                        Op = StructuredQuery.Types.FieldFilter.Types.Operator.In,
+                        Value = new Value { ArrayValue = arrayOfIds }
+                    }
+                },
+                OrderBy =
+               {
+                   new StructuredQuery.Types.Order
+                   {
+                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
+                       Direction = StructuredQuery.Types.Direction.Ascending
+                   }
+               }
+            };
+
+            var request = new RunQueryRequest
+            {
+                Parent = $"{_configuration.DatabasePath}/documents",
+                StructuredQuery = query
+            };
+
+            var client = _connectionProvider.GetFirestoreClient();
+            return BrighterAsyncContext.Run(async () =>
+            {
+                var messages = new List<Message>();
+
+                using var response = client.RunQuery(request);
+                await foreach (var doc in response.GetResponseStream())
+                {
+                    messages.Add(ToMessage(doc.Document));
+                }
+
+                return messages;
+            });
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    /// <inheritdoc />
     public void MarkDispatched(Id id, RequestContext? requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
     {
         var dbAttributes = new Dictionary<string, string>
@@ -531,89 +602,9 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
            Tracer?.EndSpan(span);
        }
     }
-    
-    /// <summary>
-    /// Returns messages specified by the Ids
-    /// </summary>
-    /// <param name="messageIds">The Ids of the messages</param>
-    /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-    /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
-    /// <returns>A list of messages</returns>
-    public IList<Message> Get (IEnumerable<Id> messageIds, RequestContext? requestContext = null, int outBoxTimeout = -1)
-    {
-        var ids = messageIds.Select(id => id.Value).ToArray();
-        
-        var dbAttributes = new Dictionary<string, string>()
-        {
-            {"db.operation.parameter.message.ids", string.Join(",", ids)}
-        };
-        
-       var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, 
-                _configuration.Database,
-                BoxDbOperation.Get,
-                _outboxCollection.Name,
-                dbAttributes: dbAttributes),
-            requestContext?.Span,
-            options: _configuration.Instrumentation);
 
-       var arrayOfIds = new ArrayValue();
-       arrayOfIds.Values.AddRange(ids.Select(id => new Value { StringValue = id}));
-       try
-       {
-           var query = new StructuredQuery
-           {
-               From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _outboxCollection.Name  } },
-               Where = new StructuredQuery.Types.Filter
-               {
-                   FieldFilter = new StructuredQuery.Types.FieldFilter
-                   {
-                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.MessageId) },
-                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.In,
-                       Value = new Value { ArrayValue = arrayOfIds }
-                   }
-               },
-               OrderBy =  
-               {
-                   new StructuredQuery.Types.Order
-                   {
-                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
-                       Direction = StructuredQuery.Types.Direction.Ascending
-                   }
-               }
-           };
-
-           var request = new RunQueryRequest 
-           {
-               Parent = $"{_configuration.DatabasePath}/documents", 
-               StructuredQuery = query
-           };
-        
-           var client = _connectionProvider.GetFirestoreClient();
-           return BrighterAsyncContext.Run(async () =>
-           {
-               var messages = new List<Message>();
-
-               using var response = client.RunQuery(request);
-               await foreach (var doc in response.GetResponseStream())
-               {
-                   messages.Add(ToMessage(doc.Document));
-               }
-            
-               return messages;
-           });
-       }
-       finally
-       {
-           Tracer?.EndSpan(span);
-       }
-    }
-
-    /// <summary>
-    /// Get the number of messages in the Outbox that are not dispatched
-    /// </summary>
-    /// <returns></returns>
-    public long GetNumberOfOutstandingMessages()
+    /// <inheritdoc />
+    public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
     {
        var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, 
@@ -668,7 +659,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                    if (resp.Result.AggregateFields.TryGetValue("total_count", out var value))
                    {
                        // The aggregated count is typically returned as an Int64Value in the Value proto
-                       return value.IntegerValue;
+                       return value.IntegerValue > int.MaxValue ? int.MaxValue : (int)value.IntegerValue;
                    }
                }
 
@@ -1158,7 +1149,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     /// <param name="args">Additional parameters required for search, if any</param>
     /// <param name="cancellationToken"></param>
     /// <returns>A list of messages</returns>
-    public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
        var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Get, _outboxCollection.Name),
@@ -1228,7 +1219,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
     /// <param name="cancellationToken"></param>
     /// <returns>A list of messages</returns>
-    public async Task<IList<Message>> GetAsync(IEnumerable<Id> messageIds, RequestContext? requestContext = null, int outBoxTimeout = -1, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var ids = messageIds.Select(id => id.Value).ToArray();
         
@@ -1294,13 +1285,9 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
            Tracer?.EndSpan(span);
        }
     }
-    
-    /// <summary>
-    /// Get the number of messages in the Outbox that are not dispatched
-    /// </summary>
-    /// <param name="cancellationToken">Cancel the async operation</param>
-    /// <returns></returns>
-    public async Task<long> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken = default)
+
+    /// <inheritdoc />
+    public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
        var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Firestore, 
@@ -1353,7 +1340,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                if (resp.Result.AggregateFields.TryGetValue("total_count", out var value))
                {
                    // The aggregated count is typically returned as an Int64Value in the Value proto
-                   return value.IntegerValue;
+                   return value.IntegerValue > int.MaxValue ? int.MaxValue : (int)value.IntegerValue;
                }
            }
 

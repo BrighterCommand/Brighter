@@ -23,16 +23,15 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Outbox.DynamoDB;
+using System.Collections.Generic;
 
-internal sealed class DispatchedTopicQueryContext
+namespace Paramore.Brighter.Outbox.DynamoDB.V4;
+
+internal sealed class IndexQueryResult(IEnumerable<MessageItem> messages, int shardNumber, string? paginationToken, bool queryComplete)
 {
-    public int NextPage { get; private set; }
-    public string LastEvaluatedKey { get; private set; }
+    public IEnumerable<MessageItem> Messages { get; private set; } = messages;
+    public int ShardNumber { get; private set; } = shardNumber;
+    public string? PaginationToken { get; private set; } = paginationToken;
 
-    public DispatchedTopicQueryContext(int nextPage, string lastEvaluatedKey)
-    {
-        NextPage = nextPage;
-        LastEvaluatedKey = lastEvaluatedKey;
-    }
+    public bool QueryComplete { get; private set; } = queryComplete;
 }

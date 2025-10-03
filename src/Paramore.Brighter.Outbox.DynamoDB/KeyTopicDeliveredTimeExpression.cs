@@ -4,27 +4,22 @@ using Amazon.DynamoDBv2.DocumentModel;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
-    internal sealed class KeyTopicDeliveredTimeExpression
+    internal sealed class KeyTopicDeliveredTimeExpression : TopicQueryKeyExpression
     {
-        private readonly Expression _expression = new()
+        public KeyTopicDeliveredTimeExpression()
         {
-            ExpressionStatement = "Topic = :v_Topic and DeliveryTime < :v_SinceTime"
-        };
-
-        public override string ToString()
-        {
-            return _expression.ExpressionStatement;
+            Expression.ExpressionStatement = "TopicShard = :v_TopicShard and DeliveryTime < :v_SinceTime";
         }
 
-        public Expression Generate(string topicName, DateTimeOffset sinceTime)
+        public override Expression Generate(string topicName, DateTimeOffset sinceTime, int shard)
         {
-            _expression.ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>(capacity: 2)
+            Expression.ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>(capacity: 2)
             {
-                { ":v_Topic", topicName },
+                { ":v_TopicShard", $"{topicName}_{shard}" },
                 { ":v_SinceTime", sinceTime.Ticks }
             };
 
-            return _expression;
+            return Expression;
         }
     }
 }

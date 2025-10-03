@@ -127,7 +127,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert 
-        Assert.Equal(21, _exportedActivities.Count);
+        Assert.Equal(19, _exportedActivities.Count);
         Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
         
         //there should be a create span for the batch
@@ -138,9 +138,9 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         var clearActivity = _exportedActivities.Where(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
         Assert.Equal(3, clearActivity.Count());
 
-        //there should be a span in the Db for retrieving the message
+        //there should be a span in the Db for retrieving the batch of messages
         var outBoxActivity = _exportedActivities.Where(a => a.DisplayName == $"{BoxDbOperation.Get.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
-        Assert.Equal(3, outBoxActivity.Count());
+        Assert.Single(outBoxActivity);
 
         //there should be a span for publishing the message via the producer
         var producerActivity = _exportedActivities.Where(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");

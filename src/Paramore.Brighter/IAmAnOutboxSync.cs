@@ -72,7 +72,7 @@ namespace Paramore.Brighter
         /// <param name="pageNumber">The page number.</param>
         /// <param name="outBoxTimeout">Timeout of sql call.</param>
         /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns>List of messages that need to be dispatched.</returns>
+        /// <returns>List of messages that have been dispatched.</returns>
         IEnumerable<Message> DispatchedMessages(
             TimeSpan dispatchedSince, 
             RequestContext requestContext,
@@ -86,10 +86,20 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; -1 for default timeout</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
+        /// <returns>The requested message</returns>
         Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null);
+
+        /// <summary>
+        /// Gets a batch of messages with the specified identifiers.
+        /// </summary>
+        /// <param name="messageIds">The identifiers of the messages to retrieve.</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; -1 for default timeout</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <returns>The requested messages</returns>
+        IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Update a message to show it is dispatched
@@ -116,6 +126,20 @@ namespace Paramore.Brighter
             int pageSize = 100, 
             int pageNumber = 1,
             IEnumerable<RoutingKey>? trippedTopics = null,
+            Dictionary<string, object>? args = null);
+
+        /// <summary>
+        /// Gets the current count of outstanding messages in the Outbox
+        /// </summary>
+        /// <param name="dispatchedSince">The age a message must be before it's considered to be outstanding</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="maxCount">For outbox implementations that have to scan through messages, the maximum number of messages to scan before returning a value</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>The number of outstanding messages in the outbox</returns>
+        int GetOutstandingMessageCount(
+            TimeSpan dispatchedSince,
+            RequestContext? requestContext,
+            int maxCount = 100,
             Dictionary<string, object>? args = null);
     }
 }
