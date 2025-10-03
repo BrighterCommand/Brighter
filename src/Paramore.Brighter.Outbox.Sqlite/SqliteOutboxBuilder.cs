@@ -30,58 +30,64 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// </summary>
     public class SqliteOutboxBuilder
     {
-        const string TextOutboxDdl = @"CREATE TABLE {0} 
-                                    (
-                                        [MessageId] TEXT NOT NULL COLLATE NOCASE,
-                                        [MessageType] TEXT NULL,
-                                        [Topic] TEXT NULL,
-                                        [Timestamp] TEXT NULL,
-                                        [CorrelationId] TEXT NULL,
-                                        [ReplyTo] TEXT NULL,
-                                        [ContentType] TEXT NULL,  
-                                        [PartitionKey] TEXT NULL,
-                                        [WorkflowId] TEXT NULL,
-                                        [JobId] TEXT NULL,
-                                        [Dispatched] TEXT NULL,
-                                        [HeaderBag] TEXT NULL,
-                                        [Body] TEXT NULL,
-                                        [Source] TEXT NULL,
-                                        [Type] TEXT NULL,
-                                        [DataSchema] TEXT NULL,
-                                        [Subject] TEXT NULL,
-                                        [TraceParent] TEXT NULL,
-                                        [TraceState] TEXT NULL,
-                                        [Baggage] TEXT NULL,
-                                        [DataRef] TEXT NULL,
-                                        [SpecVersion] TEXT NULL
-                                    );";
-        
-        const string BinaryOutboxDdl = @"CREATE TABLE {0} 
-                                    (
-                                        [MessageId] TEXT NOT NULL COLLATE NOCASE,
-                                        [MessageType] TEXT NULL,
-                                        [Topic] TEXT NULL,
-                                        [Timestamp] TEXT NULL,
-                                        [CorrelationId] TEXT NULL,
-                                        [ReplyTo] TEXT NULL,
-                                        [ContentType] TEXT NULL,  
-                                        [PartitionKey] TEXT NULL,
-                                        [WorkflowId] TEXT NULL,
-                                        [JobId] TEXT NULL,
-                                        [Dispatched] TEXT NULL,
-                                        [HeaderBag] TEXT NULL,
-                                        [Body] BLOB NULL,
-                                        [Source] TEXT NULL,
-                                        [Type] TEXT NULL,
-                                        [DataSchema] TEXT NULL,
-                                        [Subject] TEXT NULL,
-                                        [TraceParent] TEXT NULL,
-                                        [TraceState] TEXT NULL,
-                                        [Baggage] TEXT NULL,
-                                        [DataRef] TEXT NULL,
-                                        [SpecVersion] TEXT NULL
-                                    );";
-         
+        private const string TextOutboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            (
+                [MessageId] TEXT NOT NULL COLLATE NOCASE,
+                [MessageType] TEXT NULL,
+                [Topic] TEXT NULL,
+                [Timestamp] TEXT NULL,
+                [CorrelationId] TEXT NULL,
+                [ReplyTo] TEXT NULL,
+                [ContentType] TEXT NULL,  
+                [PartitionKey] TEXT NULL,
+                [WorkflowId] TEXT NULL,
+                [JobId] TEXT NULL,
+                [Dispatched] TEXT NULL,
+                [HeaderBag] TEXT NULL,
+                [Body] TEXT NULL,
+                [Source] TEXT NULL,
+                [Type] TEXT NULL,
+                [DataSchema] TEXT NULL,
+                [Subject] TEXT NULL,
+                [TraceParent] TEXT NULL,
+                [TraceState] TEXT NULL,
+                [Baggage] TEXT NULL,
+                [DataRef] TEXT NULL,
+                [SpecVersion] TEXT NULL
+            );
+            """;
+
+        private const string BinaryOutboxDdl =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            (
+                [MessageId] TEXT NOT NULL COLLATE NOCASE,
+                [MessageType] TEXT NULL,
+                [Topic] TEXT NULL,
+                [Timestamp] TEXT NULL,
+                [CorrelationId] TEXT NULL,
+                [ReplyTo] TEXT NULL,
+                [ContentType] TEXT NULL,  
+                [PartitionKey] TEXT NULL,
+                [WorkflowId] TEXT NULL,
+                [JobId] TEXT NULL,
+                [Dispatched] TEXT NULL,
+                [HeaderBag] TEXT NULL,
+                [Body] BLOB NULL,
+                [Source] TEXT NULL,
+                [Type] TEXT NULL,
+                [DataSchema] TEXT NULL,
+                [Subject] TEXT NULL,
+                [TraceParent] TEXT NULL,
+                [TraceState] TEXT NULL,
+                [Baggage] TEXT NULL,
+                [DataRef] TEXT NULL,
+                [SpecVersion] TEXT NULL
+            );
+            """;
+
 
         private const string OutboxExistsQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='{0}';";
 
@@ -93,9 +99,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <returns>The required DDL</returns>
         public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
         {
-            return hasBinaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDdl, outboxTableName);
+            return hasBinaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDDL, outboxTableName);
         }
-        
+
         /// <summary>
         /// Get the SQL statements required to test for the existence of an Outbox in Sqlite
         /// </summary>

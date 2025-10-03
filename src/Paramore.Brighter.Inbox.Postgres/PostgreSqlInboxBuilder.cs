@@ -30,27 +30,47 @@ namespace Paramore.Brighter.Inbox.Postgres
     /// </summary>
     public class PostgreSqlInboxBuilder
     {
-        private const string OutboxDDL = @"
-                    CREATE TABLE {0}
-                        (
-                            CommandId VARCHAR(256) NOT NULL ,
-                            CommandType VARCHAR(256) NULL ,
-                            CommandBody TEXT NULL ,
-                            Timestamp timestamptz  NULL ,
-                            ContextKey VARCHAR(256) NULL,
-                            PRIMARY KEY (CommandId, ContextKey)
-                        );";
-        
+        private const string TextOutboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            (
+                CommandId VARCHAR(256) NOT NULL ,
+                CommandType VARCHAR(256) NULL ,
+                CommandBody TEXT NULL ,
+                Timestamp timestamptz  NULL ,
+                ContextKey VARCHAR(256) NULL,
+                PRIMARY KEY (CommandId, ContextKey)
+            );
+            """;
+
+        private const string BinaryOutboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            (
+                CommandId VARCHAR(256) NOT NULL ,
+                CommandType VARCHAR(256) NULL ,
+                CommandBody BYTEA NULL ,
+                Timestamp timestamptz  NULL ,
+                ContextKey VARCHAR(256) NULL,
+                PRIMARY KEY (CommandId, ContextKey)
+            );
+            """;
+
         private const string InboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{0}' AND TABLE_NAME = '{1}')";
- 
+
         /// <summary>
         /// Get the DDL statements to create an Inbox in Postgres
         /// </summary>
         /// <param name="inboxTableName">The name you want to use for the table</param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string inboxTableName)
+        public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false)
         {
-            return string.Format(OutboxDDL, inboxTableName);
+            if (binaryMessagePayload)
+            {
+                return string.Format(BinaryOutboxDDL, inboxTableName);
+            }
+
+            return string.Format(TextOutboxDDL, inboxTableName);
         }
 
         /// <summary>

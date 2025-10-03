@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MSSQL.Tests
                 [Id] ASC
                 )WITH(PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON[PRIMARY]
                 ) ON[PRIMARY] TEXTIMAGE_ON[PRIMARY]";
-        
+
         private const string _binaryQueueDDL = @"CREATE TABLE [dbo].[{0}](
                 [Id][bigint] IDENTITY(1, 1) NOT NULL,
                 [Topic] [nvarchar](255) NOT NULL,
@@ -37,11 +37,11 @@ namespace Paramore.Brighter.MSSQL.Tests
                 [Id] ASC
                 )WITH(PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON[PRIMARY]
                 ) ON[PRIMARY] TEXTIMAGE_ON[PRIMARY]";
-        
-        public RelationalDatabaseConfiguration InboxConfiguration => 
-            new(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
 
-        public RelationalDatabaseConfiguration OutboxConfiguration => 
+        public RelationalDatabaseConfiguration InboxConfiguration =>
+            new(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
+
+        public RelationalDatabaseConfiguration OutboxConfiguration =>
             new(_sqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
 
         public RelationalDatabaseConfiguration QueueConfiguration =>
@@ -138,7 +138,7 @@ namespace Paramore.Brighter.MSSQL.Tests
         {
             using var connection = _connectionProvider.GetConnection();
             _tableName = $"[command_{_tableName}]";
-            var createTableSql = SqlInboxBuilder.GetDDL(_tableName);
+            var createTableSql = SqlInboxBuilder.GetDDL(_tableName, _binaryMessagePayload);
 
             using var command = connection.CreateCommand();
             command.CommandText = createTableSql;
