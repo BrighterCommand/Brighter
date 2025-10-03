@@ -358,7 +358,31 @@ namespace Paramore.Brighter
             {
                Tracer?.EndSpan(span); 
             }
+        }
 
+        /// <inheritdoc />
+        public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null)
+        {
+            ClearExpiredMessages();
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.Get, InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions
+            );
+
+            try
+            {
+                return messageIds
+                    .Select(id => Requests.TryGetValue(id, out OutboxEntry? entry) ? entry.Message : null)
+                    .Where(msg => msg != null)
+                    .Select(msg => msg!);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -390,6 +414,27 @@ namespace Paramore.Brighter
             var command = Get(messageId, requestContext, outBoxTimeout);
 
             tcs.SetResult(command);
+            return tcs.Task;
+        }
+
+        /// <inheritdoc />
+        public Task<IEnumerable<Message>> GetAsync(
+            IEnumerable<Id> messageIds,
+            RequestContext requestContext,
+            int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
+        {
+            //NOTE: We don't create a span here as we just call the sync method
+            
+            var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
+            var messages = Get(messageIds, requestContext, outBoxTimeout);
+            tcs.SetResult(messages);
             return tcs.Task;
         }
 
@@ -554,7 +599,49 @@ namespace Paramore.Brighter
 
             return tcs.Task;
         }
-        
+
+        /// <inheritdoc/>
+        public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+        {
+            ClearExpiredMessages();
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.OutStandingMessageCount,
+                    InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var now = _timeProvider.GetUtcNow();
+                var sentBefore = now - dispatchedSince;
+                var outstandingMessageCount = Requests.Values
+                    .OrderBy(oe => oe.Message.Header.TimeStamp)
+                    .Where(oe =>
+                        oe.TimeFlushed == DateTimeOffset.MinValue
+                        && oe.WriteTime <= sentBefore.DateTime)
+                    .Take(maxCount)
+                    .Count();
+                return outstandingMessageCount;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc/>
+        public Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            //NOTE: We don't create a span here as we just call the sync method
+
+            var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            tcs.SetResult(GetOutstandingMessageCount(dispatchedSince, requestContext, maxCount, args));
+
+            return tcs.Task;
+        }
+
         private void Delete(Id messageId, RequestContext? requestContext = null)
         {
             var span = Tracer?.CreateDbSpan(

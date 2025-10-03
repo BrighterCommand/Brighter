@@ -38,8 +38,8 @@ public class FetchOutStandingMessageAsyncTests
         var context = new RequestContext();
         await _outbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
         await _outbox.MarkDispatchedAsync(_messageDispatched.Id, context);
-        
-        var total = await _outbox.GetNumberOfOutstandingMessagesAsync();
+
+        var total = await _outbox.GetOutstandingMessageCountAsync(TimeSpan.Zero, context);
 
         var allUnDispatched = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context, pageSize: 1_000);
         var messagesOverAnHour = await _outbox.OutstandingMessagesAsync(TimeSpan.FromHours(1), context, pageSize: 1_000);

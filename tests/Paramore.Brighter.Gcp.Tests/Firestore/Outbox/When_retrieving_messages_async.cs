@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.Firestore;
 
@@ -39,7 +40,7 @@ public class FetchMessageAsyncTests
         var messages = await _outbox.GetAsync(pageSize: 1_000);
 
         //Assert
-        Assert.True(messages.Count >= 3);
+        Assert.True(messages.Count() >= 3);
         Assert.Contains(messages, message => message.Id == _messageEarliest.Id);
         Assert.Contains(messages, message => message.Id == _messageDispatched.Id);
         Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);
@@ -60,7 +61,7 @@ public class FetchMessageAsyncTests
         //Assert
         //Assert
         Assert.NotNull(messages);
-        Assert.Equal(2, messages.Count);
+        Assert.Equal(2, messages.Count());
         Assert.Contains(messages, message => message.Id == _messageEarliest.Id);
         Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);
         Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);

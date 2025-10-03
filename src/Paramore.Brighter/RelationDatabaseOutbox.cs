@@ -575,18 +575,12 @@ namespace Paramore.Brighter
             }
         }
 
-        /// <summary>
-        /// Returns messages specified by the Ids
-        /// </summary>
-        /// <param name="messageIds">The Ids of the messages</param>
-        /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-        /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
-        /// <param name="cancellationToken">Cancellation Token.</param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public async Task<IEnumerable<Message>> GetAsync(
             IEnumerable<Id> messageIds,
             RequestContext requestContext,
             int outBoxTimeout = -1,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         )
         {
@@ -926,7 +920,7 @@ namespace Paramore.Brighter
         /// <returns>Outstanding Messages</returns>
         public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
             TimeSpan dispatchedSince,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             IEnumerable<RoutingKey>? trippedTopics = null,
@@ -957,6 +951,19 @@ namespace Paramore.Brighter
             {
                 Tracer?.EndSpan(span);
             }
+        }
+
+        /// <inheritdoc/>
+        public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+        {
+            return OutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, args).Count();
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            return (await OutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, args, cancellationToken))
+                .Count();
         }
 
         protected virtual void WriteToStore(
