@@ -568,7 +568,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         }
 
         /// <summary>
-        /// Returns messages that have yet to be dispatched
+        /// Returns messages that have yet to be dispatched. When querying all topics, only one query can run concurrently.
+        /// When querying by topic, one query per topic can run concurrently.
         /// </summary>
         /// <param name="dispatchedSince">How long ago as the message sent?</param>
         /// <param name="requestContext"></param>

@@ -110,6 +110,6 @@ If the partition key isn't specified for a message, then fall back to random sha
     * Add a new GSI called `OutstandingAllTopics`, that uses `OutstandingCreatedTime` as its HASH key and `MessageId` as its RANGE key
     * Add a new GSI called `DeliveredAllTopics`, that uses `DeliveryTime` as its HASH key and `MessageId` as its RANGE key
     * Change the HASH key used by the `Delivered` index. This can be achieved by:
-        * Adding a _new_ GSI, which for the sake of example we'll call `DeliveredV10`, which uses `TopicShard` as its HASH key and `DeliveryTime` as its RANGE key
-        * When performing the Brighter v10 upgrade, customise the `DynamoDbConfiguration` during configuration to set `DeliveredIndexName` to `DeliveredV10`
+        * Adding a _new_ GSI, which for the sake of example we'll call `DeliveredSharded`, which uses `TopicShard` as its HASH key and `DeliveryTime` as its RANGE key
+        * When performing the Brighter v10 upgrade, customise the `DynamoDbConfiguration` during configuration to set `DeliveredIndexName` to `DeliveredSharded`
         * Once the v10 upgrade is complete, the old `Delivered` index can be removed if desired
