@@ -77,6 +77,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .ToArray();
             
             MapperRegistryFromAssemblies(brighterAssembly);
+            HandlersFromAssemblies(brighterAssembly, null);
             AsyncHandlersFromAssemblies(brighterAssembly, null);
             TransformsFromAssemblies(brighterAssembly);
         }
@@ -125,9 +126,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
                 !a.IsDynamic 
-                && a.FullName?.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) != true 
-                && a.FullName?.StartsWith("System.", true, CultureInfo.InvariantCulture) != true
-                && a.FullName?.StartsWith("Paramore.Brighter", true, CultureInfo.InvariantCulture) != true);
+                && a.FullName?.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) == false 
+                && a.FullName?.StartsWith("System.", true, CultureInfo.InvariantCulture) == false 
+                && a.FullName?.StartsWith("Paramore.Brighter", true, CultureInfo.InvariantCulture) == false);
 
             var assemblies = extraAssemblies !=  null ? appDomainAssemblies.Concat(extraAssemblies) : appDomainAssemblies;
             excludeDynamicHandlerTypes = excludeDynamicHandlerTypes?.ToList();
