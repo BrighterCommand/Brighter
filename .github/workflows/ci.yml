@@ -40,9 +40,9 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
+
       - run: dotnet --info
       - uses: actions/checkout@v5
         with:
@@ -95,9 +95,8 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -113,9 +112,9 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
+
       - name: Install dependencies
         run: dotnet restore
       - name: Hangfire Tests
@@ -131,9 +130,9 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
+
       - name: Install dependencies
         run: dotnet restore
       - name: Quartz Tests
@@ -153,16 +152,15 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5             
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v5
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -215,9 +213,8 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Async Transport Tests
@@ -280,9 +277,8 @@ jobs:
     - name: Setup dotnet
       uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: |
-          8.0.x
-          9.0.x
+        dotnet-version: '10.x.x'
+        dotnet-quality: 'preview'
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
@@ -336,9 +332,8 @@ jobs:
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -364,9 +359,8 @@ jobs:
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -395,9 +389,8 @@ jobs:
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -429,9 +422,8 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
@@ -461,9 +453,8 @@ jobs:
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -495,9 +486,8 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -521,9 +511,8 @@ jobs:
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
@@ -538,9 +527,8 @@ jobs:
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
@@ -570,9 +558,8 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
       - name: Install dependencies
         run: dotnet restore
       - name: MongoDB Tests
@@ -605,9 +592,8 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '10.x.x'
+          dotnet-quality: 'preview'
             
       - name: Install dependencies
         run: dotnet restore
