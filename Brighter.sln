@@ -444,7 +444,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskStatusSender", "samples
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.RocketMQ.Tests", "tests\Paramore.Brighter.RocketMQ.Tests\Paramore.Brighter.RocketMQ.Tests\Paramore.Brighter.RocketMQ.Tests.csproj", "{9063F17B-5636-4AD5-999B-C894517DB5FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Tranformers.Gcp", "src\Paramore.Brighter.Tranformers.Gcp\Paramore.Brighter.Tranformers.Gcp.csproj", "{231C1680-1590-458A-B9B2-38A3EDEE5E24}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Transformers.Gcp", "src\Paramore.Brighter.Transformers.Gcp\Paramore.Brighter.Transformers.Gcp.csproj", "{231C1680-1590-458A-B9B2-38A3EDEE5E24}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Outbox.Firestore", "src\Paramore.Brighter.Outbox.Firestore\Paramore.Brighter.Outbox.Firestore.csproj", "{E8CD464E-A64D-4B04-B000-1377EF44FE1B}"
 EndProject
