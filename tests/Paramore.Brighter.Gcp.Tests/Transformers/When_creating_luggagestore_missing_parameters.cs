@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Paramore.Brighter.Tranformers.Gcp;
+using Paramore.Brighter.Transformers.Gcp;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
