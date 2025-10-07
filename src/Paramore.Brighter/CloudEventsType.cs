@@ -35,8 +35,6 @@ namespace Paramore.Brighter;
 /// </remarks>
 public sealed class CloudEventsType : IEquatable<CloudEventsType>
 {
-    private readonly string value;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="CloudEventsType"/> class.
     /// </summary>
@@ -45,26 +43,26 @@ public sealed class CloudEventsType : IEquatable<CloudEventsType>
     /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> is empty or whitespace.</exception>
     public CloudEventsType(string value)
     {
-        this.value = value ?? throw new ArgumentNullException(nameof(value));
+        Value = value ?? throw new ArgumentNullException(nameof(value));
     }
     
     /// <summary>
     /// Returns an empty <see cref="CloudEventsType"/> instance.
     /// </summary>
-    public static CloudEventsType Empty { get; } = new CloudEventsType(string.Empty);
+    public static CloudEventsType Empty { get; } = new(string.Empty);
 
     /// <summary>
     /// Gets the string value of the CloudEvents type.
     /// </summary>
     /// <value>The event type as a <see cref="string"/>.</value>
-    public string Value => value;
+    public string Value { get; }
 
     /// <summary>
     /// Implicitly converts a <see cref="CloudEventsType"/> to a <see cref="string"/>.
     /// </summary>
     /// <param name="type">The <see cref="CloudEventsType"/> instance.</param>
     /// <returns>The string value of the CloudEvents type.</returns>
-    public static implicit operator string(CloudEventsType type) => type.value;
+    public static implicit operator string(CloudEventsType type) => type.Value;
 
     /// <summary>
     /// Explicitly converts a <see cref="string"/> to a <see cref="CloudEventsType"/>.
@@ -73,20 +71,20 @@ public sealed class CloudEventsType : IEquatable<CloudEventsType>
     /// <returns>A new <see cref="CloudEventsType"/> instance.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> is empty or whitespace.</exception>
-    public static explicit operator CloudEventsType(string value) => new CloudEventsType(value);
+    public static explicit operator CloudEventsType(string value) => new(value);
 
     /// <inheritdoc />
-    public override string ToString() => value;
+    public override string ToString() => Value;
 
     /// <inheritdoc />
     public override bool Equals(object? obj) => Equals(obj as CloudEventsType);
 
     /// <inheritdoc />
-    public bool Equals(CloudEventsType? other) => other is not null && value == other.value;
+    public bool Equals(CloudEventsType? other) => other is not null && Value == other.Value;
 
     /// <inheritdoc />
-    public override int GetHashCode() => value.GetHashCode();
-
+    public override int GetHashCode() => Value.GetHashCode();
+    
     public static bool operator ==(CloudEventsType? left, CloudEventsType? right) =>
         Equals(left, right);
 
