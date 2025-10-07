@@ -2,7 +2,6 @@
   <PropertyGroup>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <Nullable>enable</Nullable>
-    <RootNamespace>Paramore.Brighter.Tranformers.Gcp</RootNamespace>
   </PropertyGroup>
 
     <ItemGroup>
