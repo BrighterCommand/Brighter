@@ -6,7 +6,7 @@ using Google.Cloud.Storage.V1;
 using Grpc.Core;
 using Paramore.Brighter.Transforms.Storage;
 
-namespace Paramore.Brighter.Tranformers.Gcp;
+namespace Paramore.Brighter.Transformers.Gcp;
 
 /// <summary>
 /// Configuration options for the Google Cloud Storage (GCS) luggage store provider in the Brighter framework.

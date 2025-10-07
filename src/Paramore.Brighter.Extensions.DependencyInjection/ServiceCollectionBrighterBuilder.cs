@@ -71,6 +71,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             PolicyRegistry = policyRegistry;
 #pragma warning restore CS0618 // Type or member is obsolete
             ResiliencePolicyRegistry = resiliencePipelineRegistry;
+            
+            var brighterAssembly = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
+                !a.IsDynamic && a.FullName?.StartsWith("Paramore.Brighter", true, CultureInfo.InvariantCulture) == true)
+                .ToArray();
+            
+            MapperRegistryFromAssemblies(brighterAssembly);
+            HandlersFromAssemblies(brighterAssembly, null);
+            AsyncHandlersFromAssemblies(brighterAssembly, null);
+            TransformsFromAssemblies(brighterAssembly);
         }
 
         /// <summary>
@@ -116,8 +125,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IBrighterBuilder AutoFromAssemblies(IEnumerable<Assembly>? extraAssemblies = null, IEnumerable<Type>? excludeDynamicHandlerTypes = null, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper =  null)
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
-                !a.IsDynamic && a.FullName?.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) != true &&
-                a.FullName?.StartsWith("System.", true, CultureInfo.InvariantCulture) != true);
+                !a.IsDynamic 
+                && a.FullName?.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) == false 
+                && a.FullName?.StartsWith("System.", true, CultureInfo.InvariantCulture) == false 
+                && a.FullName?.StartsWith("Paramore.Brighter", true, CultureInfo.InvariantCulture) == false);
 
             var assemblies = extraAssemblies !=  null ? appDomainAssemblies.Concat(extraAssemblies) : appDomainAssemblies;
             excludeDynamicHandlerTypes = excludeDynamicHandlerTypes?.ToList();

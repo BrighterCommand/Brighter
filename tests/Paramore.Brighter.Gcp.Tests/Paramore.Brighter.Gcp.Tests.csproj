@@ -37,7 +37,7 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.GcpPubSub\Paramore.Brighter.MessagingGateway.GcpPubSub.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Firestore\Paramore.Brighter.Outbox.Firestore.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Spanner\Paramore.Brighter.Outbox.Spanner.csproj" />
-    <ProjectReference Include="..\..\src\Paramore.Brighter.Tranformers.Gcp\Paramore.Brighter.Tranformers.Gcp.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.Gcp\Paramore.Brighter.Transformers.Gcp.csproj" />
   </ItemGroup>
 
   <ItemGroup>
