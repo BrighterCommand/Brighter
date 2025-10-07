@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(BrighterTargetFramework)</TargetFramework>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>                                                                                 
+  <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj"/>
   </ItemGroup>
 
