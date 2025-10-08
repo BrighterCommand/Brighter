@@ -1,9 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>SQLite provider for Paramore.Brighter Command Processor. Provides common components for connecting to SQLite, including connection and transaction management for inbox, outbox, and messaging gateway implementations.</Description>
     <Authors>Ian Cooper</Authors>
-    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>SQLite;Database;Embedded Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

@@ -60,7 +60,7 @@ public class OutboxWritingMessageTests
             correlationId:   Id.Random(),
             replyTo:         new RoutingKey("ReplyTo"),
             contentType:     new ContentType(MediaTypeNames.Text.Plain),
-            partitionKey:    Guid.CreateVersion7().ToString(),
+            partitionKey:    Uuid.NewAsString(),
             dataSchema:      new Uri("https://schema.example.com"),
             subject:         "TestSubject",
             handledCount:    5,

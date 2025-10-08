@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
-    <Description>This Microsoft Extensions Diagnostics Health Checks for Service Activator</Description>
+    <Description>Microsoft Extensions Diagnostics Health Checks integration for Paramore.Brighter Service Activator. Provides health check implementations for monitoring service activator status and message consumer health.</Description>
     <Authors>Paul Reardon</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Service Activator;Health Checks;Diagnostics;Monitoring;Command;Event;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>

@@ -78,7 +78,9 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         /// <returns>The Sqlite Transaction</returns>
         public override DbTransaction GetTransaction()
         {
-            return _context.Database.CurrentTransaction?.GetDbTransaction();
+            // If there is no current transaction, we create a new one
+            var currentTransaction = _context.Database.CurrentTransaction ?? _context.Database.BeginTransaction();
+            return currentTransaction.GetDbTransaction();
         }
 
         /// <summary>

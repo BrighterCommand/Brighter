@@ -32,7 +32,7 @@ public class FakeServiceBusSenderWrapper : IServiceBusSenderWrapper
     {
         foreach (var messageBatch in Batches[batch])
         {
-            SentMessages.AddRange(messageBatch);
+            SentMessages.Add(messageBatch);
         }
 
         return Task.CompletedTask;

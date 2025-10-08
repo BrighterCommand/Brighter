@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Entity Framework Core integration for PostgreSQL provider in Paramore.Brighter Command Processor. Provides connection and transaction providers to obtain PostgreSQL connections from Entity Framework Core DbContext.</Description>
     <Authors>Sam Rumley</Authors>
-    <Description>Common components required to get a PostgreSql connection from Entity Framework Core.</Description>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
-    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageTags>PostgreSQL;Postgres;Entity Framework Core;EF Core;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

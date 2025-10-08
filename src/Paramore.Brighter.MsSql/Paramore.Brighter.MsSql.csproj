@@ -1,19 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-      <Description>This is the common components required to connect to MsSql for Inbox, Outbox, and Messaging Gateway.</Description>
-      <Authors>Paul Reardon</Authors>
-      <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
-      <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-      <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Description>Microsoft SQL Server provider for Paramore.Brighter Command Processor. Provides common components for connecting to SQL Server, including connection and transaction management for inbox, outbox, and messaging gateway implementations.</Description>
+    <Authors>Paul Reardon</Authors>
+    <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>SQL Server;MSSQL;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Microsoft.Data.SqlClient" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
 
 </Project>
