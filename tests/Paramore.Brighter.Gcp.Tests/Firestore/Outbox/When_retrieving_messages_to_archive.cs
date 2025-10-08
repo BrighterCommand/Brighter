@@ -46,7 +46,15 @@ public class ArchiveFetchTests
         Assert.Contains(allDispatched, x => x.Id == _messageEarliest.Id);
         Assert.Contains(allDispatched, x => x.Id == _messageDispatched.Id);
         Assert.DoesNotContain(allDispatched, x => x.Id == _messageUnDispatched.Id);
-        Assert.Empty(messagesOverAnHour);
-        Assert.Empty(messagesOver4Hours);
+        
+        messagesOverAnHour = messagesOverAnHour.ToList();
+        Assert.DoesNotContain(messagesOverAnHour, x => x.Id == _messageUnDispatched.Id);
+        Assert.DoesNotContain(messagesOverAnHour, x => x.Id == _messageDispatched.Id);
+        Assert.DoesNotContain(messagesOverAnHour, x => x.Id == _messageEarliest.Id);
+
+        messagesOver4Hours = messagesOver4Hours.ToList();
+        Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageUnDispatched.Id);
+        Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageDispatched.Id);
+        Assert.DoesNotContain(messagesOver4Hours, x => x.Id == _messageEarliest.Id);
     }
 }
