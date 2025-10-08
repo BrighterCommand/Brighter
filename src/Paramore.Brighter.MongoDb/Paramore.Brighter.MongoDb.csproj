@@ -6,6 +6,7 @@
     <TargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>MongoDB;NoSQL;Database;Document Database;Command;Event;Command Processor;Brighter</PackageTags>
     <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

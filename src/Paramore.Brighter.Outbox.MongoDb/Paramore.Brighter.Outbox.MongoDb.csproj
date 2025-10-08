@@ -5,6 +5,7 @@
     <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>MongoDB;NoSQL;Outbox;Transactional;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>

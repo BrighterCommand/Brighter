@@ -6,6 +6,7 @@
     <OutputType>Library</OutputType>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>Service Activator;Control;API;REST;Health Check;Node Status;ASP.NET Core;Command;Event;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>

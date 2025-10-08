@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);AD0001</NoWarn>
+    <IsPackable>false</IsPackable>
+    <BrighterTestTargetFrameworks>net8.0;net9.0</BrighterTestTargetFrameworks>
+  </PropertyGroup>
+</Project>

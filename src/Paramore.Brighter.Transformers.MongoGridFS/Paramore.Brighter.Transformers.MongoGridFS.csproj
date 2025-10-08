@@ -5,6 +5,7 @@
     <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>MongoDB;GridFS;Transformers;Claim Check;Luggage Store;Large Messages;Message Transformation;NoSQL;Command;Event;Command Processor;Brighter</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>

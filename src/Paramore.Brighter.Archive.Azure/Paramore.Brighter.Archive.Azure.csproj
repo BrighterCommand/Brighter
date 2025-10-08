@@ -5,6 +5,7 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Archive;Azure;Blob Storage;Command;Event;Command Processor;Audit;Replay;Brighter</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <RootNamespace>Paramore.Brighter.Storage.Azure</RootNamespace>

@@ -5,6 +5,7 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>SQLite;Entity Framework Core;EF Core;Database;Embedded Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>

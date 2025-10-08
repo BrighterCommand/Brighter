@@ -5,6 +5,7 @@
     <Authors>Paul Reardon</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Azure;Blob Storage;Transformers;Claim Check;Luggage Store;Large Messages;Message Transformation;Command;Event;Command Processor;Brighter</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
