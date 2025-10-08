@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>AWS EventBridge Scheduler integration for Paramore.Brighter Command Processor. Provides message scheduling capabilities using Amazon EventBridge Scheduler for delayed message delivery and recurring tasks.</Description>
+    <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>AWS;EventBridge;Scheduler;Message Scheduling;Delayed Messages;Amazon;Cloud;SQS;SNS;Command Processor;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

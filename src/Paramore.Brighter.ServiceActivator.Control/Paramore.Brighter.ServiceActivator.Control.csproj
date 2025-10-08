@@ -1,19 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <Description>Control modules for Paramore.Brighter Service Activator. Provides heartbeat monitoring and node status management for distributed service activator instances, enabling health checks and orchestration.</Description>
     <Authors>Paul Reardon</Authors>
-    <Description>The Control modules for Brighter Service Activator</Description>
-    <PackageTags>Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Service Activator;Control;Heartbeat;Node Status;Health Check;Command;Event;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
-    <ProjectReference Include="..\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj"/>
-    <ProjectReference Include="..\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj"/>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj"/>
   </ItemGroup>
 
   <ItemGroup>

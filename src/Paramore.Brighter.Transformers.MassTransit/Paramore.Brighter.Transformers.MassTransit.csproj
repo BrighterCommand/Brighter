@@ -1,12 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Description>MassTransit message transformers for Paramore.Brighter Command Processor. Provides message transformation capabilities for mapping between Brighter messages and MassTransit message formats, enabling interoperability with MassTransit-based messaging systems.</Description>
+    <Authors>Rafael Andrade</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>MassTransit;Transformers;Message Transformation;Interoperability;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
 
 </Project>

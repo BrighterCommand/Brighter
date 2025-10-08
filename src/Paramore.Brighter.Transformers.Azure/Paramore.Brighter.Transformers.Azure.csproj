@@ -1,10 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <Description>Azure Blob Storage transformers for Paramore.Brighter Command Processor. Provides claim check pattern implementation using Azure Blob Storage for storing large message payloads separately from message metadata (luggage store pattern).</Description>
     <Authors>Paul Reardon</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Azure;Blob Storage;Transformers;Claim Check;Luggage Store;Large Messages;Message Transformation;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

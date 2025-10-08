@@ -1,16 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using PostgreSql</Description>
+    <Description>PostgreSQL outbox implementation for Paramore.Brighter Command Processor. Provides reliable message publishing with outbox pattern using PostgreSQL for transactional consistency and guaranteed delivery.</Description>
     <Authors>Tarun Pothulapati</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
-    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageTags>PostgreSQL;Postgres;Database;Outbox;Transactional;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
   <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="..\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj" />
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Npgsql" />
   </ItemGroup>

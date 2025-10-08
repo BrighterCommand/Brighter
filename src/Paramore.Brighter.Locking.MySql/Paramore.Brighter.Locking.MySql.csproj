@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>This is an implementation of the locking using MySQL.</Description>
-    <Authors>Rafael Lillo</Authors>
+    <Description>MySQL distributed locking provider for Paramore.Brighter Command Processor. Provides distributed lock implementation using MySQL for coordinating concurrent operations across multiple instances.</Description>
+    <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
-    <PackageTags>MySql;Brighter;</PackageTags>
+    <PackageTags>MySQL;Distributed Locking;Concurrency;Lock;Command Processor;Database;SQL;Brighter</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Nullable>enable</Nullable>
   </PropertyGroup>

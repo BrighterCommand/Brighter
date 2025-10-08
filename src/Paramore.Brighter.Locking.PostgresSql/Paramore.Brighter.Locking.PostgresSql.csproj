@@ -1,16 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>This is an implementation of the locking using PostgreSql</Description>
-    <Authors>Rafael Lillo</Authors>
+    <Description>PostgreSQL distributed locking provider for Paramore.Brighter Command Processor. Provides distributed lock implementation using PostgreSQL for coordinating concurrent operations across multiple instances.</Description>
+    <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
-    <PackageTags>Postgres;Brighter;</PackageTags>
+    <PackageTags>PostgreSQL;Postgres;Distributed Locking;Concurrency;Lock;Command Processor;Database;SQL;Brighter</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj"/>
   </ItemGroup>
+  
   <ItemGroup>
     <PackageReference Include="Npgsql"/>
   </ItemGroup>

@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>MySQL provider for Paramore.Brighter Command Processor. Provides common components for connecting to MySQL, including connection and transaction management for inbox, outbox, and messaging gateway implementations.</Description>
+    <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>MySQL;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

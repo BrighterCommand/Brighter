@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>DynamoDB v4 distributed locking provider for Paramore.Brighter Command Processor. Provides distributed lock implementation using Amazon DynamoDB v4 SDK for coordinating concurrent operations across multiple instances.</Description>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>DynamoDB;AWS;Distributed Locking;Concurrency;Lock;Command Processor;Cloud;Amazon;SDK v4;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Title>This is the Dynamo DB Distributed Locking Provider.</Title>
@@ -16,5 +18,4 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.DynamoDBv2" VersionOverride="$(AwsDynamoDbV4)" />
   </ItemGroup>
-
 </Project>

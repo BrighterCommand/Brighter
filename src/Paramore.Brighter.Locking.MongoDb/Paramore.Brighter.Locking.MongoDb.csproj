@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Description>MongoDB distributed locking provider for Paramore.Brighter Command Processor. Provides distributed lock implementation using MongoDB for coordinating concurrent operations across multiple instances.</Description>
+    <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>MongoDB;NoSQL;Distributed Locking;Concurrency;Lock;Command Processor;Database;Document Database;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
