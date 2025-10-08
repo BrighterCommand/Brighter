@@ -1,8 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Entity Framework Core integration for MySQL provider in Paramore.Brighter Command Processor. Provides connection and transaction providers to obtain MySQL connections from Entity Framework Core DbContext.</Description>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <Authors>Ian Cooper</Authors>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <PackageTags>MySQL;Entity Framework Core;EF Core;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
