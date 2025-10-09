@@ -196,9 +196,7 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     /// <inheritdoc />
     public virtual TMessage MapToRequest(Message message)
     {
-        var envelop =
-            JsonSerializer.Deserialize<MassTransitMessageEnvelop<TMessage>>(message.Body.Bytes,
-                JsonSerialisationOptions.Options);
+        var envelop = JsonSerializer.Deserialize<MassTransitMessageEnvelop<TMessage>>(message.Body.Bytes, JsonSerialisationOptions.Options);
         if (envelop == null)
         {
             throw new InvalidOperationException("It's not a MassTransit envelop message");
@@ -207,6 +205,84 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
         if (envelop.Message == null)
         {
             throw new InvalidOperationException("Message inside MassTransit envelop doesn't match the current type");
+        }
+        
+        if (Context != null)
+        {
+            Context.Bag[RequestContextBagNames.Headers] = message.Header.Bag;
+            Context.Bag[RequestContextBagNames.TimeStamp] = message.Header.TimeStamp;
+            Context.Bag[RequestContextBagNames.Source] = message.Header.Source;
+            Context.Bag[RequestContextBagNames.Type] = message.Header.Type;
+            
+            if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+            {
+                Context.Bag[RequestContextBagNames.PartitionKey] = message.Header.PartitionKey;
+            }
+
+            if (!Id.IsNullOrEmpty(message.Header.JobId))
+            {
+                Context.Bag[RequestContextBagNames.JobId] = message.Header.JobId;
+            }
+            
+            if (!Id.IsNullOrEmpty(message.Header.WorkflowId))
+            {
+                Context.Bag[RequestContextBagNames.WorkflowId] = message.Header.WorkflowId;
+            }
+            
+            if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
+            {
+                Context.Bag[RequestContextBagNames.CorrelationId] = message.Header.CorrelationId;
+            }
+            
+            if (!string.IsNullOrEmpty(message.Header.Subject))
+            {
+                Context.Bag[RequestContextBagNames.Subject] = message.Header.Subject!;
+            }
+            
+            if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
+            {
+                Context.Bag[RequestContextBagNames.ReplyTo] = message.Header.ReplyTo;
+            }
+
+            if (!Id.IsNullOrEmpty(envelop.ConversationId))
+            {
+                Context.Bag[MassTransitHeaderNames.ConversationId] = message.Header.CorrelationId;
+            }
+            
+            if (envelop.DestinationAddress != null)
+            {
+                Context.Bag[MassTransitHeaderNames.DestinationAddress] = envelop.DestinationAddress;
+            }
+            
+            if (envelop.ExpirationTime != null)
+            {
+                Context.Bag[MassTransitHeaderNames.ExpirationTime] = envelop.ExpirationTime.Value;
+            }
+            
+            if (envelop.FaultAddress != null)
+            {
+                Context.Bag[MassTransitHeaderNames.FaultAddress] = envelop.FaultAddress;
+            }
+            
+            if (!Id.IsNullOrEmpty(envelop.InitiatorId))
+            {
+                Context.Bag[MassTransitHeaderNames.InitiatorId] = envelop.InitiatorId;
+            }
+            
+            if (envelop.MessageType != null)
+            {
+                Context.Bag[MassTransitHeaderNames.MessageType] = envelop.MessageType;
+            }
+            
+            if (!Id.IsNullOrEmpty(envelop.RequestId))
+            {
+                Context.Bag[MassTransitHeaderNames.RequestId] = envelop.RequestId;
+            }
+            
+            if (envelop.SourceAddress != null)
+            {
+                Context.Bag[MassTransitHeaderNames.SourceAddress] = envelop.SourceAddress;
+            }
         }
 
         return envelop.Message;

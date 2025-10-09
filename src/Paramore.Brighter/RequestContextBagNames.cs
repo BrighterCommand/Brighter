@@ -130,5 +130,56 @@ public static class RequestContextBagNames
     /// </summary>
     /// <remarks>Reserved for future usage</remarks>
     public const string WorkflowId = "Brighter-WorkflowId";
+   
+    /// <summary>
+    /// Key used to store the **timestamp** of the message creation.
+    /// </summary>
+    /// <remarks>
+    /// This is typically set by default message mappers (especially CloudEvents) to set the
+    /// message's timestamp header/field.
+    /// </remarks>
+    public const string TimeStamp = "Brighter-TimeStamp";
     
+    /// <summary>
+    /// Key used to store the **subject** of the message in the request context bag.
+    /// </summary>
+    /// <remarks>
+    /// This is typically set by default message mappers (especially CloudEvents) to set the
+    /// message's subject header/field.
+    /// </remarks>
+    public const string Subject = "Brighter-Subject";
+    
+    /// <summary>
+    /// Key used to store the **source URI** of the message in the request context bag.
+    /// </summary>
+    /// <remarks>
+    /// This is typically set by default message mappers (especially CloudEvents) to set the
+    /// message's source header/field, identifying the producer of the message.
+    /// </remarks>
+    public const string Source = "Brighter-Source";
+    
+    /// <summary>
+    /// Key used to store the **reply-to address or queue** for the message in the request context bag.
+    /// </summary>
+    /// <remarks>
+    /// Used in request-reply scenarios to specify where the response message should be sent.
+    /// </remarks>
+    public const string ReplyTo = "Brighter-ReplyTo";
+    
+    /// <summary>
+    /// Key used to store the **correlation ID** for tracing a sequence of related messages in the request context bag.
+    /// </summary>
+    /// <remarks>
+    /// Essential for distributed tracing and correlating request and response messages.
+    /// </remarks>
+    public const string CorrelationId = "Brighter-CorrelationId";
+    
+    /// <summary>
+    /// Key used to store the **type** (or event type) of the message in the request context bag.
+    /// </summary>
+    /// <remarks>
+    /// This is typically set by default message mappers (especially CloudEvents) to set the
+    /// message's type header/field, classifying the message payload.
+    /// </remarks>
+    public const string Type = "Brighter-Type";
 }
