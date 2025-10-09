@@ -1,6 +1,6 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -19,26 +19,47 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-namespace Paramore.Brighter.Observability;
+namespace Paramore.Brighter.Pulsar.Tests.TestDoubles;
 
-/// <summary>
-/// The messaging system used to send a message
-/// </summary>
-public enum MessagingSystem
+internal class MyEvent : Event, IEquatable<MyEvent>
 {
-    ActiveMQ = 0,
-    AWSSQS,
-    EventGrid,
-    EventHubs,
-    InternalBus,
-    JMS,
-    Kafka,
-    PubSub,
-    RabbitMQ,
-    RocketMQ,
-    ServiceBus,
-    Pulsar
-}
+    public int Data { get; private set; }
 
+    public MyEvent() : base(Guid.NewGuid())
+    {
+        Data = 7;
+    }
+
+    public bool Equals(MyEvent other)
+    {
+        if (ReferenceEquals(null, other)) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return Data == other.Data;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != this.GetType()) return false;
+        return Equals((MyEvent)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return Data;
+    }
+
+    public static bool operator ==(MyEvent left, MyEvent right)
+    {
+        return Equals(left, right);
+    }
+
+    public static bool operator !=(MyEvent left, MyEvent right)
+    {
+        return !Equals(left, right);
+    }
+}
