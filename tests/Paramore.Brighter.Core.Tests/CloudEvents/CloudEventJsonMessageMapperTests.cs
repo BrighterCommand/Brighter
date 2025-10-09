@@ -201,6 +201,23 @@ public class CloudEventJsonMessageMapperTests
         Assert.NotNull(request);
         Assert.Equal(command.Value, request.Value);
     }
+    
+    [Fact]
+    public void When_mapping_message_to_command_set_context()
+    {
+        var command = new MyCommand { Value = Guid.NewGuid().ToString() };
+        var mapper = new CloudEventJsonMessageMapper<MyCommand> { Context = new RequestContext() };
+
+        var message = new Message(new MessageHeader{ PartitionKey = "123" },
+            new MessageBody(
+                JsonSerializer.Serialize(
+                    new CloudEventJsonMessageMapper<MyCommand>.CloudEventMessage { Data = command })));
+        var request = mapper.MapToRequest(message);
+
+        Assert.NotNull(request);
+        Assert.Equal(command.Value, request.Value);
+        Assert.Equal(mapper.Context.Bag[RequestContextBagNames.PartitionKey], message.Header.PartitionKey);
+    }
 
     [Fact]
     public async Task When_mapping_message_to_command_async()
@@ -215,5 +232,23 @@ public class CloudEventJsonMessageMapperTests
 
         Assert.NotNull(request);
         Assert.Equal(command.Value, request.Value);
+    }
+    
+    [Fact]
+    public async Task When_mapping_message_to_command_set_context_async()
+    {
+        var command = new MyCommand { Value = Guid.NewGuid().ToString() };
+        var mapper = new CloudEventJsonMessageMapper<MyCommand> { Context = new RequestContext() };
+
+        var message = new Message(new MessageHeader{ PartitionKey = "123" },
+            new MessageBody(
+                JsonSerializer.Serialize(
+                    new CloudEventJsonMessageMapper<MyCommand>.CloudEventMessage { Data = command })));
+        var request = await mapper.MapToRequestAsync(message);
+
+        Assert.NotNull(request);
+        Assert.Equal(command.Value, request.Value);
+        Assert.Equal(mapper.Context.Bag[RequestContextBagNames.PartitionKey], message.Header.PartitionKey);
+        
     }
 }
