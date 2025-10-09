@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageScheduler.AWS.V4\Paramore.Brighter.MessageScheduler.AWS.V4.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS.V4\Paramore.Brighter.MessagingGateway.AWSSQS.V4.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
