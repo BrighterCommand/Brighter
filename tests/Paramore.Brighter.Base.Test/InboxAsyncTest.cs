@@ -1,0 +1,118 @@
+﻿using System;
+using System.Threading.Tasks;
+using Paramore.Brighter.Base.Test.Requests;
+using Paramore.Brighter.Inbox.Exceptions;
+using Xunit;
+
+namespace Paramore.Brighter.Base.Test;
+
+public abstract class InboxAsyncTest
+{
+    protected abstract IAmAnInboxAsync Inbox { get; }
+
+    protected InboxAsyncTest()
+    {
+        // ReSharper disable once VirtualMemberCallInConstructor
+        BeforeEachTestAsync().GetAwaiter().GetResult();
+    }
+
+    protected virtual async Task BeforeEachTestAsync()
+    {
+        await CreateStoreAsync();
+    }
+    
+    protected virtual Task CreateStoreAsync()
+    {
+        return Task.CompletedTask;
+    }
+    
+    public void Dispose()
+    {
+        AfterEachTestAsync().GetAwaiter().GetResult();
+    }
+
+    protected virtual async Task AfterEachTestAsync()
+    {
+        await DeleteStoreAsync();
+    }
+
+    protected virtual Task DeleteStoreAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task WriteToInbox()
+    {
+        var contextKey = Uuid.NewAsString();
+        var command = new MyCommand { Value = Uuid.NewAsString() };
+        
+        // act 
+        await Inbox.AddAsync(command, contextKey, null);
+        var loadedCommand = await Inbox.GetAsync<MyCommand>(command.Id, contextKey, null);
+        
+        Assert.NotNull(loadedCommand);
+        Assert.Equal(command.Value, loadedCommand.Value);
+        Assert.Equal(command.Id, loadedCommand.Id);
+    }
+    
+    [Fact]
+    public async Task ThrowExceptionWhenTryToAddMessageThatAlreadyExists()
+    {
+        // setup
+        var contextKey = Uuid.NewAsString();
+        var command = new MyCommand { Value = Uuid.NewAsString() };
+        await Inbox.AddAsync(command, contextKey, null);
+
+        // act 
+        await Assert.ThrowsAsync<Exception>(async () => await Inbox.AddAsync(command, contextKey, null));
+        
+        // asserts
+        var exists = await Inbox.ExistsAsync<MyCommand>(command.Id, contextKey, null);
+        Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
+    }
+    
+    [Fact]
+    public async Task ThrowExceptionWhenTryToAddMessageWithDifferentContextKeyThatAlreadyExists()
+    {
+        // setup
+        var contextKey = Uuid.NewAsString();
+        var command = new MyCommand { Value = Uuid.NewAsString() };
+        await Inbox.AddAsync(command, contextKey, null);
+
+        // act 
+        await Assert.ThrowsAsync<Exception>(async () => await Inbox.AddAsync(command, Uuid.NewAsString(), null));
+        
+        // asserts
+        var exists = await Inbox.ExistsAsync<MyCommand>(command.Id, contextKey, null);
+        Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
+    }
+    
+    [Fact]
+    public async Task ThrowRequestNotFoundExceptionWhenTryToGetAMessageThatNotExists()
+    {
+        // setup
+        var contextKey = Uuid.NewAsString();
+        var commandId = Uuid.NewAsString();
+        
+        // act & asserts
+        await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(async () => await Inbox.GetAsync<MyCommand>(commandId, contextKey, null));
+    }
+    
+    [Fact]
+    public async Task ThrowRequestNotFoundExceptionWhenTryToGetAMessageThatExistsWithDifferentContextKey()
+    {
+        var command = new MyCommand { Value = Uuid.NewAsString() };
+        await Inbox.AddAsync(command, Uuid.NewAsString(), null);
+        
+        // act & asserts
+        await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(async () => await Inbox.GetAsync<MyCommand>(command.Id, Uuid.NewAsString(), null));
+    }
+
+    [Fact]
+    public async Task ReturnFalseWhenCheckIfAMessageExistsAndMessageNotExists()
+    {
+        var exists = await Inbox.ExistsAsync<MyCommand>(Uuid.NewAsString(), Uuid.NewAsString(), null);
+        Assert.False(exists, "A command should not exists");
+    }
+}
