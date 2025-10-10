@@ -1,14 +1,9 @@
-﻿using System.Net;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
+﻿using System;
+using System.Net;
 using MQTTnet;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server;
-using Paramore.Test.Helpers.Base;
-using Paramore.Test.Helpers.Loggers;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
 {
@@ -23,40 +18,29 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
     /// This class initializes an MQTT test server, configures message producers and consumers, and provides
     /// utility methods for managing the lifecycle of these components during tests.
     /// </remarks>
-    public abstract class MqttTestClassBase<T> : TestClassBase<T> 
+    public abstract class MqttTestClassBase<T> : IDisposable
         where T : class
     {
-        protected static readonly MqttFactory s_mqttFactory = new();
+        private static readonly MqttFactory s_mqttFactory = new();
 
         protected readonly Message _noopMessage = new();
-        protected readonly MqttTestServer? MqttTestServer;
+        private readonly MqttTestServer? _mqttTestServer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttTestClassBase{T}"/> class with the specified client ID, topic prefix, and test output helper.
         /// </summary>
-        /// <param name="clientID">The unique identifier for the MQTT client.</param>
+        /// <param name="clientId">The unique identifier for the MQTT client.</param>
         /// <param name="topicPrefix">The prefix for MQTT topics used in the test.</param>
-        /// <param name="testOutputHelper">The output helper for capturing test output during execution.</param>
         /// <remarks>
         /// This constructor sets up the necessary MQTT test server and configurations for messaging gateway tests.
         /// It also configures logging to integrate with the test output helper.
         /// </remarks>
-        protected MqttTestClassBase(string clientID, string topicPrefix, ITestOutputHelper testOutputHelper)
-        : base(testOutputHelper)
+        protected MqttTestClassBase(string clientId, string topicPrefix)
         {
-            ApplicationLogging.LoggerFactory = LoggerFactory.Create(configure =>
-            {
-                configure.Services.AddSingleton(TestOutputHelper);
-                configure.Services.AddSingleton<ITestOutputLoggingProvider, TestOutputLoggingProvider>();
-                configure.Services.AddSingleton<ILoggerProvider>(sp => sp.GetRequiredService<ITestOutputLoggingProvider>());
-                configure.Services.TryAdd(ServiceDescriptor.Singleton(typeof(ILogger), typeof(TestOutputLogger)));
-                configure.Services.TryAdd(ServiceDescriptor.Singleton(typeof(ILogger<>), typeof(TestOutputLogger<>)));
-            });
-
-            IPAddress serverIPAddress = IPAddress.Any;
+            IPAddress serverIpAddress = IPAddress.Any;
             int serverPort = MqttTestServer.GetRandomServerPort();
 
-            MqttTestServer = MqttTestServer.CreateTestMqttServer(s_mqttFactory, true, ApplicationLogging.CreateLogger<T>(), serverIPAddress, serverPort, null, TestDisplayName);
+            _mqttTestServer = MqttTestServer.CreateTestMqttServer(s_mqttFactory, true, ApplicationLogging.CreateLogger<T>(), serverIpAddress, serverPort);
 
             var mqttProducerConfig = new MqttMessagingGatewayProducerConfiguration
             {
@@ -73,7 +57,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
                 Hostname = IPAddress.Loopback.ToString(),
                 Port = serverPort,
                 TopicPrefix = topicPrefix,
-                ClientID = clientID
+                ClientID = clientId
             };
 
             MessageConsumerAsync = new MqttMessageConsumer(mqttConsumerConfig);
@@ -106,30 +90,11 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
         /// </value>
         protected IAmAMessageConsumerAsync MessageConsumerAsync { get; }
 
-        /// <summary>
-        /// Releases the resources used by the <see cref="MqttTestClassBase{T}"/> instance.
-        /// </summary>
-        /// <param name="disposing">
-        /// A boolean value indicating whether the method is being called explicitly 
-        /// to release both managed and unmanaged resources (<c>true</c>), 
-        /// or by the finalizer to release only unmanaged resources (<c>false</c>).
-        /// </param>
-        /// <remarks>
-        /// This method ensures that all disposable components, such as the message producer, 
-        /// message consumer, and MQTT test server, are properly disposed of when no longer needed.
-        /// It also calls the base class's <see cref="TestClassBase.Dispose(bool)"/> method to 
-        /// perform additional cleanup operations.
-        /// </remarks>
-        protected override void Dispose(bool disposing)
+        public void Dispose()
         {
-            if (disposing)
-            {
-                ((IAmAMessageProducerSync)MessageProducerAsync).Dispose();
-                ((IAmAMessageConsumerSync)MessageConsumerAsync).Dispose();
-                MqttTestServer?.Dispose();
-            }
-
-            base.Dispose(disposing);
+            ((IAmAMessageProducerSync)MessageProducerAsync).Dispose();
+            ((IAmAMessageConsumerSync)MessageConsumerAsync).Dispose();
+            _mqttTestServer?.Dispose();
         }
     }
 }

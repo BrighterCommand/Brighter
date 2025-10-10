@@ -2,21 +2,15 @@
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 {
     [Trait("Category", "MQTT")]
     [Collection("MQTT")]
-    public class WhenQueueIsPurgedAsync : MqttTestClassBase<WhenQueueIsPurgedAsync>
+    public class WhenQueueIsPurgedAsync() : MqttTestClassBase<WhenQueueIsPurgedAsync>(ClientId, TopicPrefix)
     {
         private const string ClientId = "BrighterIntegrationTests-Purge";
         private const string TopicPrefix = "BrighterIntegrationTests/PurgeTests";
-
-        public WhenQueueIsPurgedAsync(ITestOutputHelper testOutputHelper)
-        : base(ClientId, TopicPrefix, testOutputHelper)
-        {
-        }
 
         [Fact]
         public async Task WhenPurgingTheQueueOnTheMessagingGatewayAsync()
