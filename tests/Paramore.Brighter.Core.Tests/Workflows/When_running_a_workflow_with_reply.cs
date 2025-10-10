@@ -5,7 +5,6 @@ using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
-using Xunit.Abstractions;
 using MyCommand = Paramore.Brighter.Core.Tests.Workflows.TestDoubles.MyCommand;
 using MyCommandHandlerAsync = Paramore.Brighter.Core.Tests.Workflows.TestDoubles.MyCommandHandlerAsync;
 using MyEvent = Paramore.Brighter.Core.Tests.Workflows.TestDoubles.MyEvent;
