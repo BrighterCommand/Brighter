@@ -13,7 +13,6 @@ using Paramore.Brighter.DynamoDB.V4.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Brighter.Outbox.DynamoDB.V4;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox;
 
