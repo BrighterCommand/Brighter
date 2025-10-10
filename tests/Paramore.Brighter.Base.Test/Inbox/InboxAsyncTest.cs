@@ -4,7 +4,7 @@ using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.Inbox.Exceptions;
 using Xunit;
 
-namespace Paramore.Brighter.Base.Test;
+namespace Paramore.Brighter.Base.Test.Inbox;
 
 public abstract class InboxAsyncTest
 {
@@ -57,7 +57,7 @@ public abstract class InboxAsyncTest
     }
     
     [Fact]
-    public async Task ThrowExceptionWhenTryToAddMessageThatAlreadyExists()
+    public async Task NotThrowExceptionWhenTryToAddMessageThatAlreadyExists()
     {
         // setup
         var contextKey = Uuid.NewAsString();
@@ -65,7 +65,7 @@ public abstract class InboxAsyncTest
         await Inbox.AddAsync(command, contextKey, null);
 
         // act 
-        await Assert.ThrowsAsync<Exception>(async () => await Inbox.AddAsync(command, contextKey, null));
+        await Inbox.AddAsync(command, contextKey, null);
         
         // asserts
         var exists = await Inbox.ExistsAsync<MyCommand>(command.Id, contextKey, null);
@@ -73,7 +73,7 @@ public abstract class InboxAsyncTest
     }
     
     [Fact]
-    public async Task ThrowExceptionWhenTryToAddMessageWithDifferentContextKeyThatAlreadyExists()
+    public async Task NotThrowExceptionWhenTryToAddMessageWithDifferentContextKeyThatAlreadyExists()
     {
         // setup
         var contextKey = Uuid.NewAsString();
@@ -81,7 +81,7 @@ public abstract class InboxAsyncTest
         await Inbox.AddAsync(command, contextKey, null);
 
         // act 
-        await Assert.ThrowsAsync<Exception>(async () => await Inbox.AddAsync(command, Uuid.NewAsString(), null));
+        await Inbox.AddAsync(command, Uuid.NewAsString(), null);
         
         // asserts
         var exists = await Inbox.ExistsAsync<MyCommand>(command.Id, contextKey, null);

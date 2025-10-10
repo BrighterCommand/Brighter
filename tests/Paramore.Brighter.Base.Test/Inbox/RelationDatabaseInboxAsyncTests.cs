@@ -1,12 +1,12 @@
 ﻿using System;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Base.Test;
+namespace Paramore.Brighter.Base.Test.Inbox;
 
-public abstract class RelationalDatabaseInboxTests : InboxTests
+public abstract class RelationalDatabaseInboxAsyncTests : InboxAsyncTest
 {
     private RelationalDatabaseInbox? _inbox;
-    protected override IAmAnInboxSync Inbox => _inbox ?? throw new InvalidOperationException();
-    
+    protected override IAmAnInboxAsync Inbox => _inbox ?? throw new InvalidOperationException();
     protected RelationalDatabaseConfiguration? Configuration { get; private set; } 
     
     protected abstract string DefaultConnectingString { get; }
@@ -14,12 +14,12 @@ public abstract class RelationalDatabaseInboxTests : InboxTests
     protected abstract bool BinaryMessagePayload { get; }
     protected virtual string? SchemaName { get; } = null;
     protected abstract RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration);
-    protected abstract void CreateInboxTable(RelationalDatabaseConfiguration configuration);
-    protected abstract void DeleteInboxTable(RelationalDatabaseConfiguration configuration);
+    protected abstract Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration);
+    protected abstract Task DeleteInboxTableAsync(RelationalDatabaseConfiguration configuration);
 
-    protected override void BeforeEachTest()
+    protected override async Task BeforeEachTestAsync()
     { 
-        var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
+       var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             connectionString = DefaultConnectingString;
@@ -31,17 +31,16 @@ public abstract class RelationalDatabaseInboxTests : InboxTests
             binaryMessagePayload: BinaryMessagePayload);
         
         _inbox = CreateInbox(Configuration);
-        base.BeforeEachTest();
+        await base.BeforeEachTestAsync();
     }
 
-    protected override void CreateStore()
+    protected override async Task CreateStoreAsync()
     {
-        CreateInboxTable(Configuration!);
+        await CreateInboxTableAsync(Configuration!);
     }
 
-    protected override void DeleteStore()
+    protected override async Task DeleteStoreAsync()
     {
-        DeleteInboxTable(Configuration!);
-        base.DeleteStore();
+        await DeleteInboxTableAsync(Configuration!);
     }
 }

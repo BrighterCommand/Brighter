@@ -11,7 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="xunit" />
+      <PackageReference Include="xunit.v3" />
     </ItemGroup>
   
 </Project>

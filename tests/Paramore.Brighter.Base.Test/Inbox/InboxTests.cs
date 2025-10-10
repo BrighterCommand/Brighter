@@ -3,7 +3,7 @@ using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.Inbox.Exceptions;
 using Xunit;
 
-namespace Paramore.Brighter.Base.Test;
+namespace Paramore.Brighter.Base.Test.Inbox;
 
 public abstract class InboxTests : IDisposable
 {
@@ -54,7 +54,7 @@ public abstract class InboxTests : IDisposable
     }
     
     [Fact]
-    public void ThrowExceptionWhenTryToAddMessageThatAlreadyExists()
+    public void NotThrowExceptionWhenTryToAddMessageThatAlreadyExists()
     {
         // setup
         var contextKey = Uuid.NewAsString();
@@ -62,7 +62,7 @@ public abstract class InboxTests : IDisposable
         Inbox.Add(command, contextKey, null);
 
         // act 
-        Assert.Throws<Exception>(() => Inbox.Add(command, contextKey, null));
+        Inbox.Add(command, contextKey, null);
         
         // asserts
         var exists = Inbox.Exists<MyCommand>(command.Id, contextKey, null);
@@ -70,7 +70,7 @@ public abstract class InboxTests : IDisposable
     }
     
     [Fact]
-    public void ThrowExceptionWhenTryToAddMessageWithDifferentContextKeyThatAlreadyExists()
+    public void NotThrowExceptionWhenTryToAddMessageWithDifferentContextKeyThatAlreadyExists()
     {
         // setup
         var contextKey = Uuid.NewAsString();
@@ -78,7 +78,7 @@ public abstract class InboxTests : IDisposable
         Inbox.Add(command, contextKey, null);
 
         // act 
-        Assert.Throws<Exception>(() => Inbox.Add(command, Uuid.NewAsString(), null));
+        Inbox.Add(command, Uuid.NewAsString(), null);
         
         // asserts
         var exists = Inbox.Exists<MyCommand>(command.Id, contextKey, null);
