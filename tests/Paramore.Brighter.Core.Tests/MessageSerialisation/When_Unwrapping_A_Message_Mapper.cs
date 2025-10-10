@@ -30,7 +30,13 @@ public class MessageUnwrapRequestTests
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         _message = new Message(
-            new MessageHeader(myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
+            new MessageHeader(myCommand.Id, 
+                new("transform.event"), 
+                MessageType.MT_COMMAND,
+                timeStamp: DateTime.UtcNow,
+                partitionKey: new PartitionKey("some-partition-key"),
+                type: new CloudEventsType("some-type"),
+                subject: "some-subject"),
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
@@ -40,11 +46,20 @@ public class MessageUnwrapRequestTests
     [Fact]
     public void When_Unwrapping_A_Message_Mapper()
     {
+        var requestContext = new RequestContext();
+        
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = _transformPipeline.Unwrap(_message, new RequestContext());
+        var request = _transformPipeline.Unwrap(_message, requestContext);
         
         //assert
         Assert.Equal(MySimpleTransformAsync.TRANSFORM_VALUE, request.Value);
+        Assert.Equal(_message.Header.MessageId, requestContext.Bag[RequestContextBagNames.MessageId]);
+        Assert.Equal(_message.Header.PartitionKey, requestContext.Bag[RequestContextBagNames.PartitionKey]);
+        Assert.Equal(_message.Header.Topic, requestContext.Bag[RequestContextBagNames.Topic]);
+        Assert.Equal(_message.Header.TimeStamp, requestContext.Bag[RequestContextBagNames.TimeStamp]);
+        Assert.Equal(_message.Header.Source, requestContext.Bag[RequestContextBagNames.Source]);
+        Assert.Equal(_message.Header.Type, requestContext.Bag[RequestContextBagNames.Type]);
+        Assert.Equal(_message.Header.Subject, requestContext.Bag[RequestContextBagNames.Subject]);
     }
 }

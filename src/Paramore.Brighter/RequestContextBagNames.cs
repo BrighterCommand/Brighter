@@ -11,7 +11,6 @@ namespace Paramore.Brighter;
 /// </remarks>
 public static class RequestContextBagNames
 {
-  
     /// <summary>
     /// Key used to store additional extension properties for CloudEvents in the request context bag.
     /// </summary>
@@ -45,7 +44,6 @@ public static class RequestContextBagNames
     /// </example>
     /// </remarks>
     public const string CloudEventsAdditionalProperties = "Brighter-CloudEvents-AdditionalProperties";
-    
     
     /// <summary>
     /// Key used to store the job ID, representing an instance of a workflow, in the request context bag.
@@ -124,6 +122,9 @@ public static class RequestContextBagNames
     /// </para>
     /// </remarks>
     public const string Headers = "Brighter-Headers";
+    
+    public const string MessageId = "Brighter-MessageId";
+    public const string Topic = "Brighter-Topic";
 
     /// <summary>
     /// Used to store the worfkflow ID, which indicates which workflow this request belongs to, in the request context bag.

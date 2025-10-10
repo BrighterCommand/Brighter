@@ -222,40 +222,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     {
         if (Context != null)
         {
-            Context.Bag[RequestContextBagNames.Headers] = message.Header.Bag;
-            Context.Bag[RequestContextBagNames.TimeStamp] = message.Header.TimeStamp;
-            Context.Bag[RequestContextBagNames.Source] = message.Header.Source;
-            Context.Bag[RequestContextBagNames.Type] = message.Header.Type;
-            
-            if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
-            {
-                Context.Bag[RequestContextBagNames.PartitionKey] = message.Header.PartitionKey;
-            }
-
-            if (!Id.IsNullOrEmpty(message.Header.JobId))
-            {
-                Context.Bag[RequestContextBagNames.JobId] = message.Header.JobId;
-            }
-            
-            if (!Id.IsNullOrEmpty(message.Header.WorkflowId))
-            {
-                Context.Bag[RequestContextBagNames.WorkflowId] = message.Header.WorkflowId;
-            }
-            
-            if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
-            {
-                Context.Bag[RequestContextBagNames.CorrelationId] = message.Header.CorrelationId;
-            }
-            
-            if (!string.IsNullOrEmpty(message.Header.Subject))
-            {
-                Context.Bag[RequestContextBagNames.Subject] = message.Header.Subject!;
-            }
-            
-            if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
-            {
-                Context.Bag[RequestContextBagNames.ReplyTo] = message.Header.ReplyTo;
-            }
+            Context.Bag[JustSayingAttributesName.Conversation] = message.Header.CorrelationId;
         }
         
         return JsonSerializer.Deserialize<TMessage>(message.Body.Bytes, JsonSerialisationOptions.Options)!;

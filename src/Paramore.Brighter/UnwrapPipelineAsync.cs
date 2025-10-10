@@ -77,17 +77,55 @@ namespace Paramore.Brighter
         /// <returns>a request</returns>
         public async Task<TRequest> UnwrapAsync(Message message,RequestContext? requestContext, CancellationToken cancellationToken = default)
         {
-            if(requestContext is not null)
+            if (requestContext != null)
+            {
                 requestContext.Span ??= Activity.Current;
+                requestContext.Bag[RequestContextBagNames.MessageId] = message.Header.MessageId;
+                requestContext.Bag[RequestContextBagNames.Topic] = message.Header.Topic;
+                requestContext.Bag[RequestContextBagNames.Headers] = message.Header.Bag;
+                requestContext.Bag[RequestContextBagNames.TimeStamp] = message.Header.TimeStamp;
+                requestContext.Bag[RequestContextBagNames.Source] = message.Header.Source;
+                requestContext.Bag[RequestContextBagNames.Type] = message.Header.Type;
+            
+                if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+                {
+                    requestContext.Bag[RequestContextBagNames.PartitionKey] = message.Header.PartitionKey;
+                }
+
+                if (!Id.IsNullOrEmpty(message.Header.JobId))
+                {
+                    requestContext.Bag[RequestContextBagNames.JobId] = message.Header.JobId;
+                }
+            
+                if (!Id.IsNullOrEmpty(message.Header.WorkflowId))
+                {
+                    requestContext.Bag[RequestContextBagNames.WorkflowId] = message.Header.WorkflowId;
+                }
+            
+                if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
+                {
+                    requestContext.Bag[RequestContextBagNames.CorrelationId] = message.Header.CorrelationId;
+                }
+            
+                if (!string.IsNullOrEmpty(message.Header.Subject))
+                {
+                    requestContext.Bag[RequestContextBagNames.Subject] = message.Header.Subject!;
+                }
+            
+                if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
+                {
+                    requestContext.Bag[RequestContextBagNames.ReplyTo] = message.Header.ReplyTo;
+                }
+            }
             
             var msg = message;
             await Transforms.EachAsync(async transform => {
-               transform.Context = requestContext; 
-               msg = await transform.UnwrapAsync(msg, cancellationToken);
+                transform.Context = requestContext; 
+                msg = await transform.UnwrapAsync(msg, cancellationToken);
             });
-
+           
             MessageMapper.Context = requestContext;
             return await MessageMapper.MapToRequestAsync(msg, cancellationToken);
-        }                                                        
+        }
     }
 }
