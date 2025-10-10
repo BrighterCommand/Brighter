@@ -27,7 +27,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 {
@@ -38,8 +37,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
         private const string ClientId = "BrighterIntegrationTests-Purge";
         private const string TopicPrefix = "BrighterIntegrationTests/PurgeTests";
 
-        public When_queue_is_Purged(ITestOutputHelper testOutputHelper)
-            : base(ClientId, TopicPrefix, testOutputHelper)
+        public When_queue_is_Purged()
+            : base(ClientId, TopicPrefix)
         {
         }
 

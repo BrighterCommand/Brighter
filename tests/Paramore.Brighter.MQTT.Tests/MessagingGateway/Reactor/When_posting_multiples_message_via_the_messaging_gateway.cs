@@ -24,10 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 {
@@ -38,8 +36,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
         private const string ClientId = "BrighterIntegrationTests-Produce";
         private const string TopicPrefix = "BrighterIntegrationTests/ProducerTests";
 
-        public MqttMessageProducerSendMessageTests(ITestOutputHelper testOutputHelper)
-            : base(ClientId, TopicPrefix, testOutputHelper)
+        public MqttMessageProducerSendMessageTests()
+            : base(ClientId, TopicPrefix)
         {
         }
 

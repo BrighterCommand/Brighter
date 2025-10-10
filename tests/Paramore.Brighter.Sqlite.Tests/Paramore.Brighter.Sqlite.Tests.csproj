@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <OutputType>Exe</OutputType>
         <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -21,11 +22,11 @@
       <PackageReference Include="Newtonsoft.Json"/>
       <PackageReference Include="Polly" />
       <PackageReference Include="System.Text.Json" />
-      <PackageReference Include="xunit" />
       <PackageReference Include="xunit.runner.visualstudio">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <PackageReference Include="xunit.v3" />
     </ItemGroup>
 
     <ItemGroup>

@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 {
@@ -18,14 +17,13 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
         /// <summary>
         /// Initializes a new instance of the <see cref="Proactor.MqttMessageProducerSendMessageTestsAsync "/> class.
         /// </summary>
-        /// <param name="testOutputHelper">The output helper for capturing test output during execution.</param>
         /// <remarks>
         /// This constructor sets up the MQTT messaging gateway test environment by configuring the client ID, topic prefix, 
         /// and test output helper. It leverages the base class <see cref="MqttTestClassBase{T}"/> to initialize the necessary 
         /// MQTT configurations and logging mechanisms.
         /// </remarks>
-        public MqttMessageProducerSendMessageTestsAsync(ITestOutputHelper testOutputHelper)
-        : base(ClientId, TopicPrefix, testOutputHelper)
+        public MqttMessageProducerSendMessageTestsAsync()
+        : base(ClientId, TopicPrefix)
         {
         }
 

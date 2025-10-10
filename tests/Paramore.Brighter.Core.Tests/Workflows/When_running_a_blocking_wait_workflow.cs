@@ -6,7 +6,6 @@ using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 

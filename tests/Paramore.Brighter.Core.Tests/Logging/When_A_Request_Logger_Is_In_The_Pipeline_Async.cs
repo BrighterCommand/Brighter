@@ -10,7 +10,6 @@ using Polly.Registry;
 using Serilog;
 using Serilog.Sinks.TestCorrelator;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Logging
 {
