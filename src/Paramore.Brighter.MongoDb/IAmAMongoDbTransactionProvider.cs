@@ -8,4 +8,5 @@ namespace Paramore.Brighter.MongoDb;
 /// This interface combines MongoDB client access with transaction management
 /// using <see cref="IClientSession"/> for ACID guarantees.
 /// </summary>
-public interface IAmAMongoDbTransactionProvider : IAmAMongoDbConnectionProvider, IAmABoxTransactionProvider<IClientSession>;
+public interface IAmAMongoDbTransactionProvider : IAmAMongoDbConnectionProvider, 
+    IAmABoxTransactionProvider<IClientSession>;
