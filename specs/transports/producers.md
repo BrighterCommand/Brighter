@@ -57,4 +57,8 @@ endif
 
 #### Marking Messages as Dispatched in the Outbox
 
-When the message has been sent, e need to mark it as dispatched in the Outbox. Some middleware will asynchronously confirm delivery of the message via a callback. For example, RabbitMQ has [Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and Kafka. Other middleware, for example SQS, returns a value indicating whether we successfully published. In the latter case, the `OutboxProducerMediator` handles marking the message as dispatched in the `Outbox` and you MUST NOT handle this in the producer. In the former case, you should hook up the callback to 
+When the message has been sent, e need to mark it as dispatched in the Outbox. Some middleware will asynchronously confirm delivery of the message via a callback. For example, RabbitMQ has [Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and Kafka. Other middleware, for example SQS, returns a value indicating whether we successfully published. 
+
+If a producer uses callbacks then the producer should implement the interface `ISupportPublishConfirmation`. This interface contains an `event` which is fired when a callback occurs. Your producer will fire this event when the callback from the middleware indicates that your event has been published successfully. This allows `OutboxProducerMediator` to mark the message as dispatched in the `Outbox`. There is already code in `OutboxProducerMediator` to handle this and you MUST not write code there.
+
+* If the transport does not the latter case, the `OutboxProducerMediator` handles marking the message as dispatched in the `Outbox` and you MUST NOT handle this in the producer. In the former case, you should hook up the callback to 

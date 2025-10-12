@@ -8,6 +8,14 @@ When using messaging, Brighter itself acts as a [Messaging Gateway](https://www.
 
 We name the assembly `Paramore.Brighter.MessagingGateway.X` where `X` is the name of the messaging middleware or broker we are adapting. For example, `Paramore.Brighter.MessagingGateway.Kafka` is the name of the assembly that acts as an adapter for `Kafka`.
 
+We name the test assembly for `Paramore.Brighter.MessagingGateway.X` as `Paramore.Brighter.X.Tests`. You MUST put all tests for the messaging gateway in that assembly. We add a Docker Compose file to enable us to create the middleware locally. We name the Docker Compose file for the middleware. so `docker-compose-X.yaml` where X is the name of the middleware, for example  These tests use I/O to the middleware over test doubles. You SHOULD NOT write tests using test doubles here, unless it provides some specificity or clarity.
+
+## Modularity
+
+- You MUST only write code in the assemblies that you create for these transports.
+- The assemblies you SHOULD write code in will be `Paramore.Brighter.MessagingGateway.X` and `Paramore.Brighter.X.Tests` where X is the name of the middleware that you are writing the messaging gateway for.
+- You MUST NEVER write code in `Paramore.Brighter` or `Paramore.Brighter.ServiceActivator`. If you need changes in those assemblies, write a specification of what you need and request help by raising a GitHub issue.
+
 ## Overview of a Transport With Links
 
 The following section provides an overview of writing a transport, with links to more detailed specifications.
