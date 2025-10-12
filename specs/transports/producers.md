@@ -41,7 +41,7 @@ public void Send(Message message)
 {
   SendWithDelay(message, TimeSpan.Zero);
 }
-```        
+```
 
 We implement `SendWithDelayAsync` as follows:
 
@@ -57,4 +57,9 @@ endif
 
 #### Marking Messages as Dispatched in the Outbox
 
-When the message has been sent, e need to mark it as dispatched in the Outbox. Some middleware will asynchronously confirm delivery of the message via a callback. For example, RabbitMQ has [Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and Kafka. Other middleware, for example SQS, returns a value indicating whether we successfully published. In the latter case, the `OutboxProducerMediator` handles marking the message as dispatched in the `Outbox` and you MUST NOT handle this in the producer. In the former case, you should hook up the callback to 
+When the message has been sent, e need to mark it as dispatched in the Outbox.
+
+Some middleware will asynchronously confirm delivery of the message via a callback. For example, RabbitMQ has [Publisher Confirms](https://www.rabbitmq.com/docs/confirms) and Kafka. Other middleware, for example SQS, returns a value indicating whether we successfully published.
+
+- When the middleware returns a value the `OutboxProducerMediator` handles marking the message as dispatched in the `Outbox` and you MUST NOT handle this in the producer.
+- When the middleware uses a callback, you MUST tag the `Producer` with the interface `ISupportPublishConfirmation` to indicate that.
