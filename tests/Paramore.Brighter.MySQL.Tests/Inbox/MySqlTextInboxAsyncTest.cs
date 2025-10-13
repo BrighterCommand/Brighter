@@ -7,8 +7,8 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox;
 
 public class MySqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests 
 {
-    protected override string DefaultConnectingString => "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
-    protected override string TableNamePrefix => "table_";
+    protected override string DefaultConnectingString => Const.DefaultConnectingString;
+    protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false; 
     
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration) 

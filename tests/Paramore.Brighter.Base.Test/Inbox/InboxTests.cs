@@ -41,10 +41,11 @@ public abstract class InboxTests : IDisposable
     [Fact]
     public void WriteToInbox()
     {
+        // Arrage
         var contextKey = Uuid.NewAsString();
         var command = new MyCommand { Value = Uuid.NewAsString() };
         
-        // act 
+        // Act 
         Inbox.Add(command, contextKey, null);
         var loadedCommand = Inbox.Get<MyCommand>(command.Id, contextKey, null);
         
@@ -56,15 +57,15 @@ public abstract class InboxTests : IDisposable
     [Fact]
     public void NotThrowExceptionWhenTryToAddMessageThatAlreadyExists()
     {
-        // setup
+        // Arrage
         var contextKey = Uuid.NewAsString();
         var command = new MyCommand { Value = Uuid.NewAsString() };
         Inbox.Add(command, contextKey, null);
 
-        // act 
+        // Act 
         Inbox.Add(command, contextKey, null);
         
-        // asserts
+        // Asserts
         var exists = Inbox.Exists<MyCommand>(command.Id, contextKey, null);
         Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
     }

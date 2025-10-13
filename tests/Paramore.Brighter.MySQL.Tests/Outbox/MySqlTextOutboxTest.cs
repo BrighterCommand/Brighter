@@ -7,8 +7,8 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox;
 
 public class MySqlTextOutboxTest : RelationDatabaseOutboxTest
 {
-    protected override string DefaultConnectingString => "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
-    protected override string TableNamePrefix => "table_";
+    protected override string DefaultConnectingString => Const.DefaultConnectingString;
+    protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false; 
     
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration) 
