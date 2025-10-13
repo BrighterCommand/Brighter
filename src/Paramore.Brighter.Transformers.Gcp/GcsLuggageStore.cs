@@ -10,7 +10,7 @@ using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
 
-namespace Paramore.Brighter.Tranformers.Gcp;
+namespace Paramore.Brighter.Transformers.Gcp;
 
 /// <summary>
 /// A Google Cloud Storage (GCS) implementation of the <see cref="IAmAStorageProvider"/> and <see cref="IAmAStorageProviderAsync"/> interfaces for the Brighter framework.

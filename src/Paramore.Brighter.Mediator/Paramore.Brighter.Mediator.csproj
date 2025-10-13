@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-      <Description>The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers</Description>
-      <Authors>Ian Cooper</Authors>
-      <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-      <PackageTags>Command;Event;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-      <LangVersion>latest</LangVersion>
-      <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Description>Mediator pattern implementation for Paramore.Brighter Command Processor. Provides in-memory command and query dispatching using the Mediator pattern, including support for task scheduling, state management, and specification-based queries.</Description>
+    <Authors>Ian Cooper</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Mediator;Command;Event;Query;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Text.Json" />

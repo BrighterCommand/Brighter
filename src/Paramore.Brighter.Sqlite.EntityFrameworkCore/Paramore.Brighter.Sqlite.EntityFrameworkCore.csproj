@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Entity Framework Core integration for SQLite provider in Paramore.Brighter Command Processor. Provides connection and transaction providers to obtain SQLite connections from Entity Framework Core DbContext.</Description>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
-    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageTags>SQLite;Entity Framework Core;EF Core;Database;Embedded Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

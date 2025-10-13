@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Dapper integration for Paramore.Brighter Command Processor. Provides lightweight ORM capabilities for data access patterns within the Brighter framework.</Description>
+    <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Dapper;ORM;Data Access;Command;Event;Command Processor;Database;SQL;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

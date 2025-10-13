@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Description>DynamoDB outbox implementation for Paramore.Brighter Command Processor. Provides reliable message publishing with outbox pattern using Amazon DynamoDB for transactional consistency and guaranteed delivery.</Description>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>DynamoDB;AWS;Outbox;Transactional;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

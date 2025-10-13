@@ -1,8 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <Description>Microsoft.Extensions.DependencyInjection integration for Paramore.Brighter Command Processor. Provides dependency injection container support for registering handlers, policies, and framework components.</Description>
     <Authors>Daniel Stockhammer, Toby Henderson</Authors>
-    <Description>Brighter Microsoft.Extensions.DependencyInjection support</Description>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Dependency Injection;DI;Container;Command;Event;Command Processor;Microsoft Extensions;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

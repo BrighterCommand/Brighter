@@ -100,7 +100,10 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
             }
         }
 
+        /// <inheritdoc />
         public override bool HasOpenTransaction => _context.Database.CurrentTransaction != null;
+        
+        /// <inheritdoc />
         public override bool IsSharedConnection => true;
     }
 }

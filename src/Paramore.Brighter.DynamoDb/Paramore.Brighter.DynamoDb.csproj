@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Amazon DynamoDB provider for Paramore.Brighter Command Processor. Enables storing and retrieving commands, events, and outbox patterns using DynamoDB as the persistence layer.</Description>
+    <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>DynamoDB;AWS;NoSQL;Command;Event;Command Processor;Database;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

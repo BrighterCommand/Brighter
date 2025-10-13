@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+      <Description>Google Cloud Spanner inbox provider for Paramore.Brighter Command Processor. Enables inbox pattern implementation for idempotent command and event handling using Cloud Spanner as the persistence layer.</Description>
+      <Authors>Rafael Andrade</Authors>
       <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
+      <PackageTags>Cloud Spanner;Google Cloud;Database;Inbox;Idempotent;Command;Event;Command Processor;Distributed Database;GCP;Brighter</PackageTags>
       <Nullable>enable</Nullable>
     </PropertyGroup>
 
