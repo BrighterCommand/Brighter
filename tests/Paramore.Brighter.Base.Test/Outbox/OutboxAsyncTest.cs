@@ -350,7 +350,7 @@ public abstract class OutboxAsyncTest<TTransaction>
     }
     
     [Fact]
-    public async Task AddMessageUsingTransactionAsync()
+    public virtual async Task AddMessageUsingTransactionAsync()
     {
         // Arrange
         var transaction = CreateTransactionProvider();
@@ -402,7 +402,7 @@ public abstract class OutboxAsyncTest<TTransaction>
     }
     
      [Fact]
-    public async Task AddMessageUsingTransactionShouldNotInsertWhenRollbackAsync()
+    public virtual async Task AddMessageUsingTransactionShouldNotInsertWhenRollbackAsync()
     {
         // Arrange
         var transaction = CreateTransactionProvider();

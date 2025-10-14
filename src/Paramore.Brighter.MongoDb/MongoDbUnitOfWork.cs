@@ -104,13 +104,17 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
     /// <inheritdoc />
     public IClientSessionHandle GetTransaction()
     {
-        return _session = Client.StartSession();
+        _session = Client.StartSession();
+        _session.StartTransaction();
+        return _session;
     }
     
     /// <inheritdoc />
     public async Task<IClientSessionHandle> GetTransactionAsync(CancellationToken cancellationToken = default)
     {
-        return _session = await Client.StartSessionAsync(cancellationToken: cancellationToken);
+        _session = await Client.StartSessionAsync(cancellationToken: cancellationToken);
+        _session.StartTransaction();
+        return _session;
     }
 
     async Task<IClientSession> IAmABoxTransactionProvider<IClientSession>.GetTransactionAsync(CancellationToken cancellationToken)

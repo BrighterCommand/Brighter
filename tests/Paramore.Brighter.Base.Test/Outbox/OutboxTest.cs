@@ -346,7 +346,7 @@ public abstract class OutboxTest<TTransaction>
     }
     
     [Fact]
-    public void AddMessageUsingTransaction()
+    public virtual void AddMessageUsingTransaction()
     {
         // Arrange
         var transaction = CreateTransactionProvider();
@@ -398,7 +398,7 @@ public abstract class OutboxTest<TTransaction>
     }
     
      [Fact]
-    public void AddMessageUsingTransactionShouldNotInsertWhenRollback()
+    public virtual void AddMessageUsingTransactionShouldNotInsertWhenRollback()
     {
         // Arrange
         var transaction = CreateTransactionProvider();
