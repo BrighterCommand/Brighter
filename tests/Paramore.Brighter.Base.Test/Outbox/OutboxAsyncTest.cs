@@ -367,6 +367,7 @@ public abstract class OutboxAsyncTest<TTransaction>
         var storedMessage = await Outbox.GetAsync(message.Id, context);
         
         // Assertion
+        Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
         Assert.Equal(message.Body.Value, storedMessage.Body.Value);
         
         //should read the header from the sql outbox
