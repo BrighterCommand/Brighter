@@ -1,14 +1,13 @@
-﻿using System.Collections.Generic;
-using System.Data.Common;
+﻿using System.Data.Common;
 using System.Threading.Tasks;
-using MySqlConnector;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Base.Test.Outbox;
-using Paramore.Brighter.MySql;
-using Paramore.Brighter.Outbox.MySql;
+using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Outbox.MsSql;
 
-namespace Paramore.Brighter.MySQL.Tests.Outbox;
+namespace Paramore.Brighter.MSSQL.Tests.Outbox;
 
-public class MySqlTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
+public class MsSqlTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
 {
     protected override string DefaultConnectingString => Const.DefaultConnectingString;
     protected override string TableNamePrefix => Const.TablePrefix;
@@ -16,26 +15,28 @@ public class MySqlTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
     
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration)
     {
-        return new MySqlOutbox(configuration);
+        return new MsSqlOutbox(configuration);
     }
 
     protected override IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
     {
-        return new MySqlTransactionProvider(Configuration);
+        return new MsSqlTransactionProvider(Configuration);
     }
 
     protected override async Task CreateOutboxTableAsync(RelationalDatabaseConfiguration configuration)
     {
-        await using var connection = new MySqlConnection(configuration.ConnectionString);
+        await MsSqlTestHelper.EnsureDatabaseExistsAsync(configuration.ConnectionString);
+        
+        await using var connection = new SqlConnection(configuration.ConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = MySqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, BinaryMessagePayload);
+        command.CommandText = SqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, BinaryMessagePayload);
         await command.ExecuteNonQueryAsync();
     }
 
     protected override async Task DeleteOutboxTableAsync(RelationalDatabaseConfiguration configuration)
     {
-        await using var connection = new MySqlConnection(configuration.ConnectionString);
+        await using var connection = new SqlConnection(configuration.ConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = $"DROP TABLE {configuration.OutBoxTableName}";

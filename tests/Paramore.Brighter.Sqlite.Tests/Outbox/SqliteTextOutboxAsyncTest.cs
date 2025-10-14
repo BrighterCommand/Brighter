@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Base.Test.Outbox;
@@ -32,5 +33,10 @@ public class SqliteTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
         await using var command = connection.CreateCommand();
         command.CommandText = $"DROP TABLE {configuration.OutBoxTableName}";
         await command.ExecuteNonQueryAsync();
+    }
+
+    protected override IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
+    {
+        return new SqliteTransactionProvider(Configuration);
     }
 }

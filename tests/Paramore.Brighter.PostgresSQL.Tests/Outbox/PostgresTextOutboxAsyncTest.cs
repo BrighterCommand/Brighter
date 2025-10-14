@@ -1,7 +1,9 @@
+using System.Data.Common;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Outbox.PostgreSql;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
 
@@ -32,5 +34,10 @@ public class PostgresTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
         await using var command = connection.CreateCommand();
         command.CommandText = $"DROP TABLE {configuration.OutBoxTableName}";
         await command.ExecuteNonQueryAsync();
+    }
+
+    protected override IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
+    {
+        return new PostgreSqlTransactionProvider(Configuration);
     }
 }

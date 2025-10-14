@@ -11,7 +11,7 @@ public abstract class RelationDatabaseOutboxAsyncTest : OutboxAsyncTest<DbTransa
 
     protected override IAmAnOutboxAsync<Message, DbTransaction> Outbox => _outbox ?? throw new InvalidOperationException();
 
-    protected RelationalDatabaseConfiguration? Configuration { get; private set; } 
+    protected RelationalDatabaseConfiguration Configuration { get; private set; } = null!;
     protected abstract string DefaultConnectingString { get; }
     protected abstract string TableNamePrefix { get; }
     protected abstract bool BinaryMessagePayload { get; }
@@ -42,12 +42,12 @@ public abstract class RelationDatabaseOutboxAsyncTest : OutboxAsyncTest<DbTransa
 
     protected override async Task CreateStoreAsync()
     {
-        await CreateOutboxTableAsync(Configuration!);
+        await CreateOutboxTableAsync(Configuration);
     }
 
     protected override async Task DeleteStoreAsync()
     {
-        await DeleteOutboxTableAsync(Configuration!);
+        await DeleteOutboxTableAsync(Configuration);
     }
 
 

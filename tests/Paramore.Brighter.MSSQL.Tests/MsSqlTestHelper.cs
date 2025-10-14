@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MsSql;
@@ -143,6 +145,45 @@ namespace Paramore.Brighter.MSSQL.Tests
             using var command = connection.CreateCommand();
             command.CommandText = createTableSql;
             command.ExecuteNonQuery();
+        }
+
+        public static void EnsureDatabaseExists(string connectionString)
+        {
+            var builder = new SqlConnectionStringBuilder(connectionString);
+            var databaseName = builder.InitialCatalog;
+            builder.InitialCatalog = "master";
+            using var connection = new SqlConnection(builder.ConnectionString);
+            connection.Open();
+            
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                $"""
+                IF DB_ID('{databaseName}') IS NULL
+                BEGIN
+                    CREATE DATABASE {databaseName};
+                END;
+                """;
+            command.ExecuteNonQuery();
+        }
+        
+        public static async Task EnsureDatabaseExistsAsync(string connectionString)
+        {
+            var builder = new SqlConnectionStringBuilder(connectionString);
+            var databaseName = builder.InitialCatalog;
+            builder.InitialCatalog = "master";
+
+            await using var connection = new SqlConnection(builder.ConnectionString);
+            await connection.OpenAsync();
+
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                $"""
+                 IF DB_ID('{databaseName}') IS NULL
+                 BEGIN
+                     CREATE DATABASE {databaseName};
+                 END;
+                 """;
+            await command.ExecuteNonQueryAsync();
         }
     }
 

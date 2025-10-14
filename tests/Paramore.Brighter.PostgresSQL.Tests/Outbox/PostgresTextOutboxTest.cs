@@ -1,6 +1,8 @@
+using System.Data.Common;
 using Npgsql;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Outbox.PostgreSql;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
 
@@ -31,5 +33,10 @@ public class PostgresTextOutboxTest : RelationDatabaseOutboxTest
         using var command = connection.CreateCommand();
         command.CommandText = $"DROP TABLE {configuration.OutBoxTableName}";
         command.ExecuteNonQuery();
+    }
+
+    protected override IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
+    {
+        return new PostgreSqlTransactionProvider(Configuration);
     }
 }

@@ -10,7 +10,7 @@ public abstract class RelationDatabaseOutboxTest : OutboxTest<DbTransaction>
 
     protected override IAmAnOutboxSync<Message, DbTransaction> Outbox => _outbox ?? throw new InvalidOperationException();
 
-    protected RelationalDatabaseConfiguration? Configuration { get; private set; } 
+    protected RelationalDatabaseConfiguration Configuration { get; private set; } = null!;
     protected abstract string DefaultConnectingString { get; }
     protected abstract string TableNamePrefix { get; }
     protected abstract bool BinaryMessagePayload { get; }
@@ -41,12 +41,12 @@ public abstract class RelationDatabaseOutboxTest : OutboxTest<DbTransaction>
 
     protected override void CreateStore()
     {
-        CreateOutboxTable(Configuration!);
+        CreateOutboxTable(Configuration);
     }
 
     protected override void DeleteStore()
     {
-        DeleteOutboxTable(Configuration!);
+        DeleteOutboxTable(Configuration);
         base.DeleteStore();
     }
 
