@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IAmAFeatureSwitchRegistry? FeatureSwitchRegistry { get; set; } = null;
 
         /// <summary>
-        /// Configures the lifetime of the Handlers. Defaults to Scoped.
+        /// Configures the lifetime of the Handlers. Defaults to Transient.
         /// </summary>
         public ServiceLifetime HandlerLifetime { get; set; } = ServiceLifetime.Transient;
 
