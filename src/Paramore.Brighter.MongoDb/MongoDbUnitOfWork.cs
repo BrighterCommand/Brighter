@@ -35,7 +35,11 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
     /// <inheritdoc />
     public void Commit()
     {
-        _session?.CommitTransaction();
+        if (_session is { IsInTransaction: true })
+        {
+            _session.CommitTransaction();
+        }
+        
         _session?.Dispose();
         _session = null;
     }
@@ -43,18 +47,17 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
     /// <inheritdoc />
     public async Task CommitAsync(CancellationToken cancellationToken = default)
     {
-        if (_session == null)
+        if (_session is { IsInTransaction: true })
         {
-            return;
+            await _session.CommitTransactionAsync(cancellationToken);
         }
         
-        await _session.CommitTransactionAsync(cancellationToken);
-        _session.Dispose();
+        _session?.Dispose();
         _session = null;
     }
 
     /// <inheritdoc />
-    public bool HasOpenTransaction => _session != null; 
+    public bool HasOpenTransaction => _session is { IsInTransaction: true }; 
 
     /// <inheritdoc />
     public bool IsSharedConnection => false;
@@ -62,42 +65,24 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
     /// <inheritdoc />
     public void Rollback()
     {
-        if (_session == null)
-        {
-            return;
-        }
-        
-        try
+        if (_session is { IsInTransaction: true })
         {
             _session.AbortTransaction();
         }
-        catch
-        {
-            // Ignore
-        }
 
-        _session.Dispose();
+        _session?.Dispose();
         _session = null;
     }
 
     /// <inheritdoc />
     public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
-        if (_session == null)
-        {
-            return;
-        }
-        
-        try
+        if (_session is { IsInTransaction: true })
         {
             await _session.AbortTransactionAsync(cancellationToken);
         }
-        catch
-        {
-            // Ignore
-        }
-
-        _session.Dispose();
+        
+        _session?.Dispose();
         _session = null;
     }
 
@@ -105,7 +90,17 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
     public IClientSessionHandle GetTransaction()
     {
         _session = Client.StartSession();
-        _session.StartTransaction();
+
+        try
+        {
+            _session.StartTransaction();
+        }
+        catch (NotSupportedException)
+        {
+            // In some case mongodb doesn't have support to transaction
+            // Like standard alone server
+        }
+        
         return _session;
     }
     
@@ -113,7 +108,17 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
     public async Task<IClientSessionHandle> GetTransactionAsync(CancellationToken cancellationToken = default)
     {
         _session = await Client.StartSessionAsync(cancellationToken: cancellationToken);
-        _session.StartTransaction();
+        
+        try
+        {
+            _session.StartTransaction();
+        }
+        catch (NotSupportedException)
+        {
+            // In some case mongodb doesn't have support to transaction
+            // Like standard alone server
+        }
+        
         return _session;
     }
 

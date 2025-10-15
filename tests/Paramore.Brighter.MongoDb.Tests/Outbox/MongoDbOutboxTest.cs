@@ -39,18 +39,12 @@ public class MongoDbOutboxTest : OutboxTest<IClientSessionHandle>
         var database = Const.Client.GetDatabase(Const.DatabaseName);
         database.DropCollection(_collectionName);
     }
-    
-    [Fact]
-    public override void AddMessageUsingTransaction()
-    {
-        // MongoDBin docker-compose doesn't have support to transaction
-        Assert.True(true);
-    }
+
 
     [Fact]
     public override void AddMessageUsingTransactionShouldNotInsertWhenRollback()
     {
-        // MongoDBin docker-compose doesn't have support to transaction
+        // MongoDb On docker-compose doesn't support transaction
         Assert.True(true);
     }
 }

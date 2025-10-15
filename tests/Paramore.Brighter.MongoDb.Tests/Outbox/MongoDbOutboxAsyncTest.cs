@@ -43,17 +43,9 @@ public class MongoDbOutboxAsyncTest : OutboxAsyncTest<IClientSessionHandle>
     }
 
     [Fact]
-    public override Task AddMessageUsingTransactionAsync()
-    {
-        // MongoDBin docker-compose doesn't have support to transaction
-        Assert.True(true);
-        return Task.CompletedTask;
-    }
-
-    [Fact]
     public override Task AddMessageUsingTransactionShouldNotInsertWhenRollbackAsync()
     {
-        // MongoDBin docker-compose doesn't have support to transaction
+        // MongoDb On docker-compose doesn't support transaction
         Assert.True(true);
         return Task.CompletedTask;
     }
