@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// The <a href="https://cloudevents.io/">CloudEvents</a> data schema of the message, if any.
         /// </summary>
         /// <value>The data schema as a <see cref="string"/>. May be <c>null</c>.</value>
-        public string? DataSchema { get; }
+        public string? DataSchema { get; set; }
         
         /// <summary>
         /// The <a href="https://cloudevents.io/">CloudEvents</a> data ref for a claim check, if any.
@@ -178,13 +178,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// What is the W3C Trace Parent of the span publishing the message?
         /// </summary>
         /// <value>The trace parent as a <see cref="string"/>. May be <c>null</c>.</value>
-        public string? TraceParent { get; }
+        public string? TraceParent { get; set; }
         
         /// <summary>
         /// What is the W3C Trace State of the span publishing the message?
         /// </summary>
         /// <value>The trace state as a <see cref="string"/>. May be <c>null</c>.</value>
-        public string? TraceState { get; }
+        public string? TraceState { get; set; }
 
         /// <summary>
         /// What is the <a href="https://cloudevents.io/">CloudEvents</a> Type of the message? 
@@ -194,6 +194,20 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         /// <value>The baggage as a <see cref="string"/>. May be <c>null</c>.</value>
         public string? Baggage { get; }
+        
+        /// <summary>
+        /// The identifier for an instance of a workflow. This is used to correlate messages that are part of a workflow.
+        /// </summary>
+        /// <remarks> Reserved for future use, currently not used in Brighter</remarks>
+        /// <value>The job identifier.</value>
+        public string? JobId { get; set; }
+        
+        /// <summary>
+        /// The identity of the workflow this message was sent as part of. This is used to correlate messages that are part of a workflow.
+        /// </summary>
+        /// <value>The workflow identifier.</value>
+        /// <remarks> Reserved for future use, currently not used in Brighter</remarks>
+        public string? WorkflowId { get; set; }
 
         public MessageItem()
         {
@@ -232,7 +246,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             DataRef = message.Header.DataRef;
             TraceParent = message.Header.TraceParent?.Value;
             TraceState = message.Header.TraceState?.Value;
-            Baggage =message.Header.Baggage.ToString();
+            Baggage = message.Header.Baggage.ToString();
+            JobId = message.Header.JobId?.Value;
+            WorkflowId = message.Header.WorkflowId?.Value;
         }
 
         public Message ConvertToMessage()
@@ -252,6 +268,18 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 source = new Uri(MessageHeader.DefaultSource);
             }
+
+            Id? jobId = null;
+            if (!string.IsNullOrEmpty(JobId))
+            {
+                jobId = Id.Create(JobId);
+            }
+            
+            Id? workflowId = null;
+            if (!string.IsNullOrEmpty(WorkflowId))
+            {
+                workflowId = Id.Create(WorkflowId);
+            }
             
             var header = new MessageHeader(
                 messageId: Id.Create(messageId),
@@ -270,7 +298,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 dataSchema: dataSchema,
                 traceParent: !string.IsNullOrEmpty(TraceParent) ? new TraceParent(TraceParent!) : Brighter.TraceParent.Empty,
                 traceState: !string.IsNullOrEmpty(TraceState) ? new TraceState(TraceState!) : Brighter.TraceState.Empty,
-                baggage: baggage
+                baggage: baggage,
+                jobId: jobId,
+                workflowId: workflowId
             )
             {
                 DataRef = DataRef

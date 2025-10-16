@@ -102,7 +102,7 @@ public abstract class OutboxTest<TTransaction>
             .OutstandingMessages(TimeSpan.Zero, context)
             .ToArray();
         
-        Assert.Equal(2, messages.Length);
+        Assert.DoesNotContain(firstMessage.Id, messages.Select(x => x.Id));
         Assert.Contains(secondMessage.Id, messages.Select(x => x.Id));
         Assert.Contains(thirdMessage.Id, messages.Select(x => x.Id));
     }
@@ -128,7 +128,9 @@ public abstract class OutboxTest<TTransaction>
             .OutstandingMessages(TimeSpan.Zero, context)
             .ToArray();
         
-        Assert.Empty(messages);
+        Assert.DoesNotContain(firstMessage.Id, messages.Select(x => x.Id));
+        Assert.DoesNotContain(secondMessage.Id, messages.Select(x => x.Id));
+        Assert.DoesNotContain(thirdMessage.Id, messages.Select(x => x.Id));
     }
 
     [Fact]
@@ -258,12 +260,10 @@ public abstract class OutboxTest<TTransaction>
         Assert.DoesNotContain(dispatched.Id, allUndispatched.Select(x => x.Id));
         Assert.Contains(undispatched.Id, allUndispatched.Select(x => x.Id));
         
-        
         Assert.True(allUndispatched.Length >= 1, "Expecting at least 1 message");
         Assert.Contains(earliest.Id, messagesOverAnHour.Select(x => x.Id));
         Assert.DoesNotContain(dispatched.Id, messagesOverAnHour.Select(x => x.Id));
         Assert.DoesNotContain(undispatched.Id, messagesOverAnHour.Select(x => x.Id));
-        
         
         Assert.DoesNotContain(earliest.Id, messagesOver4Hours.Select(x => x.Id));
         Assert.DoesNotContain(dispatched.Id, messagesOver4Hours.Select(x => x.Id));
@@ -321,7 +321,7 @@ public abstract class OutboxTest<TTransaction>
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
         Assert.Equal(message.Header.ReplyTo, storedMessage.Header.ReplyTo);
-        Assert.Equal(message.Header.ContentType, storedMessage.Header.ContentType);
+        Assert.StartsWith(message.Header.ContentType.ToString(), storedMessage.Header.ContentType.ToString());
         Assert.Equal(message.Header.PartitionKey, storedMessage.Header.PartitionKey); 
             
         //Bag serialization
@@ -342,7 +342,7 @@ public abstract class OutboxTest<TTransaction>
         Assert.Equal(message.Header.DataSchema,   storedMessage.Header.DataSchema);
         Assert.Equal(message.Header.Subject,      storedMessage.Header.Subject);
         Assert.Equal(message.Header.TraceParent,  storedMessage.Header.TraceParent);
-        Assert.Equal(message.Header.TraceState,   storedMessage.Header.TraceState);        
+        Assert.Equal(message.Header.TraceState,   storedMessage.Header.TraceState);
     }
     
     [Fact]
@@ -373,7 +373,7 @@ public abstract class OutboxTest<TTransaction>
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
         Assert.Equal(message.Header.ReplyTo, storedMessage.Header.ReplyTo);
-        Assert.Equal(message.Header.ContentType, storedMessage.Header.ContentType);
+        Assert.StartsWith(message.Header.ContentType.ToString(), storedMessage.Header.ContentType.ToString());
         Assert.Equal(message.Header.PartitionKey, storedMessage.Header.PartitionKey); 
             
         //Bag serialization

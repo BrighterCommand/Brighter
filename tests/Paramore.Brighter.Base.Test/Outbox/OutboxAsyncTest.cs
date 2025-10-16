@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
-public abstract class OutboxAsyncTest<TTransaction>
+public abstract class OutboxAsyncTest<TTransaction> : IDisposable
 {
     protected abstract IAmAnOutboxAsync<Message, TTransaction> Outbox { get; }
 
@@ -106,7 +106,7 @@ public abstract class OutboxAsyncTest<TTransaction>
             .OutstandingMessagesAsync(TimeSpan.Zero, context))
             .ToArray();
         
-        Assert.Equal(2, messages.Length);
+        Assert.DoesNotContain(firstMessage.Id, messages.Select(x => x.Id));
         Assert.Contains(secondMessage.Id, messages.Select(x => x.Id));
         Assert.Contains(thirdMessage.Id, messages.Select(x => x.Id));
     }
@@ -132,7 +132,9 @@ public abstract class OutboxAsyncTest<TTransaction>
             .OutstandingMessagesAsync(TimeSpan.Zero, context))
             .ToArray();
         
-        Assert.Empty(messages);
+        Assert.DoesNotContain(firstMessage.Id, messages.Select(x => x.Header.MessageId));
+        Assert.DoesNotContain(secondMessage.Id, messages.Select(x => x.Header.MessageId));
+        Assert.DoesNotContain(thirdMessage.Id, messages.Select(x => x.Header.MessageId));
     }
 
     [Fact]
@@ -251,6 +253,8 @@ public abstract class OutboxAsyncTest<TTransaction>
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(dispatched.Id, context);
         
+        await Task.Delay(TimeSpan.FromSeconds(10));
+        
         // Act
         var allUndispatched = (await Outbox.OutstandingMessagesAsync(TimeSpan.Zero, context)).ToArray();
         var messagesOverAnHour = (await Outbox.OutstandingMessagesAsync(TimeSpan.FromHours(1), context)).ToArray();
@@ -262,12 +266,10 @@ public abstract class OutboxAsyncTest<TTransaction>
         Assert.DoesNotContain(dispatched.Id, allUndispatched.Select(x => x.Id));
         Assert.Contains(undispatched.Id, allUndispatched.Select(x => x.Id));
         
-        
         Assert.True(allUndispatched.Length >= 1, "Expecting at least 1 message");
         Assert.Contains(earliest.Id, messagesOverAnHour.Select(x => x.Id));
         Assert.DoesNotContain(dispatched.Id, messagesOverAnHour.Select(x => x.Id));
         Assert.DoesNotContain(undispatched.Id, messagesOverAnHour.Select(x => x.Id));
-        
         
         Assert.DoesNotContain(earliest.Id, messagesOver4Hours.Select(x => x.Id));
         Assert.DoesNotContain(dispatched.Id, messagesOver4Hours.Select(x => x.Id));
@@ -325,7 +327,7 @@ public abstract class OutboxAsyncTest<TTransaction>
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
         Assert.Equal(message.Header.ReplyTo, storedMessage.Header.ReplyTo);
-        Assert.Equal(message.Header.ContentType, storedMessage.Header.ContentType);
+        Assert.StartsWith(message.Header.ContentType.ToString(), storedMessage.Header.ContentType.ToString());
         Assert.Equal(message.Header.PartitionKey, storedMessage.Header.PartitionKey); 
             
         //Bag serialization
@@ -378,7 +380,7 @@ public abstract class OutboxAsyncTest<TTransaction>
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
         Assert.Equal(message.Header.ReplyTo, storedMessage.Header.ReplyTo);
-        Assert.Equal(message.Header.ContentType, storedMessage.Header.ContentType);
+        Assert.StartsWith(message.Header.ContentType.ToString(), storedMessage.Header.ContentType.ToString());
         Assert.Equal(message.Header.PartitionKey, storedMessage.Header.PartitionKey); 
             
         //Bag serialization

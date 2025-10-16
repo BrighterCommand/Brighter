@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -17,7 +18,6 @@ public abstract class DistributedLockingAsyncTest
         return Task.CompletedTask;
     }
     
-    
     public void Dispose()
     {
         AfterEachTestAsync().GetAwaiter().GetResult();
@@ -30,6 +30,8 @@ public abstract class DistributedLockingAsyncTest
         return Task.CompletedTask;
     }
 
+    protected virtual TimeSpan DelayBetweenTryAcquireLockOnSameResource { get; } = TimeSpan.Zero;
+    
     [Fact]
     public async Task LockCanBeObtained()
     {
@@ -96,6 +98,11 @@ public abstract class DistributedLockingAsyncTest
         Assert.Null(lock2);
         
         await provider.ReleaseLockAsync(resource, lock1, CancellationToken.None);
+
+        if (DelayBetweenTryAcquireLockOnSameResource > TimeSpan.Zero)
+        {
+            await Task.Delay(DelayBetweenTryAcquireLockOnSameResource);
+        }
         
         // Assert
         var lock3 = await provider.ObtainLockAsync(resource, CancellationToken.None);
