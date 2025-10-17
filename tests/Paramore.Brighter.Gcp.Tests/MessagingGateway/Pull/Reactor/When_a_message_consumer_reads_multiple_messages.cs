@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Mime;
 using System.Threading;
-using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;

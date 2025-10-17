@@ -1,5 +1,4 @@
 ﻿using System.Data.Common;
-using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Outbox.Spanner;
@@ -7,9 +6,9 @@ using Paramore.Brighter.Spanner;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Outbox;
 
+[Trait("Category", "Spanner")]
 public class SpannerTextOutboxTest : RelationDatabaseOutboxTest
 {
-
     protected override string DefaultConnectingString => Const.ConnectionString;
     protected override string TableNamePrefix => Const.TablePrefix; 
     protected override bool BinaryMessagePayload => false;

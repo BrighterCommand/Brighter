@@ -7,6 +7,7 @@ using Paramore.Brighter.Spanner;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Outbox;
 
+[Trait("Category", "Spanner")]
 public class SpannerTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
 {
     protected override string DefaultConnectingString => Const.ConnectionString;

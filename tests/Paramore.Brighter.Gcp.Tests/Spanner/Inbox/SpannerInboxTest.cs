@@ -1,10 +1,10 @@
-﻿using System.Threading.Tasks;
-using Google.Cloud.Spanner.Data;
+﻿using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Spanner;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Inbox;
 
+[Trait("Category", "Spanner")]
 public class SpannerInboxTest : RelationalDatabaseInboxTests
 {
     protected override string DefaultConnectingString => Const.ConnectionString;

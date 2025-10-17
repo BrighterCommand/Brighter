@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 using Google.Cloud.Firestore.V1;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Firestore;
