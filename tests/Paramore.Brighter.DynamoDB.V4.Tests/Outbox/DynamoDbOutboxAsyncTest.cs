@@ -68,7 +68,7 @@ public class DynamoDbOutboxAsyncTest : OutboxAsyncTest<TransactWriteItemsRequest
             }
             catch 
             {
-                // Ignoring any error
+                // Ignoring any error during delete, it's not important at this point
             }
         }
     }

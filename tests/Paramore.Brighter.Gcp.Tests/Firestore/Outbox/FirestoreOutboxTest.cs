@@ -35,10 +35,17 @@ public class FirestoreOutboxTest : OutboxTest<FirestoreTransaction>
         
         foreach (var command in CreatedMessages)
         {
-            firestore.DeleteDocument(new DeleteDocumentRequest
+            try
             {
-                Name = $"{config.DatabasePath}/documents/{command.Id}"
-            });
+                firestore.DeleteDocument(new DeleteDocumentRequest
+                {
+                    Name = $"{config.DatabasePath}/documents/{command.Id}"
+                });
+            }
+            catch
+            {
+                // Ignoring any error during delete, it's not important at this point
+            }
         }
     }
 }

@@ -56,23 +56,23 @@ public class DynamoDbOutboxTest : OutboxTest<TransactWriteItemsRequest>
         return new DynamoDbUnitOfWork(Const.DynamoDbClient);
     }
 
-    // protected override void DeleteStore()
-    // {
-    //     var client =  Const.DynamoDbClient;
-    //     foreach (var message in CreatedMessages)
-    //     {
-    //         try
-    //         {
-    //             client.DeleteItemAsync(new DeleteItemRequest(_tableName,
-    //                 new Dictionary<string, AttributeValue>
-    //                 {
-    //                     [nameof(MessageItem.MessageId)] = new() { S = message.Id }
-    //                 })).GetAwaiter().GetResult();
-    //         }
-    //         catch 
-    //         {
-    //             // Ignoring any error
-    //         }
-    //     }
-    // }
+    protected override void DeleteStore()
+    {
+        var client =  Const.DynamoDbClient;
+        foreach (var message in CreatedMessages)
+        {
+            try
+            {
+                client.DeleteItemAsync(new DeleteItemRequest(_tableName,
+                    new Dictionary<string, AttributeValue>
+                    {
+                        [nameof(MessageItem.MessageId)] = new() { S = message.Id }
+                    })).GetAwaiter().GetResult();
+            }
+            catch 
+            {
+                // Ignoring any error during delete, it's not important at this point
+            }
+        }
+    }
 }

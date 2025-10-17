@@ -1,4 +1,5 @@
-﻿using Google.Cloud.Firestore.V1;
+﻿using System;
+using Google.Cloud.Firestore.V1;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Firestore;
 using Paramore.Brighter.Inbox.Firestore;
@@ -22,10 +23,17 @@ public class FirestoreInboxTest : InboxTests
         
         foreach (var command in CreatedCommands)
         {
-            firestore.DeleteDocument(new DeleteDocumentRequest
+            try
             {
-                Name = $"{config.DatabasePath}/documents/{command.Id}"
-            });
+                firestore.DeleteDocument(new DeleteDocumentRequest
+                {
+                    Name = $"{config.DatabasePath}/documents/{command.Id}"
+                });
+            }
+            catch (Exception e)
+            {
+                // Ignoring any error during delete, it's not important at this point
+            }
         }
     }
 }

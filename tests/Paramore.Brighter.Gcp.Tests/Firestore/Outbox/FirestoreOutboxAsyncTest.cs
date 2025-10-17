@@ -36,10 +36,17 @@ public class FirestoreOutboxAsyncTest : OutboxAsyncTest<FirestoreTransaction>
         
         foreach (var command in CreatedMessages)
         {
-            await firestore.DeleteDocumentAsync(new DeleteDocumentRequest
+            try
             {
-                Name = $"{config.DatabasePath}/documents/{command.Id}"
-            });
+                await firestore.DeleteDocumentAsync(new DeleteDocumentRequest
+                {
+                    Name = $"{config.DatabasePath}/documents/{command.Id}"
+                });
+            }
+            catch
+            {
+                // Ignoring any error during delete, it's not important at this point
+            }
         }
     }
 }
