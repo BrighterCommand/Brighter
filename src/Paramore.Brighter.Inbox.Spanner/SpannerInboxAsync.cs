@@ -27,13 +27,13 @@ namespace Paramore.Brighter.Inbox.Spanner;
 /// base class handles much of the common database interaction logic.
 /// </para>
 /// </remarks>
-public class SpannerInbox(
+public class SpannerInboxAsync(
     IAmARelationalDatabaseConfiguration configuration,
     IAmARelationalDbConnectionProvider connectionProvider)
     : RelationalDatabaseInbox(DbSystem.Spanner, configuration, connectionProvider,
-        new SpannerSqlQueries(), ApplicationLogging.CreateLogger<SpannerInbox>())
+        new SpannerSqlQueries(), ApplicationLogging.CreateLogger<SpannerInboxAsync>())
 {
-    public SpannerInbox(IAmARelationalDatabaseConfiguration configuration)
+    public SpannerInboxAsync(IAmARelationalDatabaseConfiguration configuration)
         : this(configuration, new SpannerConnectionProvider(configuration))
     {
         

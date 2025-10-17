@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -9,6 +9,7 @@ namespace Paramore.Brighter.Base.Test.Inbox;
 public abstract class InboxAsyncTest
 {
     protected abstract IAmAnInboxAsync Inbox { get; }
+    protected List<MyCommand> CreatedCommands { get; } = [];
 
     protected InboxAsyncTest()
     {
@@ -40,12 +41,21 @@ public abstract class InboxAsyncTest
     {
         return Task.CompletedTask;
     }
+    
+    protected virtual MyCommand CreateCommand()
+    {
+        var command = new MyCommand { Value = Uuid.NewAsString() };
+        
+        CreatedCommands.Add(command);
+
+        return command;
+    }
 
     [Fact]
     public async Task WriteToInbox()
     {
         var contextKey = Uuid.NewAsString();
-        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var command = CreateCommand();
         
         // act 
         await Inbox.AddAsync(command, contextKey, null);
@@ -61,7 +71,7 @@ public abstract class InboxAsyncTest
     {
         // setup
         var contextKey = Uuid.NewAsString();
-        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var command = CreateCommand();
         await Inbox.AddAsync(command, contextKey, null);
 
         // act 
@@ -77,7 +87,7 @@ public abstract class InboxAsyncTest
     {
         // setup
         var contextKey = Uuid.NewAsString();
-        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var command = CreateCommand();
         await Inbox.AddAsync(command, contextKey, null);
 
         // act 
@@ -102,7 +112,7 @@ public abstract class InboxAsyncTest
     [Fact]
     public async Task ThrowRequestNotFoundExceptionWhenTryToGetAMessageThatExistsWithDifferentContextKey()
     {
-        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var command = CreateCommand();
         await Inbox.AddAsync(command, Uuid.NewAsString(), null);
         
         // act & asserts

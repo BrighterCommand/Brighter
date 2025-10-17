@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.Inbox.Exceptions;
 using Xunit;
@@ -8,6 +9,7 @@ namespace Paramore.Brighter.Base.Test.Inbox;
 public abstract class InboxTests : IDisposable
 {
     protected abstract IAmAnInboxSync Inbox { get; }
+    protected virtual List<MyCommand> CreatedCommands { get; } = [];
 
     protected InboxTests()
     {
@@ -37,13 +39,22 @@ public abstract class InboxTests : IDisposable
     protected virtual void DeleteStore()
     {
     }
+    
+    protected virtual MyCommand CreateCommand()
+    {
+        var command = new MyCommand { Value = Uuid.NewAsString() };
+        
+        CreatedCommands.Add(command);
+
+        return command;
+    }
 
     [Fact]
     public void WriteToInbox()
     {
         // Arrage
         var contextKey = Uuid.NewAsString();
-        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var command = CreateCommand();
         
         // Act 
         Inbox.Add(command, contextKey, null);
@@ -59,7 +70,8 @@ public abstract class InboxTests : IDisposable
     {
         // Arrage
         var contextKey = Uuid.NewAsString();
-        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var command = CreateCommand();
+        
         Inbox.Add(command, contextKey, null);
 
         // Act 
@@ -75,7 +87,8 @@ public abstract class InboxTests : IDisposable
     {
         // setup
         var contextKey = Uuid.NewAsString();
-        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var command = CreateCommand();
+        
         Inbox.Add(command, contextKey, null);
 
         // act 
@@ -100,7 +113,7 @@ public abstract class InboxTests : IDisposable
     [Fact]
     public void ThrowRequestNotFoundExceptionWhenTryToGetAMessageThatExistsWithDifferentContextKey()
     {
-        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var command = CreateCommand();
         Inbox.Add(command, Uuid.NewAsString(), null);
         
         // act & asserts
