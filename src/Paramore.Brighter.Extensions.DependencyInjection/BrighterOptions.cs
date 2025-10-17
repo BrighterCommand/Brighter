@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IAmAFeatureSwitchRegistry? FeatureSwitchRegistry { get; set; } = null;
 
         /// <summary>
-        /// Configures the lifetime of the Handlers. Defaults to Scoped.
+        /// Configures the lifetime of the Handlers. Defaults to Transient.
         /// </summary>
         public ServiceLifetime HandlerLifetime { get; set; } = ServiceLifetime.Transient;
 
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IAmARequestContextFactory RequestContextFactory { get; set; } = new InMemoryRequestContextFactory();
 
         /// <summary>
-        /// Configures the lifetime of any transformers. Defaults to Singleton
+        /// Configures the lifetime of any transformers. Defaults to Transient
         /// </summary>
         public ServiceLifetime TransformerLifetime { get; set; } = ServiceLifetime.Transient;
     }
