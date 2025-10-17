@@ -80,7 +80,7 @@ public class PostCommandWithCustomPolicyTests : IDisposable
     }
 
     [Fact]
-    public void When_Posting_With_A_Default_Policy()
+    public void When_Posting_With_A_Custom_Policy()
     {
         var requestContext = new RequestContext();
         _commandProcessor.Post(_myCommand, requestContext);
