@@ -30,13 +30,13 @@ public class DynamoDbOutboxTest : OutboxTest<TransactWriteItemsRequest>
         Dictionary<string,AttributeValue>? lastKey =  null;
         do
         {
-            var scan = client.ScanAsync(new ScanRequest
-                {
-                    TableName = _tableName,
-                    AttributesToGet = { nameof(MessageItem.MessageId) },
-                    ExclusiveStartKey = lastKey,
-                    Select = Select.SPECIFIC_ATTRIBUTES
-                })
+            var request  = new ScanRequest();
+            request.TableName = _tableName;
+            request.ExclusiveStartKey = lastKey;
+            request.Select = Select.SPECIFIC_ATTRIBUTES;
+            request.AttributesToGet = [nameof(MessageItem.MessageId)];
+            
+            var scan = client.ScanAsync(request)
                 .GetAwaiter()
                 .GetResult();
 
