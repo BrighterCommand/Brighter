@@ -93,6 +93,11 @@ public class DynamoDbTableFactory
         {
             createTableRequest.GlobalSecondaryIndexes = null;
         }
+
+        if (createTableRequest.LocalSecondaryIndexes.Count == 0)
+        {
+            createTableRequest.LocalSecondaryIndexes = null;
+        }
         
         return createTableRequest;
     }
