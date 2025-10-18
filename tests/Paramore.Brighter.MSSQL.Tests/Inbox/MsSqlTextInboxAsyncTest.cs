@@ -7,8 +7,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox;
 
 public class MsSqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests 
 {
-    protected override string DefaultConnectingString => Const.DefaultConnectingString;
-    protected override string TableNamePrefix => Const.TablePrefix;
+    protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;
+    protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
     protected override bool BinaryMessagePayload => false; 
     
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
@@ -18,21 +18,12 @@ public class MsSqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)
     {
-        await MsSqlTestHelper.EnsureDatabaseExistsAsync(configuration.ConnectionString);
-        
-        await using var connection = new SqlConnection(configuration.ConnectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = SqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload);
-        await command.ExecuteNonQueryAsync();
+        await Tests.Configuration.EnsureDatabaseExistsAsync(configuration.ConnectionString);
+        await Tests.Configuration.CreateTableAsync(configuration.ConnectionString, SqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload));
     }
 
     protected override async Task DeleteInboxTableAsync(RelationalDatabaseConfiguration configuration)
     {
-        await using var connection = new SqlConnection(configuration.ConnectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE {configuration.InBoxTableName}";
-        await command.ExecuteNonQueryAsync();
+        await Tests.Configuration.DeleteTableAsync(configuration.ConnectionString, configuration.InBoxTableName);
     }
 }

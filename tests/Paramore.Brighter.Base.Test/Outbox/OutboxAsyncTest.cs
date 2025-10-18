@@ -225,7 +225,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IDisposable
         var messagesOver4Hours = (await Outbox.DispatchedMessagesAsync(TimeSpan.FromHours(4), context)).ToArray();
         
         // Assert
-        Assert.True(allDispatched.Length >= 2, "Expecting at least 2 messages");
+        Assert.True(allDispatched.Length >= 2, $"Expecting at least 2 messages, but it got {allDispatched.Length}");
         Assert.Contains(earliest.Id, allDispatched.Select(x => x.Id));
         Assert.Contains(dispatched.Id, allDispatched.Select(x => x.Id));
         Assert.DoesNotContain(undispatched.Id, allDispatched.Select(x => x.Id));

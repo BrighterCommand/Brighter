@@ -6,8 +6,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox;
 
 public class MsSqlTextInboxTest : RelationalDatabaseInboxTests 
 {
-    protected override string DefaultConnectingString => Const.DefaultConnectingString;
-    protected override string TableNamePrefix => Const.TablePrefix;
+    protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;
+    protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
     protected override bool BinaryMessagePayload => false; 
     
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
@@ -17,21 +17,12 @@ public class MsSqlTextInboxTest : RelationalDatabaseInboxTests
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)
     {
-        MsSqlTestHelper.EnsureDatabaseExists(configuration.ConnectionString);
-        
-        using var connection = new SqlConnection(configuration.ConnectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = SqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload);
-        command.ExecuteNonQuery();
+        Tests.Configuration.EnsureDatabaseExists(configuration.ConnectionString);
+        Tests.Configuration.CreateTable(configuration.ConnectionString, SqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload));
     }
 
     protected override void DeleteInboxTable(RelationalDatabaseConfiguration configuration)
     {
-        using var connection = new SqlConnection(configuration.ConnectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE {configuration.InBoxTableName}";
-        command.ExecuteNonQuery();
+        Tests.Configuration.DeleteTable(configuration.ConnectionString, configuration.InBoxTableName);
     }
 }

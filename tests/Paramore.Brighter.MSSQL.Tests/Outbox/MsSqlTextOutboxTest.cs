@@ -8,8 +8,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox;
 
 public class MsSqlTextOutboxTest : RelationDatabaseOutboxTest
 {
-    protected override string DefaultConnectingString => Const.DefaultConnectingString;
-    protected override string TableNamePrefix => Const.TablePrefix;
+    protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;
+    protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
     protected override bool BinaryMessagePayload => false; 
     
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration)
@@ -24,21 +24,12 @@ public class MsSqlTextOutboxTest : RelationDatabaseOutboxTest
 
     protected override void CreateOutboxTable(RelationalDatabaseConfiguration configuration)
     {
-        MsSqlTestHelper.EnsureDatabaseExists(configuration.ConnectionString);
-        
-        using var connection = new SqlConnection(configuration.ConnectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = SqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, BinaryMessagePayload);
-        command.ExecuteNonQuery();
+        Tests.Configuration.EnsureDatabaseExists(configuration.ConnectionString);
+        Tests.Configuration.CreateTable(configuration.ConnectionString, SqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, BinaryMessagePayload));
     }
 
     protected override void DeleteOutboxTable(RelationalDatabaseConfiguration configuration)
     {
-        using var connection = new SqlConnection(configuration.ConnectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE {configuration.OutBoxTableName}";
-        command.ExecuteNonQuery();
+        Tests.Configuration.DeleteTable(configuration.ConnectionString, configuration.OutBoxTableName);
     }
 }
