@@ -20,7 +20,7 @@ public class FirestoreOutboxAsyncTest : OutboxAsyncTest<FirestoreTransaction>
 
     protected override async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        return await _outbox!.GetAsync();
+        return await _outbox!.GetAsync(pageSize: 1_000);
     }
 
     protected override IAmABoxTransactionProvider<FirestoreTransaction> CreateTransactionProvider()
@@ -40,7 +40,7 @@ public class FirestoreOutboxAsyncTest : OutboxAsyncTest<FirestoreTransaction>
             {
                 await firestore.DeleteDocumentAsync(new DeleteDocumentRequest
                 {
-                    Name = $"{config.DatabasePath}/documents/{command.Id}"
+                    Name = config.GetDocumentName(config.Outbox!.Name, command.Id)
                 });
             }
             catch

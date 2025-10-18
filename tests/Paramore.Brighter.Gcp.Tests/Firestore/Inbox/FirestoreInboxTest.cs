@@ -27,7 +27,7 @@ public class FirestoreInboxTest : InboxTests
             {
                 firestore.DeleteDocument(new DeleteDocumentRequest
                 {
-                    Name = $"{config.DatabasePath}/documents/{command.Id}"
+                    Name = config.GetDocumentName(config.Inbox!.Name, command.Id)
                 });
             }
             catch (Exception e)

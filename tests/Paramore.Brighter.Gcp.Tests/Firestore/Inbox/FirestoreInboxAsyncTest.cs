@@ -29,7 +29,7 @@ public class FirestoreInboxAsyncTest : InboxAsyncTest
             {
                 await firestore.DeleteDocumentAsync(new DeleteDocumentRequest
                 {
-                    Name = $"{config.DatabasePath}/documents/{command.Id}"
+                    Name = config.GetDocumentName(config.Inbox!.Name, command.Id)
                 });
             }
             catch 

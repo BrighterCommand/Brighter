@@ -18,7 +18,7 @@ public class FirestoreOutboxTest : OutboxTest<FirestoreTransaction>
 
     protected override IEnumerable<Message> GetAllMessages()
     {
-        return _outbox!.Get();
+        return _outbox!.Get(pageSize: 1_000);
     }
 
     protected override IAmABoxTransactionProvider<FirestoreTransaction> CreateTransactionProvider()
@@ -28,17 +28,17 @@ public class FirestoreOutboxTest : OutboxTest<FirestoreTransaction>
 
     protected override void DeleteStore()
     {
-       var config = Configuration.CreateOutbox();
+        var config = Configuration.CreateOutbox();
         var firestore = new FirestoreConnectionProvider(config)
             .GetFirestoreClient();
-        
+
         foreach (var command in CreatedMessages)
         {
             try
             {
                 firestore.DeleteDocument(new DeleteDocumentRequest
                 {
-                    Name = $"{config.DatabasePath}/documents/{command.Id}"
+                    Name = config.GetDocumentName(config.Outbox!.Name, command.Id)
                 });
             }
             catch

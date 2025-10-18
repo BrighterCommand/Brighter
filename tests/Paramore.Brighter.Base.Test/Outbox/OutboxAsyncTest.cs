@@ -216,7 +216,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IDisposable
         var undispatched = CreateRandomMessage();
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
-        await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTimeOffset.UtcNow.AddHours(-3));
         await Outbox.MarkDispatchedAsync(dispatched.Id, context);
         
         // Act
