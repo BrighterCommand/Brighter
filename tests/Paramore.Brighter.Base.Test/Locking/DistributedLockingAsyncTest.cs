@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Locking;
 
-public abstract class DistributedLockingAsyncTest
+public abstract class DistributedLockingAsyncTest : IDisposable
 {
     protected DistributedLockingAsyncTest()
     {
