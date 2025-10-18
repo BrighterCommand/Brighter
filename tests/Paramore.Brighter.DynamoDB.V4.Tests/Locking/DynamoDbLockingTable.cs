@@ -34,11 +34,12 @@ public static class DynamoDbLockingTable
                         ReadCapacityUnits = 10, WriteCapacityUnits = 10
                     }));
 
-            s_tableName = request.TableName;
             var builder = new DynamoDbTableBuilder(dynamoDbClient);
             await builder.Build(request);
 
             await builder.EnsureTablesReady([request.TableName], TableStatus.ACTIVE);
+            
+            s_tableName = request.TableName;
             return s_tableName;
         }
         catch (ResourceInUseException)

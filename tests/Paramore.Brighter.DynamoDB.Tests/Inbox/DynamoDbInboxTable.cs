@@ -11,7 +11,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox;
 
 public static class DynamoDbInboxTable
 {
-    private static readonly SemaphoreSlim s_semaphoreSlim = new SemaphoreSlim(1, 1);
+    private static readonly SemaphoreSlim s_semaphoreSlim = new(1, 1);
     private static string? s_tableName;
 
     public static async Task<string> EnsureTableIsCreatedAsync(AmazonDynamoDBClient dynamoDbClient)
@@ -36,11 +36,11 @@ public static class DynamoDbInboxTable
                         ReadCapacityUnits = 10, WriteCapacityUnits = 10
                     }));
 
-            s_tableName = request.TableName;
             var builder = new DynamoDbTableBuilder(dynamoDbClient);
             await builder.Build(request);
 
             await builder.EnsureTablesReady([request.TableName], TableStatus.ACTIVE);
+            s_tableName = request.TableName;
             return s_tableName;
         }
         catch (ResourceInUseException)
