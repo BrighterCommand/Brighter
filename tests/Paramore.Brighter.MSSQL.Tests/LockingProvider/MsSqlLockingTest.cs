@@ -4,7 +4,7 @@ using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MSSQL.Tests.LockingProvider;
 
-public class MySqlLockingTest : RelationalDatabaseDistributedLockingAsyncTest
+public class MsSqlLockingTest : RelationalDatabaseDistributedLockingAsyncTest
 {
     protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;
     protected override IDistributedLock CreateDistributedLock()
