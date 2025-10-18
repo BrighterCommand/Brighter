@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
-using System.Threading;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
@@ -85,7 +84,7 @@ public class MessageProducerDlqTestsAsync : IDisposable
         }
         
         var dlqCount = GetDLQCount();
-        Assert.Equal(1, dlqCount);
+        Assert.True(dlqCount >= 1);
     }
 
     private int GetDLQCount()

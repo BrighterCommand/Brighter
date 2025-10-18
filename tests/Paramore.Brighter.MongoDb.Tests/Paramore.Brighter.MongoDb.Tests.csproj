@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.MongoDb\Paramore.Brighter.MongoDb.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.MongoDb\Paramore.Brighter.Outbox.MongoDb.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.MongoGridFS\Paramore.Brighter.Transformers.MongoGridFS.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
   </ItemGroup>
 
 </Project>

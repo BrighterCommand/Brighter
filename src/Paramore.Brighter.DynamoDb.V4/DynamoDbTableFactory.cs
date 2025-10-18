@@ -74,6 +74,7 @@ public class DynamoDbTableFactory
             GlobalSecondaryIndexes = [],
             LocalSecondaryIndexes = []
         };
+        
         AddTableProvisionedThroughput<T>(provisionedThroughput, createTableRequest);
         createTableRequest.AttributeDefinitions.AddRange(GetAttributeDefinitions<T>(docType));
         createTableRequest.GlobalSecondaryIndexes.AddRange(GetGlobalSecondaryIndices<T>(docType).Select(entry => entry.Value));
@@ -87,6 +88,17 @@ public class DynamoDbTableFactory
         [
             new Tag { Key = "outbox", Value = "brighter_outbox" }
         ];
+
+        if (createTableRequest.GlobalSecondaryIndexes.Count == 0)
+        {
+            createTableRequest.GlobalSecondaryIndexes = null;
+        }
+
+        if (createTableRequest.LocalSecondaryIndexes.Count == 0)
+        {
+            createTableRequest.LocalSecondaryIndexes = null;
+        }
+        
         return createTableRequest;
     }
 

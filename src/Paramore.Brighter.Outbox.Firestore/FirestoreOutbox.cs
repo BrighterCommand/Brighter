@@ -225,66 +225,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     public IEnumerable<Message> DispatchedMessages(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize = 100,
         int pageNumber = 1, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
-        var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.DispatchedMessages, _outboxCollection.Name),
-            requestContext?.Span,
-            options: _configuration.Instrumentation);
-
-        try
-        {
-            var offset = (pageNumber - 1) * pageSize;
-            var timeStamp = _configuration.TimeProvider.GetUtcNow() - dispatchedSince;
-            var query = new StructuredQuery
-            {
-                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _outboxCollection.Name } },
-                Where = new StructuredQuery.Types.Filter
-                {
-                    FieldFilter = new StructuredQuery.Types.FieldFilter
-                    {
-                        Field = new StructuredQuery.Types.FieldReference { FieldPath = Dispatched },
-                        Op = StructuredQuery.Types.FieldFilter.Types.Operator.LessThan,
-                        Value = new Value { TimestampValue = Timestamp.FromDateTimeOffset(timeStamp) }
-                    }
-                },
-                OrderBy =
-                {
-                    new StructuredQuery.Types.Order
-                    {
-                        Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
-                        Direction = StructuredQuery.Types.Direction.Descending
-                    }
-                },
-                Offset = offset,
-                Limit = pageSize
-            };
-
-            var request = new RunQueryRequest
-            {
-                Parent = $"{_configuration.DatabasePath}/documents", 
-                StructuredQuery = query
-            };
-
-            return BrighterAsyncContext.Run(async () =>
-            {
-                var messages = new List<Message>(pageSize);
-
-                var client = await _connectionProvider.GetFirestoreClientAsync();
-                using var response = client.RunQuery(request);
-                await foreach (var doc in response.GetResponseStream())
-                {
-                    if (doc.Document != null)
-                    {
-                        messages.Add(ToMessage(doc.Document));
-                    }
-                }
-
-                return messages;
-            });
-        }
-        finally
-        {
-            Tracer?.EndSpan(span);
-        }
+        return BrighterAsyncContext.Run(async () => await DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, outBoxTimeout, args));
     }
 
     /// <inheritdoc />
@@ -322,72 +263,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     /// <inheritdoc />
     public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
-        var ids = messageIds.Select(id => id.Value).ToArray();
-
-        var dbAttributes = new Dictionary<string, string>()
-        {
-            {"db.operation.parameter.message.ids", string.Join(",", ids)}
-        };
-
-        var span = Tracer?.CreateDbSpan(
-             new BoxSpanInfo(DbSystem.Firestore,
-                 _configuration.Database,
-                 BoxDbOperation.Get,
-                 _outboxCollection.Name,
-                 dbAttributes: dbAttributes),
-             requestContext?.Span,
-             options: _configuration.Instrumentation);
-
-        var arrayOfIds = new ArrayValue();
-        arrayOfIds.Values.AddRange(ids.Select(id => new Value { StringValue = id }));
-        try
-        {
-            var query = new StructuredQuery
-            {
-                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _outboxCollection.Name } },
-                Where = new StructuredQuery.Types.Filter
-                {
-                    FieldFilter = new StructuredQuery.Types.FieldFilter
-                    {
-                        Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.MessageId) },
-                        Op = StructuredQuery.Types.FieldFilter.Types.Operator.In,
-                        Value = new Value { ArrayValue = arrayOfIds }
-                    }
-                },
-                OrderBy =
-               {
-                   new StructuredQuery.Types.Order
-                   {
-                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
-                       Direction = StructuredQuery.Types.Direction.Ascending
-                   }
-               }
-            };
-
-            var request = new RunQueryRequest
-            {
-                Parent = $"{_configuration.DatabasePath}/documents",
-                StructuredQuery = query
-            };
-
-            var client = _connectionProvider.GetFirestoreClient();
-            return BrighterAsyncContext.Run(async () =>
-            {
-                var messages = new List<Message>();
-
-                using var response = client.RunQuery(request);
-                await foreach (var doc in response.GetResponseStream())
-                {
-                    messages.Add(ToMessage(doc.Document));
-                }
-
-                return messages;
-            });
-        }
-        finally
-        {
-            Tracer?.EndSpan(span);
-        }
+        return BrighterAsyncContext.Run(async () => await GetAsync(messageIds, requestContext, outBoxTimeout, args));
     }
 
     /// <inheritdoc />
@@ -405,6 +281,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
 
         try
         {
+            dispatchedAt ??= _configuration.TimeProvider.GetUtcNow();
             var client = _connectionProvider.GetFirestoreClient();
             var document = new Document
             {
@@ -413,7 +290,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                 {
                     [Dispatched] = new Value
                     {
-                        TimestampValue = Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow())
+                        TimestampValue = Timestamp.FromDateTimeOffset(dispatchedAt.Value)
                     },
                     [IsDispatched] = new Value
                     {
@@ -445,89 +322,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize = 100,
         int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null)
     {
-        var offset = (pageNumber - 1) * pageSize;
-        var timeStamp = _configuration.TimeProvider.GetUtcNow() - dispatchedSince;
-        var query = new StructuredQuery
-        {
-            From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _outboxCollection.Name  } },
-            Where = new StructuredQuery.Types.Filter
-            {
-                CompositeFilter =  new StructuredQuery.Types.CompositeFilter
-                {
-                    Op = StructuredQuery.Types.CompositeFilter.Types.Operator.And,
-                    Filters =
-                    {
-                        new  StructuredQuery.Types.Filter
-                        {
-                            FieldFilter = new StructuredQuery.Types.FieldFilter
-                            { 
-                                Field = new StructuredQuery.Types.FieldReference { FieldPath = IsDispatched }, 
-                                Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal, 
-                                Value = new Value { BooleanValue = false }
-                            }
-                        },
-                        new  StructuredQuery.Types.Filter
-                        {
-                            FieldFilter = new StructuredQuery.Types.FieldFilter
-                            { 
-                                Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) }, 
-                                Op = StructuredQuery.Types.FieldFilter.Types.Operator.LessThan, 
-                                Value = new Value { TimestampValue = Timestamp.FromDateTimeOffset(timeStamp) }
-                            }
-                        }
-                    }
-                }
-            },
-            OrderBy =  
-            {
-                new StructuredQuery.Types.Order
-                {
-                    Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
-                    Direction = StructuredQuery.Types.Direction.Descending
-                }
-            },
-            Offset = offset,
-            Limit = pageSize
-        };
-
-
-        if (trippedTopics != null)
-        {
-            var arrayValue = new ArrayValue();
-            arrayValue.Values.AddRange(trippedTopics.Select(topic => new Value { StringValue = topic.Value }));
-            query.Where.CompositeFilter.Filters.Add(new StructuredQuery.Types.Filter
-            {
-                FieldFilter = new StructuredQuery.Types.FieldFilter
-                {
-                    Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.Topic) },
-                    Op = StructuredQuery.Types.FieldFilter.Types.Operator.NotIn,
-                    Value = new Value { ArrayValue = arrayValue }
-                }
-            });
-        }
-
-        var request = new RunQueryRequest 
-        {
-            Parent = $"{_configuration.DatabasePath}/documents", 
-            StructuredQuery = query
-        };
-        
-        return BrighterAsyncContext.Run(async () =>
-        {
-            var messages = new List<Message>();
-
-            var client = await _connectionProvider.GetFirestoreClientAsync();
-            using var response = client.RunQuery(request);
-            await foreach (var doc in response.GetResponseStream())
-            {
-                if (doc.Document != null)
-                {
-                    messages.Add(ToMessage(doc.Document));
-                }
-            }
-            
-            return messages;
-        });
+        return BrighterAsyncContext.Run(async () => await OutstandingMessagesAsync(dispatchedSince, requestContext ?? new RequestContext(), pageSize, pageNumber, trippedTopics, args));
     }
     
     /// <summary>
@@ -845,7 +640,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         try
         {
             var offset = (pageNumber - 1) * pageSize;
-            var timeStamp = _configuration.TimeProvider.GetUtcNow() - dispatchedSince;
+            var timeStamp = _configuration.TimeProvider.GetUtcNow().Subtract(dispatchedSince);
             var query = new StructuredQuery
             {
                 From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _outboxCollection.Name } },
@@ -854,7 +649,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                     FieldFilter = new StructuredQuery.Types.FieldFilter
                     {
                         Field = new StructuredQuery.Types.FieldReference { FieldPath = Dispatched },
-                        Op = StructuredQuery.Types.FieldFilter.Types.Operator.LessThan,
+                        Op = StructuredQuery.Types.FieldFilter.Types.Operator.LessThanOrEqual,
                         Value = new Value { TimestampValue = Timestamp.FromDateTimeOffset(timeStamp) }
                     }
                 },
@@ -947,9 +742,10 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
             new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.MarkDispatched, _outboxCollection.Name, dbAttributes: dbAttributes),
             requestContext?.Span,
             options: _configuration.Instrumentation);
-
+        
         try
         {
+            dispatchedAt ??= _configuration.TimeProvider.GetUtcNow();
             var document = new Document
             {
                 Name = _configuration.GetDocumentName(_outboxCollection.Name, id),
@@ -957,7 +753,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                 {
                     [Dispatched] = new Value
                     {
-                        TimestampValue = Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow())
+                        TimestampValue = Timestamp.FromDateTimeOffset(dispatchedAt.Value)
                     },
                     [IsDispatched] = new Value
                     {
@@ -1058,7 +854,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     { 
         var offset = (pageNumber - 1) * pageSize;
-        var timeStamp = _configuration.TimeProvider.GetUtcNow() - dispatchedSince;
+        var timeStamp = _configuration.TimeProvider.GetUtcNow().Subtract(dispatchedSince);
         var query = new StructuredQuery
         {
             From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _outboxCollection.Name } },
@@ -1443,6 +1239,16 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         {
             doc.Fields[nameof(MessageHeader.TraceState)] = new Value { StringValue = message.Header.TraceState.Value };
         }
+
+        if (!Id.IsNullOrEmpty(message.Header.WorkflowId))
+        {
+            doc.Fields[nameof(MessageHeader.WorkflowId)] = new Value { StringValue = message.Header.WorkflowId.Value };
+        }
+        
+        if (!Id.IsNullOrEmpty(message.Header.JobId))
+        {
+            doc.Fields[nameof(MessageHeader.JobId)] = new Value { StringValue = message.Header.JobId.Value };
+        }
         
         return doc;
     }
@@ -1539,6 +1345,18 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
             traceState  = new TraceState(traceStateValue.StringValue);
         }
 
+        Id? workflowId = null;
+        if (document.Fields.TryGetValue(nameof(MessageHeader.WorkflowId), out var workflowIdValue))
+        {
+            workflowId = Id.Create(workflowIdValue.StringValue);
+        }
+        
+        Id? jobId = null;
+        if (document.Fields.TryGetValue(nameof(MessageHeader.JobId), out var jobIdValue))
+        {
+            jobId = Id.Create(jobIdValue.StringValue);
+        }
+        
         return new Message(
             new MessageHeader(
                 messageId: messageId,
@@ -1557,7 +1375,9 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                 delayed: TimeSpan.Zero,
                 traceParent: traceParent,
                 traceState: traceState,
-                baggage: baggage)
+                baggage: baggage,
+                jobId: jobId,
+                workflowId: workflowId)
             {
                 Bag = bag,
                 DataRef = dataRef,

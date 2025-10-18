@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.DynamoDB.V4\Paramore.Brighter.Inbox.DynamoDB.V4.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.DynamoDB.V4\Paramore.Brighter.Locking.DynamoDB.V4.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.DynamoDB.V4\Paramore.Brighter.Outbox.DynamoDB.V4.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
   </ItemGroup>
 
 </Project>

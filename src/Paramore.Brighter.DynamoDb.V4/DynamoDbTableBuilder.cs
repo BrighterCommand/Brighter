@@ -142,7 +142,7 @@ public class DynamoDbTableBuilder(IAmazonDynamoDB client)
     private static bool AddLocalSecondaryIndexUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
         List<AttributeDefinition> keyMatchedAttributes)
     {
-        foreach (var index in tableRequest.LocalSecondaryIndexes)
+        foreach (var index in tableRequest.LocalSecondaryIndexes ?? [])
         {
             foreach (var keySchemaElement in index.KeySchema)
             {

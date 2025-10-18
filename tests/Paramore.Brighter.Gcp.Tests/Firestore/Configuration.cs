@@ -45,14 +45,8 @@ public static class Configuration
         };
     }
 
-    public static void Cleanup(string collection)
-    {
-        // var config = new MongoDbConfiguration(ConnectionString, DatabaseName);
-        // config.Client.GetDatabase(config.DatabaseName).DropCollection(collection);
-    }
-
-    public const string DatabaseName = "brighter-firestore-database";
-    public const string InboxCollection = "inbox";
-    public const string OutboxCollection = "outbox";
-    public const string LockingCollection = "locking";
+    private const string DatabaseName = "brighter-firestore-database";
+    private const string InboxCollection = "inbox";
+    private const string OutboxCollection = "outbox";
+    private const string LockingCollection = "locking";
 }
