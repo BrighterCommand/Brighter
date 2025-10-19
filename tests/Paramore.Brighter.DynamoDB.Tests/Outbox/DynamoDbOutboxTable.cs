@@ -19,7 +19,8 @@ public static class DynamoDbOutboxTable
         {
             return s_tableName;
         }
-        
+
+        var tableName = string.Empty;
         await s_semaphoreSlim.WaitAsync();
         try
         {
@@ -42,6 +43,7 @@ public static class DynamoDbOutboxTable
                         ["DeliveredAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10}
                     }));
 
+            tableName = request.TableName;
             var builder = new DynamoDbTableBuilder(dynamoDbClient);
             await builder.Build(request);
 
@@ -53,7 +55,7 @@ public static class DynamoDbOutboxTable
         catch (ResourceInUseException)
         {
             // just in case the table already exists
-            return s_tableName;
+            return s_tableName = tableName;
         }
         finally
         {

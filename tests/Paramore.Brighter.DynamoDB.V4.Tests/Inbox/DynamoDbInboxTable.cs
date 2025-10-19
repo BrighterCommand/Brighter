@@ -20,7 +20,8 @@ public static class DynamoDbInboxTable
         {
             return s_tableName;
         }
-        
+
+        var tableName = string.Empty;
         await s_semaphoreSlim.WaitAsync();
         try
         {
@@ -37,9 +38,11 @@ public static class DynamoDbInboxTable
                     },
                     new Dictionary<string, ProvisionedThroughput>()));
 
+            tableName = request.TableName;
             var builder = new DynamoDbTableBuilder(dynamoDbClient);
             await builder.Build(request);
 
+            
             await builder.EnsureTablesReady([request.TableName], TableStatus.ACTIVE);
             
             s_tableName = request.TableName;
@@ -48,7 +51,7 @@ public static class DynamoDbInboxTable
         catch (ResourceInUseException)
         {
             // just in case the table already exists
-            return s_tableName;
+            return s_tableName = tableName;
         }
         finally
         {
