@@ -7,8 +7,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class SqliteTextOutboxTest : RelationDatabaseOutboxTest
 {
-    protected override string DefaultConnectingString => Const.ConnectionString;
-    protected override string TableNamePrefix => Const.TablePrefix;
+    protected override string DefaultConnectingString => Tests.Configuration.ConnectionString;
+    protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
     protected override bool BinaryMessagePayload => false;
     
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration)
@@ -18,20 +18,12 @@ public class SqliteTextOutboxTest : RelationDatabaseOutboxTest
 
     protected override void CreateOutboxTable(RelationalDatabaseConfiguration configuration)
     {
-        using var connection = new SqliteConnection(configuration.ConnectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, BinaryMessagePayload);
-        command.ExecuteNonQuery();
+        Tests.Configuration.CreateTable(configuration.ConnectionString, SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, BinaryMessagePayload));
     }
 
     protected override void DeleteOutboxTable(RelationalDatabaseConfiguration configuration)
     {
-        using var connection = new SqliteConnection(configuration.ConnectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE {configuration.OutBoxTableName}";
-        command.ExecuteNonQuery();
+        Tests.Configuration.DeleteTable(configuration.ConnectionString, configuration.OutBoxTableName);
     }
 
     protected override IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()

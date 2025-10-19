@@ -6,8 +6,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox;
 
 public class SqliteTextInboxTest : RelationalDatabaseInboxTests
 {
-    protected override string DefaultConnectingString => Const.ConnectionString;
-    protected override string TableNamePrefix => Const.TablePrefix;
+    protected override string DefaultConnectingString => Tests.Configuration.ConnectionString;
+    protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
     protected override bool BinaryMessagePayload => false;
     
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
@@ -17,19 +17,11 @@ public class SqliteTextInboxTest : RelationalDatabaseInboxTests
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)
     {
-        using var connection = new SqliteConnection(configuration.ConnectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = SqliteInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload);
-        command.ExecuteNonQuery();
+        Tests.Configuration.CreateTable(configuration.ConnectionString, SqliteInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload));
     }
 
     protected override void DeleteInboxTable(RelationalDatabaseConfiguration configuration)
     {
-        using var connection = new SqliteConnection(configuration.ConnectionString);
-        connection.Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE {configuration.InBoxTableName}";
-        command.ExecuteNonQuery();
+        Tests.Configuration.DeleteTable(configuration.ConnectionString, configuration.InBoxTableName);
     }
 }

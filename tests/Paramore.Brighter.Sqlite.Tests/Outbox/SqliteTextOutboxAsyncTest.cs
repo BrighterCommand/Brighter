@@ -8,8 +8,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class SqliteTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
 {
-    protected override string DefaultConnectingString => Const.ConnectionString;
-    protected override string TableNamePrefix => Const.TablePrefix;
+    protected override string DefaultConnectingString => Tests.Configuration.ConnectionString;
+    protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
     protected override bool BinaryMessagePayload => false;
     
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration)
@@ -19,20 +19,12 @@ public class SqliteTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
 
     protected override async Task CreateOutboxTableAsync(RelationalDatabaseConfiguration configuration)
     {
-        await using var connection = new SqliteConnection(configuration.ConnectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, BinaryMessagePayload);
-        await command.ExecuteNonQueryAsync();
+        await Tests.Configuration.CreateTableAsync(configuration.ConnectionString, SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, BinaryMessagePayload));
     }
 
     protected override async Task DeleteOutboxTableAsync(RelationalDatabaseConfiguration configuration)
     {
-        await using var connection = new SqliteConnection(configuration.ConnectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE {configuration.OutBoxTableName}";
-        await command.ExecuteNonQueryAsync();
+        await Tests.Configuration.DeleteTableAsync(configuration.ConnectionString, configuration.OutBoxTableName);
     }
 
     protected override IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
