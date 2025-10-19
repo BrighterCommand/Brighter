@@ -50,9 +50,9 @@ public abstract class InboxTests : IDisposable
     }
 
     [Fact]
-    public void WriteToInbox()
+    public void When_Adding_A_Command_To_The_Inbox_It_Can_Be_Retrieved()
     {
-        // Arrage
+        // Arrange
         var contextKey = Uuid.NewAsString();
         var command = CreateCommand();
         
@@ -60,15 +60,16 @@ public abstract class InboxTests : IDisposable
         Inbox.Add(command, contextKey, null);
         var loadedCommand = Inbox.Get<MyCommand>(command.Id, contextKey, null);
         
+        // Assert
         Assert.NotNull(loadedCommand);
         Assert.Equal(command.Value, loadedCommand.Value);
         Assert.Equal(command.Id, loadedCommand.Id);
     }
     
     [Fact]
-    public void NotThrowExceptionWhenTryToAddMessageThatAlreadyExists()
+    public void When_Adding_A_Duplicate_Command_With_Same_Context_Key_It_Should_Not_Throw()
     {
-        // Arrage
+        // Arrange
         var contextKey = Uuid.NewAsString();
         var command = CreateCommand();
         
@@ -77,53 +78,57 @@ public abstract class InboxTests : IDisposable
         // Act 
         Inbox.Add(command, contextKey, null);
         
-        // Asserts
+        // Assert
         var exists = Inbox.Exists<MyCommand>(command.Id, contextKey, null);
         Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
     }
     
     [Fact]
-    public void NotThrowExceptionWhenTryToAddMessageWithDifferentContextKeyThatAlreadyExists()
+    public void When_Adding_A_Duplicate_Command_With_Different_Context_Key_It_Should_Not_Throw()
     {
-        // setup
+        // Arrange
         var contextKey = Uuid.NewAsString();
         var command = CreateCommand();
         
         Inbox.Add(command, contextKey, null);
 
-        // act 
+        // Act 
         Inbox.Add(command, Uuid.NewAsString(), null);
         
-        // asserts
+        // Assert
         var exists = Inbox.Exists<MyCommand>(command.Id, contextKey, null);
         Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
     }
     
     [Fact]
-    public void ThrowRequestNotFoundExceptionWhenTryToGetAMessageThatNotExists()
+    public void When_Getting_A_Non_Existent_Command_It_Should_Throw_RequestNotFoundException()
     {
-        // setup
+        // Arrange
         var contextKey = Uuid.NewAsString();
         var commandId = Uuid.NewAsString();
         
-        // act & asserts
+        // Act & Assert
         Assert.Throws<RequestNotFoundException<MyCommand>>(() => Inbox.Get<MyCommand>(commandId, contextKey, null));
     }
     
     [Fact]
-    public void ThrowRequestNotFoundExceptionWhenTryToGetAMessageThatExistsWithDifferentContextKey()
+    public void When_Getting_A_Command_With_Wrong_Context_Key_It_Should_Throw_RequestNotFoundException()
     {
+        // Arrange
         var command = CreateCommand();
         Inbox.Add(command, Uuid.NewAsString(), null);
         
-        // act & asserts
+        // Act & Assert
         Assert.Throws<RequestNotFoundException<MyCommand>>(() => Inbox.Get<MyCommand>(command.Id, Uuid.NewAsString(), null));
     }
 
     [Fact]
-    public void ReturnFalseWhenCheckIfAMessageExistsAndMessageNotExists()
+    public void When_Checking_If_A_Non_Existent_Command_Exists_It_Should_Return_False()
     {
+        // Act
         var exists = Inbox.Exists<MyCommand>(Uuid.NewAsString(), Uuid.NewAsString(), null);
+        
+        // Assert
         Assert.False(exists, "A command should not exists");
     }
 }

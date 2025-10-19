@@ -90,9 +90,9 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RemovingOneMessageAsync()
+    public async Task When_Deleting_One_Message_It_Should_Be_Removed_From_Outbox()
     {
-        // arrange
+        // Arrange
         var context = new RequestContext();
         var firstMessage = CreateRandomMessage();
         var secondMessage = CreateRandomMessage();
@@ -116,9 +116,9 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
     
     [Fact]
-    public async Task RemovingMultipleMessages()
+    public async Task When_Deleting_Multiple_Messages_They_Should_Be_Removed_From_Outbox()
     {
-        // arrange
+        // Arrange
         var context = new RequestContext();
         var firstMessage = CreateRandomMessage();
         var secondMessage = CreateRandomMessage();
@@ -142,7 +142,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RetrievingMessagesAsync()
+    public async Task When_Retrieving_All_Messages_They_Should_Include_Dispatched_And_Undispatched()
     {
         // Arrange
         var context = new RequestContext();
@@ -165,7 +165,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
     
     [Fact]
-    public async Task RetrievingMessagesByIdsAsync()
+    public async Task When_Retrieving_Messages_By_Ids_It_Should_Return_Only_Requested_Messages()
     {
         // Arrange
         var context = new RequestContext();
@@ -190,7 +190,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
     
     [Fact]
-    public async Task RetrievingMessagesByIdAsync()
+    public async Task When_Retrieving_A_Message_By_Id_It_Should_Return_The_Correct_Message()
     {
         // Arrange
         var context = new RequestContext();
@@ -211,7 +211,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RetrievingDispatchedMessagesAsync()
+    public async Task When_Retrieving_Dispatched_Messages_It_Should_Filter_By_Age()
     {
         // Arrange
         var context = new RequestContext();
@@ -246,7 +246,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
 
 
     [Fact]
-    public async Task RetrievingNotDispatchedMessageAsync()
+    public async Task When_Retrieving_Outstanding_Messages_It_Should_Filter_By_Age()
     {
         // Arrange
         var context = new RequestContext();
@@ -281,7 +281,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RetrievingAMessageThatNotExistsAsync()
+    public async Task When_Retrieving_A_Non_Existent_Message_It_Should_Return_Empty_Message()
     {
         // Arrange
         var context = new RequestContext();
@@ -294,7 +294,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
 
     [Fact]
-    public async Task IgnoreDuplicatedMessageAsync()
+    public async Task When_Adding_A_Duplicate_Message_It_Should_Not_Throw()
     {
         // Arrange
         var context = new RequestContext();
@@ -305,12 +305,12 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         await Outbox.AddAsync(message, context);
         
         // Assert
-        // Just adding a simple assertion to remove any warning
-        Assert.True(true);
+        var storedMessage = await Outbox.GetAsync(message.Id, context);
+        Assert.Equal(message.Id, storedMessage.Id);
     }
 
     [Fact]
-    public async Task AddMessageAsync()
+    public async Task When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties()
     {
         // Arrange
         var message = CreateRandomMessage();
@@ -356,7 +356,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
     
     [Fact]
-    public virtual async Task AddMessageUsingTransactionAsync()
+    public virtual async Task When_Adding_A_Message_Within_Transaction_It_Should_Be_Stored_After_Commit()
     {
         // Arrange
         var transaction = CreateTransactionProvider();
@@ -372,7 +372,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         var storedMessage = await Outbox.GetAsync(message.Id, context);
         
-        // Assertion
+        // Assert
         Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
         Assert.Equal(message.Body.Value, storedMessage.Body.Value);
         
@@ -409,7 +409,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
     }
     
      [Fact]
-    public virtual async Task AddMessageUsingTransactionShouldNotInsertWhenRollbackAsync()
+    public virtual async Task When_Adding_A_Message_Within_Transaction_And_Rollback_It_Should_Not_Be_Stored()
     {
         // Arrange
         var transaction = CreateTransactionProvider();
@@ -423,7 +423,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         await transaction.RollbackAsync();
         var storedMessage = await Outbox.GetAsync(message.Id, context);
         
-        // Assertion
+        // Assert
         Assert.Equal(MessageType.MT_NONE, storedMessage.Header.MessageType);
     }
 }

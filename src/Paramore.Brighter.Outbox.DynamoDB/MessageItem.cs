@@ -193,7 +193,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public string? Type { get; set; }
 
         /// <value>The baggage as a <see cref="string"/>. May be <c>null</c>.</value>
-        public string? Baggage { get; }
+        public string? Baggage { get; set; }
         
         /// <summary>
         /// The identifier for an instance of a workflow. This is used to correlate messages that are part of a workflow.

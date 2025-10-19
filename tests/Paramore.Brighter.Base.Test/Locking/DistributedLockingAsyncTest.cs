@@ -33,7 +33,7 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
     protected virtual TimeSpan DelayBetweenTryAcquireLockOnSameResource { get; } = TimeSpan.Zero;
     
     [Fact]
-    public async Task LockCanBeObtained()
+    public async Task When_Obtaining_A_Lock_On_A_Resource_It_Should_Succeed()
     {
         // Arrange
         var resource = Uuid.NewAsString();
@@ -48,7 +48,7 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
     }
     
     [Fact]
-    public async Task TryToObtainLockTwiceWithSameInstance()
+    public async Task When_Trying_To_Obtain_Same_Lock_Twice_With_Same_Instance_It_Should_Fail_Second_Time()
     {
         // Arrange
         var resource = Uuid.NewAsString();
@@ -65,7 +65,7 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
     }
     
     [Fact]
-    public async Task TryToObtainLockTwiceWithDifferentInstance()
+    public async Task When_Trying_To_Obtain_Same_Lock_With_Different_Instances_It_Should_Fail_Second_Time()
     {
         // Arrange
         var resource = Uuid.NewAsString();
@@ -83,7 +83,7 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
     }
     
     [Fact]
-    public async Task FailsToObtainLockUntilThePreviousLockIsReleased()
+    public async Task When_Lock_Is_Released_It_Can_Be_Obtained_Again()
     {
         // Arrange
         var resource = Uuid.NewAsString();
@@ -93,10 +93,12 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
         var lock1 = await provider.ObtainLockAsync(resource, CancellationToken.None);
         var lock2 = await provider.ObtainLockAsync(resource, CancellationToken.None);
         
+        // Assert - Initial locks
         Assert.NotNull(lock1);
         Assert.NotEmpty(lock1);
         Assert.Null(lock2);
         
+        // Act - Release lock
         await provider.ReleaseLockAsync(resource, lock1, CancellationToken.None);
 
         if (DelayBetweenTryAcquireLockOnSameResource > TimeSpan.Zero)
@@ -104,7 +106,7 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
             await Task.Delay(DelayBetweenTryAcquireLockOnSameResource);
         }
         
-        // Assert
+        // Assert - Lock can be obtained again
         var lock3 = await provider.ObtainLockAsync(resource, CancellationToken.None);
         Assert.NotNull(lock3);
         Assert.NotEmpty(lock3);

@@ -82,9 +82,9 @@ public abstract class OutboxTest<TTransaction>
     }
 
     [Fact]
-    public void RemovingOneMessage()
+    public void When_Deleting_One_Message_It_Should_Be_Removed_From_Outbox()
     {
-        // arrange
+        // Arrange
         var context = new RequestContext();
         var firstMessage = CreateRandomMessage();
         var secondMessage = CreateRandomMessage();
@@ -108,9 +108,9 @@ public abstract class OutboxTest<TTransaction>
     }
     
     [Fact]
-    public void RemovingMultipleMessages()
+    public void When_Deleting_Multiple_Messages_They_Should_Be_Removed_From_Outbox()
     {
-        // arrange
+        // Arrange
         var context = new RequestContext();
         var firstMessage = CreateRandomMessage();
         var secondMessage = CreateRandomMessage();
@@ -134,7 +134,7 @@ public abstract class OutboxTest<TTransaction>
     }
 
     [Fact]
-    public void RetrievingMessages()
+    public void When_Retrieving_All_Messages_They_Should_Include_Dispatched_And_Undispatched()
     {
         // Arrange
         var context = new RequestContext();
@@ -157,7 +157,7 @@ public abstract class OutboxTest<TTransaction>
     }
     
     [Fact]
-    public void RetrievingMessagesByIds()
+    public void When_Retrieving_Messages_By_Ids_It_Should_Return_Only_Requested_Messages()
     {
         // Arrange
         var context = new RequestContext();
@@ -182,7 +182,7 @@ public abstract class OutboxTest<TTransaction>
     }
     
     [Fact]
-    public void RetrievingMessagesById()
+    public void When_Retrieving_A_Message_By_Id_It_Should_Return_The_Correct_Message()
     {
         // Arrange
         var context = new RequestContext();
@@ -203,7 +203,7 @@ public abstract class OutboxTest<TTransaction>
     }
 
     [Fact]
-    public void RetrievingDispatchedMessages()
+    public void When_Retrieving_Dispatched_Messages_It_Should_Filter_By_Age()
     {
         // Arrange
         var context = new RequestContext();
@@ -238,7 +238,7 @@ public abstract class OutboxTest<TTransaction>
 
 
     [Fact]
-    public void RetrievingNotDispatchedMessage()
+    public void When_Retrieving_Outstanding_Messages_It_Should_Filter_By_Age()
     {
         // Arrange
         var context = new RequestContext();
@@ -271,7 +271,7 @@ public abstract class OutboxTest<TTransaction>
     }
 
     [Fact]
-    public void RetrievingAMessageThatNotExists()
+    public void When_Retrieving_A_Non_Existent_Message_It_Should_Return_Empty_Message()
     {
         // Arrange
         var context = new RequestContext();
@@ -284,7 +284,7 @@ public abstract class OutboxTest<TTransaction>
     }
 
     [Fact]
-    public void IgnoreDuplicatedMessage()
+    public void When_Adding_A_Duplicate_Message_It_Should_Not_Throw()
     {
         // Arrange
         var context = new RequestContext();
@@ -300,7 +300,7 @@ public abstract class OutboxTest<TTransaction>
     }
 
     [Fact]
-    public void AddMessage()
+    public void When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties()
     {
         // Arrange
         var context = new RequestContext();
@@ -310,7 +310,7 @@ public abstract class OutboxTest<TTransaction>
         Outbox.Add(message, context);
         var storedMessage = Outbox.Get(message.Id, context);
         
-        // Assertion
+        // Assert
         Assert.Equal(message.Body.Value, storedMessage.Body.Value);
         
         //should read the header from the sql outbox
@@ -346,7 +346,7 @@ public abstract class OutboxTest<TTransaction>
     }
     
     [Fact]
-    public virtual void AddMessageUsingTransaction()
+    public virtual void When_Adding_A_Message_Within_Transaction_It_Should_Be_Stored_After_Commit()
     {
         // Arrange
         var transaction = CreateTransactionProvider();
@@ -362,7 +362,7 @@ public abstract class OutboxTest<TTransaction>
         
         var storedMessage = Outbox.Get(message.Id, context);
         
-        // Assertion
+        // Assert
         Assert.Equal(message.Body.Value, storedMessage.Body.Value);
         
         //should read the header from the sql outbox
@@ -398,7 +398,7 @@ public abstract class OutboxTest<TTransaction>
     }
     
      [Fact]
-    public virtual void AddMessageUsingTransactionShouldNotInsertWhenRollback()
+    public virtual void When_Adding_A_Message_Within_Transaction_And_Rollback_It_Should_Not_Be_Stored()
     {
         // Arrange
         var transaction = CreateTransactionProvider();
@@ -412,7 +412,7 @@ public abstract class OutboxTest<TTransaction>
         transaction.Rollback();
         var storedMessage = Outbox.Get(message.Id, context);
         
-        // Assertion
+        // Assert
         Assert.Equal(MessageType.MT_NONE, storedMessage.Header.MessageType);
     }
 }

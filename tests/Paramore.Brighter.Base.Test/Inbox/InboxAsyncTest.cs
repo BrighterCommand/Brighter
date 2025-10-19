@@ -51,77 +51,83 @@ public abstract class InboxAsyncTest : IAsyncLifetime
     }
 
     [Fact]
-    public async Task WriteToInbox()
+    public async Task When_Adding_A_Command_To_The_Inbox_It_Can_Be_Retrieved()
     {
+        // Arrange
         var contextKey = Uuid.NewAsString();
         var command = CreateCommand();
         
-        // act 
+        // Act 
         await Inbox.AddAsync(command, contextKey, null);
         var loadedCommand = await Inbox.GetAsync<MyCommand>(command.Id, contextKey, null);
         
+        // Assert
         Assert.NotNull(loadedCommand);
         Assert.Equal(command.Value, loadedCommand.Value);
         Assert.Equal(command.Id, loadedCommand.Id);
     }
     
     [Fact]
-    public async Task NotThrowExceptionWhenTryToAddMessageThatAlreadyExists()
+    public async Task When_Adding_A_Duplicate_Command_With_Same_Context_Key_It_Should_Not_Throw()
     {
-        // setup
+        // Arrange
         var contextKey = Uuid.NewAsString();
         var command = CreateCommand();
         await Inbox.AddAsync(command, contextKey, null);
 
-        // act 
+        // Act 
         await Inbox.AddAsync(command, contextKey, null);
         
-        // asserts
+        // Assert
         var exists = await Inbox.ExistsAsync<MyCommand>(command.Id, contextKey, null);
         Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
     }
     
     [Fact]
-    public async Task NotThrowExceptionWhenTryToAddMessageWithDifferentContextKeyThatAlreadyExists()
+    public async Task When_Adding_A_Duplicate_Command_With_Different_Context_Key_It_Should_Not_Throw()
     {
-        // setup
+        // Arrange
         var contextKey = Uuid.NewAsString();
         var command = CreateCommand();
         await Inbox.AddAsync(command, contextKey, null);
 
-        // act 
+        // Act 
         await Inbox.AddAsync(command, Uuid.NewAsString(), null);
         
-        // asserts
+        // Assert
         var exists = await Inbox.ExistsAsync<MyCommand>(command.Id, contextKey, null);
         Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
     }
     
     [Fact]
-    public async Task ThrowRequestNotFoundExceptionWhenTryToGetAMessageThatNotExists()
+    public async Task When_Getting_A_Non_Existent_Command_It_Should_Throw_RequestNotFoundException()
     {
-        // setup
+        // Arrange
         var contextKey = Uuid.NewAsString();
         var commandId = Uuid.NewAsString();
         
-        // act & asserts
+        // Act & Assert
         await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(async () => await Inbox.GetAsync<MyCommand>(commandId, contextKey, null));
     }
     
     [Fact]
-    public async Task ThrowRequestNotFoundExceptionWhenTryToGetAMessageThatExistsWithDifferentContextKey()
+    public async Task When_Getting_A_Command_With_Wrong_Context_Key_It_Should_Throw_RequestNotFoundException()
     {
+        // Arrange
         var command = CreateCommand();
         await Inbox.AddAsync(command, Uuid.NewAsString(), null);
         
-        // act & asserts
+        // Act & Assert
         await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(async () => await Inbox.GetAsync<MyCommand>(command.Id, Uuid.NewAsString(), null));
     }
 
     [Fact]
-    public async Task ReturnFalseWhenCheckIfAMessageExistsAndMessageNotExists()
+    public async Task When_Checking_If_A_Non_Existent_Command_Exists_It_Should_Return_False()
     {
+        // Act
         var exists = await Inbox.ExistsAsync<MyCommand>(Uuid.NewAsString(), Uuid.NewAsString(), null);
+        
+        // Assert
         Assert.False(exists, "A command should not exists");
     }
 }
