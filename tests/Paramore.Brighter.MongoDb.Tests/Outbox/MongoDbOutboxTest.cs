@@ -42,8 +42,9 @@ public class MongoDbOutboxTest : OutboxTest<IClientSessionHandle>
 
 
     [Fact]
-    public override void AddMessageUsingTransactionShouldNotInsertWhenRollback()
+    public override void When_Adding_A_Message_Within_Transaction_And_Rollback_It_Should_Not_Be_Stored()
     {
+        
         // MongoDb On docker-compose doesn't support transaction
         Assert.True(true);
     }
