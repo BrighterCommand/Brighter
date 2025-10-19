@@ -8,16 +8,20 @@ using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
-public abstract class OutboxAsyncTest<TTransaction> : IDisposable
+public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime 
 {
     protected abstract IAmAnOutboxAsync<Message, TTransaction> Outbox { get; }
 
     protected List<Message> CreatedMessages { get; } = [];
     
-    protected OutboxAsyncTest()
+    public async Task InitializeAsync()
     {
-        // ReSharper disable once VirtualMemberCallInConstructor
-        BeforeEachTestAsync().GetAwaiter().GetResult();
+        await BeforeEachTestAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        await AfterEachTestAsync();
     }
 
     protected virtual async Task BeforeEachTestAsync()

@@ -6,15 +6,19 @@ using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Inbox;
 
-public abstract class InboxAsyncTest
+public abstract class InboxAsyncTest : IAsyncLifetime
 {
     protected abstract IAmAnInboxAsync Inbox { get; }
     protected List<MyCommand> CreatedCommands { get; } = [];
 
-    protected InboxAsyncTest()
+    public async Task InitializeAsync()
     {
-        // ReSharper disable once VirtualMemberCallInConstructor
-        BeforeEachTestAsync().GetAwaiter().GetResult();
+        await BeforeEachTestAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        await AfterEachTestAsync();
     }
 
     protected virtual async Task BeforeEachTestAsync()
@@ -27,11 +31,6 @@ public abstract class InboxAsyncTest
         return Task.CompletedTask;
     }
     
-    public void Dispose()
-    {
-        AfterEachTestAsync().GetAwaiter().GetResult();
-    }
-
     protected virtual async Task AfterEachTestAsync()
     {
         await DeleteStoreAsync();

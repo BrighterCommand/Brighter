@@ -5,24 +5,24 @@ using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Locking;
 
-public abstract class DistributedLockingAsyncTest : IDisposable
+public abstract class DistributedLockingAsyncTest : IAsyncLifetime
 {
-    protected DistributedLockingAsyncTest()
+    public async Task InitializeAsync()
     {
-        // ReSharper disable once VirtualMemberCallInConstructor
-        BeforeEachTestAsync().GetAwaiter().GetResult();
+        await BeforeEachTestAsync();
     }
+
+    public async Task DisposeAsync()
+    {
+        await AfterEachTestAsync();
+    }
+    
 
     protected virtual Task BeforeEachTestAsync()
     {
         return Task.CompletedTask;
     }
     
-    public void Dispose()
-    {
-        AfterEachTestAsync().GetAwaiter().GetResult();
-    }
-
     protected abstract IDistributedLock CreateDistributedLock();
 
     protected virtual Task AfterEachTestAsync()
