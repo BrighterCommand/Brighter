@@ -34,7 +34,7 @@ public class BinaryOutboxWritingMessageTests
             correlationId: Id.Random(),
             replyTo: new RoutingKey("ReplyTo"),
             contentType: new ContentType(MediaTypeNames.Text.Plain),
-            partitionKey: Guid.CreateVersion7().ToString());
+            partitionKey: Uuid.NewAsString());
         messageHeader.Bag.Add(Key1, Value1);
         messageHeader.Bag.Add(Key2, Value2);
         messageHeader.Bag.Add(Key3, Value3);

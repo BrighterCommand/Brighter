@@ -1,14 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using MS Sql Server</Description>
+    <Description>Microsoft SQL Server outbox implementation for Paramore.Brighter Command Processor. Provides reliable message publishing with outbox pattern using SQL Server for transactional consistency and guaranteed delivery.</Description>
     <Authors>Francesco Pighi</Authors>
     <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
-    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageTags>SQL Server;MSSQL;Database;Outbox;Transactional;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
   <ItemGroup>
     <None Remove="DDL_SCRIPTS\MSSQL\Outbox.sql"/>
   </ItemGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
     <ProjectReference Include="..\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj"/>
