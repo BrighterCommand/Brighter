@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>$(BrighterTargetFramework)</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
