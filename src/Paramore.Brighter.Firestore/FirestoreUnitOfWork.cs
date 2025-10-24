@@ -41,7 +41,7 @@ public class FirestoreUnitOfWork : FirestoreConnectionProvider, IAmAFirestoreTra
         
         var request = new CommitRequest
         {
-            Database = _configuration.Database, 
+            Database = _configuration.DatabasePath, 
             Transaction = _transaction.Transaction
         };
         
@@ -62,7 +62,7 @@ public class FirestoreUnitOfWork : FirestoreConnectionProvider, IAmAFirestoreTra
         
         var request = new CommitRequest
         {
-            Database = _configuration.Database, 
+            Database = _configuration.DatabasePath, 
             Transaction = _transaction.Transaction
         };
             
@@ -90,7 +90,7 @@ public class FirestoreUnitOfWork : FirestoreConnectionProvider, IAmAFirestoreTra
 
         var request = new RollbackRequest
         {
-            Database = _configuration.Database,
+            Database = _configuration.DatabasePath,
             Transaction = _transaction.Transaction
         };
         
@@ -110,7 +110,7 @@ public class FirestoreUnitOfWork : FirestoreConnectionProvider, IAmAFirestoreTra
 
         var request = new RollbackRequest
         {
-            Database = _configuration.Database,
+            Database = _configuration.DatabasePath,
             Transaction = _transaction.Transaction
         };
         
@@ -129,7 +129,7 @@ public class FirestoreUnitOfWork : FirestoreConnectionProvider, IAmAFirestoreTra
         }
         
         var client = GetFirestoreClient();
-        var transaction = client.BeginTransaction(new BeginTransactionRequest { Database = _configuration.Database });
+        var transaction = client.BeginTransaction(new BeginTransactionRequest { Database = _configuration.DatabasePath });
         return _transaction = new FirestoreTransaction(transaction.Transaction);
     }
 
@@ -142,7 +142,7 @@ public class FirestoreUnitOfWork : FirestoreConnectionProvider, IAmAFirestoreTra
         }
         
         var client = await GetFirestoreClientAsync(cancellationToken);
-        var transaction = await client.BeginTransactionAsync(new BeginTransactionRequest { Database = _configuration.Database },
+        var transaction = await client.BeginTransactionAsync(new BeginTransactionRequest { Database = _configuration.DatabasePath },
             CallSettings.FromCancellationToken(cancellationToken));
         return _transaction = new FirestoreTransaction(transaction.Transaction);
     }
