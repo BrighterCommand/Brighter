@@ -15,6 +15,7 @@
     <PackageReference Include="Serilog.Extensions.Hosting" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AWSSDK.IdentityManagement" VersionOverride="4.0.4.1" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessageScheduler.AWS.V4\Paramore.Brighter.MessageScheduler.AWS.V4.csproj" />
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
