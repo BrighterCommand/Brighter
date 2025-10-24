@@ -331,3 +331,4 @@ ASALocalRun/
 broker/
 /zoo/
 .DS_Store
+.claude/settings.local.json
