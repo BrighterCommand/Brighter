@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -54,7 +56,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="traceParent">The traceparent to check</param>
         /// <returns></returns>
-        public static bool IsNullOrEmpty(TraceParent? traceParent)
+        public static bool IsNullOrEmpty([NotNullWhen(false)] TraceParent? traceParent)
         {
            return traceParent == null || string.IsNullOrEmpty(traceParent.Value);
         }
@@ -117,7 +119,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="traceState">The traceState</param>
         /// <returns></returns>
-        public static bool IsNullOrEmpty(TraceState? traceState)
+        public static bool IsNullOrEmpty([NotNullWhen(false)] TraceState? traceState)
         {
             return traceState == null || string.IsNullOrEmpty(traceState.Value);
         }
