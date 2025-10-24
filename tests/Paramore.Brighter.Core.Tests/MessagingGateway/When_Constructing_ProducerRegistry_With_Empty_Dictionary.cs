@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway;
 
-public class When_Constructing_ProducerRegistry_With_Empty_Dictionary
+public class EmptyProducerRegistryTests
 {
     [Fact]
     public void When_constructing_producer_registry_with_empty_dictionary()
