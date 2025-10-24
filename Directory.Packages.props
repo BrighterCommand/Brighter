@@ -143,6 +143,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.15" />
+    <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="8.3.2" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.3" />
     <PackageVersion Include="Npgsql" Version="8.0.7" />
   </ItemGroup>
@@ -153,6 +154,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
+    <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="9.0.2" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
     <PackageVersion Include="Npgsql" Version="9.0.4" />
   </ItemGroup>
