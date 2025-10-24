@@ -52,6 +52,8 @@ public class OutboxMessage : IMongoDbCollectionTTL
         TraceState = message.Header.TraceState?.Value;
         Subject = message.Header.Subject;
         ExpireAfterSeconds = expireAfterSeconds;
+        WorkflowId =  message.Header.WorkflowId?.Value;
+        JobId = message.Header.JobId?.Value;
     }
 
 
@@ -79,7 +81,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// </summary>
     /// <value>The <see cref="string"/>of the body content type</value>
 # if NET472
-    public string BodyContentType { get; set; } = "appllcation/json";
+    public string BodyContentType { get; set; } = "application/json";
 #else
     public string BodyContentType { get; set; } = MediaTypeNames.Application.Json; 
 #endif    
@@ -99,7 +101,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// <summary>
     /// The correlation id.
     /// </summary>
-    /// <value>The <see cref="stirng"/> with the correlation id.</value>
+    /// <value>The <see cref="string"/> with the correlation id.</value>
     public string? CorrelationId { get; set; }
     
     /// <summary>
@@ -204,12 +206,12 @@ public class OutboxMessage : IMongoDbCollectionTTL
    /// <value>The <see cref="string"/> with the W3C Trace State</value>
     public string? TraceState { get; set; }
    
-   /// <summary>
-   /// The Workflow that this message is associated with
-   /// </summary>
-   /// <value>The <see cref="string"/> id of the workflo</value>
-   public string? WorkflowId { get; set; } 
-
+    /// <summary>
+    /// The Workflow that this message is associated with
+    /// </summary>
+    /// <value>The <see cref="string"/> id of the workflow</value>
+    public string? WorkflowId { get; set; } 
+    
     /// <summary>
     /// Convert the outbox message to <see cref="Message"/>
     /// </summary>
@@ -220,6 +222,18 @@ public class OutboxMessage : IMongoDbCollectionTTL
             ? (CharacterEncoding)Enum.Parse(typeof(CharacterEncoding), CharacterEncoding)
             : Brighter.CharacterEncoding.UTF8;
         var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
+        
+        Id? workflowId = null;
+        if (!string.IsNullOrWhiteSpace(WorkflowId))
+        {
+            workflowId = Id.Create(WorkflowId);
+        }
+        
+        Id? jobId = null;
+        if (!string.IsNullOrWhiteSpace(JobId))
+        {
+            jobId = Id.Create(JobId);
+        }
 
         var header = new MessageHeader(
             messageId: MessageId,
@@ -227,7 +241,9 @@ public class OutboxMessage : IMongoDbCollectionTTL
             messageType: messageType,
             timeStamp: TimeStamp,
             correlationId: CorrelationId is not null ? new Id(CorrelationId) : null,
-            replyTo: ReplyTo == null ? RoutingKey.Empty : new RoutingKey(ReplyTo));
+            replyTo: ReplyTo == null ? RoutingKey.Empty : new RoutingKey(ReplyTo),
+            workflowId: workflowId,
+            jobId: jobId);
 
         if (!string.IsNullOrEmpty(PartitionKey))
         {
