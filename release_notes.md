@@ -111,15 +111,15 @@ services.AddBrighter()
 
 ### Polly Resilience Pipeline
 
-**Breaking Change**: New resilience pipeline attributes replace legacy timeout policies ([PR #3677](https://github.com/BrighterCommand/Brighter/pull/3677)):
+**Breaking Change**: New resilience pipeline attributes can replace legacy Polly policies and timeout policies ([PR #3677](https://github.com/BrighterCommand/Brighter/pull/3677)):
 
 ```csharp
 // V9 - Deprecated
-[TimeoutPolicy(milliseconds: 5000)]
+[TimeoutPolicy(milliseconds: 5000, step: 1)]
 public override MyResult Handle(MyCommand command) { }
 
 // V10 - New approach
-[UseResiliencePipeline("MyPipeline")]
+[UseResiliencePipeline(policy: "MyPipeline"), step: 1]
 public override MyResult Handle(MyCommand command) { }
 ```
 
@@ -127,19 +127,6 @@ The `TimeoutPolicyAttribute` is now marked as obsolete. The new approach provide
 - **Full Polly v8 Support**: Access to all Polly resilience strategies
 - **CancellationToken Integration**: Proper cancellation token flow from resilience pipelines ([PR #3698](https://github.com/BrighterCommand/Brighter/pull/3698))
 - **Enhanced Context**: Request context integration with Polly's resilience context
-
-Configure resilience pipelines in your DI container:
-
-```csharp
-services.AddResilienceEnrichment();
-services.Configure<ResilienceOptions>(options =>
-{
-    options.Pipelines.Add("MyPipeline", builder => builder
-        .AddTimeout(TimeSpan.FromSeconds(5))
-        .AddRetry(new RetryStrategyOptions())
-        .AddCircuitBreaker(new CircuitBreakerStrategyOptions()));
-});
-```
 
 ### Default Message Mappers
 
@@ -172,6 +159,7 @@ public class MyCustomMapper : IAmAMessageMapper<MyCommand>
 
 - **Partition Key**: Set message partition keys dynamically (see [PR #3678](https://github.com/BrighterCommand/Brighter/pull/3678))
 - **Custom Headers**: Add headers via request context
+- **Originating Message**: Where you are handling a message received from a queue or stream (ServiceActivator) then the `OriginalMessage` (in Brighter's message format) is now available on the `RequestContext`
 - **Resilience Context**: Integration with Polly Resilience Pipeline
 
 ```csharp
@@ -229,9 +217,9 @@ var subscription = new RmqSubscription<MyMessage>(
 - **Outbox Improvements**: Enhanced outbox pattern with better URI handling and code consolidation ([PR #3659](https://github.com/BrighterCommand/Brighter/pull/3659))
 - **RocketMQ Fixes**: Various improvements to RocketMQ transport ([PR #3696](https://github.com/BrighterCommand/Brighter/pull/3696))
 
-### Circuit Breaking
+### Outbox Sweeper Circuit Breaking
 
-Topic-level circuit breaking has been added to prevent cascade failures:
+Topic-level circuit breaking has been added to the Outbox Sweeper to prevent cascade failures:
 
 - **Failure Tracking**: Automatic tracking of dispatch failures per topic
 - **Configurable Thresholds**: Set failure thresholds and cooldown periods  
@@ -330,10 +318,11 @@ For users upgrading from V9 to V10:
    - Address nullable warnings in your handlers and commands
 
 3. **Update Builder Calls**:
-   - Replace messaging builder methods with `AddProducers()`/`AddConsumers()`
+   - Replace messaging builder methods with `AddProducers()`/`AddConsumers()`. These names should be simpler than the older names to understand
 
-4. **Migrate Timeout Policies**:
-   - Replace `[TimeoutPolicy]` with `[UseResiliencePipeline]` and Polly configuration
+4. **[Optional] Migrate Policies to Polly Resilience policies**:
+   - Replace `[TimeoutPolicy]` with `[UseResiliencePipeline]` and Polly configuration ([TimeoutPolicy is deprecated in V10 and will be removed in V11]
+   - Replace `[UsePolicy]with `[UseResiliencePipeline]` and convert Polly Policies to Strategies via a Resilience Pipeline, see [Polly: Migration guide from v7 to v8](https://www.pollydocs.org/migration-v8.html)
 
 5. **Message ID Changes**:
    - Message and Correlation IDs are now strings (defaulting to GUID strings)
@@ -341,10 +330,7 @@ For users upgrading from V9 to V10:
 6. **Generic Message Pumps**:
    - Remove generic type parameters if directly instantiating message pumps
 
-7. **Test Framework Changes**:
-   - Replace Fluent Assertions with xUnit assertions in your test projects
-
-8. **Default Message Mappers**:
+7. **Default Message Mappers**:
    - Review your message mappers - many can now be removed in favor of default implementations
 
 ### Database Schema Updates
