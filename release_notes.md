@@ -1,11 +1,5 @@
 # Release Notes
 
-NuGet packages for the last good build on master are available via [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter) (see Artifacts) or the nuget feed is [https://ci.appveyor.com/nuget/paramore-brighter-m289d49fraww](https://ci.appveyor.com/nuget/paramore-brighter-m289d49fraww). The simplest way to work with this is to use the Nuget Feed, which is every successful build, So
-
-When we push a collection of functionality it is available via [nuget.org](http://www.nuget.org) and symbol files are published to [symbolsource.org](http://www.symbolsource.org)
-
-This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter), but not yet deployed to [nuget.org](http://www.nuget.org).
-
 ## Master
 
 ## Release 10.0.0
