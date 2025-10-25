@@ -40,7 +40,7 @@
 | Release [X] | The code for an actively supported release. Created when master needs breaking changes that are not compatible with the current release. We support one 'historical' release. |
 | [Other]  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas. |
 
-## Using Docker Compose to test ##
+## Using Docker Compose to test
 
 We provide a Docker Compose file to allow you to run the test suite, without having to install the pre-requisites, such as brokers or databases locally.
 

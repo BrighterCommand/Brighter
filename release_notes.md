@@ -263,6 +263,7 @@ var subscription = new RmqSubscription<MyMessage>(
 * **Updated Defaults**: Improved default configuration values for better out-of-the-box experience
 
 **AWS Improvements**:
+
 * **SQS Publication Enhancement**: Allow publishing directly to an SQS queue without SNS
 * **S3 Claim-Check**: Fixed AWS S3 claim-check implementation
 
@@ -374,8 +375,8 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 
 ## Release 9.3.0
 
-- Bug with DynamoDb Outbox and the Outbox Sweeper fixed. The Sweeper required a topic argument supplied by a dictionary of args
-  * Required adding a Dictionary<string, object> to various interfaces, which defaults to null, hence the minor version bump as these interfaces have new capabiities
+* Bug with DynamoDb Outbox and the Outbox Sweeper fixed. The Sweeper required a topic argument supplied by a dictionary of args
+  * Required adding a Dictionary<string, object> to various interfaces, which defaults to null, hence the minor version bump as these interfaces have new capabilities
 * Internal change to move outstanding message box to a semaphore slim over a mutex as thread-safe. Not strictly neededm, but follows our policy of moving to semaphore slim
 * Changes to the DynamoDb Outbox implementation as Outstanding Message check was not behaving as expected
 * The interfaces around Outbox configuration will likely change in v10 to avoid current split and need to configure on both publication and outbox
@@ -396,9 +397,9 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
   * Mostly you can search and replace to fix
 * Added support for a global inbox via a UseInbox configuration parameter to the Command Processor
   * Will insert an Inbox in all pipelines
-  * Can be overriden by a NoGlobalInbox attribute for don't add to pipeline, or an alternative UseInbox attribute to vary config
+  * Can be overridden by a NoGlobalInbox attribute for don't add to pipeline, or an alternative UseInbox attribute to vary config
 * The goal here is to be clearer than our own internal names, which don't help folks who were not part of this team
-* The Outbox now fills up if a producer fails to send. You can set an upper limit on your producer, which is the maximum outstanding messages that you want in the Outbox before we throw an exception. This is not the same as Outbox size limits or sweeper, which is seperate and mainly intended if you don't want the Outbox limit to fail-fast on hitting a limit but keep accumulating results  
+* The Outbox now fills up if a producer fails to send. You can set an upper limit on your producer, which is the maximum outstanding messages that you want in the Outbox before we throw an exception. This is not the same as Outbox size limits or sweeper, which is separate and mainly intended if you don't want the Outbox limit to fail-fast on hitting a limit but keep accumulating results  
 * Added caching of attributes on target handlers in the pipeline build step
   * This means we don't do reflection every time we build the pipeline for a request
   * We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does
@@ -412,8 +413,8 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
   * Added a matching Publication for producers
   * Base class includes the attributes that Brighter Core (Brighter & ServiceActivator) need
   * Derived classes contain transport specific details
-  * On SQSConnection, renamed VisibilityTimeout to LockTimeout to more generically describe its purpose seperated from GatewayConfiguration, that now has a marker interface, used to connect to the Gateway and not about how we publish or subscribe
-  * We now have the option to declare infastructure separately and Validate or Assume it exists, still have an option to Create which is the default
+  * On SQSConnection, renamed VisibilityTimeout to LockTimeout to more generically describe its purpose separated from GatewayConfiguration, that now has a marker interface, used to connect to the Gateway and not about how we publish or subscribe
+  * We now have the option to declare infrastructure separately and Validate or Assume it exists, still have an option to Create which is the default
   * We think it will be most useful for environments like AWS where there is a price to checking (HTTP call, and often looping through results)  
   * Added support for a range of parameters that we did not have before such as dead letter queues, security etc via these platform specific configuration files  
 * Provided a short form of the BrighterMessaging constructor, that queries object provided for async versions of interfaces
@@ -489,7 +490,7 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 
 ### **Breaking Changes**
 
-* Configuration no longer supports XML based config sections. We use data structures instead, and expect you to configure mostly in code, initializing those data structures from your config system of choice yourself. We recommend following 12-Factor Apps guidelines and preferring enviroment variables for items that vary by environment over XML or JSON based configuration files. (We may consider providing config sections in Contrib again, please feedback if this is a critical issue for you. PRs welcome.)
+* Configuration no longer supports XML based config sections. We use data structures instead, and expect you to configure mostly in code, initializing those data structures from your config system of choice yourself. We recommend following 12-Factor Apps guidelines and preferring environment variables for items that vary by environment over XML or JSON based configuration files. (We may consider providing config sections in Contrib again, please feedback if this is a critical issue for you. PRs welcome.)
 * Dropped CommandProcessor from namespaces and folder names, to shorten, and remove semantic issue that it is not just a Command Processor
 * Changed namespaces and folders to be CamelCase
 * As a result, your using statements will need revision with this release
@@ -515,23 +516,23 @@ Fix issue with encoding of non-string types and transmission of correlation id <
 * In the abstract RequestHandler `logger` is now `Logger`
 * `RequestLogging` has moved namespace to `paramore.brighter.commandprocessor.logging.Attributes`
 
-**Bug fixes**:
+### **Bug fixes**:
 
 * Fixed issue #132: concurrent usages of the RabbitMQ messaging gateway would sometimes throw an exception
 * Fixed issue #134: We no longer use async/await in the command processor. This caused issues with ASP.NET synchronization contexts, resulting in a deadlock when waiting on the thread that was also being used to run the completion. See <http://blog.stephencleary.com/2012/07/dont-block-on-async-code.html> We wil revisit async when we write *Async versions of the CommandProcesor APIs suitable for using in hosts that can run async code without deadlocking their synchronization context.
-* Fixed issue 110: Where we want to log we have two constuctors. A constructor that directly takes an iLog that you provide either directly or via your ioC container; a constructor that defaults that to LogProvider.GetCurrentClassLogger
+* Fixed issue 110: Where we want to log we have two constructors. A constructor that directly takes an iLog that you provide either directly or via your ioC container; a constructor that defaults that to LogProvider.GetCurrentClassLogger
  	* In Production code you should set up your log provider and use the constructors that do not take an ILog reference.
- 	* In Test code you should inject the ILog using a fake logger. We don't recommend testing log output, its an implementation detail, unless its an important part of your acceptance criteria for that behaviour.
+ 	* In Test code you should inject the ILog using a fake logger. We don't recommend testing log output, its an implementation detail, unless its an important part of your acceptance criteria for that behavior.
  	* This means that your production code should not need to take a direct dependency on Paramore's ILog implementation.
  	* This is a BREAKING CHANGE because we remove the ability to inject the constructor via the *Builder objects, so as to remove the temptation to do that when you should rely on the LibLog framework to wrap your current logger.
 
-**Features:**
+### **Features:**
 * Huge feature, Async; added support for SendAsync and PublishAsync to an IHandleRequestsAsync pipeline.
 * Basic support for publishing to Azure Service Bus with `paramore.brighter.commandprocessor.messaginggateway.azureservicebus`.
 
 ## Release 5
 
-**Bug Fixes:**
+### **Bug Fixes:**
 
 * #100 `CommandProcessor.Post` fails with Object reference not set to an instance of an object.
 * Fix RequeueMessage exhaustion to log ERROR.
@@ -542,9 +543,9 @@ Fix issue with encoding of non-string types and transmission of correlation id <
 * Removed a few unused interfaces.
 * Correct exceptions namespace to actions.
 
-**Features:**
+### **Features:**
 
-* A connection can now be flagged as isDurable in the configuration. Choosing isDurable when using RMQ as the broker will create a durable channel (i.e. does not die if no one is consuming it, and thus continues to subscribe to messages that match it's topic). We think there are sufficient trade-offs with a message store that allows replay to make this setting false by default, but have configured to allow users to make this choice dependent on the characteristics of their consumers (i.e. sufficiently intermittend that messages would be lost).
+* A connection can now be flagged as isDurable in the configuration. Choosing isDurable when using RMQ as the broker will create a durable channel (i.e. does not die if no one is consuming it, and thus continues to subscribe to messages that match it's topic). We think there are sufficient trade-offs with a message store that allows replay to make this setting false by default, but have configured to allow users to make this choice dependent on the characteristics of their consumers (i.e. sufficiently intermittent that messages would be lost).
 * #92 Added [Event Store](https://geteventstore.com/ "Event Store") Message Store implementation
 * #30 Changed RabbitMQ Messaging Gateway to support multiple performers per connection, fixing the pipeline errors from RabbitMQ Client
 * Added a UseCommandSourcing attribute that stores commands to a command store. This is the Event Sourcing paradigm described by Martin Fowler in <http://martinfowler.com/eaaDev/EventSourcing.html> The term Command Sourcing refers to the fact that as described the pattern stores commands (instructions to change state) not events (the results of applying those commands).
