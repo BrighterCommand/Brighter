@@ -159,7 +159,8 @@ namespace Paramore.Brighter
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
             }
 #pragma warning restore CS0618 // Type or member is obsolete
-            
+
+            _resiliencePipelineRegistry = resiliencePipelineRegistry;
             _policyRegistry = policyRegistry;
             return this;
         }
