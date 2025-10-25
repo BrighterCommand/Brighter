@@ -334,7 +334,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="builder">The builder.</param>
         /// <param name="factory">The message scheduler factory</param>
         /// <returns></returns>
-        public static IBrighterBuilder UseRequestScheduler(this IBrighterBuilder builder, Func<IServiceProvider, IAmAMessageSchedulerFactory> factory)
+        public static IBrighterBuilder UseRequestScheduler(this IBrighterBuilder builder, Func<IServiceProvider, IAmARequestSchedulerFactory> factory)
         {
             builder.Services.AddSingleton(factory);
             return builder;
