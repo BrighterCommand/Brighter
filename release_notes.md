@@ -322,7 +322,9 @@ Enhanced command processor with support for content-based routing using specific
 For users upgrading from V9 to V10:
 
 1. **Update Subscription Configuration**:
-   - Replace `isAsync/runAsync` with `MessagePumpType.Proactor` or `MessagePumpType.Reactor`
+   - Replace `isAsync/runAsync` with `messagePumpType` with options of `MessagePumpType.Proactor` or `MessagePumpType.Reactor`
+   - Replace `timeoutInMilliseconds` with `timeOut` which is now a `TimeSpan` type
+   - Replace `requeueDelayInMs` with `requeueDelay` which is now a `TimeSpan` type   
 
 2. **Handle Nullable Reference Types**:
    - Address nullable warnings in your handlers and commands
