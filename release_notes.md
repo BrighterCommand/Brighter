@@ -196,7 +196,7 @@ services.AddBrighter()
 public override MyResult Handle(MyCommand command) { }
 
 // V10 - New approach
-[UseResiliencePipeline(policy: "MyPipeline"), step: 1]
+[UseResiliencePipeline(policy: "MyPipeline", step: 1)]
 public override MyResult Handle(MyCommand command) { }
 ```
 
@@ -205,7 +205,7 @@ The `TimeoutPolicyAttribute` is now marked as obsolete.
 The new approach provides:
 
 * **Full Polly v8 Support**: Access to all Polly resilience strategies
-* **CancellationToken Integration**: Proper cancellation token flow from resilience pipelines ([PR #3698](https://github.com/BrighterCommand/Brighter/pull/3698))
+* **CancellationToken Integration**: Proper cancellation token flow from resilience pipelines 
 * **Enhanced Context**: Request context integration with Polly's resilience context
 
 ### Request Context Enhancements
@@ -325,8 +325,9 @@ For users upgrading from V9 to V10:
 3. **Update Builder Calls**:
    * Replace messaging builder methods with `AddProducers()`/`AddConsumers()`
 
-4. **Migrate Timeout Policies**:
-   * Replace `[TimeoutPolicy]` with `[UseResiliencePipeline]` and Polly configuration
+4. **Migrate Policies**:
+   * Replace `[TimeoutPolicy]` with `[UseResiliencePipeline]` and Polly configuration ([TimeoutPolicy is deprecated in V10 and will be removed in V11])
+   * Replace `[UsePolicy]` with `[UseResiliencePipeline]`
 
 5. **Message ID Changes**:
    * Message and Correlation IDs are now strings (defaulting to GUID strings)
