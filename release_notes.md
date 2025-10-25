@@ -59,13 +59,13 @@ You only need to create custom message mappers when you require explicit transfo
   {
     ...
   })
-  //This is the default mapper type, so you can omit it, but we are  explicit  for this note to show how to register your own default
+  //This is the default mapper type, so you can omit it, but we are explicit for this note to show how to register your own default
   .AutoFromAssemblies([typeof(TaskCreated).Assembly], defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
 ```
 
 ### Dynamic Message Deserialization
 
-Brighter now supports multiple message types on the same channel through dynamic request type resolution. This enables content-based deserialization where the message type is determined at runtime metadata rather than compile-time generic parameters. We still support the older DataType channel approach. As routing to a handler is based on type, this will decide the handler that receives this message (although see also Agreement Dispatcher).
+Brighter now supports multiple message types on the same channel through dynamic request type resolution. This enables content-based deserialization where the message type is determined at runtime from metadata rather than compile-time generic parameters. We still support the older DataType channel approach. As routing to a handler is based on type, this will decide the handler that receives this message (although see also Agreement Dispatcher).
 
 ```csharp
 new KafkaSubscription(
@@ -111,6 +111,26 @@ registry.RegisterAsync<MyCommand>(((request, context) =>
 The CommandProcessor now lets you set the `RequestContext` explicitly when calling `Send`, `Publish`, `DepositPost` etc. This allows you to set properties of the `RequestContext` for transmission to the `RequestHandler` instead of having a new context created by the `RequestContextFactory` for that pipeline.
 
 For consumers, we now add a property to the `RequestContext` that provides the `OriginatingMessage` which allows you to examine properties of the message that was received.
+
+**Breaking Change**: The `IRequestContext` interface has been enhanced to support:
+
+* **Partition Key**: Set message partition keys dynamically 
+* **Custom Headers**: Add headers via request context
+* **Resilience Context**: Integration with Polly Resilience Pipeline
+
+```csharp
+// Set partition key and custom headers via request context
+public class MyHandler : RequestHandler<MyCommand>
+{
+    public override MyCommand Handle(MyCommand command)
+    {
+        Context.Span.SetAttribute("custom.header", "value");
+        Context.PartitionKey = command.TenantId;
+        
+        return base.Handle(command);
+    }
+}
+```
 
 ### Proactor and Reactor
 
@@ -207,28 +227,6 @@ The new approach provides:
 * **Full Polly v8 Support**: Access to all Polly resilience strategies
 * **CancellationToken Integration**: Proper cancellation token flow from resilience pipelines 
 * **Enhanced Context**: Request context integration with Polly's resilience context
-
-### Request Context Enhancements
-
-**Breaking Change**: The `IRequestContext` interface has been enhanced to support:
-
-* **Partition Key**: Set message partition keys dynamically 
-* **Custom Headers**: Add headers via request context
-* **Resilience Context**: Integration with Polly Resilience Pipeline
-
-```csharp
-// Set partition key and custom headers via request context
-public class MyHandler : RequestHandler<MyCommand>
-{
-    public override MyCommand Handle(MyCommand command)
-    {
-        Context.Span.SetAttribute("custom.header", "value");
-        Context.PartitionKey = command.TenantId;
-        
-        return base.Handle(command);
-    }
-}
-```
 
 ### AWS SDK v4 Support
 

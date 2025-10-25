@@ -72,4 +72,3 @@ Portions of this code are based on Stephen Cleary's [AsyncEx's AsyncContext](htt
 ![CodeScene System Mastery](https://codescene.io/projects/32198/status-badges/system-mastery)
 
 ![CI](https://github.com/BrighterCommand/Brighter/workflows/CI/badge.svg)
-
