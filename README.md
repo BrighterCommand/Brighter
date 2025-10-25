@@ -1,7 +1,7 @@
 | | |
 | ------------- | ------------- |
 |![canon](https://raw.githubusercontent.com/BrighterCommand/Brighter/master/images/brightercanon-nuget.png) |[Brighter](https://github.com/BrighterCommand/Brighter)|
-||Brighter is a framework for building messaging app with .NET and C#. It can be used with an in-memory bus, or for interoperability in a microservices architecture, out of process via a wider range of middleware transports. |
+||Brighter is a framework for building messaging apps with .NET and C#. It can be used with an in-memory bus, or for interoperability in a microservices architecture, out of process via a wider range of middleware transports. |
 | Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.svg)](https://www.nuget.org/packages/paramore.brighter/)  |
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.svg)](https://www.nuget.org/packages/Paramore.Brighter/) |
 | Documentation  |  [Technical Documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/)  |

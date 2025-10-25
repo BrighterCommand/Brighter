@@ -6,13 +6,13 @@
 
 With V10 we have made a number of significant changes to Brighter. There are breaking changes that you will need to be aware of. However, most of the changes required are straightforward to make. A summary of the most important changes:
 
-* **Cloud Events**: We now have full support Cloud Events headers; you can set values in your Publication and have them reflected on messages.
+* **Cloud Events**:We now have full support for Cloud Events headers; you can set values in your Publication and have them reflected on messages.
 * **Open Telemetry**: We now support the OpenTelemetry Semantic Conventions for Messaging. This will mean that you have different traces to V9, where the OTel conventions were Brighter's own.
 * **Default Message Mappers**: There is no need to provide a mapper if your goal is to serialize your body as JSON. You can use a default mapper. You can create your own default mapper for other formats. You only need explicit mappers for complex transform pipelines.
 * **Dynamic Message Deserialization**: Previously we required that you used a DataType Channel (one type per channel). Whilst we recommend this, and it remains the default you can now provide a callback to determine the message type from the message itself, such as via the Cloud Events type, before deserializing.
 * **Agreement Dispatcher**: We now support a callback for determining the handler to dispatch a Command or Event to. Previously we matched request and handler based on the request type. Whilst this is still a default, you can now add a callback to dynamically determine the handler from the request and the request context.
 * **Request Context Improvements**: You can now inject the RequestContext more easily into a pipeline. The RequestContext now supports the `OriginatingMessage` for subscriptions to queues or streams.
-* **Reactor and Proactor**: We have made considerable under-the-hood improvements synchronous and asynchronous message pumps in your consumer. The asynchronous pipeline is now end-to-end.
+* **Reactor and Proactor**: We have made considerable under-the-hood improvements to synchronous and asynchronous message pumps in your consumer. The asynchronous pipeline is now end-to-end.
 * **Scheduled Requests/Messaging**: We now support integration with schedulers, like Quartz.NET, Hangfire, or AWS Scheduler. This can be used with requests or messages. We use this support internally, if available, to allow "Requeue with Delay" where the messaging protocol does not natively support it.
 * **Nullability**: We have enabled nullable reference types.
 * **Simplified Configuration**: We have tried to make configuration simpler, including renaming obscure methods. This needs more work in future releases.
@@ -24,7 +24,7 @@ Full Cloud Events specification support has been added across all supported mess
 * **Publication**: Support for Cloud Events on the Publication with configurable additional properties
 * **Message Mapper**: The Publication is passed into the message mapper, allowing you to read CloudEvents properties
 * **Default Mappers**: The default `JsonMessageMapper` writes `binary` Cloud Event headers, and the default `CloudEventJsonMessageMapper` writes `structured` Cloud Events Headers.
-* **Transport Integration**: We support writing and reading CloudEvents headers across are supported messaging protocols.
+* **Transport Integration**: We support writing and reading CloudEvents headers across all supported messaging protocols.
 * **Message Routing**: Use Cloud Events type for message deserialization (see below).
 
 ### OpenTelemetry Integration

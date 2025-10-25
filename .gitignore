@@ -246,7 +246,7 @@ ServiceFabricBackup/
 *.ldf
 *.ndf
 
-# SQlite files
+# SQLite files
 *.db
 *.sqlite
 *.sqlite3
