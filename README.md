@@ -16,7 +16,7 @@
   * You can write a command, that is then dispatched to a handler that you write. 
   * Alternatively you can write an event, that is dispatched to zero or more handlers that you write.
   * Brighter also supports the Command Processor pattern, so that you can add middleware between the sender and handler.
-  * Handlers are tagged via attributes to include middleware in thier pipeline.
+  * Handlers are tagged via attributes to include middleware in their pipeline.
   * Out-of-the-box middleware is provided for logging and Polly (retry, and circuit breaker).
 
 * When integrating two microservices using messaging, one question is how to abstract from the developer the code that sends and receives messages in favor of writing domain code.

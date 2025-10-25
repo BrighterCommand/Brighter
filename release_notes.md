@@ -19,7 +19,7 @@ With V10 we have made a number of significant changes to Brighter. There are bre
 
 ### Cloud Events Support
 
-Full Cloud Events specification support has been added across all transports:
+Full Cloud Events specification support has been added across all supported messaging protocols:
 
 * **Publication**: Support for Cloud Events on the Publication with configurable additional properties
 * **Message Mapper**: The Publication is passed into the message mapper, allowing you to read CloudEvents properties
@@ -58,7 +58,7 @@ You only need to create custom message mappers when you require explicit transfo
   .AddProducers((configure) =>
   {
     ...
-  }
+  })
   //This is the default mapper type, so you can omit it, but we are  explicit  for this note to show how to register your own default
   .AutoFromAssemblies([typeof(TaskCreated).Assembly], defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
 ```
@@ -188,7 +188,7 @@ services.AddBrighter()
 
 ### Polly Resilience Pipeline
 
-**Breaking Change**: New resilience pipeline attributes replace legacy timeout policies ([PR #3677](https://github.com/BrighterCommand/Brighter/pull/3677)):
+**Breaking Change**: New resilience pipeline attributes replace legacy timeout policies 
 
 ```csharp
 // V9 - Deprecated
@@ -212,7 +212,7 @@ The new approach provides:
 
 **Breaking Change**: The `IRequestContext` interface has been enhanced to support:
 
-* **Partition Key**: Set message partition keys dynamically (see [PR #3678](https://github.com/BrighterCommand/Brighter/pull/3678))
+* **Partition Key**: Set message partition keys dynamically 
 * **Custom Headers**: Add headers via request context
 * **Resilience Context**: Integration with Polly Resilience Pipeline
 
