@@ -349,7 +349,7 @@ If you use Inbox/Outbox patterns, you may need to update your database schemas. 
 
 For detailed migration guidance, see the [V10 Migration Guide](https://brightercommand.github.io/Brighter/migration/v10) in our documentation.
 
-## Release 9.X ##
+## Release 9.X
 
 ## Binary Serialization Fixes
 
@@ -367,7 +367,7 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 
 * Compression Transform now available to compress messages using Gzip (or Brotli or Deflate on .NET 6 or 7)
 
-## Release 9.3.6 
+## Release 9.3.6
 
 * Set correct partition key (kafka key) for Kafka messages  
 * Add default option for Header bags serialisation
@@ -391,7 +391,7 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 
 * Fixed missing negation operator when checking for AWS resources
 
-## Release 9.1.14 
+## Release 9.1.14
 
 * Renamed MessageStore to Outbox and CommandStore to Inbox for clarity with well-known pattern names outside this team
   * Impact is wide, namespaces, class names and project names, so this is a ***BREAKING CHANGE***
@@ -423,13 +423,13 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 * Supports an async pipeline: callbacks should happen on the same thread as the handler (and the pump), avoiding thread pool threads
 * Fixed issue in SQlite with SQL to mark a message as dispatched
 
-## Release 8.1.1399 
+## Release 8.1.1399
 
 * Update nuget libs
 * RabbitMQ 6.*
 * Fix correlationid no been sent correctly when using SqlCommandStore
 
-## Release 8.1.1036 
+## Release 8.1.1036
 
 * Fixes issue when a rabbitmq connection is dropped it sometimes ends up with 2 connections and then does not dispose the ghost connection.
 * Fix for System.InvalidOperationException: You cannot enqueue more items than the buffer length #846
@@ -457,13 +457,13 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 * Added support for the Outbox pattern via DepositPost and ClearPostBox
 * Fixed <https://github.com/BrighterCommand/Brighter/issues/156> to allow different exchange types to be set (was broken by support of delayed exchange)
   
-## Release 7.4.0 
+## Release 7.4.0
 
 * Updated to signed version of Polly, works with netcore2.1.
 * Fix for Sql CommandStore.
 * Fixes to make flaky tests stable.
   
-## Release 7.3.0   
+## Release 7.3.0
 
 * Added beta Support for a Redis transport
 * Support for Binding a channel to multiple topics
@@ -473,23 +473,23 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 * Fixed an issue where multiple performers did not have distinct names and so could not be tracked
 * RMQ changed from push rabbit consumer to just simple pull based.
 
-## Release 7.2.0 
+## Release 7.2.0
 
 * Support for PostgreSql Message Store (Tarun Pothulapati @Pothulapati)
 * Support for MySql Message and Command Stores (Derek Comartin @dcomartin)
 * Support for Kafka Messaging Gateway - Beta (Wayne Hunsley @whunsley)
 * Support for MSSql Messaging Gateway - Beta (Fred Hoogduin @Red-F)
 
-## Release 7.1.0 
+## Release 7.1.0
 
 * Fixes issue with high CPU when failing to connect to RabbitMQ.
 * Fixes missing High Availability setting, had to make changes to IAmAChannelFactory.
 
-## Release 7.0.137 - 7.0.143 
+## Release 7.0.137 - 7.0.143
 
 * Support for .NET Core (NETSTANDARD 1.5)
 
-**Breaking Changes**
+### **Breaking Changes**
 
 * Configuration no longer supports XML based config sections. We use data structures instead, and expect you to configure mostly in code, initializing those data structures from your config system of choice yourself. We recommend following 12-Factor Apps guidelines and preferring enviroment variables for items that vary by environment over XML or JSON based configuration files. (We may consider providing config sections in Contrib again, please feedback if this is a critical issue for you. PRs welcome.)
 * Dropped CommandProcessor from namespaces and folder names, to shorten, and remove semantic issue that it is not just a Command Processor
@@ -497,20 +497,20 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 * As a result, your using statements will need revision with this release
 * Some namespaces i.e Paramore.Brighter.Policy changed to avoid clashes now CamelCase (has become Paramore.Brighter.Policies)
 
-## Release 6.1.0 
+## Release 6.1.0
 
 * Support for binary message payloads i.e. not just text/plain for JSON or XML. Current support is modelled around use of protobuf over RMQ
 
-## Release 6.0.28 
+## Release 6.0.28
 
 Fix issue with encoding of non-string types and transmission of correlation id <https://github.com/BrighterCommand/Brighter/pull/180>
 
-## Release 6.0.6 
+## Release 6.0.6
 
 - Increase logging level when we stop reading from a queue that cannot be readhttps://github.com/BrighterCommand/Brighter/pull/179
 * Peformance issue caused by creation of a logger per requesthandler instance. The logger is now static, but is initialized lazily and can be overridden for TDD or legacy compatibility
 
-## Release 6.0.0 
+## Release 6.0.0
 
 **Breaking Changes**
 * CommandProcessorBuilder no longer takes .Logger(logger)
@@ -531,7 +531,7 @@ Fix issue with encoding of non-string types and transmission of correlation id <
 * Huge feature, Async; added support for SendAsync and PublishAsync to an IHandleRequestsAsync pipeline.
 * Basic support for publishing to Azure Service Bus with `paramore.brighter.commandprocessor.messaginggateway.azureservicebus`.
 
-## Release 5 
+## Release 5
 
 **Bug Fixes:**
 
@@ -564,7 +564,7 @@ Fix issue with encoding of non-string types and transmission of correlation id <
 * Dropped support for RavenDb as a message store, we feel EventStore covers this scenario better where non-relational stores are an option
 * Removed release branch. We just tag a release on master now, so this only existed to support an older version of the library that was pre the tagging strategy. Removed now as confusing to new users of the library.
 
-## Release 4.0.215 
+## Release 4.0.215
 
 1. Fixed an issue where you could not have multiple UsePolicy or FallbackPolicy attributes on a single handler.#
 2. We pool connections now, to prevent clients with large number of channels overwhelming servers.
@@ -575,7 +575,7 @@ Fix issue with encoding of non-string types and transmission of correlation id <
 7. Fixed and issues with unhandled exceptions from handlers when an event is published not been logged correctly
 8. The first early version of a Message Store Viewer has been release as a zip file download
 
-## Release 3.0.129 
+## Release 3.0.129
 
 1. We now support a Fallback method on IHandleRequests<TRequest> which is intended to be used for compensating or emergency action when a Handle method cannot be executed. The [FallbackPolicy] attribute supports the pipeline calling the Fallback method for you, in the event of either any exception bubbling into the handler, or a broken circuit exception bubbling into the handler.
 2. Fix issue with RabbitMQ consumers running on a High Availability cluster not cancelling properly after cluster failover.
@@ -583,7 +583,7 @@ Fix issue with encoding of non-string types and transmission of correlation id <
 4. Added functionality so after a specified number of unacceptable message (unable to read from queue or map message) a connection is shutdown, by default unacceptable message are acked and dropped. <https://github.com/BrighterCommand/Brighter/issues/51>
 5. Move RequeueException to paramore.brighter.commandprocessor.exceptions (breaking change).
 
-## Release 3 
+## Release 3
 
 1. Refactored **IAmAMessagingGateway** into a **IAmAMessageConsumer** and **IAmAMessageProducer** to support differing approaches to producing and consuming messages for a particular flavour of Message-Oriented-Middleware. *These changes are a breaking binary change for users of earlier versions.*
  1. NOTE: IF YOU USE TASK QUEUES PLEASE SAVE YOUR SERVICEACTIVATORCONNECTIONS IN YOUR APP.CONFIG AS THE V2.0.1 BRIGHTER.SERVICEACTIVATOR UNINSTALL WILL DELETE THEM (FIXED FOR V3)
