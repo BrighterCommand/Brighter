@@ -46,6 +46,20 @@ public string Status { get; set; }
 - Documentation comments should be changed when APIs change.  
 - Document new features and changes in the Docs repository of the BrighterCommand organization.
 
+## Architecture Decision Records
+
+We are using Architecture Decision Records (ADR) to record important design decisions that we make. When you make a significant decicion about design, that would be useful as context to future reviewers, or explorers of the codebase, please record your design decision as an ADR.
+
+Place ADRs in the [ADR directory](../adr) 
+
+The template for the ADR is in our [first ADR](../adr/0001-record-architecture-decisions.md).
+
+An ADR should follow the naming convention [Sequence Number]-[Title].md
+
+Scan the ADR directory for existing ADRs to determine the next [Sequence Number] to use.
+
+Use dash-case (aka kebab-case) for the [Title] of the ADR.
+
 ## Licensing
 
 - We add a license comment to every src file

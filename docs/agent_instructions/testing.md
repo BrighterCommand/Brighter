@@ -2,7 +2,10 @@
 
 - Use TDD where possible.
 - Write developer tests using xUnit.
-- Name test methods in the format: When_[condition]_should_[expected_behavior]. Name test classes [behavior]Tests for the behavior being tested across all tests in the file, for example CommandProcessorPostBoxBulkClearAsyncTests.
+- Name test methods in the format: When_[condition]_should_[expected_behavior].
+- Prefer a test case per file.
+- Name test files for the test method in the file i.e. When_[condition]_should_[expected_behavior].cs 
+- If you decide to use multiple test cases per file, for example shared complex set up, then name test classes [behavior]Tests for the behavior being tested across all tests in the file, for example CommandProcessorPostBoxBulkClearAsyncTests.
 - Ensure all new features and bug fixes include appropriate test coverage.
 
 ## TDD Style
