@@ -536,7 +536,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
         if (_ttl.HasValue)
         {
-            arguments.Add("x-message-ttl", _ttl.Value.TotalMilliseconds);
+            arguments.Add("x-message-ttl", Convert.ToInt32(_ttl.Value.TotalMilliseconds));
         }
 
         if (_maxQueueLength.HasValue)
