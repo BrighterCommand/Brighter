@@ -14,25 +14,57 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
 public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, RmqSubscription>
 {
-    private int? MaxQueueLenght { get; set; }
-    protected override bool HasSupportToDelayedMessages => true;
-
+    protected int? MaxQueueLenght { get; set; }
+    protected TimeSpan? Ttl { get; set; }
+    protected int BufferSize { get; set; } = 2;
+    
+    private IAmAChannelAsync? DeadLetterQueueChannel { get; set; }
+    
     protected override bool HasSupportToDeadLetterQueue => true;
+
+    protected override async Task CleanUpAsync(CancellationToken cancellationToken = default)
+    {
+        if (DeadLetterQueueChannel != null)
+        {
+            try
+            {
+                await DeadLetterQueueChannel.PurgeAsync(cancellationToken);
+                DeadLetterQueueChannel.Dispose();
+                DeadLetterQueueChannel = null;
+            }
+            catch 
+            {
+                // Ignoring any error
+            }
+        }
+        
+        await base.CleanUpAsync(cancellationToken);
+    }
 
     protected override RmqPublication CreatePublication(RoutingKey routingKey)
     {
         return new RmqPublication<MyCommand>
         {
             Topic = routingKey,
-            MakeChannels = OnMissingChannel.Create
+            MakeChannels = OnMissingChannel.Create,
         };
     }
 
     protected override RmqSubscription CreateSubscription(RoutingKey routingKey, 
         ChannelName channelName,
-        OnMissingChannel makeChannel = OnMissingChannel.Create)
+        OnMissingChannel makeChannel = OnMissingChannel.Create,
+        bool setupDeadLetterQueue = false)
     {
-        return new RmqSubscription<MyCommand>(
+        ChannelName? deadLetterChannelName = null;
+        RoutingKey? deadLetterRoutingKey = null;
+
+        if (setupDeadLetterQueue)
+        {
+            deadLetterChannelName = new ChannelName(channelName.Value + "DLQ");
+            deadLetterRoutingKey = new RoutingKey(routingKey.Value + "DLQ");
+        }
+        
+        var subscription = new RmqSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
             channelName: channelName,
             routingKey: routingKey,
@@ -40,21 +72,35 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
             makeChannels: makeChannel,
             requeueCount: 3,
             maxQueueLength: MaxQueueLenght,
-            ttl: TimeSpan.FromSeconds(10),
-            deadLetterChannelName: new ChannelName(channelName.Value + "DLQ"),
-            deadLetterRoutingKey: new RoutingKey(routingKey.Value + "DLQ"));
+            ttl: Ttl,
+            deadLetterChannelName: deadLetterChannelName,
+            deadLetterRoutingKey: deadLetterRoutingKey,
+            bufferSize: BufferSize);
+
+        if (setupDeadLetterQueue)
+        {
+            GetMessageFromDeadLetterQueueAsync(subscription)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        return subscription;
     }
 
     protected override async Task<Message> GetMessageFromDeadLetterQueueAsync(RmqSubscription subscription, CancellationToken cancellationToken = default)
     {
-        var sub = new RmqSubscription<MyCommand>(
-            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: subscription.DeadLetterChannelName,
-            routingKey: subscription.RoutingKey,
-            messagePumpType: MessagePumpType.Proactor);
+        if (DeadLetterQueueChannel == null)
+        {
+            var sub = new RmqSubscription<MyCommand>(
+                subscriptionName: new SubscriptionName(Uuid.NewAsString()),
+                channelName: subscription.DeadLetterChannelName,
+                routingKey: subscription.DeadLetterRoutingKey,
+                messagePumpType: MessagePumpType.Proactor);
 
-        var channel = await CreateChannelAsync(sub, cancellationToken);
-        return await channel.ReceiveAsync(ReceiveTimeout,cancellationToken);
+            DeadLetterQueueChannel = await CreateChannelAsync(sub, cancellationToken);
+        }
+        
+        return await DeadLetterQueueChannel.ReceiveAsync(ReceiveTimeout,cancellationToken);
     }
 
     protected override async Task<IAmAMessageProducerAsync> CreateProducerAsync(RmqPublication publication, CancellationToken cancellationToken = default)
@@ -311,26 +357,78 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     {
         // arrange
         MaxQueueLenght = 1;
+        BufferSize = 1;
         
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        Producer = await CreateProducerAsync(Publication);
         Channel = await CreateChannelAsync(Subscription);
+        Producer = await CreateProducerAsync(Publication);
         
         await Producer.SendAsync(CreateMessage(Publication.Topic!));
         await Producer.SendAsync(CreateMessage(Publication.Topic!));
         
-        await Task.Delay(DelayForReceiveMessage);
+        try
+        {
+            await Producer.SendAsync(CreateMessage(Publication.Topic!));
+            Assert.Fail("Exception an exception during publication");
+        }
+        catch (Exception e)
+        {
+            Assert.IsType<PublishException>(e);
+        }
         
         // Act
         var received = await Channel.ReceiveAsync(ReceiveTimeout);
-        Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
-
+        Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
         await Channel.AcknowledgeAsync(received);
         
-        // Assert
         received = await Channel.ReceiveAsync(ReceiveTimeout);
-        Assert.Equal(MessageType.MT_QUIT,  received.Header.MessageType);
+        Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
+        await Channel.AcknowledgeAsync(received);
+        
+        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        Assert.Equal(MessageType.MT_NONE,  received.Header.MessageType);
+    }
+    
+    [Fact]
+    public async Task When_rejecting_to_dead_letter_queue_a_message_due_to_queue_length()
+    {
+         // arrange
+        MaxQueueLenght = 1;
+        BufferSize = 1;
+        
+        Publication = CreatePublication(GetOrCreateRoutingKey());
+        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName(), setupDeadLetterQueue: true);
+        Channel = await CreateChannelAsync(Subscription);
+        Producer = await CreateProducerAsync(Publication);
+        
+        await Producer.SendAsync(CreateMessage(Publication.Topic!));
+        await Producer.SendAsync(CreateMessage(Publication.Topic!));
+        
+        try
+        {
+            await Producer.SendAsync(CreateMessage(Publication.Topic!));
+            Assert.Fail("Exception an exception during publication");
+        }
+        catch (Exception e)
+        {
+            Assert.IsType<PublishException>(e);
+        }
+        
+        // Act
+        var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
+        await Channel.AcknowledgeAsync(received);
+        
+        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
+        await Channel.AcknowledgeAsync(received);
+        
+        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        Assert.Equal(MessageType.MT_NONE,  received.Header.MessageType);
+
+        received = await GetMessageFromDeadLetterQueueAsync(subscription: Subscription);
+        Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
     }
     
     [Fact]
@@ -344,26 +442,21 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
         Assert.NotSame(originalConnection, (await connectionPool.GetConnectionAsync(connectionFactory)));
     } 
     
-    
     [Fact]
     public async Task When_rejecting_a_message_to_a_dead_letter_queue()
     {
         Publication = CreatePublication(GetOrCreateRoutingKey());
-        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
+        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName(), setupDeadLetterQueue: true);
         Producer = await CreateProducerAsync(Publication);
         Channel = await CreateChannelAsync(Subscription);
 
         var messageOne = CreateMessage(Publication.Topic!);
-        var messageTwo = CreateMessage(Publication.Topic!);
-        
         await Producer.SendAsync(messageOne);
-        await Producer.SendAsync(messageTwo);
 
-        //Let it expire
-        await Task.Delay(TimeSpan.FromSeconds(11));
-
-        //assert this is our message
         var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        await Channel.RejectAsync(received);
+        
+        received = await Channel.ReceiveAsync(ReceiveTimeout);
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
     }
 }

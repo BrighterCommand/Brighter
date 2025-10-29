@@ -80,6 +80,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
 
     protected virtual bool HasSupportToDelayedMessages { get; } = false;
     protected virtual bool HasSupportToDeadLetterQueue { get; } = false;
+    protected virtual bool HasSupportToMoveToDeadLetterQueueAfterTooManyRetries { get; } = false;
     
     /// <summary>
     /// Initializes the test fixture asynchronously before each test runs.
@@ -163,13 +164,10 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// <returns>A publication configuration of type <typeparamref name="TPublication"/>.</returns>
     protected abstract TPublication CreatePublication(RoutingKey routingKey);
     
-    /// <summary>
-    /// Creates a subscription configuration for the specified routing key and channel name.
-    /// </summary>
-    /// <param name="routingKey">The routing key for the subscription.</param>
-    /// <param name="channelName">The channel name for the subscription.</param>
-    /// <returns>A subscription configuration of type <typeparamref name="TSubscription"/>.</returns>
-    protected abstract TSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName, OnMissingChannel makeChannel = OnMissingChannel.Create);
+    protected abstract TSubscription CreateSubscription(RoutingKey routingKey, 
+        ChannelName channelName, 
+        OnMissingChannel makeChannel = OnMissingChannel.Create, 
+        bool setupDeadLetterQueue = false);
     
     /// <summary>
     /// Creates an async message producer for the specified publication.
@@ -262,6 +260,8 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// </summary>
     /// <value>The timeout as a <see cref="TimeSpan"/>. Default is 1 second.</value>
     protected virtual TimeSpan ReceiveTimeout => TimeSpan.FromSeconds(1);
+    
+    protected virtual TimeSpan MessageDelay => TimeSpan.FromSeconds(5);
 
     [Fact]
     public async Task When_posting_a_message_via_the_messaging_gateway()
@@ -315,7 +315,6 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
             CreateMessage(Publication.Topic!),
             CreateMessage(Publication.Topic!)
         ];
-        
 
         await messages.EachAsync(async message => await Producer.SendAsync(message));
         
@@ -334,6 +333,11 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
             Assert.NotNull(expectedMessage);
             
             await Channel.AcknowledgeAsync(received);
+
+            if ((i + 1) % Subscription.BufferSize == 0)
+            {
+                await Task.Delay(DelayForReceiveMessage);
+            }
         }
     }
     
@@ -475,7 +479,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         Channel = await CreateChannelAsync(Subscription);
 
         var message = CreateMessage(Publication.Topic!);
-        await Producer.SendWithDelayAsync(message, TimeSpan.FromSeconds(5));
+        await Producer.SendWithDelayAsync(message, MessageDelay);
         
         // Act
         var received = await Channel.ReceiveAsync(ReceiveTimeout);
@@ -601,8 +605,13 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     [Fact]
     public async Task When_requeuing_a_message_to_a_dead_letter_queue()
     {
+        if (!HasSupportToMoveToDeadLetterQueueAfterTooManyRetries)
+        {
+            return;
+        }
+        
         Publication = CreatePublication(GetOrCreateRoutingKey());
-        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
+        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName(), setupDeadLetterQueue: true);
         Producer = await CreateProducerAsync(Publication);
         Channel = await CreateChannelAsync(Subscription);
         

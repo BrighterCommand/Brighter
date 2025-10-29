@@ -536,18 +536,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
         if (_ttl.HasValue)
         {
-            arguments.Add("x-message-ttl", _ttl.Value.Milliseconds);
+            arguments.Add("x-message-ttl", _ttl.Value.TotalMilliseconds);
         }
 
         if (_maxQueueLength.HasValue)
         {
             arguments.Add("x-max-length", _maxQueueLength.Value);
-            if (_hasDlq)
-            {
-                arguments.Add("x-overflow", "reject-publish-dlx");
-            }
-
-            arguments.Add("x-overflow", "reject-publish");
+            arguments.Add("x-overflow", _hasDlq ? "reject-publish-dlx" : "reject-publish");
         }
 
         return arguments;
