@@ -184,7 +184,7 @@ internal sealed partial class RmqMessagePublisher
             headers.Add(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, message.Header.DataSchema.ToString());
         }
 
-        if (message.Header.CorrelationId != string.Empty)
+        if (!Id.IsNullOrEmpty(message.Header.CorrelationId))
             headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.Value);
 
         if (!string.IsNullOrEmpty(message.Header.TraceParent?.Value))
