@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Base.Test.MessagingGateway;
 /// Derived classes should implement the abstract methods to provide specific gateway implementations.
 /// The class handles proper disposal of resources including producers, subscriptions, and channels.
 /// </remarks>
-public abstract class MessagingGatewayProactorTests<TPublication, TSubscription> : IAsyncLifetime
+public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> : IAsyncLifetime
     where TPublication : Publication
     where TSubscription : Subscription
 {
@@ -70,13 +70,13 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// Gets the message producer for the test.
     /// </summary>
     /// <value>The message producer as <see cref="IAmAMessageProducer"/>, or null if not yet initialized.</value>
-    protected IAmAMessageProducerAsync? Producer { get; set; }
+    protected IAmAMessageProducerSync? Producer { get; set; }
     
     /// <summary>
     /// Gets the async channel for receiving messages.
     /// </summary>
     /// <value>The async channel as <see cref="IAmAChannelAsync"/>, or null if not yet initialized.</value>
-    protected IAmAChannelAsync? Channel { get; set; }
+    protected IAmAChannelSync? Channel { get; set; }
 
     /// <summary>
     /// Indicates whether the messaging gateway supports delayed message delivery.
@@ -113,28 +113,25 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// Initializes the test fixture asynchronously before each test runs.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
-    public async Task InitializeAsync()
+    public Task InitializeAsync()
     {
-        await BeforeEachTestAsync();
+        BeforeEachTest();
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Hook method called before each test runs. Override to provide custom setup logic.
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous setup operation.</returns>
-    protected virtual Task BeforeEachTestAsync(CancellationToken cancellationToken = default)
+    protected virtual void BeforeEachTest()
     {
-        return Task.CompletedTask;
     }
     
     /// <summary>
     /// Disposes the test fixture asynchronously after each test completes.
     /// </summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous disposal operation.</returns>
     public async Task DisposeAsync()
     {
-        await AfterEachTestAsync();
+        AfterEachTest();
         await DisposeAsync(Producer);
         await DisposeAsync(Subscription);
         
@@ -157,25 +154,21 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// <summary>
     /// Hook method called after each test completes. Override to provide custom teardown logic.
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous teardown operation.</returns>
-    protected virtual async Task AfterEachTestAsync(CancellationToken cancellationToken = default)
+    protected virtual void AfterEachTest()
     {
-        await CleanUpAsync(cancellationToken);
+        CleanUp();
     }
 
     /// <summary>
     /// Cleans up test resources, including purging the channel if available.
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous cleanup operation.</returns>
-    protected virtual async Task CleanUpAsync(CancellationToken cancellationToken = default)
+    protected virtual void CleanUp()
     {
         if (Channel != null)
         {
             try
             {
-                await Channel.PurgeAsync(cancellationToken);
+                Channel.Purge();
             }
             catch
             {
@@ -208,17 +201,13 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// Creates an async message producer for the specified publication.
     /// </summary>
     /// <param name="publication">The publication configuration.</param>
-    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation, containing an <see cref="IAmAMessageProducerAsync"/>.</returns>
-    protected abstract Task<IAmAMessageProducerAsync> CreateProducerAsync(TPublication publication, CancellationToken cancellationToken = default);
+    protected abstract IAmAMessageProducerSync CreateProducer(TPublication publication);
     
     /// <summary>
     /// Creates an async channel for the specified subscription.
     /// </summary>
     /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation, containing an <see cref="IAmAChannelAsync"/>.</returns>
-    protected abstract Task<IAmAChannelAsync> CreateChannelAsync(TSubscription subscription, CancellationToken cancellationToken = default);
+    protected abstract IAmAChannelSync CreateChannel(TSubscription subscription);
 
     /// <summary>
     /// Gets or creates a unique routing key for the test. Uses the calling test method name as the seed.
@@ -244,14 +233,13 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// Retrieves a message from the dead letter queue for the specified subscription.
     /// </summary>
     /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation, containing the message from the dead letter queue.</returns>
     /// <exception cref="NotImplementedException">Thrown if the messaging gateway does not support dead letter queues.</exception>
     /// <remarks>
     /// Override this method in derived classes to provide implementation for retrieving messages from the dead letter queue.
     /// This method is used by tests that verify dead letter queue functionality.
     /// </remarks>
-    protected virtual Task<Message> GetMessageFromDeadLetterQueueAsync(TSubscription subscription, CancellationToken cancellationToken = default)
+    protected virtual Message GetMessageFromDeadLetterQueue(TSubscription subscription)
     {
         throw new NotImplementedException();
     }
@@ -326,6 +314,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         Assert.Equal(expected.Header.ContentType, received.Header.ContentType);
         Assert.Equal(expected.Header.CorrelationId, received.Header.CorrelationId);
         Assert.Equal(expected.Header.DataSchema, received.Header.DataSchema);
+        Assert.Equal(expected.Header.MessageId, received.Header.MessageId);
         Assert.Equal(expected.Header.PartitionKey, received.Header.PartitionKey);
         Assert.Equal(expected.Header.ReplyTo, received.Header.ReplyTo);
         Assert.Equal(expected.Header.Subject, received.Header.Subject);
@@ -341,33 +330,33 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
 
     [Fact]
-    public async Task When_posting_a_message_via_the_messaging_gateway_should_be_received()
+    public void When_posting_a_message_via_the_messaging_gateway_should_be_received()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        Producer = await CreateProducerAsync(Publication);
-        Channel = await CreateChannelAsync(Subscription);
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
         
         var message = CreateMessage(Publication.Topic!);
         
         // Act
-        await Producer.SendAsync(message);
-        await Task.Delay(DelayForReceiveMessage);
-        var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        Producer.Send(message);
+        Thread.Sleep(DelayForReceiveMessage);
+        var received = Channel.Receive(ReceiveTimeout);
         
         // Assert
         AssertMessageAreEquals(message, received);
     }
 
     [Fact]
-    public async Task When_a_message_consumer_reads_multiple_messages_should_receive_all_messages()
+    public void When_a_message_consumer_reads_multiple_messages_should_receive_all_messages()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        Producer = await CreateProducerAsync(Publication);
-        Channel = await CreateChannelAsync(Subscription);
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
 
         List<Message> messages =
         [
@@ -377,15 +366,15 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
             CreateMessage(Publication.Topic!)
         ];
 
-        await messages.EachAsync(async message => await Producer.SendAsync(message));
+        messages.Each(message => Producer.Send(message));
         
-        await Task.Delay(DelayForReceiveMessage);
+        Thread.Sleep(DelayForReceiveMessage);
         
         // Act
         var total = messages.Count;
         for (var i = 0; i < total; i++)
         {
-            var received = await Channel.ReceiveAsync(ReceiveTimeout);
+            var received = Channel.Receive(ReceiveTimeout);
             
             // Assert
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
@@ -394,23 +383,23 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
             Assert.NotNull(expectedMessage);
             
             AssertMessageAreEquals(expectedMessage, received);
-            await Channel.AcknowledgeAsync(received);
+            Channel.Acknowledge(received);
 
             if ((i + 1) % Subscription.BufferSize == 0)
             {
-                await Task.Delay(DelayForReceiveMessage);
+                Thread.Sleep(DelayForReceiveMessage);
             }
         }
     }
     
     
     [Fact]
-    public async Task When_confirming_posting_a_message_should_receive_publish_confirmation()
+    public void When_confirming_posting_a_message_should_receive_publish_confirmation()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        Producer = await CreateProducerAsync(Publication);
+        Producer = CreateProducer(Publication);
 
         if (Producer is not ISupportPublishConfirmation confirmation)
         {
@@ -423,31 +412,31 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         var message = CreateMessage(Publication.Topic!);
         
         // Act
-        await Producer.SendAsync(message);
-        await Task.Delay(DelayForReceiveMessage);
+        Producer.Send(message);
+        Thread.Sleep(DelayForReceiveMessage);
         
         // Assert
         Assert.True(messageSent);
     }
     
     [Fact]
-    public async Task When_infrastructure_missing_and_assume_channel_should_throw_exception()
+    public void When_infrastructure_missing_and_assume_channel_should_throw_exception()
     {
         try
         {
             // Arrange
             Publication = CreatePublication(GetOrCreateRoutingKey());
             Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName(), OnMissingChannel.Assume);
-            Producer = await CreateProducerAsync(Publication);
-            Channel = await CreateChannelAsync(Subscription);
+            Producer = CreateProducer(Publication);
+            Channel = CreateChannel(Subscription);
         
             var message = CreateMessage(Publication.Topic!);
         
             // Act
-            await Producer.SendAsync(message);
+            Producer.Send(message);
         
             // Assert
-            await Channel.ReceiveAsync(ReceiveTimeout);
+            Channel.Receive(ReceiveTimeout);
             Assert.Fail("We are expected to throw an exception");
         }
         catch
@@ -457,23 +446,23 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
     
     [Fact]
-    public async Task When_infrastructure_missing_and_validate_channel_should_throw_exception()
+    public void When_infrastructure_missing_and_validate_channel_should_throw_exception()
     {
         try
         {
             // Arrange
             Publication = CreatePublication(GetOrCreateRoutingKey());
             Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName(), OnMissingChannel.Validate);
-            Producer = await CreateProducerAsync(Publication);
-            Channel = await CreateChannelAsync(Subscription);
+            Producer = CreateProducer(Publication);
+            Channel = CreateChannel(Subscription);
         
             var message = CreateMessage(Publication.Topic!);
         
             // Act
-            await Producer.SendAsync(message);
+            Producer.Send(message);
         
             // Assert
-            await Channel.ReceiveAsync(ReceiveTimeout);
+            Channel.Receive(ReceiveTimeout);
             Assert.Fail("We are expected to throw an exception");
         }
         catch
@@ -484,38 +473,37 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     
     
     [Fact]
-    public async Task When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception()
+    public void When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
-        Producer = await CreateProducerAsync(Publication);
+        Producer = CreateProducer(Publication);
         
         // Act
         var options = new ParallelOptions { MaxDegreeOfParallelism = 4 };
-        await Parallel.ForEachAsync(Enumerable.Range(0, 10), options, async (_, ct) =>
+        Parallel.ForEach(Enumerable.Range(0, 10), options, (_, _) =>
         {
             var message = CreateMessage(Publication.Topic!);
-            await Producer.SendAsync(message, ct);
+            Producer.Send(message);
         });
         
         // Assert
         Assert.True(true);
     }
     
-    
     [Fact]
-    public async Task When_posting_a_message_but_no_broker_created_should_throw_exception()
+    public void When_posting_a_message_but_no_broker_created_should_throw_exception()
     {
         try
         {
             // Arrange
             Publication = CreatePublication(GetOrCreateRoutingKey());
             Publication.MakeChannels = OnMissingChannel.Validate;
-            Producer = await CreateProducerAsync(Publication);
+            Producer = CreateProducer(Publication);
             
             // Act
             var message = CreateMessage(Publication.Topic!);
-            await Producer.SendAsync(message);
+            Producer.Send(message);
             
             // Assert
             Assert.Fail("We are expected to throw an exception");
@@ -527,7 +515,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
     
     [Fact]
-    public async Task When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery()
+    public void When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery()
     {
         if (!HasSupportToDelayedMessages)
         {
@@ -537,25 +525,25 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         // arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        Producer = await CreateProducerAsync(Publication);
-        Channel = await CreateChannelAsync(Subscription);
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
 
         var message = CreateMessage(Publication.Topic!);
-        await Producer.SendWithDelayAsync(message, MessageDelay);
+        Producer.SendWithDelay(message, MessageDelay);
         
         // Act
-        var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        var received = Channel.Receive(ReceiveTimeout);
         Assert.Equal(MessageType.MT_NONE,  received.Header.MessageType);
         
-        await Task.Delay(MessageDelay);
+        Thread.Sleep(MessageDelay);
         
         // Assert
-        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        received = Channel.Receive(ReceiveTimeout);
         AssertMessageAreEquals(message, received);
     }
     
     [Fact]
-    public async Task When_requeing_a_failed_message_with_delay_should_receive_message_again()
+    public void When_requeing_a_failed_message_with_delay_should_receive_message_again()
     {
         if (!HasSupportToDelayedMessages)
         {
@@ -565,54 +553,55 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         // arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        Producer = await CreateProducerAsync(Publication);
-        Channel = await CreateChannelAsync(Subscription);
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
 
         var message = CreateMessage(Publication.Topic!);
-        await Producer.SendWithDelayAsync(message, TimeSpan.FromSeconds(5));
-        await Task.Delay(TimeSpan.FromSeconds(6));
+        Producer.SendWithDelay(message, MessageDelay);
+        
+        Thread.Sleep(MessageDelay);
         
         // Act
-        var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        var received = Channel.Receive(ReceiveTimeout);
         Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
         
-        await Channel.RequeueAsync(received);
+        Assert.True(Channel.Requeue(received));
         
         // Assert
-        received = await Channel.ReceiveAsync(ReceiveTimeout);
-        await Channel.AcknowledgeAsync(received);
+        received = Channel.Receive(ReceiveTimeout);
+        Channel.Acknowledge(received);
         AssertMessageAreEquals(message, received);
     }
     
     [Fact]
-    public async Task When_requeing_a_failed_message_should_receive_message_again()
+    public void When_requeing_a_failed_message_should_receive_message_again()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        Producer = await CreateProducerAsync(Publication);
-        Channel = await CreateChannelAsync(Subscription);
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
         
         var message = CreateMessage(Publication.Topic!);
-        await Producer.SendAsync(message);
+        Producer.Send(message);
         
-        await Task.Delay(DelayForReceiveMessage);
+        Thread.Sleep(DelayForReceiveMessage);
         
         // Act
-        var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        var received = Channel.Receive(ReceiveTimeout);
         Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
 
-        await Channel.RequeueAsync(received);
+        Assert.True(Channel.Requeue(received));
 
-        await Task.Delay(DelayForReceiveMessage);
-        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        Thread.Sleep(DelayForReceiveMessage);
+        received = Channel.Receive(ReceiveTimeout);
         
         // Assert
         AssertMessageAreEquals(message, received); 
     }
     
     [Fact]
-    public async Task When_sending_a_message_should_propagate_activity_context()
+    public void When_sending_a_message_should_propagate_activity_context()
     {
         //arrange
         var builder = Sdk.CreateTracerProviderBuilder();
@@ -632,14 +621,14 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        Producer = await CreateProducerAsync(Publication);
-        Channel = await CreateChannelAsync(Subscription);
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
         Producer.Span = parentActivity;
             
         var message = CreateMessage(Publication.Topic!, false);
         
         //act
-        await Producer.SendAsync(message);
+        Producer.Send(message);
         
         parentActivity.Stop();
         tracerProvider.ForceFlush();
@@ -651,7 +640,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
 
     [Fact]
-    public async Task When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue()
+    public void When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue()
     {
         if (!HasSupportToMoveToDeadLetterQueueAfterTooManyRetries)
         {
@@ -660,23 +649,23 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName(), setupDeadLetterQueue: true);
-        Producer = await CreateProducerAsync(Publication);
-        Channel = await CreateChannelAsync(Subscription);
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
         
         var message = CreateMessage(Publication.Topic!);
-        await Producer.SendAsync(message);
+        Producer.Send(message);
 
         Message? received;
         for (var i = 0; i < Subscription.RequeueCount; i++)
         {
-            received = await Channel.ReceiveAsync(ReceiveTimeout);
-            await Channel.RequeueAsync(received);
+            received = Channel.Receive(ReceiveTimeout);
+            Channel.Requeue(received);
         }
         
-        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        received = Channel.Receive(ReceiveTimeout);
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
-        received = await GetMessageFromDeadLetterQueueAsync(Subscription);
+        received = GetMessageFromDeadLetterQueue(Subscription);
         
         // Assert
         AssertMessageAreEquals(message, received); 

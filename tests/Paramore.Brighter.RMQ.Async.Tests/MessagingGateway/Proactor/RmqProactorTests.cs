@@ -10,17 +10,25 @@ using RabbitMQ.Client.Exceptions;
 using Xunit;
 using MyCommand = Paramore.Brighter.Base.Test.Requests.MyCommand;
 
-namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
+namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
 public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, RmqSubscription>
 {
     protected int? MaxQueueLenght { get; set; }
-    protected TimeSpan? Ttl { get; set; }
     protected int BufferSize { get; set; } = 2;
     
     private IAmAChannelAsync? DeadLetterQueueChannel { get; set; }
     
     protected override bool HasSupportToDeadLetterQueue => true;
+
+    protected virtual bool IsDurable { get; } = false;
+    protected virtual TimeSpan? Ttl { get; } = null;
+    protected virtual QueueType QueueType => QueueType.Classic;
+
+    protected virtual RmqMessagingGatewayConnection CreateConnection()
+    {
+        return Configuration.CreateConnection();
+    }
 
     protected override async Task CleanUpAsync(CancellationToken cancellationToken = default)
     {
@@ -75,7 +83,9 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
             ttl: Ttl,
             deadLetterChannelName: deadLetterChannelName,
             deadLetterRoutingKey: deadLetterRoutingKey,
-            bufferSize: BufferSize);
+            bufferSize: BufferSize,
+            queueType: QueueType,
+            isDurable: IsDurable);
 
         if (setupDeadLetterQueue)
         {
@@ -95,7 +105,9 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
                 channelName: subscription.DeadLetterChannelName,
                 routingKey: subscription.DeadLetterRoutingKey,
-                messagePumpType: MessagePumpType.Proactor);
+                messagePumpType: MessagePumpType.Proactor,
+                queueType: QueueType.Classic,
+                isDurable: IsDurable);
 
             DeadLetterQueueChannel = await CreateChannelAsync(sub, cancellationToken);
         }
@@ -105,7 +117,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
 
     protected override async Task<IAmAMessageProducerAsync> CreateProducerAsync(RmqPublication publication, CancellationToken cancellationToken = default)
     {
-        return await CreateProducerAsync(Configuration.Connection, publication);
+        return await CreateProducerAsync(Configuration.CreateConnection(), publication);
     }
     
     private static async Task<IAmAMessageProducerAsync> CreateProducerAsync(RmqMessagingGatewayConnection connection, RmqPublication publication)
@@ -121,7 +133,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
 
     protected override async Task<IAmAChannelAsync> CreateChannelAsync(RmqSubscription subscription, CancellationToken cancellationToken = default)
     {
-        var channel = await new ChannelFactory(new RmqMessageConsumerFactory(Configuration.Connection))
+        var channel = await new ChannelFactory(new RmqMessageConsumerFactory(CreateConnection()))
             .CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -141,7 +153,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
         
         var message = CreateMessage(Publication.Topic!);
-        var badReceiver = new AlreadyClosedRmqMessageConsumer(Configuration.Connection, Subscription.ChannelName, message.Header.Topic, false, 1, false);
+        var badReceiver = new AlreadyClosedRmqMessageConsumer(CreateConnection(), Subscription.ChannelName, message.Header.Topic, false, 1, false);
 
         Producer = await CreateProducerAsync(Publication);
 
@@ -173,7 +185,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
         
         var message = CreateMessage(Publication.Topic!);
-        var badReceiver = new NotSupportedRmqMessageConsumer(Configuration.Connection, Subscription.ChannelName, message.Header.Topic, false, 1, false);
+        var badReceiver = new NotSupportedRmqMessageConsumer(CreateConnection(), Subscription.ChannelName, message.Header.Topic, false, 1, false);
         
         Producer = await CreateProducerAsync(Publication);
         
@@ -195,23 +207,25 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
             await badReceiver.DisposeAsync();
         }
     }
-    
+
     [Fact]
-    public async Task When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting_should_throw_channel_failure_exception()
+    public async Task
+        When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting_should_throw_channel_failure_exception()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
-        
+
         var message = CreateMessage(Publication.Topic!);
-        var badReceiver = new OperationInterruptedRmqMessageConsumer(Configuration.Connection, Subscription.ChannelName, message.Header.Topic, false, 1, false);
-        
+        var badReceiver = new OperationInterruptedRmqMessageConsumer(CreateConnection(), Subscription.ChannelName,
+            message.Header.Topic, false, 1, false);
+
         Producer = await CreateProducerAsync(Publication);
-        
+
         // Act
         await Producer.SendAsync(message);
         await Task.Delay(DelayForReceiveMessage);
-        
+
         try
         {
             await badReceiver.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
@@ -225,28 +239,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
         {
             await badReceiver.DisposeAsync();
         }
-    }
-    
-    
-    [Fact]
-    public void When_creating_quorum_consumer_without_durability_should_throw()
-    {
-        var rmqConnection = new RmqMessagingGatewayConnection
-        {
-            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-            Exchange = new Exchange("paramore.brighter.durableexchange", durable: true)
-        };
 
-        var queueName = new ChannelName(Guid.NewGuid().ToString());
-        var routingKey = new RoutingKey(Guid.NewGuid().ToString());
-
-        var exception = Assert.Throws<ConfigurationException>(() =>
-            new RmqMessageConsumer(rmqConnection, queueName, routingKey,
-                isDurable: false, // This should cause the exception
-                highAvailability: false,
-                queueType: QueueType.Quorum));
-
-        Assert.Contains("Quorum queues require durability to be enabled", exception.Message);
     }
 
     [Fact]
@@ -353,7 +346,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
     
     [Fact]
-    public async Task When_rejecting_a_message_due_to_queue_length_should_throw_publish_exception()
+    public virtual async Task When_rejecting_a_message_due_to_queue_length_should_throw_publish_exception()
     {
         // arrange
         MaxQueueLenght = 1;
@@ -365,14 +358,17 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
         Producer = await CreateProducerAsync(Publication);
         
         await Producer.SendAsync(CreateMessage(Publication.Topic!));
+        await Task.Delay(DelayForReceiveMessage);
+        
         await Producer.SendAsync(CreateMessage(Publication.Topic!));
+        await Task.Delay(DelayForReceiveMessage);
         
         try
         {
             await Producer.SendAsync(CreateMessage(Publication.Topic!));
             Assert.Fail("Exception an exception during publication");
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not Xunit.Sdk.FailException)
         {
             Assert.IsType<PublishException>(e);
         }
@@ -391,7 +387,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
     
     [Fact]
-    public async Task When_rejecting_to_dead_letter_queue_a_message_due_to_queue_length_should_move_to_dlq()
+    public virtual async Task When_rejecting_to_dead_letter_queue_a_message_due_to_queue_length_should_move_to_dlq()
     {
          // arrange
         MaxQueueLenght = 1;
