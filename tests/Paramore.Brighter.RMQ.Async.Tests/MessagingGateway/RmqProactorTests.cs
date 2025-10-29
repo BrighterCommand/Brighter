@@ -134,7 +134,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
 
     [Fact]
-    public async Task When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
+    public async Task When_a_message_consumer_throws_an_already_closed_exception_when_connecting_should_throw_channel_failure_exception()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -166,7 +166,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
     
     [Fact]
-    public async Task When_a_message_consumer_throws_an_not_supported_exception_when_connecting()
+    public async Task When_a_message_consumer_throws_an_not_supported_exception_when_connecting_should_throw_channel_failure_exception()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -197,7 +197,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
     
     [Fact]
-    public async Task When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting()
+    public async Task When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting_should_throw_channel_failure_exception()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -319,7 +319,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
     
     [Fact]
-    public async Task When_posting_a_message_to_persist_via_the_messaging_gateway()
+    public async Task When_posting_a_message_to_persist_via_the_messaging_gateway_should_persist_message()
     {
         // arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -353,7 +353,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
     
     [Fact]
-    public async Task When_rejecting_a_message_due_to_queue_length()
+    public async Task When_rejecting_a_message_due_to_queue_length_should_throw_publish_exception()
     {
         // arrange
         MaxQueueLenght = 1;
@@ -391,7 +391,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
     
     [Fact]
-    public async Task When_rejecting_to_dead_letter_queue_a_message_due_to_queue_length()
+    public async Task When_rejecting_to_dead_letter_queue_a_message_due_to_queue_length_should_move_to_dlq()
     {
          // arrange
         MaxQueueLenght = 1;
@@ -432,7 +432,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     }
     
     [Fact]
-    public async Task When_resetting_a_connection_that_exists()
+    public async Task When_resetting_a_connection_that_exists_should_create_new_connection()
     {
         var connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7);
         var connectionFactory = new ConnectionFactory{HostName = "localhost"};
@@ -443,8 +443,9 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     } 
     
     [Fact]
-    public async Task When_rejecting_a_message_to_a_dead_letter_queue()
+    public async Task When_rejecting_a_message_to_a_dead_letter_queue_should_not_requeue()
     {
+        // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName(), setupDeadLetterQueue: true);
         Producer = await CreateProducerAsync(Publication);

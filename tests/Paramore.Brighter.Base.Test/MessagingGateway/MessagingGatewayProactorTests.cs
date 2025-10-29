@@ -342,7 +342,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
 
     [Fact]
-    public async Task When_posting_a_message_via_the_messaging_gateway()
+    public async Task When_posting_a_message_via_the_messaging_gateway_should_be_received()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -358,27 +358,11 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         var received = await Channel.ReceiveAsync(ReceiveTimeout);
         
         // Assert
-        Assert.Equal(message.Header.MessageType, received.Header.MessageType);
-        Assert.Equal(message.Header.ContentType, received.Header.ContentType);
-        Assert.Equal(message.Header.CorrelationId, received.Header.CorrelationId);
-        Assert.Equal(message.Header.DataSchema, received.Header.DataSchema);
-        Assert.Equal(message.Header.MessageId, received.Header.MessageId);
-        Assert.Equal(message.Header.PartitionKey, received.Header.PartitionKey);
-        Assert.Equal(message.Header.ReplyTo, received.Header.ReplyTo);
-        Assert.Equal(message.Header.Subject, received.Header.Subject);
-        Assert.Equal(message.Header.SpecVersion, received.Header.SpecVersion);
-        Assert.Equal(message.Header.Source, received.Header.Source);
-        Assert.Equal(message.Header.Topic, received.Header.Topic);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), received.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
-        Assert.Equal(message.Header.Type, received.Header.Type);
-        Assert.Equal(message.Body.Value, received.Body.Value);
-        Assert.Equal(message.Header.TraceParent, received.Header.TraceParent);
-        Assert.Equal(message.Header.TraceState, received.Header.TraceState);
-        Assert.Equal(message.Header.Baggage, received.Header.Baggage);
+        AssertMessageAreEquals(message, received);
     }
 
     [Fact]
-    public async Task When_a_message_consumer_reads_multiple_messages()
+    public async Task When_a_message_consumer_reads_multiple_messages_should_receive_all_messages()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -410,6 +394,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
             var expectedMessage = messages.FirstOrDefault(x => x.Header.MessageId == received.Header.MessageId);
             Assert.NotNull(expectedMessage);
             
+            AssertMessageAreEquals(expectedMessage, received);
             await Channel.AcknowledgeAsync(received);
 
             if ((i + 1) % Subscription.BufferSize == 0)
@@ -421,7 +406,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     
     
     [Fact]
-    public async Task When_confirming_posting_a_message_via_the_messaging_gateway_async()
+    public async Task When_confirming_posting_a_message_should_receive_publish_confirmation()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -447,7 +432,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
     
     [Fact]
-    public async Task When_infrastructure_exists_can_assume_producer()
+    public async Task When_infrastructure_missing_and_assume_channel_should_throw_exception()
     {
         try
         {
@@ -473,7 +458,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
     
     [Fact]
-    public async Task When_infrastructure_exists_can_validate_producer()
+    public async Task When_infrastructure_missing_and_validate_channel_should_throw_exception()
     {
         try
         {
@@ -500,7 +485,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     
     
     [Fact]
-    public async Task When_multiple_threads_try_to_post_a_message_at_the_same_time()
+    public async Task When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -520,7 +505,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     
     
     [Fact]
-    public async Task When_posting_a_message_but_no_broker_created()
+    public async Task When_posting_a_message_but_no_broker_created_should_throw_exception()
     {
         try
         {
@@ -543,7 +528,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
     
     [Fact]
-    public async Task When_reading_a_delayed_message_via_the_messaging_gateway()
+    public async Task When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery()
     {
         if (!HasSupportToDelayedMessages)
         {
@@ -561,17 +546,17 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         
         // Act
         var received = await Channel.ReceiveAsync(ReceiveTimeout);
-        Assert.Equal(MessageType.MT_QUIT,  received.Header.MessageType);
+        Assert.Equal(MessageType.MT_NONE,  received.Header.MessageType);
         
-        await Task.Delay(TimeSpan.FromSeconds(6));
+        await Task.Delay(MessageDelay);
         
         // Assert
         received = await Channel.ReceiveAsync(ReceiveTimeout);
-        Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
+        AssertMessageAreEquals(message, received);
     }
     
     [Fact]
-    public async Task When_requeing_a_failed_message_with_delay()
+    public async Task When_requeing_a_failed_message_with_delay_should_receive_message_again()
     {
         if (!HasSupportToDelayedMessages)
         {
@@ -596,13 +581,14 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         
         // Assert
         received = await Channel.ReceiveAsync(ReceiveTimeout);
-        Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
         await Channel.AcknowledgeAsync(received);
+        AssertMessageAreEquals(message, received);
     }
     
     [Fact]
-    public async Task When_posting_a_message_via_the_messaging_gateway_async()
+    public async Task When_requeing_a_failed_message_should_receive_message_again()
     {
+        // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
         Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
         Producer = await CreateProducerAsync(Publication);
@@ -623,26 +609,11 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         received = await Channel.ReceiveAsync(ReceiveTimeout);
         
         // Assert
-        Assert.Equal(message.Header.MessageType, received.Header.MessageType);
-        Assert.Equal(message.Header.ContentType, received.Header.ContentType);
-        Assert.Equal(message.Header.CorrelationId, received.Header.CorrelationId);
-        Assert.Equal(message.Header.DataSchema, received.Header.DataSchema);
-        Assert.Equal(message.Header.PartitionKey, received.Header.PartitionKey);
-        Assert.Equal(message.Header.ReplyTo, received.Header.ReplyTo);
-        Assert.Equal(message.Header.Subject, received.Header.Subject);
-        Assert.Equal(message.Header.SpecVersion, received.Header.SpecVersion);
-        Assert.Equal(message.Header.Source, received.Header.Source);
-        Assert.Equal(message.Header.Topic, received.Header.Topic);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), received.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
-        Assert.Equal(message.Header.Type, received.Header.Type);
-        Assert.Equal(message.Body.Value, received.Body.Value);
-        Assert.Equal(message.Header.TraceParent, received.Header.TraceParent);
-        Assert.Equal(message.Header.TraceState, received.Header.TraceState);
-        Assert.Equal(message.Header.Baggage, received.Header.Baggage);
+        AssertMessageAreEquals(message, received); 
     }
     
     [Fact]
-    public async Task When_Sending_A_Message_Should_Propagate_Context()
+    public async Task When_sending_a_message_should_propagate_activity_context()
     {
         //arrange
         var builder = Sdk.CreateTracerProviderBuilder();
@@ -681,7 +652,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
 
     [Fact]
-    public async Task When_requeuing_a_message_to_a_dead_letter_queue()
+    public async Task When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue()
     {
         if (!HasSupportToMoveToDeadLetterQueueAfterTooManyRetries)
         {
@@ -709,21 +680,6 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         received = await GetMessageFromDeadLetterQueueAsync(Subscription);
         
         // Assert
-        Assert.Equal(message.Header.MessageType, received.Header.MessageType);
-        Assert.Equal(message.Header.ContentType, received.Header.ContentType);
-        Assert.Equal(message.Header.CorrelationId, received.Header.CorrelationId);
-        Assert.Equal(message.Header.DataSchema, received.Header.DataSchema);
-        Assert.Equal(message.Header.PartitionKey, received.Header.PartitionKey);
-        Assert.Equal(message.Header.ReplyTo, received.Header.ReplyTo);
-        Assert.Equal(message.Header.Subject, received.Header.Subject);
-        Assert.Equal(message.Header.SpecVersion, received.Header.SpecVersion);
-        Assert.Equal(message.Header.Source, received.Header.Source);
-        Assert.Equal(message.Header.Topic, received.Header.Topic);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), received.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
-        Assert.Equal(message.Header.Type, received.Header.Type);
-        Assert.Equal(message.Body.Value, received.Body.Value);
-        Assert.Equal(message.Header.TraceParent, received.Header.TraceParent);
-        Assert.Equal(message.Header.TraceState, received.Header.TraceState);
-        Assert.Equal(message.Header.Baggage, received.Header.Baggage);
+        AssertMessageAreEquals(message, received); 
     }
 }
