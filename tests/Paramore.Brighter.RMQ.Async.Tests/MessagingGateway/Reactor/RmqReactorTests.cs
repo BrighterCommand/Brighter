@@ -142,6 +142,26 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
         return channel;
     }
 
+    protected override void AssertMessageAreEquals(Message expected, Message received)
+    {
+        Assert.Equal(expected.Header.MessageType, received.Header.MessageType);
+        Assert.Equal(expected.Header.ContentType, received.Header.ContentType);
+        Assert.Equal(expected.Header.CorrelationId, received.Header.CorrelationId);
+        Assert.Equal(expected.Header.DataSchema, received.Header.DataSchema);
+        Assert.Equal(expected.Header.PartitionKey, received.Header.PartitionKey);
+        Assert.Equal(expected.Header.ReplyTo, received.Header.ReplyTo);
+        Assert.Equal(expected.Header.Subject, received.Header.Subject);
+        Assert.Equal(expected.Header.SpecVersion, received.Header.SpecVersion);
+        Assert.Equal(expected.Header.Source, received.Header.Source);
+        Assert.Equal(expected.Header.Topic, received.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), received.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
+        Assert.Equal(expected.Header.Type, received.Header.Type);
+        Assert.Equal(expected.Body.Value, received.Body.Value);
+        Assert.Equal(expected.Header.TraceParent, received.Header.TraceParent);
+        Assert.Equal(expected.Header.TraceState, received.Header.TraceState);
+        Assert.Equal(expected.Header.Baggage, received.Header.Baggage);
+    }
+
     [Fact]
     public void When_a_message_consumer_throws_an_already_closed_exception_when_connecting_should_throw_channel_failure_exception()
     {

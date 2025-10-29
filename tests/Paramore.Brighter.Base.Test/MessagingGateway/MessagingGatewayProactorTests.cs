@@ -326,6 +326,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         Assert.Equal(expected.Header.ContentType, received.Header.ContentType);
         Assert.Equal(expected.Header.CorrelationId, received.Header.CorrelationId);
         Assert.Equal(expected.Header.DataSchema, received.Header.DataSchema);
+        Assert.Equal(expected.Header.MessageId, received.Header.MessageId);
         Assert.Equal(expected.Header.PartitionKey, received.Header.PartitionKey);
         Assert.Equal(expected.Header.ReplyTo, received.Header.ReplyTo);
         Assert.Equal(expected.Header.Subject, received.Header.Subject);
