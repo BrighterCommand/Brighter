@@ -378,10 +378,19 @@ internal sealed partial class RmqMessageCreator
 
     private static HeaderResult<TraceState?> ReadTraceState(IDictionary<string, object?> headers)
     {
-        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out var traceState)
+        object? traceState = null;
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out traceState)
             && traceState is byte[] traceParentArray)
         {
             return new HeaderResult<TraceState?>(Encoding.UTF8.GetString(traceParentArray), true);
+        }
+        
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE_DEPRECTED, out traceState)
+#pragma warning restore CS0618 // Type or member is obsolete
+            && traceState is byte[] traceParentDeprecatedArray)
+        {
+            return new HeaderResult<TraceState?>(Encoding.UTF8.GetString(traceParentDeprecatedArray), true);
         }
 
         return new HeaderResult<TraceState?>(string.Empty, true);

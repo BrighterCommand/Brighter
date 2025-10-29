@@ -78,8 +78,35 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// <value>The async channel as <see cref="IAmAChannelAsync"/>, or null if not yet initialized.</value>
     protected IAmAChannelAsync? Channel { get; set; }
 
+    /// <summary>
+    /// Indicates whether the messaging gateway supports delayed message delivery.
+    /// </summary>
+    /// <value><c>true</c> if delayed messages are supported; otherwise, <c>false</c>. Default is <c>false</c>.</value>
+    /// <remarks>
+    /// When <c>true</c>, tests for delayed message functionality will execute. 
+    /// Override this property in derived classes to enable delayed message tests.
+    /// </remarks>
     protected virtual bool HasSupportToDelayedMessages { get; } = false;
+    
+    /// <summary>
+    /// Indicates whether the messaging gateway supports dead letter queues.
+    /// </summary>
+    /// <value><c>true</c> if dead letter queues are supported; otherwise, <c>false</c>. Default is <c>false</c>.</value>
+    /// <remarks>
+    /// When <c>true</c>, tests that verify dead letter queue functionality will execute.
+    /// Override this property in derived classes to enable dead letter queue tests.
+    /// </remarks>
     protected virtual bool HasSupportToDeadLetterQueue { get; } = false;
+    
+    /// <summary>
+    /// Indicates whether the messaging gateway supports automatic movement to dead letter queue after exceeding requeue limit.
+    /// </summary>
+    /// <value><c>true</c> if automatic DLQ movement is supported; otherwise, <c>false</c>. Default is <c>false</c>.</value>
+    /// <remarks>
+    /// When <c>true</c>, tests that verify automatic dead letter queue movement after too many requeues will execute.
+    /// This feature moves messages to a dead letter queue when they exceed the <see cref="Subscription.RequeueCount"/>.
+    /// Override this property in derived classes to enable these tests.
+    /// </remarks>
     protected virtual bool HasSupportToMoveToDeadLetterQueueAfterTooManyRetries { get; } = false;
     
     /// <summary>
@@ -164,6 +191,14 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// <returns>A publication configuration of type <typeparamref name="TPublication"/>.</returns>
     protected abstract TPublication CreatePublication(RoutingKey routingKey);
     
+    /// <summary>
+    /// Creates a subscription configuration for the specified routing key and channel name.
+    /// </summary>
+    /// <param name="routingKey">The routing key for the subscription.</param>
+    /// <param name="channelName">The channel name for the subscription.</param>
+    /// <param name="makeChannel">Strategy for handling missing channels. Default is <see cref="OnMissingChannel.Create"/>.</param>
+    /// <param name="setupDeadLetterQueue">Whether to set up a dead letter queue. Default is <c>false</c>.</param>
+    /// <returns>A subscription configuration of type <typeparamref name="TSubscription"/>.</returns>
     protected abstract TSubscription CreateSubscription(RoutingKey routingKey, 
         ChannelName channelName, 
         OnMissingChannel makeChannel = OnMissingChannel.Create, 
@@ -205,7 +240,17 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         return new ChannelName($"Queue{Uuid.New():N}");
     }
 
-
+    /// <summary>
+    /// Retrieves a message from the dead letter queue for the specified subscription.
+    /// </summary>
+    /// <param name="subscription">The subscription configuration.</param>
+    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation, containing the message from the dead letter queue.</returns>
+    /// <exception cref="NotImplementedException">Thrown if the messaging gateway does not support dead letter queues.</exception>
+    /// <remarks>
+    /// Override this method in derived classes to provide implementation for retrieving messages from the dead letter queue.
+    /// This method is used by tests that verify dead letter queue functionality.
+    /// </remarks>
     protected virtual Task<Message> GetMessageFromDeadLetterQueueAsync(TSubscription subscription, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
@@ -215,7 +260,12 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// Creates a test message with CloudEvents-compliant headers.
     /// </summary>
     /// <param name="routingKey">The routing key for the message.</param>
+    /// <param name="setTrace">Whether to set trace context headers (TraceParent, TraceState, Baggage). Default is <c>true</c>.</param>
     /// <returns>A <see cref="Message"/> configured with CloudEvents headers and a random body.</returns>
+    /// <remarks>
+    /// The created message includes CloudEvents-compliant headers such as correlation ID, data schema, reply-to, subject, source, and type.
+    /// When <paramref name="setTrace"/> is <c>true</c>, the message includes OpenTelemetry trace context headers for distributed tracing.
+    /// </remarks>
     protected virtual Message CreateMessage(RoutingKey routingKey, bool setTrace = true)
     {
         Baggage? baggage = null;
@@ -252,7 +302,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// <summary>
     /// Gets the delay to wait after sending a message before attempting to receive it.
     /// </summary>
-    /// <value>The delay as a <see cref="TimeSpan"/>. Default is 5 seconds.</value>
+    /// <value>The delay as a <see cref="TimeSpan"/>. Default is 1 second.</value>
     protected virtual TimeSpan DelayForReceiveMessage => TimeSpan.FromSeconds(1);
     
     /// <summary>
@@ -261,7 +311,35 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// <value>The timeout as a <see cref="TimeSpan"/>. Default is 1 second.</value>
     protected virtual TimeSpan ReceiveTimeout => TimeSpan.FromSeconds(1);
     
+    /// <summary>
+    /// Gets the delay for delayed message delivery tests.
+    /// </summary>
+    /// <value>The delay as a <see cref="TimeSpan"/>. Default is 5 seconds.</value>
+    /// <remarks>
+    /// This value is used in tests that verify delayed message functionality, determining how long a message should be delayed before delivery.
+    /// </remarks>
     protected virtual TimeSpan MessageDelay => TimeSpan.FromSeconds(5);
+
+    protected virtual void AssertMessageAreEquals(Message expected, Message received)
+    {
+        Assert.Equal(expected.Header.MessageType, received.Header.MessageType);
+        Assert.Equal(expected.Header.ContentType, received.Header.ContentType);
+        Assert.Equal(expected.Header.CorrelationId, received.Header.CorrelationId);
+        Assert.Equal(expected.Header.DataSchema, received.Header.DataSchema);
+        Assert.Equal(expected.Header.MessageId, received.Header.MessageId);
+        Assert.Equal(expected.Header.PartitionKey, received.Header.PartitionKey);
+        Assert.Equal(expected.Header.ReplyTo, received.Header.ReplyTo);
+        Assert.Equal(expected.Header.Subject, received.Header.Subject);
+        Assert.Equal(expected.Header.SpecVersion, received.Header.SpecVersion);
+        Assert.Equal(expected.Header.Source, received.Header.Source);
+        Assert.Equal(expected.Header.Topic, received.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), received.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
+        Assert.Equal(expected.Header.Type, received.Header.Type);
+        Assert.Equal(expected.Body.Value, received.Body.Value);
+        Assert.Equal(expected.Header.TraceParent, received.Header.TraceParent);
+        Assert.Equal(expected.Header.TraceState, received.Header.TraceState);
+        Assert.Equal(expected.Header.Baggage, received.Header.Baggage);
+    }
 
     [Fact]
     public async Task When_posting_a_message_via_the_messaging_gateway()
