@@ -45,6 +45,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
     private bool _subscriptionCreated;
     private readonly string _subscriptionName;
     private readonly IServiceBusReceiverProvider _serviceBusReceiverProvider;
+    private readonly bool _ackOnRead;
     protected override string SubscriptionName => _subscriptionName;
 
     /// <summary>
@@ -54,15 +55,18 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
     /// <param name="messageProducer">An instance of the Messaging Producer used for Requeue.</param>
     /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
     /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
+    /// <param name="ackOnRead">When set to True this will remove the message from the channel when it is read.</param>
     public AzureServiceBusTopicConsumer(
         AzureServiceBusSubscription subscription,
         IAmAMessageProducer messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
-        IServiceBusReceiverProvider serviceBusReceiverProvider) 
-        : base(subscription, messageProducer, administrationClientWrapper)
+        IServiceBusReceiverProvider serviceBusReceiverProvider,
+        bool ackOnRead = false) 
+        : base(subscription, messageProducer, administrationClientWrapper, ackOnRead)
     {
         _subscriptionName = subscription.ChannelName.Value;
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
+        _ackOnRead = ackOnRead;
     }
     
     /// <summary>
@@ -127,7 +131,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         try
         {
             ServiceBusReceiver = await _serviceBusReceiverProvider.GetAsync(Topic, _subscriptionName,
-                SubscriptionConfiguration.RequireSession);
+                SubscriptionConfiguration.RequireSession, _ackOnRead);
         }
         catch (Exception e)
         {

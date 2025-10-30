@@ -45,6 +45,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     protected readonly string Topic;
     private readonly IAmAMessageProducer _messageProducer;
     protected readonly IAdministrationClientWrapper AdministrationClientWrapper;
+    private readonly bool _ackOnRead;
     private readonly int _batchSize;
     protected IServiceBusReceiverWrapper? ServiceBusReceiver;
     protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
@@ -56,12 +57,12 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <param name="subscription">The ASB subscription details</param>
     /// <param name="messageProducer">The producer we want to send via</param>
     /// <param name="administrationClientWrapper">The admin client for ASB</param>
-    /// <param name="isAsync">Whether the consumer is async</param>
+    /// <param name="ackOnRead">When set to True this will remove the message from the channel when it is read</param>
     protected AzureServiceBusConsumer(
         AzureServiceBusSubscription subscription, 
         IAmAMessageProducer messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
-        bool isAsync = false
+        bool ackOnRead = false
     )
     {
         Subscription = subscription;
@@ -70,6 +71,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
         _messageProducer = messageProducer;
         AdministrationClientWrapper = administrationClientWrapper;
+        _ackOnRead = ackOnRead;
         _azureServiceBusMesssageCreator = new AzureServiceBusMesssageCreator(subscription);
     }
         
@@ -101,6 +103,11 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <param name="cancellationToken">Cancels the acknowledge operation</param>
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
     {
+        if (_ackOnRead)
+        {
+            Logger.LogDebug("Skipping ACK message as it was acknowledged when it was read off the queue.");
+            return;
+        }
         try
         {
             await EnsureChannelAsync();
@@ -243,6 +250,12 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
     public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
     {
+        if (_ackOnRead)
+        {
+            Logger.LogDebug(
+                "A messaged that has been retrieved with Acknowledge on Read cannot be placed on the dead letter queue.");
+            return false;
+        }
         try
         {
             await EnsureChannelAsync();

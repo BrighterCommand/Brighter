@@ -45,7 +45,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     private readonly IServiceBusReceiverProvider _serviceBusReceiverProvider;
 
     private bool _queueCreated = false;
-        
+
     /// <summary>
     /// Initializes an Instance of <see cref="AzureServiceBusQueueConsumer"/> for Service Bus Queus
     /// </summary>
@@ -53,11 +53,13 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     /// <param name="messageProducer">An instance of the Messaging Producer used for Requeue.</param>
     /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
     /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
+    /// <param name="ackOnRead">When set to True this will remove the message from the channel when it is read.</param>
     public AzureServiceBusQueueConsumer(AzureServiceBusSubscription subscription,
         IAmAMessageProducerSync messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
-        IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
-        messageProducer, administrationClientWrapper)
+        IServiceBusReceiverProvider serviceBusReceiverProvider, 
+        bool ackOnRead = false) : base(subscription,
+        messageProducer, administrationClientWrapper, ackOnRead)
     {
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
