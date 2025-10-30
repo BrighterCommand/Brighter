@@ -386,7 +386,7 @@ internal sealed partial class RmqMessageCreator
         }
         
 #pragma warning disable CS0618 // Type or member is obsolete
-        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE_DEPRECTED, out traceState)
+        if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE_DEPRECATED, out traceState)
 #pragma warning restore CS0618 // Type or member is obsolete
             && traceState is byte[] traceParentDeprecatedArray)
         {

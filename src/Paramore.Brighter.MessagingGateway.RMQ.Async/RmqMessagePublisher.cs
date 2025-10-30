@@ -194,7 +194,7 @@ internal sealed partial class RmqMessagePublisher
         {
             headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE, message.Header.TraceState?.Value!);
 #pragma warning disable CS0618 // Type or member is obsolete
-            headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE_DEPRECTED, message.Header.TraceState?.Value!);
+            headers.Add(HeaderNames.CLOUD_EVENTS_TRACE_STATE_DEPRECATED, message.Header.TraceState?.Value!);
 #pragma warning restore CS0618 // Type or member is obsolete
         }
 

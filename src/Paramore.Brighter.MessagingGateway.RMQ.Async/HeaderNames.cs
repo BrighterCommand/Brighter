@@ -117,8 +117,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <summary>
         /// The cloud events tracestate, follows the W3C standard
         /// </summary>
-        [Obsolete("Use the CLOUD_EVENTS_TRACE_STATE")]
-        public const string CLOUD_EVENTS_TRACE_STATE_DEPRECTED = "cloudevents_:tracestate";
+        [Obsolete("Use CLOUD_EVENTS_TRACE_STATE instead. This constant had an erroneous colon in the header name.")] 
+        public const string CLOUD_EVENTS_TRACE_STATE_DEPRECATED = "cloudevents_:tracestate";
         
         /// <summary>
         /// The cloud events tracestate, follows the W3C standard
