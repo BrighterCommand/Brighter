@@ -103,7 +103,7 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
                 channelName: subscription.DeadLetterChannelName,
                 routingKey: subscription.DeadLetterRoutingKey,
                 messagePumpType: MessagePumpType.Proactor,
-                queueType: QueueType,
+                queueType: QueueType.Classic,
                 isDurable: IsDurable);
 
             DeadLetterQueueChannel = CreateChannel(sub);
@@ -279,7 +279,7 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
     }
 
     [Fact]
-    public void When_rejecting_a_message_due_to_queue_length_should_throw_publish_exception()
+    public virtual void When_rejecting_a_message_due_to_queue_length_should_throw_publish_exception()
     {
         // arrange
         MaxQueueLenght = 1;
@@ -317,7 +317,7 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
     }
     
     [Fact]
-    public void When_rejecting_to_dead_letter_queue_a_message_due_to_queue_length_should_move_to_dlq()
+    public virtual void When_rejecting_to_dead_letter_queue_a_message_due_to_queue_length_should_move_to_dlq()
     {
          // arrange
         MaxQueueLenght = 1;
