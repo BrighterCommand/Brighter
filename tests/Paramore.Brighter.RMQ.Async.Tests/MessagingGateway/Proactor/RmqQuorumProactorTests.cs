@@ -43,7 +43,7 @@ public class RmqQuorumProactorTests : RmqProactorTests
     public override async Task When_rejecting_a_message_due_to_queue_length_should_throw_publish_exception()
     {
         // arrange
-        MaxQueueLenght = 1;
+        MaxQueueLength = 1;
         BufferSize = 1;
         
         Publication = CreatePublication(GetOrCreateRoutingKey());

@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.MessagingGateway;
-using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using RabbitMQ.Client;
+using Paramore.Brighter.MessagingGateway.RMQ.Sync;
+using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, RmqSubscription>
 {
@@ -22,7 +20,6 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
 
     protected virtual bool IsDurable { get; } = false;
     protected virtual TimeSpan? Ttl { get; } = null;
-    protected virtual QueueType QueueType => QueueType.Classic;
     
     protected virtual RmqMessagingGatewayConnection CreateConnection()
     {
@@ -83,7 +80,6 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
             deadLetterChannelName: deadLetterChannelName,
             deadLetterRoutingKey: deadLetterRoutingKey,
             bufferSize: BufferSize,
-            queueType: QueueType,
             isDurable: IsDurable);
 
         if (setupDeadLetterQueue)
@@ -103,7 +99,6 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
                 channelName: subscription.DeadLetterChannelName,
                 routingKey: subscription.DeadLetterRoutingKey,
                 messagePumpType: MessagePumpType.Proactor,
-                queueType: QueueType.Classic,
                 isDurable: IsDurable);
 
             DeadLetterQueueChannel = CreateChannel(sub);
@@ -258,27 +253,6 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
     }
 
     [Fact]
-    public void When_creating_quorum_consumer_with_high_availability_should_throw()
-    {
-        var rmqConnection = new RmqMessagingGatewayConnection
-        {
-            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-            Exchange = new Exchange("paramore.brighter.exchange")
-        };
-
-        var queueName = new ChannelName(Guid.NewGuid().ToString());
-        var routingKey = new RoutingKey(Guid.NewGuid().ToString());
-
-        var exception = Assert.Throws<ConfigurationException>(() =>
-            new RmqMessageConsumer(rmqConnection, queueName, routingKey,
-                isDurable: true,
-                highAvailability: true, // This should cause the exception
-                queueType: QueueType.Quorum));
-
-        Assert.Contains("Quorum queues do not support high availability mirroring", exception.Message);
-    }
-
-    [Fact]
     public virtual void When_rejecting_a_message_due_to_queue_length_should_throw_publish_exception()
     {
         // arrange
@@ -292,16 +266,7 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
         
         Producer.Send(CreateMessage(Publication.Topic!));
         Producer.Send(CreateMessage(Publication.Topic!));
-        
-        try
-        {
-            Producer.Send(CreateMessage(Publication.Topic!));
-            Assert.Fail("Exception an exception during publication");
-        }
-        catch (Exception e)
-        {
-            Assert.IsType<PublishException>(e);
-        }
+        Producer.Send(CreateMessage(Publication.Topic!));
         
         // Act
         var received = Channel.Receive(ReceiveTimeout);
@@ -330,16 +295,7 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
         
         Producer.Send(CreateMessage(Publication.Topic!));
         Producer.Send(CreateMessage(Publication.Topic!));
-        
-        try
-        {
-            Producer.Send(CreateMessage(Publication.Topic!));
-            Assert.Fail("Exception an exception during publication");
-        }
-        catch (Exception e)
-        {
-            Assert.IsType<PublishException>(e);
-        }
+        Producer.Send(CreateMessage(Publication.Topic!));
         
         // Act
         var received = Channel.Receive(ReceiveTimeout);

@@ -14,7 +14,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
 public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, RmqSubscription>
 {
-    protected int? MaxQueueLenght { get; set; }
+    protected int? MaxQueueLength { get; set; }
     protected int BufferSize { get; set; } = 2;
     
     private IAmAChannelAsync? DeadLetterQueueChannel { get; set; }
@@ -79,7 +79,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel,
             requeueCount: 3,
-            maxQueueLength: MaxQueueLenght,
+            maxQueueLength: MaxQueueLength,
             ttl: Ttl,
             deadLetterChannelName: deadLetterChannelName,
             deadLetterRoutingKey: deadLetterRoutingKey,
@@ -369,7 +369,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     public virtual async Task When_rejecting_a_message_due_to_queue_length_should_throw_publish_exception()
     {
         // arrange
-        MaxQueueLenght = 1;
+        MaxQueueLength = 1;
         BufferSize = 1;
         
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -410,7 +410,7 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
     public virtual async Task When_rejecting_to_dead_letter_queue_a_message_due_to_queue_length_should_move_to_dlq()
     {
          // arrange
-        MaxQueueLenght = 1;
+        MaxQueueLength = 1;
         BufferSize = 1;
         
         Publication = CreatePublication(GetOrCreateRoutingKey());
