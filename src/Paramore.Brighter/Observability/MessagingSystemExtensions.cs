@@ -42,6 +42,7 @@ public static class MessagingSystemExtensions
         MessagingSystem.InternalBus => "internal_bus",
         MessagingSystem.JMS => "jms",
         MessagingSystem.Kafka => "kafka",
+        MessagingSystem.Postgres => "postgres",
         MessagingSystem.PubSub => "gcp_pubsub",
         MessagingSystem.RabbitMQ => "rabbitmq",
         MessagingSystem.RocketMQ => "rocketmq",

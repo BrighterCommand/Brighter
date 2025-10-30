@@ -36,6 +36,7 @@ public enum MessagingSystem
     JMS,
     Kafka,
     PubSub,
+    Postgres,
     RabbitMQ,
     RocketMQ,
     ServiceBus,
