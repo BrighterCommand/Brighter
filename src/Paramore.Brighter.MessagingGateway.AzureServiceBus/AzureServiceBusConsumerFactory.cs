@@ -35,22 +35,25 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 {
     private readonly IServiceBusClientProvider _clientProvider;
+    private readonly bool _ackOnRead;
 
     /// <summary>
     /// Factory to create an Azure Service Bus Consumer
     /// </summary>
     /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
     public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration)
-        : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString))
+        : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString), configuration.AckOnRead)
     { }
 
     /// <summary>
     /// Factory to create an Azure Service Bus Consumer
     /// </summary>
     /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
-    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider)
+    /// <param name="ackOnRead">When set to True this will remove the message from the channel when it is read.</param>
+    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, bool ackOnRead = false)
     {
         _clientProvider = clientProvider;
+        _ackOnRead = ackOnRead;
     }
 
     /// <summary>
@@ -79,7 +82,8 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
                 sub,
                 messageProducer,
                 nameSpaceManagerWrapper,
-                receiverProvider);
+                receiverProvider,
+                _ackOnRead);
         }
         else
         {

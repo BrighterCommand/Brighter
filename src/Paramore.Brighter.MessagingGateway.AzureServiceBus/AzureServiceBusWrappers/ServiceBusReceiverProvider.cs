@@ -72,15 +72,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription on the Topic.</param>
         /// <param name="sessionEnabled">Use Sessions for Processing</param>
+        /// <param name="ackOnRead">When set to True this will remove the message from the channel when it is read.</param>
         /// <returns>A ServiceBusReceiverWrapper.</returns>
-        public async Task<IServiceBusReceiverWrapper?> GetAsync(string topicName, string subscriptionName, bool sessionEnabled)
+        public async Task<IServiceBusReceiverWrapper?> GetAsync(string topicName, string subscriptionName, bool sessionEnabled, bool ackOnRead = false)
         {
+            var receiveMode = ackOnRead ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock;
             if (sessionEnabled)
             {
                 try
                 {
                     return new ServiceBusReceiverWrapper(await _client.AcceptNextSessionAsync(topicName, subscriptionName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}));
+                        new ServiceBusSessionReceiverOptions() {ReceiveMode = receiveMode}));
                 }
                 catch (ServiceBusException e)
                 {
@@ -96,7 +98,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             else
             {
                 return new ServiceBusReceiverWrapper(_client.CreateReceiver(topicName, subscriptionName,
-                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }));
+                    new ServiceBusReceiverOptions { ReceiveMode = receiveMode }));
             }
         }
     }
