@@ -149,6 +149,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="maxQueueLength">The maximum number of messages in a queue before we reject messages; defaults to no limit</param>
         public RmqSubscription(
             SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
@@ -169,7 +170,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             TimeSpan? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
-            TimeSpan? channelFailureDelay = null)
+            TimeSpan? channelFailureDelay = null,
+            int? maxQueueLength = null)
             : base(
                 subscriptionName ?? new SubscriptionName(typeof(T).FullName!), 
                 channelName ?? new ChannelName(typeof(T).FullName!), 
@@ -191,7 +193,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 ttl, 
                 makeChannels, 
                 emptyChannelDelay, 
-                channelFailureDelay)
+                channelFailureDelay,
+                maxQueueLength)
         { }
 
     }

@@ -42,10 +42,12 @@ public static class MessagingSystemExtensions
         MessagingSystem.InternalBus => "internal_bus",
         MessagingSystem.JMS => "jms",
         MessagingSystem.Kafka => "kafka",
+        MessagingSystem.Postgres => "postgres",
         MessagingSystem.PubSub => "gcp_pubsub",
         MessagingSystem.RabbitMQ => "rabbitmq",
         MessagingSystem.RocketMQ => "rocketmq",
         MessagingSystem.ServiceBus => "servicebus",
+        MessagingSystem.MicrosftSqlServer => "mssqlserver",
         _ => throw new ArgumentOutOfRangeException(nameof(messagingSystem), messagingSystem, null)
     };
 }

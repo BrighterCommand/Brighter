@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -141,12 +142,11 @@ public partial class PostgresMessageConsumer(
             {
                 if (HasLargeMessage)
                 {
-                    messages.Add(ToMessage(reader));
+                    messages.Add(await ToLargeMessageAsync(reader,cancellationToken));
                 }
                 else
                 {
-
-                    messages.Add(await ToLargeMessageAsync(reader,cancellationToken));
+                    messages.Add(ToMessage(reader));
                 }
             }
 
@@ -372,22 +372,34 @@ public partial class PostgresMessageConsumer(
         return message;
     }
     
-    private static Message ToLargeMessage(DbDataReader reader)
+    private Message ToLargeMessage(DbDataReader reader)
     {
         var id = reader.GetInt64(0);
 
         using var content = reader.GetStream(3);
+        if (DbType == NpgsqlDbType.Jsonb)
+        {
+            // Skipping the first by https://github.com/npgsql/npgsql/issues/6044
+            content.Position = 1;
+        }
+        
         var message = JsonSerializer.Deserialize<Message>(content, JsonSerialisationOptions.Options)!;
         
         message.Header.Bag["ReceiptHandle"] = id;
         return message;
     }
     
-    private static async Task<Message> ToLargeMessageAsync(DbDataReader reader, CancellationToken cancellationToken)
+    private async Task<Message> ToLargeMessageAsync(DbDataReader reader, CancellationToken cancellationToken)
     {
         var id = reader.GetInt64(0);
 
-        using var content = reader.GetStream(3);
+        await using var content = reader.GetStream(3);
+        if (DbType == NpgsqlDbType.Jsonb)
+        {
+            // Skipping the first by https://github.com/npgsql/npgsql/issues/6044
+            content.Position = 1;
+        }
+        
         var message = await JsonSerializer.DeserializeAsync<Message>(content, JsonSerialisationOptions.Options, cancellationToken);
         
         message!.Header.Bag["ReceiptHandle"] = id;

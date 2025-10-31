@@ -11,6 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
       <PackageReference Include="xunit" />
     </ItemGroup>
   

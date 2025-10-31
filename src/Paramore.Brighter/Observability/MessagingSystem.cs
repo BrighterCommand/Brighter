@@ -39,5 +39,7 @@ public enum MessagingSystem
     RabbitMQ,
     RocketMQ,
     ServiceBus,
+    Postgres,
+    MicrosftSqlServer,
 }
 

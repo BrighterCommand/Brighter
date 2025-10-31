@@ -8,6 +8,7 @@ using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.MessagingGateway.Postgres;
@@ -19,7 +20,8 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// </summary>
 public partial class PostgresMessageProducer(
     RelationalDatabaseConfiguration configuration,
-    PostgresPublication publication) : IAmAMessageProducerAsync, IAmAMessageProducerSync
+    PostgresPublication publication,
+    InstrumentationOptions instrumentations = InstrumentationOptions.All) : IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageProducer>();
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
@@ -53,6 +55,7 @@ public partial class PostgresMessageProducer(
             throw new ConfigurationException("No publication specified for producer");
         }
         
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Postgres, message, instrumentations);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
@@ -80,6 +83,7 @@ public partial class PostgresMessageProducer(
             throw new ConfigurationException("No publication specified for producer");
         }
         
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Postgres, message, instrumentations);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
@@ -102,6 +106,7 @@ public partial class PostgresMessageProducer(
             throw new ConfigurationException("No publication specified for producer");
         }
         
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Postgres, message, instrumentations);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
         
         using var connection = _connectionProvider.GetConnection();
@@ -129,6 +134,7 @@ public partial class PostgresMessageProducer(
             throw new ConfigurationException("No publication specified for producer");
         }
         
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Postgres, message, instrumentations);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
         
         using var connection = _connectionProvider.GetConnection();

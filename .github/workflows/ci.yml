@@ -57,9 +57,9 @@ jobs:
         run: dotnet build --configuration Release
       - name: Core Tests
         run: |
-          dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build --verbosity d
-          dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
-          dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
+          dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build 
+          dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build 
+          dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build 
 
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v5
@@ -101,7 +101,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n  
+        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions   
 
   hangfire:
     runs-on: ubuntu-latest
@@ -119,7 +119,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Hangfire Tests
-        run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   quartz:
     runs-on: ubuntu-latest
@@ -137,7 +137,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Quartz Tests
-        run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   redis-ci:
     runs-on: ubuntu-latest
@@ -166,7 +166,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   mqtt-ci:
     runs-on: ubuntu-latest
@@ -191,7 +191,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: MQTT Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   rabbitmq-ci:
     runs-on: ubuntu-latest
@@ -221,9 +221,9 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Async Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
       - name: RMQ Sync Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   kafka-ci:
     runs-on: ubuntu-latest
@@ -286,7 +286,7 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
-      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&Category!=Confluent&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&Category!=Confluent&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   postgres-ci:
     runs-on: ubuntu-latest
@@ -317,7 +317,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
-        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   sqlserver-ci:
     runs-on: ubuntu-latest
@@ -343,7 +343,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
-        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   mysql-ci:
     runs-on: ubuntu-latest
@@ -378,7 +378,7 @@ jobs:
             sleep 1
           done
       - name: MySQL Tests
-        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   dynamo-ci:
     runs-on: ubuntu-latest
@@ -403,8 +403,8 @@ jobs:
         run: dotnet restore
       - name: DynamoDB Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+          dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   localstack-ci:
     runs-on: ubuntu-latest
@@ -441,8 +441,8 @@ jobs:
             Linux-nuget-
       - name: AWS Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   aws-ci:
     runs-on: ubuntu-latest
@@ -475,8 +475,8 @@ jobs:
           aws-region: eu-west-1
       - name: AWS SNS, SQS and S3 Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
@@ -509,8 +509,8 @@ jobs:
           aws-region: eu-west-1
       - name: Scheduler Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+          dotnet test ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   sqlite-ci:
     runs-on: ubuntu-latest
@@ -528,7 +528,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
-        run: dotnet test ./tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   azure-ci:
     runs-on: ubuntu-latest
@@ -545,7 +545,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
-        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   mongodb-ci:
     runs-on: ubuntu-latest
@@ -577,7 +577,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: MongoDB Tests
-        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
     
   gcp-ci:
     runs-on: ubuntu-latest
@@ -614,7 +614,7 @@ jobs:
         run: dotnet restore
         
       - name: GCP Tests
-        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
         
 #  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
@@ -678,4 +678,4 @@ jobs:
 #        run: dotnet restore
 #        
 #      - name: RocketMQ Tests
-#        run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+#        run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" 
