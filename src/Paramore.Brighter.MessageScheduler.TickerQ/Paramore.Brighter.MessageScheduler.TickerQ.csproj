@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>TikcerQ integration for Paramore.Brighter Command Processor. Provides advanced message scheduling capabilities using TikcerQ for background job processing, delayed message delivery, and complex recurring task scheduling.</Description>
+    <Authors>Aboubakr Nasef</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>TikcerQ;Scheduler;Message Scheduling;Delayed Messages;Command Processor;Brighter</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="TickerQ" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="TickerQ" />
+  </ItemGroup>
+
+</Project>
