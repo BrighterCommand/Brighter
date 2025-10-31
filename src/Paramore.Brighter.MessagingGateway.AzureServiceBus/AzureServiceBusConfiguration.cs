@@ -33,7 +33,7 @@ public class AzureServiceBusConfiguration
     /// Initializes an Instance of <see cref="AzureServiceBusConfiguration"/>
     /// </summary>
     /// <param name="connectionString">The Connection String to connect to Azure Service Bus.</param>
-    /// <param name="ackOnRead">If True Messages and Read a Deleted, if False Messages are Peeked and Locked.</param>
+    /// <param name="ackOnRead">This is deprecated, has no effect, and will be removed in the future. Brighter always uses PeekLock.</param>
     /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
     public AzureServiceBusConfiguration(string connectionString, bool ackOnRead = false, int bulkSendBatchSize = 10 )
     {
@@ -48,8 +48,9 @@ public class AzureServiceBusConfiguration
     public string ConnectionString { get; }
 
     /// <summary>
-    /// When set to true this will set the Channel to Read and Delete, when False Peek and Lock
+    /// This is deprecated, has no effect, and will be removed in the future. Brighter always uses PeekLock.
     /// </summary>
+    [Obsolete("This is deprecated, has no effect, and will be removed in the future. Brighter always uses PeekLock.")]
     public bool AckOnRead{ get; }
 
     /// <summary>
