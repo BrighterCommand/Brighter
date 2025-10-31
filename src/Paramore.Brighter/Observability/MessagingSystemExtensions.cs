@@ -47,6 +47,7 @@ public static class MessagingSystemExtensions
         MessagingSystem.RabbitMQ => "rabbitmq",
         MessagingSystem.RocketMQ => "rocketmq",
         MessagingSystem.ServiceBus => "servicebus",
+        MessagingSystem.MicrosftSqlServer => "mssqlserver",
         _ => throw new ArgumentOutOfRangeException(nameof(messagingSystem), messagingSystem, null)
     };
 }
