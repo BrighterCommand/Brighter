@@ -7,7 +7,7 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>ParamoreBrighter.TickerQ.Tests</RootNamespace>
+    <RootNamespace>Paramore.Brighter.TickerQ.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

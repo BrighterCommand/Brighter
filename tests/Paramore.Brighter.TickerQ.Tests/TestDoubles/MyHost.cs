@@ -6,28 +6,25 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Hosting;
 
 namespace ParamoreBrighter.TickerQ.Tests.TestDoubles
 {
-    public class MyApplicationBuilder : IApplicationBuilder
+    public class MyHost : IHost
     {
-        public IServiceProvider ApplicationServices { get ; set ; }
+        public IServiceProvider Services { get; set; }
 
-        public IFeatureCollection ServerFeatures => throw new NotImplementedException();
-
-        public IDictionary<string, object> Properties => throw new NotImplementedException();
-
-        public RequestDelegate Build()
+        public void Dispose()
         {
             throw new NotImplementedException();
         }
 
-        public IApplicationBuilder New()
+        public Task StartAsync(CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
 
-        public IApplicationBuilder Use(Func<RequestDelegate, RequestDelegate> middleware)
+        public Task StopAsync(CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }

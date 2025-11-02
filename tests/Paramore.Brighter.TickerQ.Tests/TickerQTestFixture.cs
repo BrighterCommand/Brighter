@@ -1,9 +1,5 @@
-﻿using System;
-using System.Text.Json;
-using System.Transactions;
+﻿using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Paramore.Brighter;
 using Paramore.Brighter.MessageScheduler.TickerQ;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
@@ -14,14 +10,11 @@ using Polly;
 using Polly.Registry;
 using TickerQ.DependencyInjection;
 using TickerQ.DependencyInjection.Hosting;
-using TickerQ.Utilities;
-using TickerQ.Utilities.Base;
-using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
 using TickerQ.Utilities.Models.Ticker;
 
 
-namespace ParamoreBrighter.TickerQ.Tests
+namespace Paramore.Brighter.TickerQ.Tests
 {
     public class TickerQTestFixture
     {
@@ -38,17 +31,13 @@ namespace ParamoreBrighter.TickerQ.Tests
 
         public TickerQTestFixture()
         {
-
             _serviceCollection = new ServiceCollection();
             _serviceCollection.AddLogging();
-            _serviceCollection.AddTickerQ(opt =>
-            {
-
-            });
+            _serviceCollection.AddTickerQ();
 
             RoutingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
             TimeProvider = TimeProvider.System;
-
+            _serviceCollection.AddSingleton<TimeProvider>(TimeProvider);
             var handlerFactory = new SimpleHandlerFactory(
                 _ => new MyEventHandler(new Dictionary<string, string>()),
                 _ => new FireSchedulerMessageHandler(Processor!));
@@ -94,7 +83,8 @@ namespace ParamoreBrighter.TickerQ.Tests
             _serviceCollection.AddSingleton<TickerQSchedulerFactory>(sp =>
             {
                 var tickerManager = sp.GetRequiredService<ITimeTickerManager<TimeTicker>>();
-                return new TickerQSchedulerFactory(tickerManager);
+                var timeProvider = sp.GetRequiredService<TimeProvider>();
+                return new TickerQSchedulerFactory(tickerManager, timeProvider);
             });
 
             _serviceCollection.AddSingleton<IAmAMessageSchedulerFactory>(sp =>
@@ -105,8 +95,7 @@ namespace ParamoreBrighter.TickerQ.Tests
 
             _serviceCollection.AddSingleton<IAmACommandProcessor>(sp =>
             {
-                var tickermanager = sp.GetRequiredService<ITimeTickerManager<TimeTicker>>();
-                var scheduler = new TickerQSchedulerFactory(tickermanager);
+                var scheduler = sp.GetRequiredService<TickerQSchedulerFactory>();
                 return new CommandProcessor(
                subscriberRegistry,
                handlerFactory,
@@ -121,13 +110,17 @@ namespace ParamoreBrighter.TickerQ.Tests
             ServiceProvider = _serviceCollection.BuildServiceProvider();
             Processor = ServiceProvider.GetRequiredService<IAmACommandProcessor>();
             SchedulerFactory = ServiceProvider.GetRequiredService<TickerQSchedulerFactory>();
+            var myHost = new MyHost() { Services = ServiceProvider };
+            myHost.UseTickerQ();
+        }
 
-
-            var appBuilder = new MyApplicationBuilder
+        internal void ClearBus()
+        {
+            var length = InternalBus.Stream(RoutingKey).Count();
+            for (int i = 0; i < length; i++)
             {
-                ApplicationServices = ServiceProvider
-            };
-            appBuilder.UseTickerQ();
+                InternalBus.Dequeue(RoutingKey);
+            }
         }
     }
 }
