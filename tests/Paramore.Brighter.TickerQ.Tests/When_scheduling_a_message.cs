@@ -6,114 +6,113 @@ using Paramore.Brighter.TickerQ.Tests.TestDoubles;
 namespace Paramore.Brighter.TickerQ.Tests;
 
 [Collection("Scheduler")]
-public class TickerQSchedulerMessageAsyncTests : IClassFixture<TickerQTestFixture>, IDisposable
+public class TickerQSchedulerMessageTests : IClassFixture<TickerQTestFixture>, IDisposable
 {
     private readonly TickerQTestFixture _fixture;
 
-    public TickerQSchedulerMessageAsyncTests(Paramore.Brighter.TickerQ.Tests.TickerQTestFixture tickerQTestFixture)
+
+    public TickerQSchedulerMessageTests(TickerQTestFixture fixture)
     {
-        _fixture = tickerQTestFixture;
+        _fixture = fixture;
     }
 
     [Fact]
-    public async Task When_scheduler_a_message_with_a_datetimeoffset_async()
+    public void When_scheduler_a_message_with_a_datetimeoffset_sync()
     {
         Message message = GetMessage();
 
-        var scheduler = (IAmAMessageSchedulerAsync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = await scheduler.ScheduleAsync(message,
-            _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
+        var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
+        var id = scheduler.Schedule(message, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
         Assert.NotEqual(0, id.Length);
 
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
 
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
 
-        Assert.Equivalent(message, await _fixture.Outbox.GetAsync(message.Id, new RequestContext()));
+        Assert.Equivalent(message, _fixture.Outbox.Get(message.Id, new RequestContext()));
 
         Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
     }
 
     [Fact]
-    public async Task When_scheduler_a_message_with_a_timespan_async()
+    public void When_scheduler_a_message_with_a_timespan_sync()
     {
         Message message = GetMessage();
 
-        var scheduler = (IAmAMessageSchedulerAsync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = await scheduler.ScheduleAsync(message, TimeSpan.FromSeconds(1));
+        var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
+        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
         Assert.NotEqual(0, id.Length);
 
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
 
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
 
-        Assert.Equivalent(message, await _fixture.Outbox.GetAsync(message.Id, new RequestContext()));
+        Assert.Equivalent(message, _fixture.Outbox.Get(message.Id, new RequestContext()));
 
         Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
     }
 
     [Fact]
-    public async Task When_reschedule_a_message_with_a_datetimeoffset_async()
+    public void When_reschedule_a_message_with_a_datetimeoffset_sync()
     {
         var message = GetMessage();
 
-        var scheduler = (IAmAMessageSchedulerAsync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = await scheduler.ScheduleAsync(message, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
+        var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
+        var id = scheduler.Schedule(message, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
         Assert.True((id)?.Any());
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
 
-        await scheduler.ReSchedulerAsync(id, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
+        scheduler.ReScheduler(id, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
 
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
+        Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
+
+        Thread.Sleep(TimeSpan.FromSeconds(4));
+
+        Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
+        Assert.Equivalent(message, _fixture.Outbox.Get(message.Id, new RequestContext()));
+    }
+
+    [Fact]
+    public async Task When_reschedule_a_message_with_a_timespan_sync()
+    {
+        var message = GetMessage();
+
+        var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
+        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
+
+        Assert.True((id)?.Any());
+        Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
+
+        scheduler.ReScheduler(id, TimeSpan.FromSeconds(5));
+
+        Thread.Sleep(TimeSpan.FromSeconds(2));
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
 
         await Task.Delay(TimeSpan.FromSeconds(4));
 
         Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
-        Assert.Equivalent(message, await _fixture.Outbox.GetAsync(message.Id, new RequestContext()));
+        Assert.Equivalent(message, _fixture.Outbox.Get(message.Id, new RequestContext()));
     }
-
     [Fact]
-    public async Task When_reschedule_a_message_with_a_timespan_async()
+    public void When_cancel_scheduler_message_with_a_datetimeoffset()
     {
         var message = GetMessage();
 
-        var scheduler = (IAmAMessageSchedulerAsync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = await scheduler.ScheduleAsync(message, TimeSpan.FromSeconds(1));
+        var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
+        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
-        Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
+        Assert.NotEqual(0, id.Length);
 
-        await scheduler.ReSchedulerAsync(id, TimeSpan.FromSeconds(5));
+        scheduler.Cancel(id);
 
-        await Task.Delay(TimeSpan.FromSeconds(2));
-        Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
-
-        await Task.Delay(TimeSpan.FromSeconds(4));
-
-        Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
-        Assert.Equivalent(message, await _fixture.Outbox.GetAsync(message.Id, new RequestContext()));
-    }
-
-    [Fact]
-    public async Task When_cancel_scheduler_message_with_a_datetimeoffset_async()
-    {
-        var message = GetMessage();
-
-        var scheduler = (IAmAMessageSchedulerAsync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = await scheduler.ScheduleAsync(message, TimeSpan.FromHours(1));
-
-        Assert.True((id)?.Any());
-
-        await scheduler.CancelAsync(id);
-
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
 
         var expected = Message.Empty;
-        var actual = await _fixture.Outbox.GetAsync(message.Id, new RequestContext());
+        var actual = _fixture.Outbox.Get(message.Id, new RequestContext());
 
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
@@ -131,21 +130,21 @@ public class TickerQSchedulerMessageAsyncTests : IClassFixture<TickerQTestFixtur
 
 
     [Fact]
-    public async Task When_cancel_scheduler_request_with_a_timespan_async()
+    public void When_cancel_scheduler_request_with_a_timespan()
     {
         var message = GetMessage();
 
-        var scheduler = (IAmAMessageSchedulerAsync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = await scheduler.ScheduleAsync(message, TimeSpan.FromHours(1));
+        var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
+        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        Assert.NotEqual(0, id.Length);
 
-        await scheduler.CancelAsync(id);
+        scheduler.Cancel(id);
 
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
 
         var expected = Message.Empty;
-        var actual = await _fixture.Outbox.GetAsync(message.Id, new RequestContext());
+        var actual = _fixture.Outbox.Get(message.Id, new RequestContext());
 
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
