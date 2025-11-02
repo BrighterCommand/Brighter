@@ -70,7 +70,7 @@ public class HangfireSchedulerMessageTests : IDisposable
         );
 
         GlobalConfiguration.Configuration
-            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .SetDataCompatibilityLevel(Compatibilityevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()
             .UseRecommendedSerializerSettings()
             .UseInMemoryStorage(new InMemoryStorageOptions { IdType = InMemoryStorageIdType.Guid })
