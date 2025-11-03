@@ -9,7 +9,7 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 public class KafkaReactorTests : MessagingGatewayReactorTests<KafkaPublication, KafkaSubscription>
 {

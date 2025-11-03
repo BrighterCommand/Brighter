@@ -218,6 +218,12 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            Linux-nuget-
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Async Transport Tests
@@ -277,6 +283,12 @@ jobs:
       run: docker ps -a
     - name: Checkout code
       uses: actions/checkout@v5
+    - uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+        restore-keys: |
+          Linux-nuget-
     - name: Setup dotnet
       uses: actions/setup-dotnet@v5
       with:
@@ -286,7 +298,7 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
-      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&Category!=Confluent&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   postgres-ci:
     runs-on: ubuntu-latest
