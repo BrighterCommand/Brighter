@@ -109,6 +109,8 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
     /// </remarks>
     protected virtual bool HasSupportToMoveToDeadLetterQueueAfterTooManyRetries { get; } = false;
     
+    protected virtual bool HasSupportToPartitionKey { get; } = false;
+    
     /// <summary>
     /// Initializes the test fixture asynchronously before each test runs.
     /// </summary>
@@ -293,6 +295,8 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
     /// <value>The delay as a <see cref="TimeSpan"/>. Default is 1 second.</value>
     protected virtual TimeSpan DelayForReceiveMessage => TimeSpan.FromSeconds(1);
     
+    protected virtual TimeSpan DelayForRequeueMessage => TimeSpan.FromSeconds(1);
+    
     /// <summary>
     /// Gets the timeout for receiving a message from the channel.
     /// </summary>
@@ -343,7 +347,33 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
         // Act
         Producer.Send(message);
         Thread.Sleep(DelayForReceiveMessage);
-        var received = Channel.Receive(ReceiveTimeout);
+        var received = ReceiveMessage();
+        
+        // Assert
+        AssertMessageAreEquals(message, received);
+    }
+    
+    [Fact]
+    public void When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received()
+    {
+        if (!HasSupportToPartitionKey)
+        {
+            return;
+        }
+        
+        // Arrange
+        Publication = CreatePublication(GetOrCreateRoutingKey());
+        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
+        
+        var message = CreateMessage(Publication.Topic!);
+        message.Header.PartitionKey = new PartitionKey(Uuid.NewAsString());
+        
+        // Act
+        Producer.Send(message);
+        Thread.Sleep(DelayForReceiveMessage);
+        var received = ReceiveMessage();
         
         // Assert
         AssertMessageAreEquals(message, received);
@@ -374,7 +404,7 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
         var total = messages.Count;
         for (var i = 0; i < total; i++)
         {
-            var received = Channel.Receive(ReceiveTimeout);
+            var received = ReceiveMessage();
             
             // Assert
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
@@ -436,7 +466,7 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
             Producer.Send(message);
         
             // Assert
-            Channel.Receive(ReceiveTimeout);
+            ReceiveMessage();
             Assert.Fail("We are expected to throw an exception");
         }
         catch
@@ -462,7 +492,7 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
             Producer.Send(message);
         
             // Assert
-            Channel.Receive(ReceiveTimeout);
+            ReceiveMessage();
             Assert.Fail("We are expected to throw an exception");
         }
         catch
@@ -532,13 +562,13 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
         Producer.SendWithDelay(message, MessageDelay);
         
         // Act
-        var received = Channel.Receive(ReceiveTimeout);
+        var received = ReceiveMessage();
         Assert.Equal(MessageType.MT_NONE,  received.Header.MessageType);
         
         Thread.Sleep(MessageDelay);
         
         // Assert
-        received = Channel.Receive(ReceiveTimeout);
+        received = ReceiveMessage();
         AssertMessageAreEquals(message, received);
     }
     
@@ -562,13 +592,14 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
         Thread.Sleep(MessageDelay);
         
         // Act
-        var received = Channel.Receive(ReceiveTimeout);
-        Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
+        var received = ReceiveMessage();
+        Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
         
         Assert.True(Channel.Requeue(received));
+        Thread.Sleep(DelayForRequeueMessage);
         
         // Assert
-        received = Channel.Receive(ReceiveTimeout);
+        received = ReceiveMessage();
         Channel.Acknowledge(received);
         AssertMessageAreEquals(message, received);
     }
@@ -588,13 +619,13 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
         Thread.Sleep(DelayForReceiveMessage);
         
         // Act
-        var received = Channel.Receive(ReceiveTimeout);
+        var received = ReceiveMessage();
         Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
 
         Assert.True(Channel.Requeue(received));
 
-        Thread.Sleep(DelayForReceiveMessage);
-        received = Channel.Receive(ReceiveTimeout);
+        Thread.Sleep(DelayForRequeueMessage);
+        received = ReceiveMessage(true);
         
         // Assert
         AssertMessageAreEquals(message, received); 
@@ -658,16 +689,46 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
         Message? received;
         for (var i = 0; i < Subscription.RequeueCount; i++)
         {
-            received = Channel.Receive(ReceiveTimeout);
+            received = ReceiveMessage();
             Channel.Requeue(received);
         }
         
-        received = Channel.Receive(ReceiveTimeout);
+        received = ReceiveMessage();
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         received = GetMessageFromDeadLetterQueue(Subscription);
         
         // Assert
         AssertMessageAreEquals(message, received); 
+    }
+    
+    private const int MaxRetry = 15;
+    protected Message ReceiveMessage(bool retryOnNoneMessage = false)
+    {
+        if (Channel == null)
+        {
+            throw new InvalidOperationException();
+        }
+
+        for (int i = 0; i < MaxRetry; i++)
+        {
+            try
+            {
+                var message = Channel.Receive(ReceiveTimeout);
+                if (retryOnNoneMessage && message.Header.MessageType == MessageType.MT_NONE)
+                {
+                    Thread.Sleep(DelayForReceiveMessage);
+                    continue;
+                }
+
+                return message;
+            }
+            catch (ChannelFailureException)
+            {
+                Thread.Sleep(DelayForReceiveMessage);
+            }
+        }
+
+        return new Message();
     }
 }

@@ -26,6 +26,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
     </ItemGroup>
 
 </Project>

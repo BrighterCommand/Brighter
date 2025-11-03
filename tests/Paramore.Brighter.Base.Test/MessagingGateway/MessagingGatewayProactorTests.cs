@@ -108,6 +108,8 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// Override this property in derived classes to enable these tests.
     /// </remarks>
     protected virtual bool HasSupportToMoveToDeadLetterQueueAfterTooManyRetries { get; } = false;
+
+    protected virtual bool HasSupportToPartitionKey { get; } = false;
     
     /// <summary>
     /// Initializes the test fixture asynchronously before each test runs.
@@ -266,7 +268,8 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// The created message includes CloudEvents-compliant headers such as correlation ID, data schema, reply-to, subject, source, and type.
     /// When <paramref name="setTrace"/> is <c>true</c>, the message includes OpenTelemetry trace context headers for distributed tracing.
     /// </remarks>
-    protected virtual Message CreateMessage(RoutingKey routingKey, bool setTrace = true)
+    protected virtual Message CreateMessage(RoutingKey routingKey, 
+        bool setTrace = true)
     {
         Baggage? baggage = null;
         TraceState? traceState = null;
@@ -304,6 +307,8 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     /// </summary>
     /// <value>The delay as a <see cref="TimeSpan"/>. Default is 1 second.</value>
     protected virtual TimeSpan DelayForReceiveMessage => TimeSpan.FromSeconds(1);
+    
+    protected virtual TimeSpan DelayForRequeueMessage => TimeSpan.FromSeconds(1);
     
     /// <summary>
     /// Gets the timeout for receiving a message from the channel.
@@ -355,7 +360,33 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         // Act
         await Producer.SendAsync(message);
         await Task.Delay(DelayForReceiveMessage);
-        var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        var received = await ReceiveMessageAsync();
+        
+        // Assert
+        AssertMessageAreEquals(message, received);
+    }
+    
+    [Fact]
+    public async Task When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received()
+    {
+        if (!HasSupportToPartitionKey)
+        {
+            return;
+        }
+        
+        // Arrange
+        Publication = CreatePublication(GetOrCreateRoutingKey());
+        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
+        Producer = await CreateProducerAsync(Publication);
+        Channel = await CreateChannelAsync(Subscription);
+        
+        var message = CreateMessage(Publication.Topic!);
+        message.Header.PartitionKey = new PartitionKey(Uuid.NewAsString());
+        
+        // Act
+        await Producer.SendAsync(message);
+        await Task.Delay(DelayForReceiveMessage);
+        var received = await ReceiveMessageAsync();
         
         // Assert
         AssertMessageAreEquals(message, received);
@@ -386,7 +417,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         var total = messages.Count;
         for (var i = 0; i < total; i++)
         {
-            var received = await Channel.ReceiveAsync(ReceiveTimeout);
+            var received = await ReceiveMessageAsync();
             
             // Assert
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
@@ -448,7 +479,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
             await Producer.SendAsync(message);
         
             // Assert
-            await Channel.ReceiveAsync(ReceiveTimeout);
+            await ReceiveMessageAsync();
             Assert.Fail("We are expected to throw an exception");
         }
         catch
@@ -474,7 +505,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
             await Producer.SendAsync(message);
         
             // Assert
-            await Channel.ReceiveAsync(ReceiveTimeout);
+            await ReceiveMessageAsync();
             Assert.Fail("We are expected to throw an exception");
         }
         catch
@@ -545,13 +576,13 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         await Producer.SendWithDelayAsync(message, MessageDelay);
         
         // Act
-        var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        var received = await ReceiveMessageAsync();
         Assert.Equal(MessageType.MT_NONE,  received.Header.MessageType);
         
         await Task.Delay(MessageDelay);
         
         // Assert
-        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        received = await ReceiveMessageAsync();
         AssertMessageAreEquals(message, received);
     }
     
@@ -574,13 +605,13 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         await Task.Delay(TimeSpan.FromSeconds(6));
         
         // Act
-        var received = await Channel.ReceiveAsync(ReceiveTimeout);
+        var received = await ReceiveMessageAsync();
         Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
         
         await Channel.RequeueAsync(received);
         
         // Assert
-        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        received = await ReceiveMessageAsync();
         await Channel.AcknowledgeAsync(received);
         AssertMessageAreEquals(message, received);
     }
@@ -600,13 +631,13 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         await Task.Delay(DelayForReceiveMessage);
         
         // Act
-        var received = await Channel.ReceiveAsync(ReceiveTimeout);
-        Assert.NotEqual(MessageType.MT_QUIT,  received.Header.MessageType);
+        var received = await ReceiveMessageAsync();
+        Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 
         await Channel.RequeueAsync(received);
 
-        await Task.Delay(DelayForReceiveMessage);
-        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        await Task.Delay(DelayForRequeueMessage);
+        received = await ReceiveMessageAsync(true);
         
         // Assert
         AssertMessageAreEquals(message, received); 
@@ -670,16 +701,46 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         Message? received;
         for (var i = 0; i < Subscription.RequeueCount; i++)
         {
-            received = await Channel.ReceiveAsync(ReceiveTimeout);
+            received = await ReceiveMessageAsync();
             await Channel.RequeueAsync(received);
         }
         
-        received = await Channel.ReceiveAsync(ReceiveTimeout);
+        received = await ReceiveMessageAsync();
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         received = await GetMessageFromDeadLetterQueueAsync(Subscription);
         
         // Assert
         AssertMessageAreEquals(message, received); 
+    }
+
+    private const int MaxRetry = 10;
+    protected async Task<Message> ReceiveMessageAsync(bool retryOnNoneMessage = false)
+    {
+        if (Channel == null)
+        {
+            throw new InvalidOperationException();
+        }
+
+        for (int i = 0; i < MaxRetry; i++)
+        {
+            try
+            {
+                var message = await Channel.ReceiveAsync(ReceiveTimeout);
+                if (retryOnNoneMessage && message.Header.MessageType == MessageType.MT_NONE)
+                {
+                    await Task.Delay(DelayForReceiveMessage);
+                    continue;
+                }
+
+                return message;
+            }
+            catch (ChannelFailureException)
+            {
+                await Task.Delay(DelayForReceiveMessage);
+            }
+        }
+
+        return new Message();
     }
 }

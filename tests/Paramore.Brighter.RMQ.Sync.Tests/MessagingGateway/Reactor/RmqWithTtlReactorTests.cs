@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
-using Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 public class RmqWithTtlReactorTests : RmqReactorTests
 {

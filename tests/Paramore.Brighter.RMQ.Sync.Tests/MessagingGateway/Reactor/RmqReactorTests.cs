@@ -6,6 +6,7 @@ using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
@@ -266,6 +267,10 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
         
         Producer.Send(CreateMessage(Publication.Topic!));
         Producer.Send(CreateMessage(Publication.Topic!));
+        
+        // Waiting for RMQ receive the message
+        Thread.Sleep(ReceiveTimeout);
+        
         Producer.Send(CreateMessage(Publication.Topic!));
         
         // Act
