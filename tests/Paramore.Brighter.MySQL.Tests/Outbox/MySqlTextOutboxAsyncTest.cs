@@ -1,13 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Data.Common;
+﻿using System.Data.Common;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Outbox.MySql;
+using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox;
 
+[Collection("Outbox")]
 public class MySqlTextOutboxAsyncTest : RelationDatabaseOutboxAsyncTest
 {
     protected override string DefaultConnectingString => Const.DefaultConnectingString;

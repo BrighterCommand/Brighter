@@ -1,9 +1,10 @@
-using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Sqlite;
+using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Inbox;
 
+[Collection("Inbox")]
 public class SqliteTextInboxTest : RelationalDatabaseInboxTests
 {
     protected override string DefaultConnectingString => Tests.Configuration.ConnectionString;

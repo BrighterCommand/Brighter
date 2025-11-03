@@ -1,7 +1,5 @@
-using System;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Paramore.Brighter.Inbox.Sqlite;
 
 namespace Paramore.Brighter.Sqlite.Tests;
 

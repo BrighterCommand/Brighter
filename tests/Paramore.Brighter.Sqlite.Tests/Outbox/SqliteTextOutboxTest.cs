@@ -1,10 +1,11 @@
 using System.Data.Common;
-using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Outbox.Sqlite;
+using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
+[Collection("Outbox")]
 public class SqliteTextOutboxTest : RelationDatabaseOutboxTest
 {
     protected override string DefaultConnectingString => Tests.Configuration.ConnectionString;

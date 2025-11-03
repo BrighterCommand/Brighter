@@ -2,9 +2,11 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Postgres;
+using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Inbox;
 
+[Collection("Inbox")]
 public class PostgresTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 {
     protected override string DefaultConnectingString => Const.ConnectionString;

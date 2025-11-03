@@ -1,9 +1,11 @@
 ﻿using MySqlConnector;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MySql;
+using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.Inbox;
 
+[Collection("Inbox")]
 public class MySqlTextInboxTest : RelationalDatabaseInboxTests 
 {
     protected override string DefaultConnectingString => Const.DefaultConnectingString;

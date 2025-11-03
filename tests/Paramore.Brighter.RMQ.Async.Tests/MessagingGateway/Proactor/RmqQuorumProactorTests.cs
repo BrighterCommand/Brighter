@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Collection("RabbitMQ")]
+[Collection("MessagingGateway")]
 public class RmqQuorumProactorTests : RmqProactorTests
 {
     protected override bool IsDurable => true;

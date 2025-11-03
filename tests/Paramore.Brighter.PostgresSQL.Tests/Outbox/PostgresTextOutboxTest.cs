@@ -3,9 +3,11 @@ using Npgsql;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.PostgreSql;
+using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
 
+[Collection("Outbox")]
 public class PostgresTextOutboxTest : RelationDatabaseOutboxTest
 {
     protected override string DefaultConnectingString => Const.ConnectionString;
