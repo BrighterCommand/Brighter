@@ -3,9 +3,11 @@ using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
+using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox;
 
+[Collection("Outbox")]
 public class MsSqlTextOutboxTest : RelationDatabaseOutboxTest
 {
     protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;

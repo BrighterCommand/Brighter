@@ -5,9 +5,11 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.MessagingGateway;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
+[Collection("MessagingGateway")]
 public class MsSqlServerProactorTests : MessagingGatewayProactorTests<Publication, MsSqlSubscription>
 {
     protected string TableName { get; } = $"Q{Uuid.New():N}";

@@ -1,9 +1,10 @@
-﻿using Microsoft.Data.SqlClient;
-using Paramore.Brighter.Base.Test.Inbox;
+﻿using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
+using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.Inbox;
 
+[Collection("Inbox")]
 public class MsSqlTextInboxTest : RelationalDatabaseInboxTests 
 {
     protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;
