@@ -6,10 +6,10 @@ using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
+[Collection("RabbitMQ")]
 public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, RmqSubscription>
 {
     protected int? MaxQueueLength { get; set; }

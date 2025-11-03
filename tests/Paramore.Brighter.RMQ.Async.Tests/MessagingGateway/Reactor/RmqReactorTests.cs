@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.MessagingGateway;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
+[Collection("RabbitMQ")]
 public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, RmqSubscription>
 {
     protected int? MaxQueueLength { get; set; }

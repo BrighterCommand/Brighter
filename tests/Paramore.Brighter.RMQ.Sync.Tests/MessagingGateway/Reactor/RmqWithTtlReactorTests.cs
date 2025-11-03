@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
+[Collection("RabbitMQ")]
 public class RmqWithTtlReactorTests : RmqReactorTests
 {
     protected override TimeSpan? Ttl => TimeSpan.FromSeconds(10);

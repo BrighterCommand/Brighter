@@ -8,7 +8,6 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
-using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessageDispatch;
