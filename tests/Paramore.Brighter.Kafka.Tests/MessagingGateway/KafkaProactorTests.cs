@@ -11,6 +11,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
+[Collection("MessagingGateway")]
 public class KafkaProactorTests : MessagingGatewayProactorTests<KafkaPublication, KafkaSubscription>
 {
     protected override bool HasSupportToPartitionKey => true;
