@@ -184,7 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (redisMessage.msgId == null || string.IsNullOrEmpty(redisMessage.rawMsg))
                     return [];
                 
-                var message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
+                var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
                     _inflight.Add(message.Id, redisMessage.msgId);
@@ -232,7 +232,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (redisMessage.msgId == null || string.IsNullOrEmpty(redisMessage.rawMsg))
                     return [];
                 
-                var message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
+                var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
                 
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {

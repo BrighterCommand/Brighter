@@ -72,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="redisMessage">The raw message read from the wire</param>
         /// <returns></returns>
-        public Message CreateMessage(string redisMessage)
+        public static Message CreateMessage(string redisMessage)
         {
             var message = new Message();
             if (redisMessage.IsNullOrEmpty())
@@ -142,7 +142,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="headersJson">The raw header JSON</param>
         /// <returns></returns>
-        private MessageHeader ReadHeader(string? headersJson)
+        private static MessageHeader ReadHeader(string? headersJson)
         {
             if (headersJson is null)
                 return MessageHeader.FailureMessageHeader(RoutingKey.Empty, Id.Empty);
@@ -231,15 +231,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<string>(newCorrelationId, false);
         }
         
-        private HeaderResult<Uri?> ReadDataSchema(Dictionary<string, string> headers)
+        private static HeaderResult<Uri?> ReadDataSchema(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out string? header))
+            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out string? header)
+                && Uri.TryCreate(header, UriKind.RelativeOrAbsolute, out Uri? dataSchema))
             {
-                if (Uri.TryCreate(header, UriKind.Absolute, out Uri? dataSchema))
-                {
-                    return new HeaderResult<Uri?>(dataSchema, true);
-                }
+                return new HeaderResult<Uri?>(dataSchema, true);
             }
+            
             return new HeaderResult<Uri?>(null, false);
         }
 
@@ -278,7 +277,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>A dictionary, either empty if key missing or matching contents if present (could be mepty)</returns>
         private static HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, string> headers)
         {
-
             if (headers.TryGetValue(HeaderNames.BAG, out string? header))
             {
                 var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(header, JsonSerialisationOptions.Options);
@@ -287,8 +285,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
-            return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
 
+            return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
         }
 
          private static HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
@@ -323,16 +321,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<RoutingKey>(RoutingKey.Empty, false);
         }
         
-        private HeaderResult<Uri?> ReadSource(Dictionary<string, string> headers)
+        private static HeaderResult<Uri?> ReadSource(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out string? header))
+            if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out string? header)
+                && Uri.TryCreate(header, UriKind.RelativeOrAbsolute, out var source))
             {
-                return new HeaderResult<Uri?>(new Uri(header), true);
+                return new HeaderResult<Uri?>(source, true);
             }
-            return new HeaderResult<Uri?>(null, false);
+            return new HeaderResult<Uri?>(new Uri(MessageHeader.DefaultSource), true);
         }
         
-        private HeaderResult<string> ReadSubject(Dictionary<string, string> headers)
+        private static HeaderResult<string> ReadSubject(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SUBJECT, out string? header))
             {
@@ -346,16 +345,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="headers">The collection of headers</param>
         /// <returns>The result, always a success because we don't break for missing timestamp, just use now</returns>
-        private static HeaderResult<DateTime> ReadTimeStamp(Dictionary<string, string> headers)
+        private static HeaderResult<DateTimeOffset> ReadTimeStamp(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.TIMESTAMP, out string? header))
+            if (headers.TryGetValue(HeaderNames.TIMESTAMP, out string? header)
+                && DateTimeOffset.TryParse(header, out var timestamp))
             {
-                if(DateTime.TryParse(header, out DateTime timestamp))
-                {
-                    return new HeaderResult<DateTime>(timestamp, true);
-                }
+                return new HeaderResult<DateTimeOffset>(timestamp, true);
             }
-            return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+            
+            return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
         }
        
        private static HeaderResult<TraceParent> ReadTraceParent(Dictionary<string, string> headers)

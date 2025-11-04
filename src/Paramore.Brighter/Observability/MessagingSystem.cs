@@ -41,5 +41,6 @@ public enum MessagingSystem
     ServiceBus,
     Postgres,
     MicrosftSqlServer,
+    Redis
 }
 

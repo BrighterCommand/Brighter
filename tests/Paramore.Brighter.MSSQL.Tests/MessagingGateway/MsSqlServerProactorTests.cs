@@ -55,7 +55,7 @@ public class MsSqlServerProactorTests : MessagingGatewayProactorTests<Publicatio
     protected override MsSqlSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName,
         OnMissingChannel makeChannel = OnMissingChannel.Create, bool setupDeadLetterQueue = false)
     {
-        return new MsSqlSubscription <MyCommand>(
+        return new MsSqlSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
             channelName: channelName,
             routingKey: routingKey,
