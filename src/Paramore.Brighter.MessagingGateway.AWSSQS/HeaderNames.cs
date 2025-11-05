@@ -48,6 +48,9 @@ public static class HeaderNames
     public const string DataContentType = "datacontenttype";
     public const string DataSchema = "dataschema";
     public const string DataRef = "dataref";
+    public const string TraceState = "tracestate";
+    public const string TraceParent = "traceparent";
+    public const string Baggage = "baggage";
     
     /// <summary>
     /// Use this because we cannot set cloud events as individual headers, SNS/SQS can only have 10 headers in raw message delivery

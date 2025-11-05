@@ -37,6 +37,7 @@ public static class MessagingSystemExtensions
     {
         MessagingSystem.ActiveMQ => "activemq",
         MessagingSystem.AWSSQS => "aws_sqs",
+        MessagingSystem.AWSSNS => "aws_sns",
         MessagingSystem.EventGrid => "eventgrid",
         MessagingSystem.EventHubs => "eventhubs",
         MessagingSystem.InternalBus => "internal_bus",

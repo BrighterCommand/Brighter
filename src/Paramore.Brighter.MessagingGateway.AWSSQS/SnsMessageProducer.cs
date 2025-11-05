@@ -28,6 +28,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -39,6 +40,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
 {
     private SnsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
+    private readonly InstrumentationOptions _options;
 
     /// <summary>
     /// The publication configuration for this producer
@@ -62,11 +64,15 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// </summary>
     /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
     /// <param name="publication">Configuration of a producer</param>
-    public SnsMessageProducer(AWSMessagingGatewayConnection connection, SnsPublication publication)
+    /// <param name="instrumentation"></param>
+    public SnsMessageProducer(AWSMessagingGatewayConnection connection, 
+        SnsPublication publication, 
+        InstrumentationOptions instrumentation = InstrumentationOptions.All)
         : base(connection)
     {
         _publication = publication;
         _clientFactory = new AWSClientFactory(connection);
+        _options = instrumentation;
 
         if (publication.TopicArn != null)
         {
@@ -172,6 +178,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             return;
         }
 
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.AWSSNS, message, _options);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
 
         await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
