@@ -4,14 +4,11 @@ using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Xunit;
 
-namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway;
+namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 [Collection("MessagingGateway")]
-public class RocketMqProactorTests : MessagingGatewayProactorTests<RocketMqPublication, RocketSubscription>
+public class RocketMqReactorTests : MessagingGatewayReactorTests<RocketMqPublication, RocketSubscription>
 {
-    protected override bool HasSupportToDeadLetterQueue => true;
-    protected override bool HasSupportToMoveToDeadLetterQueueAfterTooManyRetries => true;
-
     protected override RoutingKey GetOrCreateRoutingKey(string testName = null!)
     {
         return new RoutingKey(testName);
@@ -38,20 +35,20 @@ public class RocketMqProactorTests : MessagingGatewayProactorTests<RocketMqPubli
             requeueCount: 32);
     }
 
-    protected override async Task<IAmAMessageProducerAsync> CreateProducerAsync(RocketMqPublication publication, CancellationToken cancellationToken = default)
+    protected override IAmAMessageProducerSync CreateProducer(RocketMqPublication publication)
     {
-        var producers = await new RocketMessageProducerFactory(GatewayFactory.CreateConnection(), [publication])
-            .CreateAsync();
+        var producers = new RocketMessageProducerFactory(GatewayFactory.CreateConnection(), [publication])
+            .Create();
         var producer = producers.First().Value;
-        return (IAmAMessageProducerAsync)producer;
+        return (IAmAMessageProducerSync)producer;
     }
 
-    protected override async Task<IAmAChannelAsync> CreateChannelAsync(RocketSubscription subscription, CancellationToken cancellationToken = default)
+    protected override IAmAChannelSync CreateChannel(RocketSubscription subscription)
     {
-        var channel = await new RocketMqChannelFactory(new RocketMessageConsumerFactory(GatewayFactory.CreateConnection()))
-                .CreateAsyncChannelAsync(subscription, cancellationToken);
+        var channel = new RocketMqChannelFactory(new RocketMessageConsumerFactory(GatewayFactory.CreateConnection()))
+                .CreateSyncChannel(subscription);
 
-        await channel.PurgeAsync(cancellationToken);
+        channel.Purge();
         return channel;
     }
 }

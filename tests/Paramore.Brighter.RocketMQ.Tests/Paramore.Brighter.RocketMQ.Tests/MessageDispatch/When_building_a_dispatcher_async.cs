@@ -1,13 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Paramore.Brighter.ServiceActivator;
-using Polly;
-using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;

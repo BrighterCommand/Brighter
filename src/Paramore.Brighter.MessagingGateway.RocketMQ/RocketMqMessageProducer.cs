@@ -46,6 +46,12 @@ public class RocketMqMessageProducer(
     /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
     {
+        if (delay.HasValue && delay.Value != TimeSpan.Zero && mqPublication.TopicType != TopicType.Normal && Scheduler is IAmAMessageSchedulerAsync scheduler) 
+        {
+            await scheduler.ScheduleAsync(message, delay.Value, cancellationToken);
+            return;
+        }
+        
         BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RocketMQ, message, instrumentation);
         var builder = new Org.Apache.Rocketmq.Message.Builder()
             .SetBody(message.Body.Bytes)
@@ -108,15 +114,16 @@ public class RocketMqMessageProducer(
             builder.AddProperty(HeaderNames.TraceState, message.Header.TraceState.Value);
         }
         
-        if (delay.HasValue && delay.Value != TimeSpan.Zero)
+        if (mqPublication.TopicType == TopicType.Delay || delay.HasValue && delay.Value != TimeSpan.Zero)
         {
+            delay ??= TimeSpan.Zero;
             builder
                 .SetDeliveryTimestamp(connection.TimerProvider.GetUtcNow().Add(delay.Value).UtcDateTime);
         }
         
-        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        if (mqPublication.TopicType == TopicType.Fifo || !PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
         {
-            builder.SetMessageGroup(message.Header.PartitionKey);
+            builder.SetMessageGroup(message.Header.PartitionKey.Value);
         }
         
         foreach (var (key, val) in message.Header.Bag
