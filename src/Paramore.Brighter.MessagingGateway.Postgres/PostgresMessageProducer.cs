@@ -55,7 +55,7 @@ public partial class PostgresMessageProducer(
             throw new ConfigurationException("No publication specified for producer");
         }
         
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Postgres, message, instrumentations);
+        BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
@@ -83,7 +83,7 @@ public partial class PostgresMessageProducer(
             throw new ConfigurationException("No publication specified for producer");
         }
         
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Postgres, message, instrumentations);
+        BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
@@ -106,7 +106,7 @@ public partial class PostgresMessageProducer(
             throw new ConfigurationException("No publication specified for producer");
         }
         
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Postgres, message, instrumentations);
+        BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
         
         using var connection = _connectionProvider.GetConnection();
@@ -134,7 +134,7 @@ public partial class PostgresMessageProducer(
             throw new ConfigurationException("No publication specified for producer");
         }
         
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Postgres, message, instrumentations);
+        BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
         
         using var connection = _connectionProvider.GetConnection();

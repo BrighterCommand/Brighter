@@ -38,10 +38,6 @@ public enum MessagingSystem
     PubSub,
     RabbitMQ,
     RocketMQ,
-    ServiceBus,
-    Postgres,
-    MicrosftSqlServer,
-    Redis, 
-    AWSSNS
+    ServiceBus
 }
 

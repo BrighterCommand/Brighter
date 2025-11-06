@@ -37,19 +37,15 @@ public static class MessagingSystemExtensions
     {
         MessagingSystem.ActiveMQ => "activemq",
         MessagingSystem.AWSSQS => "aws_sqs",
-        MessagingSystem.AWSSNS => "aws_sns",
         MessagingSystem.EventGrid => "eventgrid",
         MessagingSystem.EventHubs => "eventhubs",
         MessagingSystem.InternalBus => "internal_bus",
         MessagingSystem.JMS => "jms",
         MessagingSystem.Kafka => "kafka",
-        MessagingSystem.Postgres => "postgres",
         MessagingSystem.PubSub => "gcp_pubsub",
         MessagingSystem.RabbitMQ => "rabbitmq",
         MessagingSystem.RocketMQ => "rocketmq",
         MessagingSystem.ServiceBus => "servicebus",
-        MessagingSystem.MicrosftSqlServer => "mssqlserver",
-        MessagingSystem.Redis => "redis",
         _ => throw new ArgumentOutOfRangeException(nameof(messagingSystem), messagingSystem, null)
     };
 }

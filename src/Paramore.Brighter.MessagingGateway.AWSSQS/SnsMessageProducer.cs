@@ -178,7 +178,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             return;
         }
 
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.AWSSNS, message, _options);
+        BrighterTracer.WriteProducerEvent(Span, "aws_sns", message, _options);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
 
         await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);

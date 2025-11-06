@@ -136,7 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             using var client = s_pool.Value.GetClient();
             Topic = message.Header.Topic;
 
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Redis, message, instrumentation);
+            BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
             Log.PreparingToSend(s_logger);
   
             var redisMessage = CreateRedisMessage(message);
@@ -179,7 +179,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             await using var client = await s_pool.Value.GetClientAsync(token: cancellationToken);
             Topic = message.Header.Topic;
 
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Redis, message, instrumentation);
+            BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
             Log.PreparingToSend(s_logger);
   
             var redisMessage = CreateRedisMessage(message);

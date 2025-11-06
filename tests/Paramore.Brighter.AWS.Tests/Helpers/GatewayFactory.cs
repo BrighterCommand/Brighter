@@ -34,7 +34,7 @@ public static class GatewayFactory
             {
                 config?.Invoke(cfg);
 
-                var serviceUrl = "http://localhost:4566"; //Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                var serviceUrl = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
                 if (!string.IsNullOrWhiteSpace(serviceUrl))
                 {
                     if (cfg is AmazonS3Config && Uri.TryCreate(serviceUrl, UriKind.Absolute, out var uri))

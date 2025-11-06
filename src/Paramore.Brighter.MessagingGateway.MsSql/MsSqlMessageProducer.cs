@@ -135,7 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 Log.NoSchedulerConfigured(s_logger);
             }
               
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.MicrosftSqlServer, message, _instrumentation);
+            BrighterTracer.WriteProducerEvent(Span, "microsft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
             Log.SendMessage(s_logger, topic, message.Id);
@@ -171,7 +171,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 Log.NoSchedulerConfigured(s_logger);
             }
 
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.MicrosftSqlServer, message, _instrumentation);
+            BrighterTracer.WriteProducerEvent(Span, "microsft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
             Log.SendMessageAsync(s_logger, topic, message.Id);
