@@ -127,8 +127,6 @@ public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, Rm
             .CreateAsync();
 
         var producer = produces.First().Value;
-        
-        
         return (IAmAMessageProducerAsync)producer;
     }
 

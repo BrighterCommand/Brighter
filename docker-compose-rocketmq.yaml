@@ -57,7 +57,7 @@ services:
       test: [ "CMD", "sh", "-c", "netstat -an | grep 8081" ]
       interval: 5s
       timeout: 10s
-      retries: 10
+      retries: 20
     
   # Service to create the RocketMQ topic
   create-topic:
@@ -67,23 +67,23 @@ services:
             echo 'Waiting for broker to be healthy...' &&
             until curl -s http://broker:10911/ &>/dev/null; do
               echo 'Broker not fully ready yet, retrying in 60 seconds...'
-                sleep 60
+              sleep 60
             done;
             echo 'Broker is up. Creating multiple topics...' &&
 
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_building_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL && 
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_building_dispatch_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_named_gateway_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_cloudevents -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_cloudevents_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_rmm -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_rmm_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_post_via_gateway -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_post_via_gateway_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_posting_a_message_via_the_messaging_gateway_should_be_received -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL && 
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_a_message_consumer_reads_multiple_messages_should_receive_all_messages -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_confirming_posting_a_message_should_receive_publish_confirmation -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_infrastructure_missing_and_assume_channel_should_throw_exception -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_infrastructure_missing_and_validate_channel_should_throw_exception -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_posting_a_message_but_no_broker_created_should_throw_exception -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_requeing_a_failed_message_with_delay_should_receive_message_again -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_requeing_a_failed_message_should_receive_message_again -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_sending_a_message_should_propagate_activity_context -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             echo 'done'
         "
     depends_on: # Ensure broker is healthy before attempting topic creation

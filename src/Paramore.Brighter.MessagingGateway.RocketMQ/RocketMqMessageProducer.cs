@@ -46,6 +46,7 @@ public class RocketMqMessageProducer(
     /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
     {
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RocketMQ, message, instrumentation);
         var builder = new Org.Apache.Rocketmq.Message.Builder()
             .SetBody(message.Body.Bytes)
             .SetTopic(mqPublication.Topic!.Value);
@@ -56,7 +57,8 @@ public class RocketMqMessageProducer(
             .AddProperty(HeaderNames.MessageType, message.Header.MessageType.ToString())
             .AddProperty(HeaderNames.TimeStamp, message.Header.TimeStamp.ToRfc3339())
             .AddProperty(HeaderNames.Source, message.Header.Source.ToString())
-            .AddProperty(HeaderNames.SpecVersion, message.Header.SpecVersion);
+            .AddProperty(HeaderNames.SpecVersion, message.Header.SpecVersion)
+            .AddProperty(HeaderNames.Baggage, message.Header.Baggage.ToString());
 
         if (message.Header.Type != CloudEventsType.Empty)
         {
@@ -94,6 +96,16 @@ public class RocketMqMessageProducer(
         if (!string.IsNullOrEmpty(message.Header.DataRef))
         {
             builder.AddProperty(HeaderNames.DataRef, message.Header.DataRef);
+        }
+        
+        if (!TraceParent.IsNullOrEmpty(message.Header.TraceParent))
+        {
+            builder.AddProperty(HeaderNames.TraceParent, message.Header.TraceParent.Value);
+        }
+
+        if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
+        {
+            builder.AddProperty(HeaderNames.TraceState, message.Header.TraceState.Value);
         }
         
         if (delay.HasValue && delay.Value != TimeSpan.Zero)
@@ -139,7 +151,6 @@ public class RocketMqMessageProducer(
         }
         
         await producer.Send(builder.Build());
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RocketMQ, message, instrumentation);
     }
     
     /// <inheritdoc />
