@@ -11,7 +11,6 @@ using RedisSubscription = Paramore.Brighter.MessagingGateway.Redis.RedisSubscrip
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
-[Collection("MessagingGateway")]
 public class RedisReactorTests : MessagingGatewayReactorTests<RedisMessagePublication, RedisSubscription>
 {
     private readonly RedisMessagingGatewayConfiguration _configuration = new()

@@ -6,11 +6,9 @@ using Npgsql;
 using Paramore.Brighter.Base.Test.MessagingGateway;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.Postgres;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway.Proactor;
 
-[Collection("MessagingGateway")]
 public class PostgresProactorTests  : MessagingGatewayProactorTests<PostgresPublication, PostgresSubscription>
 {
     protected string TableName { get; } = Uuid.New().ToString("N");

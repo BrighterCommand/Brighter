@@ -3,7 +3,6 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs;
 
-[Collection("MessagingGateway")]
 public class SqsFifoProactorTests : SqsProactorTests
 {
     protected override bool HasSupportToDelayedMessages => false;

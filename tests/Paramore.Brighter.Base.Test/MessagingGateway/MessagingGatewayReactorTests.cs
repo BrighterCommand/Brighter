@@ -50,6 +50,7 @@ namespace Paramore.Brighter.Base.Test.MessagingGateway;
 /// Derived classes should implement the abstract methods to provide specific gateway implementations.
 /// The class handles proper disposal of resources including producers, subscriptions, and channels.
 /// </remarks>
+[Collection("MessagingGatewayReactor")]
 public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> : IAsyncLifetime
     where TPublication : Publication
     where TSubscription : Subscription

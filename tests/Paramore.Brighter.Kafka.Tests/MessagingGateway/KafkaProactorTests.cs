@@ -11,7 +11,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Collection("MessagingGateway")]
 public class KafkaProactorTests : MessagingGatewayProactorTests<KafkaPublication, KafkaSubscription>
 {
     protected override bool HasSupportToPartitionKey => true;
@@ -41,12 +40,7 @@ public class KafkaProactorTests : MessagingGatewayProactorTests<KafkaPublication
             routingKey: routingKey,
             channelName: channelName,
             makeChannels: makeChannel,
-            groupId:  Uuid.NewAsString(),
-            configHook: c =>
-            {
-                c.SessionTimeoutMs = 10_000;
-                c.MaxPollIntervalMs = 10_000;
-            });
+            groupId: Uuid.NewAsString());
     }
 
     protected override async Task<IAmAMessageProducerAsync> CreateProducerAsync(KafkaPublication publication, CancellationToken cancellationToken = default)

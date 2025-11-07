@@ -15,7 +15,6 @@ using Xunit.Sdk;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns;
 
-[Collection("MessagingGateway")]
 public class SnsProactorTests : MessagingGatewayProactorTests<SnsPublication, SqsSubscription>
 {
     protected override bool HasSupportToDeadLetterQueue => true;

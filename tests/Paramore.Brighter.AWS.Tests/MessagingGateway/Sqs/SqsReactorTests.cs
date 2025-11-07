@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
@@ -15,7 +13,6 @@ using Xunit.Sdk;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs;
 
-[Collection("MessagingGateway")]
 public class SqsReactorTests : MessagingGatewayReactorTests<SqsPublication, SqsSubscription>
 {
     protected override bool HasSupportToDeadLetterQueue => true;

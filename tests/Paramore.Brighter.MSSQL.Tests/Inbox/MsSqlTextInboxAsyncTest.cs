@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
 using Xunit;

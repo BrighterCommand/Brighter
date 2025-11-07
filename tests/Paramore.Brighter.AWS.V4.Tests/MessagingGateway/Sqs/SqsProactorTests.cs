@@ -15,11 +15,9 @@ using Xunit.Sdk;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs;
 
-[Collection("MessagingGateway")]
 public class SqsProactorTests : MessagingGatewayProactorTests<SqsPublication, SqsSubscription>
 {
     protected override bool HasSupportToDeadLetterQueue => true;
-    protected override bool HasSupportToMoveToDeadLetterQueueAfterTooManyRetries => true;
     protected override bool HasSupportToDelayedMessages => true;
 
     protected virtual SqsType TopicType { get; } = SqsType.Standard;

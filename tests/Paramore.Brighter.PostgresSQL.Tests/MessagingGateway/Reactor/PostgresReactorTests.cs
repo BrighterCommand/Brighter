@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.Base.Test.MessagingGateway;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.Postgres;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway.Reactor;
 
-[Collection("MessagingGateway")]
 public class PostgresReactorTests  : MessagingGatewayReactorTests<PostgresPublication, PostgresSubscription>
 {
     protected string TableName { get; } = Uuid.New().ToString("N");

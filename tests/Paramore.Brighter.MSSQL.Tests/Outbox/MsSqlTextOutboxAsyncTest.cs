@@ -1,6 +1,5 @@
 ﻿using System.Data.Common;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Outbox.MsSql;

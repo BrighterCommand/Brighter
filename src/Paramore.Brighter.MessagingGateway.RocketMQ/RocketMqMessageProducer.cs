@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NJsonSchema.Annotations;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
@@ -32,23 +33,41 @@ public class RocketMqMessageProducer(
 
     /// <inheritdoc />
     public void Send(Message message)
-        => SendWithDelay(message, TimeSpan.Zero);
+    {
+        SendWithDelay(message, TimeSpan.Zero);
+    }
 
     /// <inheritdoc />
     public void SendWithDelay(Message message, TimeSpan? delay)
-        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
-    
+    {
+        BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay, false));
+    }
 
     /// <inheritdoc />
     public Task SendAsync(Message message, CancellationToken cancellationToken = default)
-        => SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
+    {
+        return SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
+    }
 
     /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
     {
-        if (delay.HasValue && delay.Value != TimeSpan.Zero && mqPublication.TopicType != TopicType.Normal && Scheduler is IAmAMessageSchedulerAsync scheduler) 
+        await SendWithDelayAsync(message, delay, true, cancellationToken);
+    }
+
+    private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken = default)
+    {
+        if (delay.HasValue && delay.Value != TimeSpan.Zero && mqPublication.TopicType != TopicType.Delay)
         {
-            await scheduler.ScheduleAsync(message, delay.Value, cancellationToken);
+            if (useAsyncScheduler)
+            {
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
+            }
+            
+            var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+            schedulerSync.Schedule(message, delay.Value);
             return;
         }
         

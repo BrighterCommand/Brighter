@@ -143,7 +143,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         
         delay ??= TimeSpan.Zero;
         // SQS support delay until 15min, more than that we are going to use scheduler
-        if (delay > TimeSpan.FromMinutes(15))
+        if (delay > TimeSpan.FromMinutes(15) && _publication.QueueAttributes.Type == SqsType.Standard)
         {
             if (useAsyncScheduler)
             {
