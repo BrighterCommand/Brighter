@@ -1,10 +1,8 @@
-﻿using System.Transactions;
+﻿using System;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.MessageScheduler.TickerQ;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Scheduler.Events;
-using Paramore.Brighter.Scheduler.Handlers;
-using Paramore.Brighter.TickerQ.Tests.TestDoubles;
 using ParamoreBrighter.TickerQ.Tests.TestDoubles;
 using Polly;
 using Polly.Registry;
@@ -13,10 +11,9 @@ using TickerQ.DependencyInjection.Hosting;
 using TickerQ.Utilities.Interfaces.Managers;
 using TickerQ.Utilities.Models.Ticker;
 
-
-namespace Paramore.Brighter.TickerQ.Tests
+namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 {
-    public class TickerQRequestTestFixture
+    public abstract class BaseTickerQFixture
     {
         public TickerQSchedulerFactory SchedulerFactory { get; }
         public IAmACommandProcessor Processor { get; }
@@ -30,7 +27,7 @@ namespace Paramore.Brighter.TickerQ.Tests
         public ServiceProvider ServiceProvider { get; }
         public Dictionary<string, string> ReceivedMessages { get; }
 
-        public TickerQRequestTestFixture()
+        protected BaseTickerQFixture()
         {
             ReceivedMessages = new();
             RoutingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
@@ -38,23 +35,10 @@ namespace Paramore.Brighter.TickerQ.Tests
             _serviceCollection = new ServiceCollection();
             _serviceCollection.AddLogging();
             _serviceCollection.AddTickerQ();
-            _serviceCollection.AddSingleton<TimeProvider>(TimeProvider);
-         
-            
-            var handlerFactory = new SimpleHandlerFactoryAsync(
-                   type =>
-                   {
-                       if (type == typeof(MyEventHandlerAsync))
-                       {
-                           return new MyEventHandlerAsync(ReceivedMessages);
-                       }
+            _serviceCollection.AddSingleton(TimeProvider);
+            var handlerFactory = GetHandlerFactory();
 
-                       return new FireSchedulerMessageHandler(Processor!);
-                   });
-
-            var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
-            subscriberRegistry.RegisterAsync<FireSchedulerRequest, FireSchedulerRequestHandler>();
+            var subscriberRegistry = GetSubscriberServiceRegistry();
 
             var policyRegistry = new PolicyRegistry
             {
@@ -68,12 +52,7 @@ namespace Paramore.Brighter.TickerQ.Tests
                 [RoutingKey] = new InMemoryMessageProducer(InternalBus, TimeProvider, new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) })
             });
 
-            var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
-
-           // messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
+            var messageMapperRegistry = GetMapperRegistery();
 
             var trace = new BrighterTracer(TimeProvider);
             Outbox = new InMemoryOutbox(TimeProvider) { Tracer = trace };
@@ -89,9 +68,7 @@ namespace Paramore.Brighter.TickerQ.Tests
                 Outbox
             );
 
-
-
-            _serviceCollection.AddSingleton<TickerQSchedulerFactory>(sp =>
+            _serviceCollection.AddSingleton(sp =>
             {
                 var tickerManager = sp.GetRequiredService<ITimeTickerManager<TimeTicker>>();
                 var timeProvider = sp.GetRequiredService<TimeProvider>();
@@ -124,6 +101,9 @@ namespace Paramore.Brighter.TickerQ.Tests
             var myHost = new MyHost() { Services = ServiceProvider };
             myHost.UseTickerQ();
         }
+        protected abstract IAmAHandlerFactory GetHandlerFactory();
+        protected abstract IAmASubscriberRegistry GetSubscriberServiceRegistry();
+        protected abstract IAmAMessageMapperRegistry GetMapperRegistery();
 
         public void Clear()
         {

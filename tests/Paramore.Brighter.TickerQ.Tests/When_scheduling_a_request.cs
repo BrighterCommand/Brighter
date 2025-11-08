@@ -1,4 +1,5 @@
 ﻿using Paramore.Brighter.TickerQ.Tests.TestDoubles;
+using Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures;
 
 
 namespace Paramore.Brighter.TickerQ.Tests
