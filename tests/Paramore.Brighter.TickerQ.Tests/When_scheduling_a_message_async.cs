@@ -6,11 +6,11 @@ using Paramore.Brighter.TickerQ.Tests.TestDoubles;
 namespace Paramore.Brighter.TickerQ.Tests;
 
 [Collection("Scheduler")]
-public class TickerQSchedulerMessageAsyncTests : IClassFixture<TickerQTestFixture>, IDisposable
+public class TickerQSchedulerMessageAsyncTests : IClassFixture<TickerQMessageTestFixture>, IDisposable
 {
-    private readonly TickerQTestFixture _fixture;
+    private readonly TickerQMessageTestFixture _fixture;
 
-    public TickerQSchedulerMessageAsyncTests(Paramore.Brighter.TickerQ.Tests.TickerQTestFixture tickerQTestFixture)
+    public TickerQSchedulerMessageAsyncTests(TickerQMessageTestFixture tickerQTestFixture)
     {
         _fixture = tickerQTestFixture;
     }
@@ -173,7 +173,7 @@ public class TickerQSchedulerMessageAsyncTests : IClassFixture<TickerQTestFixtur
 
     public void Dispose()
     {
-        _fixture.ClearBus();
+        _fixture.Clear();
     }
 }
 

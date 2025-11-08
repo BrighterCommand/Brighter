@@ -10,11 +10,8 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
 {
     public class TickerQSchedulerFactory(ITimeTickerManager<TimeTicker> timeTickerManager, TimeProvider timeProvider) : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
     {
-
         public Func<string> GetOrCreateSchedulerId => () => Uuid.NewAsString();
         public Func<string, Guid> ParseSchedulerId => (str) => Uuid.Parse(str);
-
-
 
         public IAmAMessageScheduler Create(IAmACommandProcessor processor)
         {
@@ -23,17 +20,17 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
 
         public IAmARequestSchedulerAsync CreateAsync(IAmACommandProcessor processor)
         {
-            throw new NotImplementedException();
+            return new TickerQScheduler(timeTickerManager, timeProvider, GetOrCreateSchedulerId, ParseSchedulerId);
         }
 
         public IAmARequestSchedulerSync CreateSync(IAmACommandProcessor processor)
         {
-            throw new NotImplementedException();
+            return new TickerQScheduler(timeTickerManager, timeProvider, GetOrCreateSchedulerId, ParseSchedulerId);
         }
 
         public TickerQScheduler GetTickerQScheduler()
         {
-         return   new TickerQScheduler(timeTickerManager, timeProvider, GetOrCreateSchedulerId, ParseSchedulerId);
+            return new TickerQScheduler(timeTickerManager, timeProvider, GetOrCreateSchedulerId, ParseSchedulerId);
         }
     }
 }

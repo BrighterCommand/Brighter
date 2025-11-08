@@ -21,15 +21,13 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         Func<string> getOrCreateSchedulerId,
         Func<string, Guid> parseSchedulerId
         )
-        : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync/*, IAmARequestSchedulerSync, IAmARequestSchedulerAsync*/
+        : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync
     {
-
-
-
+        #region MessageScheduler
         public async Task<string> ScheduleAsync(Message message, DateTimeOffset at, CancellationToken cancellationToken = default)
         {
             var id = getOrCreateSchedulerId();
-            var request = JsonSerializer.Serialize(
+            var tickerRequest = JsonSerializer.Serialize(
                  new FireSchedulerMessage { Id = id, Async = true, Message = message },
                  JsonSerialisationOptions.Options);
             var ticker = new TimeTicker
@@ -37,7 +35,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
                 Id = parseSchedulerId(id),
                 ExecutionTime = at.UtcDateTime,
                 Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerMessageAsync),
-                Request = TickerHelper.CreateTickerRequest<string>(request),
+                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
             };
 
             var result = await timeTickerManager.AddAsync(ticker, cancellationToken);
@@ -74,7 +72,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         public string Schedule(Message message, DateTimeOffset at)
         {
             var id = getOrCreateSchedulerId();
-            var request = JsonSerializer.Serialize(
+            var tickerRequest = JsonSerializer.Serialize(
                  new FireSchedulerMessage { Id = id, Async = false, Message = message },
                  JsonSerialisationOptions.Options);
             var ticker = new TimeTicker
@@ -82,9 +80,9 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
                 Id = parseSchedulerId(id),
                 ExecutionTime = at.UtcDateTime,
                 Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerMessageAsync),
-                Request = TickerHelper.CreateTickerRequest<string>(request),
+                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
             };
-            var result = BrighterAsyncContext.Run(async () => await  timeTickerManager.AddAsync(ticker));
+            var result = BrighterAsyncContext.Run(async () => await timeTickerManager.AddAsync(ticker));
             return result.Result.Id.ToString();
         }
 
@@ -116,5 +114,87 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         {
             BrighterAsyncContext.Run(async () => await CancelAsync(id));
         }
+
+
+        #endregion
+
+        #region RequestScheduler
+        public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
+                 where TRequest : class, IRequest
+        {
+            var id = getOrCreateSchedulerId();
+            var tickerRequest = JsonSerializer.Serialize(
+                 new FireSchedulerRequest
+                 {
+                     Id = id,
+                     Async = false,
+                     SchedulerType = type,
+                     RequestType = typeof(TRequest).FullName!,
+                     RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                 },
+                 JsonSerialisationOptions.Options);
+
+            var ticker = new TimeTicker
+            {
+                Id = parseSchedulerId(id),
+                ExecutionTime = at.UtcDateTime,
+                Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerRequestAsync),
+                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
+            };
+
+            var result = BrighterAsyncContext.Run(async () => await timeTickerManager.AddAsync(ticker));
+            return result.Result.Id.ToString();
+        }
+
+        public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
+            where TRequest : class, IRequest
+        {
+            if (delay < TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
+            }
+
+            return Schedule(request, type, timeProvider.GetUtcNow().Add(delay));
+        }
+
+        public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, CancellationToken cancellationToken)
+            where TRequest : class, IRequest
+        {
+            var id = getOrCreateSchedulerId();
+            var tickerRequest = JsonSerializer.Serialize(
+                 new FireSchedulerRequest
+                 {
+                     Id = id,
+                     Async = true,
+                     SchedulerType = type,
+                     RequestType = typeof(TRequest).FullName!,
+                     RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                 },
+                 JsonSerialisationOptions.Options);
+
+            var ticker = new TimeTicker
+            {
+                Id = parseSchedulerId(id),
+                ExecutionTime = at.UtcDateTime,
+                Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerRequestAsync),
+                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
+            };
+
+            var result = await timeTickerManager.AddAsync(ticker, cancellationToken);
+
+            return result.Result.Id.ToString();
+        }
+
+        public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay, CancellationToken cancellationToken)
+            where TRequest : class, IRequest
+        {
+            if (delay < TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
+            }
+
+            return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        }
+        #endregion
     }
 }
