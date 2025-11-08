@@ -27,17 +27,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         /// <inheritdoc />
         public async Task<string> ScheduleAsync(Message message, DateTimeOffset at, CancellationToken cancellationToken = default)
         {
-            var id = getOrCreateSchedulerId();
-            var tickerRequest = JsonSerializer.Serialize(
-                 new FireSchedulerMessage { Id = id, Async = true, Message = message },
-                 JsonSerialisationOptions.Options);
-            var ticker = new TimeTicker
-            {
-                Id = parseSchedulerId(id),
-                ExecutionTime = at.UtcDateTime,
-                Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerMessageAsync),
-                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
-            };
+            var ticker = CreateTimeTicker(message, at, true);
 
             var result = await timeTickerManager.AddAsync(ticker, cancellationToken);
 
@@ -76,17 +66,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         /// <inheritdoc />
         public string Schedule(Message message, DateTimeOffset at)
         {
-            var id = getOrCreateSchedulerId();
-            var tickerRequest = JsonSerializer.Serialize(
-                 new FireSchedulerMessage { Id = id, Async = false, Message = message },
-                 JsonSerialisationOptions.Options);
-            var ticker = new TimeTicker
-            {
-                Id = parseSchedulerId(id),
-                ExecutionTime = at.UtcDateTime,
-                Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerMessageAsync),
-                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
-            };
+            var ticker = CreateTimeTicker(message, at, false);
             var result = BrighterAsyncContext.Run(async () => await timeTickerManager.AddAsync(ticker));
             return result.Result.Id.ToString();
         }
@@ -134,25 +114,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
                  where TRequest : class, IRequest
         {
-            var id = getOrCreateSchedulerId();
-            var tickerRequest = JsonSerializer.Serialize(
-                 new FireSchedulerRequest
-                 {
-                     Id = id,
-                     Async = false,
-                     SchedulerType = type,
-                     RequestType = typeof(TRequest).FullName!,
-                     RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
-                 },
-                 JsonSerialisationOptions.Options);
-
-            var ticker = new TimeTicker
-            {
-                Id = parseSchedulerId(id),
-                ExecutionTime = at.UtcDateTime,
-                Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerRequestAsync),
-                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
-            };
+            var ticker = CreateTimeTicker(request, type, at, false);
 
             var result = BrighterAsyncContext.Run(async () => await timeTickerManager.AddAsync(ticker));
             return result.Result.Id.ToString();
@@ -174,25 +136,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, CancellationToken cancellationToken)
             where TRequest : class, IRequest
         {
-            var id = getOrCreateSchedulerId();
-            var tickerRequest = JsonSerializer.Serialize(
-                 new FireSchedulerRequest
-                 {
-                     Id = id,
-                     Async = true,
-                     SchedulerType = type,
-                     RequestType = typeof(TRequest).FullName!,
-                     RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
-                 },
-                 JsonSerialisationOptions.Options);
-
-            var ticker = new TimeTicker
-            {
-                Id = parseSchedulerId(id),
-                ExecutionTime = at.UtcDateTime,
-                Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerRequestAsync),
-                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
-            };
+            var ticker = CreateTimeTicker(request, type, at, true);
 
             var result = await timeTickerManager.AddAsync(ticker, cancellationToken);
 
@@ -211,5 +155,45 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
             return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
         }
         #endregion
+
+        private TimeTicker CreateTimeTicker<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, bool isAsync) where TRequest : class, IRequest
+        {
+            var id = getOrCreateSchedulerId();
+            var tickerRequest = JsonSerializer.Serialize(
+                 new FireSchedulerRequest
+                 {
+                     Id = id,
+                     Async = isAsync,
+                     SchedulerType = type,
+                     RequestType = typeof(TRequest).FullName!,
+                     RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                 },
+                 JsonSerialisationOptions.Options);
+
+            var ticker = new TimeTicker
+            {
+                Id = parseSchedulerId(id),
+                ExecutionTime = at.UtcDateTime,
+                Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerRequestAsync),
+                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
+            };
+            return ticker;
+        }
+        private TimeTicker CreateTimeTicker(Message message, DateTimeOffset at, bool isAsync)
+        {
+            var id = getOrCreateSchedulerId();
+            var tickerRequest = JsonSerializer.Serialize(
+                 new FireSchedulerMessage { Id = id, Async = isAsync, Message = message },
+                 JsonSerialisationOptions.Options);
+            var ticker = new TimeTicker
+            {
+                Id = parseSchedulerId(id),
+                ExecutionTime = at.UtcDateTime,
+                Function = nameof(BrighterTickerQSchedulerJob.FireSchedulerMessageAsync),
+                Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
+            };
+            return ticker;
+        }
+
     }
 }
