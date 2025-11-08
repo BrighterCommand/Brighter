@@ -28,18 +28,8 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         [TickerFunction(nameof(FireSchedulerRequestAsync))]
         public async Task FireSchedulerRequestAsync(TickerFunctionContext<string> tickerContext, CancellationToken cancellationToken)
         {
-            try
-            {
-                //    var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerRequest>(tickerContext.Request, JsonSerialisationOptions.Options)!;
-                // await processor.SendAsync(schedulerRequest);
-                await processor.SendAsync(new FireSchedulerRequest());
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                throw;
-            }
-
+            var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerRequest>(tickerContext.Request, JsonSerialisationOptions.Options)!;
+            await processor.SendAsync(schedulerRequest);
         }
     }
 }

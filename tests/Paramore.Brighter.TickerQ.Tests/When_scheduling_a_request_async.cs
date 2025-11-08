@@ -1,15 +1,16 @@
 ﻿using System;
 using Paramore.Brighter.TickerQ.Tests.TestDoubles;
+using Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures;
 
 
 namespace Paramore.Brighter.TickerQ.Tests
 {
     [Collection("Scheduler")]
-    public class TickerQSchedulerRequestAsyncTests : IClassFixture<TickerQRequestTestFixture>, IDisposable
+    public class TickerQSchedulerRequestAsyncTests : IClassFixture<TickerQRequestAsyncTestFixture>, IDisposable
     {
-        private readonly TickerQRequestTestFixture _fixture;
+        private readonly TickerQRequestAsyncTestFixture _fixture;
 
-        public TickerQSchedulerRequestAsyncTests(TickerQRequestTestFixture tickerQTestFixture)
+        public TickerQSchedulerRequestAsyncTests(TickerQRequestAsyncTestFixture tickerQTestFixture)
         {
             _fixture = tickerQTestFixture;
         }
