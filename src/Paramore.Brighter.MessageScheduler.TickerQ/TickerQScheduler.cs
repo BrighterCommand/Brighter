@@ -117,7 +117,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         public async Task CancelAsync(string id, CancellationToken cancellationToken = default)
         {
             var guid = parseSchedulerId(id);
-            await timeTickerManager.DeleteAsync(guid);
+            await timeTickerManager.DeleteAsync(guid, cancellationToken);
         }
 
         /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel"/>
