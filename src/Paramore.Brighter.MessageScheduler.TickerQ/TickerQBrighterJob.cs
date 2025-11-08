@@ -12,6 +12,10 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Paramore.Brighter.MessageScheduler.TickerQ
 {
+    /// <summary>
+    /// The TickerQ Message scheduler Job
+    /// </summary>
+    /// <param name="processor"></param>
     public class BrighterTickerQSchedulerJob(IAmACommandProcessor processor)
     {
         [TickerFunction(nameof(FireSchedulerMessageAsync))]
@@ -26,16 +30,16 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         {
             try
             {
-            //    var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerRequest>(tickerContext.Request, JsonSerialisationOptions.Options)!;
-           // await processor.SendAsync(schedulerRequest);
-            await processor.SendAsync(new FireSchedulerRequest());
+                //    var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerRequest>(tickerContext.Request, JsonSerialisationOptions.Options)!;
+                // await processor.SendAsync(schedulerRequest);
+                await processor.SendAsync(new FireSchedulerRequest());
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
-                throw ;
+                throw;
             }
-          
+
         }
     }
 }
