@@ -16,7 +16,7 @@ using TickerQ.Utilities.Models.Ticker;
 
 namespace Paramore.Brighter.TickerQ.Tests
 {
-    public class TickerQTestFixture
+    public class TickerQRequestTestFixture
     {
         public TickerQSchedulerFactory SchedulerFactory { get; }
         public IAmACommandProcessor Processor { get; }
@@ -28,23 +28,33 @@ namespace Paramore.Brighter.TickerQ.Tests
 
         private readonly IServiceCollection _serviceCollection;
         public ServiceProvider ServiceProvider { get; }
+        public Dictionary<string, string> ReceivedMessages { get; }
 
-        public TickerQTestFixture()
+        public TickerQRequestTestFixture()
         {
+            ReceivedMessages = new();
+            RoutingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
+            TimeProvider = TimeProvider.System;
             _serviceCollection = new ServiceCollection();
             _serviceCollection.AddLogging();
             _serviceCollection.AddTickerQ();
-
-            RoutingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
-            TimeProvider = TimeProvider.System;
             _serviceCollection.AddSingleton<TimeProvider>(TimeProvider);
-            var handlerFactory = new SimpleHandlerFactory(
-                _ => new MyEventHandler(new Dictionary<string, string>()),
-                _ => new FireSchedulerMessageHandler(Processor!));
+         
+            
+            var handlerFactory = new SimpleHandlerFactoryAsync(
+                   type =>
+                   {
+                       if (type == typeof(MyEventHandlerAsync))
+                       {
+                           return new MyEventHandlerAsync(ReceivedMessages);
+                       }
+
+                       return new FireSchedulerMessageHandler(Processor!);
+                   });
 
             var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<MyEvent, MyEventHandler>();
-            subscriberRegistry.RegisterAsync<FireSchedulerMessage, FireSchedulerMessageHandler>();
+            subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
+            subscriberRegistry.RegisterAsync<FireSchedulerRequest, FireSchedulerRequestHandler>();
 
             var policyRegistry = new PolicyRegistry
             {
@@ -60,9 +70,10 @@ namespace Paramore.Brighter.TickerQ.Tests
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                null);
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
 
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+           // messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             var trace = new BrighterTracer(TimeProvider);
             Outbox = new InMemoryOutbox(TimeProvider) { Tracer = trace };
@@ -114,13 +125,14 @@ namespace Paramore.Brighter.TickerQ.Tests
             myHost.UseTickerQ();
         }
 
-        internal void ClearBus()
+        public void Clear()
         {
             var length = InternalBus.Stream(RoutingKey).Count();
             for (int i = 0; i < length; i++)
             {
                 InternalBus.Dequeue(RoutingKey);
             }
+            ReceivedMessages.Clear();
         }
     }
 }
