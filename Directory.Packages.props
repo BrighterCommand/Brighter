@@ -119,57 +119,56 @@
     <PackageVersion Include="xunit.v3" Version="3.1.0" />
     <PackageVersion Include="xunit.v3.runner.msbuild" Version="3.1.0" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.9" />
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'net472'">
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.11" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.9.0" />
-    <PackageVersion Include="System.Text.Json" ersion="9.0.9" />
-    <PackageVersion Include="System.Threading.Channels" Version="9.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.11" />
+    <PackageVersion Include="System.Threading.Channels" Version="9.0.11" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.9.0" />
-    <PackageVersion Include="System.Text.Json" ersion="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="System.Threading.Channels" Version="10.0.0-rc.2.25502.107" />
+    <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.0" />
+    <PackageVersion Include="System.Threading.Channels" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.15" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.3" />
-    <PackageVersion Include="Npgsql" Version="8.0.7" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.22" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.22" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.22" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.22" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.22" />
+    <PackageVersion Include="Npgsql" Version="8.0.8" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
@@ -178,24 +177,22 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.10" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
     <PackageVersion Include="Npgsql" Version="9.0.4" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
     <PackageVersion Include="Npgsql" Version="10.0.0-rc.1" />
   </ItemGroup>
   <ItemGroup>
     <GlobalPackageReference Include="MinVer" Version="6.0.0" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net462' Or '$(TargetFramework)' == 'net472'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'net472'">
     <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>

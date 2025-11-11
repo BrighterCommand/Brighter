@@ -8,15 +8,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Text.Json" />
     <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
 
