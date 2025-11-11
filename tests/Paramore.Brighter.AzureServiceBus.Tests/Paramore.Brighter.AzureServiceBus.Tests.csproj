@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
   </ItemGroup>
 
 </Project>
