@@ -704,7 +704,7 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
     }
     
     private const int MaxRetry = 15;
-    protected Message ReceiveMessage(bool retryOnNoneMessage = false)
+    protected virtual Message ReceiveMessage(bool retryOnNoneMessage = false)
     {
         if (Channel == null)
         {

@@ -123,4 +123,10 @@ public class KafkaProactorTests : MessagingGatewayProactorTests<KafkaPublication
         // Kafka doesn't support reuqueing
         return Task.CompletedTask;
     }
+
+
+    protected override Task<Message> ReceiveMessageAsync(bool retryOnNoneMessage = false)
+    {
+        return base.ReceiveMessageAsync(true);
+    }
 }

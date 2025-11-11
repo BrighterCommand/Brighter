@@ -115,4 +115,9 @@ public class KafkaReactorTests : MessagingGatewayReactorTests<KafkaPublication, 
     {
         // Kafka doesn't support requeuing
     }
+
+    protected override Message ReceiveMessage(bool retryOnNoneMessage = false)
+    {
+        return base.ReceiveMessage(true);
+    }
 }

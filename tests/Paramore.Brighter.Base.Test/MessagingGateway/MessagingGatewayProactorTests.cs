@@ -418,7 +418,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
         var total = messages.Count;
         for (var i = 0; i < total; i++)
         {
-            var received = await ReceiveMessageAsync(true);
+            var received = await ReceiveMessageAsync();
             
             // Assert
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
