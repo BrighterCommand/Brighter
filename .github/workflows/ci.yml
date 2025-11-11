@@ -33,203 +33,195 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-#  build:
-#    timeout-minutes: 30
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - run: dotnet --info
-#      - uses: actions/checkout@v5
-#        with:
-#          fetch-depth: 0
-#      - uses: actions/cache@v4
-#        with:
-#          path: ~/.nuget/packages
-#          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
-#          restore-keys: |
-#            Linux-nuget-
-#      - name: Build
-#        run: dotnet build --configuration Release
-#      - name: Core Tests
-#        run: |
-#          dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build 
-#          dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build 
-#          dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build 
-#
-#      - name: Upload packages as artifacts
-#        uses: actions/upload-artifact@v5
-#        with:
-#          name: nuget packages
-#          path: "**/*.nupkg"
-#      - name: Push to GitHub Feed
-#        if: ${{ github.event_name != 'pull_request' }}
-#        run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          REPOSITORY_OWNER: ${{ github.repository_owner }}
-#
-#  release:
-#    if: startsWith(github.ref, 'refs/tags')
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#    steps:
-#      - uses: actions/download-artifact@v6
-#        with:
-#          name: nuget packages
-#      - name: Push generated package to NuGet
-#        run: dotnet nuget push **/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_KEY }} --skip-duplicate
-#
-#  memory:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 8
-#    needs: [build]
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: In Memory Transport Tests
-#        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions   
-#
-#  hangfire:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 8
-#    needs: [ build ]
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Hangfire Tests
-#        run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  quartz:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 8
-#    needs: [ build ]
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Quartz Tests
-#        run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  redis-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#
-#    services:
-#      redis:  
-#        image: redis:latest
-#        ports:
-#        - 6379:6379
-#        options: >-
-#          --health-cmd "redis-cli ping"
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5             
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Redis Transport Tests
-#        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  mqtt-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#
-#    services:
-#      mosquitto:  
-#        image: efrecon/mosquitto:latest
-#        ports:
-#        - 1883:1883
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v5
-#      - name: Setup dotnet 
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: MQTT Transport Tests
-#        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  rabbitmq-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 7
-#    needs: [build]
-#
-#    services:
-#      rabbitmq:
-#        image: brightercommand/rabbitmq:3.13-management-delay
-#        ports:
-#        - 5672:5672 
-#        # needed because the rabbitmq container does not provide a healthcheck
-#        options: >-
-#          --health-cmd "rabbitmqctl node_health_check"
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - uses: actions/cache@v4
-#        with:
-#          path: ~/.nuget/packages
-#          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
-#          restore-keys: |
-#            Linux-nuget-
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: RMQ Async Transport Tests
-#        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#      - name: RMQ Sync Transport Tests
-#        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+  build:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - run: dotnet --info
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            Linux-nuget-
+      - name: Build
+        run: dotnet build --configuration Release
+      - name: Core Tests
+        run: |
+          dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build 
+          dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build 
+          dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build 
+
+      - name: Upload packages as artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: nuget packages
+          path: "**/*.nupkg"
+      - name: Push to GitHub Feed
+        if: ${{ github.event_name != 'pull_request' }}
+        run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: nuget packages
+      - name: Push generated package to NuGet
+        run: dotnet nuget push **/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_KEY }} --skip-duplicate
+
+  memory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [build]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: In Memory Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions   
+
+  hangfire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [ build ]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Hangfire Tests
+        run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  quartz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [ build ]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Quartz Tests
+        run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  redis-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    services:
+      redis:  
+        image: redis:latest
+        ports:
+        - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5             
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Redis Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  mqtt-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    services:
+      mosquitto:  
+        image: efrecon/mosquitto:latest
+        ports:
+        - 1883:1883
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: MQTT Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  rabbitmq-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    needs: [build]
+
+    services:
+      rabbitmq:
+        image: brightercommand/rabbitmq:3.13-management-delay
+        ports:
+        - 5672:5672 
+        # needed because the rabbitmq container does not provide a healthcheck
+        options: >-
+          --health-cmd "rabbitmqctl node_health_check"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            Linux-nuget-
+      - name: RMQ Async Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+      - name: RMQ Sync Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
   kafka-ci:
     runs-on: ubuntu-latest
@@ -295,338 +287,317 @@ jobs:
         dotnet-version: |
           8.0.x
           9.0.x
-#    - name: Install dependencies
-#      run: dotnet restore
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  postgres-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#
-#    services:
-#      postgres:
-#        image: postgres
-#        ports: 
-#          - 5432:5432
-#        env:
-#          POSTGRES_PASSWORD: password
-#          POSTGRES_DB: brightertests
-#        options: >-
-#          --health-cmd pg_isready
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet 
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Postgres Tests
-#        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  sqlserver-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#
-#    services:
-#      sqlserver:
-#        image: mcr.microsoft.com/mssql/server
-#        ports: 
-#          - 11433:1433
-#        env:
-#          ACCEPT_EULA: Y
-#          SA_PASSWORD: Password123!
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet 
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: MSSQL Tests
-#        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  mysql-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#
-#    services:
-#      mariadb:
-#        image: mariadb:latest
-#        ports:
-#          - 3306:3306
-#        env:
-#          MYSQL_DATABASE: BrighterTests
-#          MYSQL_ROOT_PASSWORD: root
-#        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet 
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Verify MariaDB connection
-#        env:
-#          PORT: ${{ job.services.mariadb.ports[3306] }}
-#        run: |
-#          while ! mysqladmin ping -h"127.0.0.1" -P"$PORT" --silent; do
-#            sleep 1
-#          done
-#      - name: MySQL Tests
-#        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  dynamo-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#
-#    services:
-#      dynamo:
-#        image: dwmkerr/dynamodb
-#        ports: 
-#          - 8000:8000
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet 
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: DynamoDB Tests
-#        run: |
-#          dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#          dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  localstack-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: build
-#    env:
-#      LOCALSTACK_SERVICE_URL: http://localhost.localstack.cloud:4566
-#
-#    services: 
-#      localstack: 
-#        image: localstack/localstack    
-#        ports:
-#          - 4566:4566
-#        env: 
-#          SERVICES: s3,sqs,sns,sts,dynamodb,iam,scheduler
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#        with:
-#          fetch-depth: 0 # Required to fetch the Git tags
-#          filter: tree:0
-#          show-progress: false
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - uses: actions/cache@v4
-#        with:
-#          path: ~/.nuget/packages
-#          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
-#          restore-keys: |
-#            Linux-nuget-
-#      - name: AWS Tests
-#        run: |
-#          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  aws-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    if: |
-#      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
-#      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
-#    needs: [build]
-#    env:
-#      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#      AWS_REGION: us-west-2
-#      AWS_DEFAULT_OUTPUT: json    
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet 
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v5
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: eu-west-1
-#      - name: AWS SNS, SQS and S3 Tests
-#        run: |
-#          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  aws-scheduler-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    if: |
-#      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
-#      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
-#    needs: [build]
-#    env:
-#      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#      AWS_REGION: us-west-2
-#      AWS_DEFAULT_OUTPUT: json
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v5
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: eu-west-1
-#      - name: Scheduler Tests
-#        run: |
-#          dotnet test ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#          dotnet test ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  sqlite-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [ build ]
-#
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet 
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Sqlite Tests
-#        run: dotnet test ./tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  azure-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet 
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: Azure Tests
-#        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
-#
-#  mongodb-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#
-#    services:
-#      mongo:
-#        image: mongo
-#        ports:
-#          - 27017:27017
-#        env:
-#          MONGO_INITDB_ROOT_USERNAME: root
-#          MONGO_INITDB_ROOT_PASSWORD: example
-#          MONGO_INITDB_DATABASE: brighter
-#        options: >-
-#          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
-#          --health-interval 20s
-#          --health-timeout 10s
-#          --health-retries 10
-#    steps:
-#      - uses: actions/checkout@v5
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#      - name: Install dependencies
-#        run: dotnet restore
-#      - name: MongoDB Tests
-#        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  postgres-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    services:
+      postgres:
+        image: postgres
+        ports: 
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: brightertests
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Postgres Tests
+        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  sqlserver-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server
+        ports: 
+          - 11433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: Password123!
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: MSSQL Tests
+        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  mysql-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    services:
+      mariadb:
+        image: mariadb:latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: BrighterTests
+          MYSQL_ROOT_PASSWORD: root
+        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Verify MariaDB connection
+        env:
+          PORT: ${{ job.services.mariadb.ports[3306] }}
+        run: |
+          while ! mysqladmin ping -h"127.0.0.1" -P"$PORT" --silent; do
+            sleep 1
+          done
+      - name: MySQL Tests
+        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  dynamo-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    services:
+      dynamo:
+        image: dwmkerr/dynamodb
+        ports: 
+          - 8000:8000
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: DynamoDB Tests
+        run: |
+          dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+          dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  localstack-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: build
+    env:
+      LOCALSTACK_SERVICE_URL: http://localhost.localstack.cloud:4566
+
+    services: 
+      localstack: 
+        image: localstack/localstack    
+        ports:
+          - 4566:4566
+        env: 
+          SERVICES: s3,sqs,sns,sts,dynamodb,iam,scheduler
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Required to fetch the Git tags
+          filter: tree:0
+          show-progress: false
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: |
+            Linux-nuget-
+      - name: AWS Tests
+        run: |
+          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  aws-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: |
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+    needs: [build]
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-west-2
+      AWS_DEFAULT_OUTPUT: json    
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+      - name: AWS SNS, SQS and S3 Tests
+        run: |
+          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  aws-scheduler-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: |
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+    needs: [build]
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-west-2
+      AWS_DEFAULT_OUTPUT: json
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+      - name: Scheduler Tests
+        run: |
+          dotnet test ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+          dotnet test ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  sqlite-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [ build ]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Sqlite Tests
+        run: dotnet test ./tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  azure-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Azure Tests
+        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+
+  mongodb-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    services:
+      mongo:
+        image: mongo
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: example
+          MONGO_INITDB_DATABASE: brighter
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
+          --health-interval 20s
+          --health-timeout 10s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: MongoDB Tests
+        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
     
-#  gcp-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 7
-#    needs: [build]
-#    if: |
-#      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
-#      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
-#    steps:
-#      - uses: actions/checkout@v5
-#        with: 
-#          fetch-depth: 0 # Required to fetch the Git tags
-#          filter: tree:0
-#          show-progress: false 
-#          
-#      - name: Google Cloud auth
-#        uses: google-github-actions/auth@v3
-#        with:
-#          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
-#            
-#      - name: Set up Cloud SDK
-#        uses: google-github-actions/setup-gcloud@v3
-#        with:
-#          version: '>= 363.0.0'
-#      
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#            
-#      - name: Install dependencies
-#        run: dotnet restore
-#        
-#      - name: GCP Tests
-#        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
+  gcp-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    needs: [build]
+    if: |
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+    steps:
+      - uses: actions/checkout@v5
+        with: 
+          fetch-depth: 0 # Required to fetch the Git tags
+          filter: tree:0
+          show-progress: false 
+
+      - name: Google Cloud auth
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          version: '>= 363.0.0'
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: GCP Tests
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
         
 #  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
