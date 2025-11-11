@@ -108,5 +108,11 @@ public class KafkaReactorTests : MessagingGatewayReactorTests<KafkaPublication, 
                 Task.Delay(DelayForReceiveMessage);
             }
         }
-    }   
+    }
+
+    [Fact]
+    public override void When_requeing_a_failed_message_should_receive_message_again()
+    {
+        // Kafka doesn't support requeuing
+    }
 }

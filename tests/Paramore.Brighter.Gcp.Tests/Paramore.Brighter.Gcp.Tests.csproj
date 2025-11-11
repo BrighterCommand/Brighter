@@ -41,8 +41,4 @@
     <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="MessagingGateway\Pull\" />
-  </ItemGroup>
-
 </Project>

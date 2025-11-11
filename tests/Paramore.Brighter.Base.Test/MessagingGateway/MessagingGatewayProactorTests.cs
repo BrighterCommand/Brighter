@@ -618,7 +618,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
     
     [Fact]
-    public async Task When_requeing_a_failed_message_should_receive_message_again()
+    public virtual async Task When_requeing_a_failed_message_should_receive_message_again()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());
@@ -716,7 +716,7 @@ public abstract class MessagingGatewayProactorTests<TPublication, TSubscription>
     }
 
     private const int MaxRetry = 10;
-    protected async Task<Message> ReceiveMessageAsync(bool retryOnNoneMessage = false)
+    protected virtual async Task<Message> ReceiveMessageAsync(bool retryOnNoneMessage = false)
     {
         if (Channel == null)
         {

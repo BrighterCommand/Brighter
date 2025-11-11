@@ -97,6 +97,11 @@ public class GcpPubSubSubscription : Subscription
     public Action<SubscriberClientBuilder>? StreamingConfiguration { get; }
 
     /// <summary>
+    /// 
+    /// </summary>
+    public string? SubscriberMember { get; }
+
+    /// <summary>
     /// Gets the type of the channel factory used to create this channel.
     /// For GCP, this is always <see cref="GcpPubSubConsumerFactory"/>.
     /// </summary>
@@ -119,11 +124,11 @@ public class GcpPubSubSubscription : Subscription
         ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null,
         TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream,
-        Action<SubscriberClientBuilder>? streamingConfiguration = null)
+        Action<SubscriberClientBuilder>? streamingConfiguration = null,
+        string? subscriberMember = null)
         : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
-            channelFactory,
-            makeChannels, emptyChannelDelay, channelFailureDelay)
+            channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
     {
         Labels = labels ?? new MapField<string, string>();
         MaxRequeueDelay = maxRequeueDelay ?? TimeSpan.FromSeconds(600); // Default to 10 minutes
@@ -140,6 +145,7 @@ public class GcpPubSubSubscription : Subscription
         AckDeadlineSeconds = ackDeadlineSeconds;
         SubscriptionMode = subscriptionMode;
         StreamingConfiguration = streamingConfiguration;
+        SubscriberMember = subscriberMember;
     }
 }
 
@@ -167,13 +173,14 @@ public class GcpPubSubSubscription<T> : GcpPubSubSubscription
         bool enableMessageOrdering = false, bool enableExactlyOnceDelivery = false, CloudStorageConfig? storage = null,
         ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null,
         TimeSpan? maxRequeueDelay = null,
-        TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream)
+        TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream,
+        string? subscriberMember = null)
         : base(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, projectId, topicAttributes,
             ackDeadlineSeconds, retainAckedMessages, messageRetentionDuration, labels, enableMessageOrdering,
             enableExactlyOnceDelivery, storage, expirationPolicy, deadLetter, maxRequeueDelay, timeProvider,
-            subscriptionMode: subscriptionMode)
+            subscriptionMode: subscriptionMode, subscriberMember: subscriberMember)
     {
     }
 }

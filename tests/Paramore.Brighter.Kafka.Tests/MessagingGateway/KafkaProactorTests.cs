@@ -109,4 +109,11 @@ public class KafkaProactorTests : MessagingGatewayProactorTests<KafkaPublication
             }
         }
     }
+
+    [Fact]
+    public override Task When_requeing_a_failed_message_should_receive_message_again()
+    {
+        // Kafka doesn't support reuqueing
+        return Task.CompletedTask;
+    }
 }

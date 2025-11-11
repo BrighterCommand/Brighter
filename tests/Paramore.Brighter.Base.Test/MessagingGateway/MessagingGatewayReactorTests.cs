@@ -606,7 +606,7 @@ public abstract class MessagingGatewayReactorTests<TPublication, TSubscription> 
     }
     
     [Fact]
-    public void When_requeing_a_failed_message_should_receive_message_again()
+    public virtual void When_requeing_a_failed_message_should_receive_message_again()
     {
         // Arrange
         Publication = CreatePublication(GetOrCreateRoutingKey());

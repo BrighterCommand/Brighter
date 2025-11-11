@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
+[Collection("MessagingGatewayReactor")]
 public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, RmqSubscription>
 {
     protected int? MaxQueueLength { get; set; }
@@ -19,7 +20,7 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
     protected override bool HasSupportToDeadLetterQueue => true;
 
     protected virtual bool IsDurable { get; } = false;
-    protected virtual TimeSpan? Ttl { get; } = null;
+    protected virtual TimeSpan? Ttl { get; set; } = null;
     protected virtual QueueType QueueType => QueueType.Classic;
     
     protected virtual RmqMessagingGatewayConnection CreateConnection()
@@ -372,5 +373,54 @@ public class RmqReactorTests :  MessagingGatewayReactorTests<RmqPublication, Rmq
         
         received = Channel.Receive(ReceiveTimeout);
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+    }   
+    
+    [Fact]
+    public void When_consuming_expired_message_should_return_none_message()
+    {
+        // Arrange
+        BufferSize = 1;
+        Ttl = TimeSpan.FromSeconds(5);
+        Publication = CreatePublication(GetOrCreateRoutingKey());
+        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName());
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
+
+        var messageOne = CreateMessage(Publication.Topic!);
+        var messageTwo = CreateMessage(Publication.Topic!);
+        Producer.Send(messageOne);
+        Producer.Send(messageTwo);
+
+        Thread.Sleep(TimeSpan.FromSeconds(6));
+
+        _ = Channel.Receive(ReceiveTimeout);
+        var receive = Channel.Receive(ReceiveTimeout);
+        Assert.Equal(MessageType.MT_NONE,  receive.Header.MessageType);
+    }
+    
+    [Fact]
+    public void When_consuming_expired_message_should_be_move_to_dead_letter_queue()
+    {
+        // Arrange
+        BufferSize = 1;
+        Ttl = TimeSpan.FromSeconds(5);
+        Publication = CreatePublication(GetOrCreateRoutingKey());
+        Subscription = CreateSubscription(Publication.Topic!, GetOrCreateChannelName(), setupDeadLetterQueue: true);
+        Producer = CreateProducer(Publication);
+        Channel = CreateChannel(Subscription);
+
+        var messageOne = CreateMessage(Publication.Topic!);
+        var messageTwo = CreateMessage(Publication.Topic!);
+        Producer.Send(messageTwo);
+        Producer.Send(messageOne);
+
+        Thread.Sleep(TimeSpan.FromSeconds(6));
+
+        Channel.Receive(ReceiveTimeout);
+        var receive = Channel.Receive(ReceiveTimeout);
+        Assert.Equal(MessageType.MT_NONE,  receive.Header.MessageType);
+        
+        receive = GetMessageFromDeadLetterQueue(Subscription);
+        AssertMessageAreEquals(messageOne, receive);
     }   
 }

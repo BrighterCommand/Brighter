@@ -3,6 +3,7 @@ using Google.Cloud.PubSub.V1;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -22,7 +23,10 @@ internal static class Parser
         HeaderNames.SpecVersion,
         HeaderNames.Type,
         HeaderNames.Source,
-        HeaderNames.DataSchema
+        HeaderNames.DataSchema,
+        HeaderNames.TraceParent,
+        HeaderNames.TraceState,
+        HeaderNames.Baggage
     };
 
 
@@ -87,6 +91,9 @@ internal static class Parser
         var type = ReadType(receivedMessage.Message.Attributes);
         var source = ReadSource(receivedMessage.Message.Attributes);
         var dataSchema = ReadDataSchema(receivedMessage.Message.Attributes);
+        var traceParent = ReadTraceParent(receivedMessage.Message.Attributes);
+        var traceState = ReadTraceState(receivedMessage.Message.Attributes);
+        var baggage = ReadBaggage(receivedMessage.Message.Attributes);
 
         var messageHeader = new MessageHeader(
             messageId: messageId,
@@ -102,7 +109,10 @@ internal static class Parser
             dataSchema: dataSchema,
             subject: subject,
             delayed: TimeSpan.Zero,
-            partitionKey: partitionKey
+            partitionKey: partitionKey,
+            traceParent: traceParent,
+            traceState: traceState,
+            baggage: baggage
         );
 
         foreach (var header in receivedMessage.Message.Attributes
@@ -241,6 +251,37 @@ internal static class Parser
 
         return null;
     }
+    
+    private static TraceParent? ReadTraceParent(MapField<string, string> attributes)
+    {
+        if (attributes.TryGetValue(HeaderNames.TraceParent, out var traceParent))
+        {
+            return new TraceParent(traceParent);
+        }
+
+        return null;
+    }
+    
+    private static TraceState? ReadTraceState(MapField<string, string> attributes)
+    {
+        if (attributes.TryGetValue(HeaderNames.TraceState, out var traceState))
+        {
+            return new TraceState(traceState);
+        }
+
+        return null;
+    }
+    
+    private static Baggage ReadBaggage(MapField<string, string> attributes)
+    {
+        var baggage = new Baggage();
+        if (attributes.TryGetValue(HeaderNames.Baggage, out var val))
+        {
+            baggage.LoadBaggage(val);
+        }
+
+        return baggage;
+    }
 
     public static PubsubMessage ToPubSubMessage(Message message)
     {
@@ -263,6 +304,7 @@ internal static class Parser
         headers.Add(HeaderNames.Source, message.Header.Source.ToString());
         headers.Add(HeaderNames.Timestamp, message.Header.TimeStamp.ToRfc3339());
         headers.Add(HeaderNames.ContentType, message.Header.ContentType.ToString());
+        headers.Add(HeaderNames.Baggage, message.Header.Baggage.ToString());
 
         if (message.Header.Type != CloudEventsType.Empty)
         {
@@ -287,6 +329,16 @@ internal static class Parser
         if (message.Header.DataSchema != null)
         {
             headers.Add(HeaderNames.DataSchema, message.Header.DataSchema.ToString());
+        }
+
+        if (!TraceParent.IsNullOrEmpty(message.Header.TraceParent))
+        {
+            headers.Add(HeaderNames.TraceParent, message.Header.TraceParent.Value);
+        }
+
+        if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
+        {
+            headers.Add(HeaderNames.TraceState, message.Header.TraceState.Value);
         }
 
         message.Header.Bag.Each(header =>
