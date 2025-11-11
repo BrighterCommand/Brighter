@@ -99,7 +99,17 @@ public class GcpStreamReactorTests : MessagingGatewayReactorTests<GcpPublication
             messagePumpType: MessagePumpType.Reactor,
             subscriptionMode: SubscriptionMode.Pull);
         using var channel = CreateChannel(sub);
-        return channel.Receive(ReceiveTimeout);
+        
+        for (var i = 0; i < 10; i++)
+        {
+            var message = channel.Receive(ReceiveTimeout);
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                return message;
+            }
+        }
+
+        return new Message();
     }
 
     protected override void CleanUp()

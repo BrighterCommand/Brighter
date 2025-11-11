@@ -102,7 +102,17 @@ public class GcpStreamProactorTests : MessagingGatewayProactorTests<GcpPublicati
             messagePumpType: MessagePumpType.Proactor,
             subscriptionMode: SubscriptionMode.Pull);
         using var channel = await CreateChannelAsync(sub, cancellationToken);
-        return await channel.ReceiveAsync(ReceiveTimeout, cancellationToken);
+        
+        for (var i = 0; i < 10; i++)
+        {
+            var message = await channel.ReceiveAsync(ReceiveTimeout, cancellationToken);
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                return message;
+            }
+        }
+
+        return new Message();
     }
 
     protected override async Task CleanUpAsync(CancellationToken cancellationToken = default)

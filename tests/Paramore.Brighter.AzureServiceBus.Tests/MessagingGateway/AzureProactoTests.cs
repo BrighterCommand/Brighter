@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.MessagingGateway;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -56,5 +57,35 @@ public class AzureProactoTests : MessagingGatewayProactorTests<AzureServiceBusPu
         }
 
         return channel;
+    }
+
+    protected override async Task CleanUpAsync(CancellationToken cancellationToken = default)
+    {
+        var clientProvider = ASBCreds.ASBClientProvider;
+        var administrationClient = new AdministrationClientWrapper(clientProvider);
+
+        if (Publication != null)
+        {
+            try
+            {
+                await administrationClient.DeleteTopicAsync(Publication.Topic!.Value);
+            }
+            catch (Exception)
+            {
+                // Ignore any error during deleting topic
+            }
+        }
+
+        if (Subscription != null)
+        {
+            try
+            {
+                await administrationClient.DeleteQueueAsync(Subscription.ChannelName.Value);
+            }
+            catch (Exception)
+            {
+                // Ignore any error during deleting topic
+            }
+        }
     }
 }

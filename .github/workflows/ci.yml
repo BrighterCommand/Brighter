@@ -98,8 +98,6 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
-      - name: Install dependencies
-        run: dotnet restore
       - name: In Memory Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions   
 
@@ -116,8 +114,6 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
-      - name: Install dependencies
-        run: dotnet restore
       - name: Hangfire Tests
         run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
@@ -226,7 +222,7 @@ jobs:
   kafka-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-#    needs: [build]
+    needs: [build]
     env:
       CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}
       CONFLUENT_SASL_PASSWORD: ${{ secrets.CONFLUENT_SASL_PASSWORD }}
@@ -560,8 +556,6 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
-      - name: Install dependencies
-        run: dotnet restore
       - name: MongoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
     
