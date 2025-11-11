@@ -14,7 +14,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 public class KafkaProactorTests : MessagingGatewayProactorTests<KafkaPublication, KafkaSubscription>
 {
     protected override bool HasSupportToPartitionKey => true;
-    protected override TimeSpan DelayForRequeueMessage  => TimeSpan.FromSeconds(15);
     private string Topic { get; } = $"Topic{Uuid.New():N}";
     
     protected override ChannelName GetOrCreateChannelName(string testName = null!)
@@ -29,7 +28,13 @@ public class KafkaProactorTests : MessagingGatewayProactorTests<KafkaPublication
 
     protected override KafkaPublication CreatePublication(RoutingKey routingKey)
     {
-        return new KafkaPublication { Topic = routingKey, MakeChannels = OnMissingChannel.Create };
+        return new KafkaPublication
+        {
+            Topic = routingKey,
+            NumPartitions = 1,
+            ReplicationFactor = 1,
+            MakeChannels = OnMissingChannel.Create
+        };
     }
 
     protected override KafkaSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName,
@@ -40,6 +45,8 @@ public class KafkaProactorTests : MessagingGatewayProactorTests<KafkaPublication
             routingKey: routingKey,
             channelName: channelName,
             makeChannels: makeChannel,
+            numOfPartitions: 1,
+            replicationFactor: 1,
             groupId: Uuid.NewAsString());
     }
 

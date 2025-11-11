@@ -12,6 +12,7 @@ using MyCommand = Paramore.Brighter.Base.Test.Requests.MyCommand;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
+[Collection("RmqProactor")]
 public class RmqProactorTests : MessagingGatewayProactorTests<RmqPublication, RmqSubscription>
 {
     protected int? MaxQueueLength { get; set; }

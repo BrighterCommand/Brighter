@@ -9,6 +9,7 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
+[Collection("StreamProactor")]
 public class GcpStreamProactorTests : MessagingGatewayProactorTests<GcpPublication, GcpPubSubSubscription>
 {
     protected override bool HasSupportToDeadLetterQueue => true;

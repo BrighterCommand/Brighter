@@ -9,6 +9,7 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
+[Collection("PullProactor")]
 public class GcpPullProactorTests : MessagingGatewayProactorTests<GcpPublication, GcpPubSubSubscription>
 {
     protected override bool HasSupportToDeadLetterQueue => true;
