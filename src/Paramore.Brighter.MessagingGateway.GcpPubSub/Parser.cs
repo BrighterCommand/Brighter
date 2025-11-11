@@ -45,6 +45,9 @@ internal static class Parser
         var type = ReadType(receivedMessage.Message.Attributes);
         var source = ReadSource(receivedMessage.Message.Attributes);
         var dataSchema = ReadDataSchema(receivedMessage.Message.Attributes);
+        var traceParent = ReadTraceParent(receivedMessage.Message.Attributes);
+        var traceState = ReadTraceState(receivedMessage.Message.Attributes);
+        var baggage = ReadBaggage(receivedMessage.Message.Attributes);
 
         var messageHeader = new MessageHeader(
             messageId: messageId,
@@ -60,7 +63,10 @@ internal static class Parser
             dataSchema: dataSchema,
             subject: subject,
             delayed: TimeSpan.Zero,
-            partitionKey: partitionKey
+            partitionKey: partitionKey,
+            baggage: baggage,
+            traceParent: traceParent,
+            traceState: traceState
         );
 
         foreach (var header in receivedMessage.Message.Attributes

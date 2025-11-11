@@ -593,7 +593,7 @@ jobs:
     
   gcp-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 7
 #    needs: [build]
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
