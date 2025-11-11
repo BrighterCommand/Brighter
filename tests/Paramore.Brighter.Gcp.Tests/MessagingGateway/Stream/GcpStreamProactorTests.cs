@@ -64,7 +64,7 @@ public class GcpStreamProactorTests : MessagingGatewayProactorTests<GcpPublicati
             channelName: channelName,
             deadLetter: deadLetter,
             requeueCount: 6,
-            enableMessageOrdering: channelName.Value.StartsWith("Partition"),
+            enableMessageOrdering: channelName.Value.StartsWith("PartitionKey"),
             messagePumpType: MessagePumpType.Proactor,
             subscriptionMode: SubscriptionMode.Stream);
     }

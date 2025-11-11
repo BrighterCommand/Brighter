@@ -24,7 +24,7 @@ public class GcpStreamReactorTests : MessagingGatewayReactorTests<GcpPublication
         return base.GetOrCreateRoutingKey(testName);
     }
 
-    protected override ChannelName GetOrCreateChannelName(string testName = null)
+    protected override ChannelName GetOrCreateChannelName(string testName = null!)
     {
         if (testName.Contains("partition", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -62,7 +62,7 @@ public class GcpStreamReactorTests : MessagingGatewayReactorTests<GcpPublication
             channelName: channelName,
             deadLetter: deadLetter,
             requeueCount: 6,
-            enableMessageOrdering: channelName.Value.StartsWith("Partition"),
+            enableMessageOrdering: channelName.Value.StartsWith("PartitionKey"),
             messagePumpType: MessagePumpType.Reactor,
             subscriptionMode: SubscriptionMode.Stream);
     }
@@ -96,7 +96,7 @@ public class GcpStreamReactorTests : MessagingGatewayReactorTests<GcpPublication
             subscriptionName: new SubscriptionName(Uuid.New().ToString("N")),
             routingKey: subscription.DeadLetter!.TopicName,
             channelName: subscription.DeadLetter!.Subscription,
-            messagePumpType: MessagePumpType.Proactor,
+            messagePumpType: MessagePumpType.Reactor,
             subscriptionMode: SubscriptionMode.Pull);
         using var channel = CreateChannel(sub);
         return channel.Receive(ReceiveTimeout);
