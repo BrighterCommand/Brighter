@@ -16,8 +16,4 @@
     <ProjectReference Include="..\Paramore.Brighter.ServiceActivator.Control\Paramore.Brighter.ServiceActivator.Control.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-
 </Project>
