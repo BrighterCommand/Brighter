@@ -6,6 +6,7 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.Base.Test.MessagingGateway;
+using Paramore.Brighter.Base.Test.MessagingGateway.Reactor;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;

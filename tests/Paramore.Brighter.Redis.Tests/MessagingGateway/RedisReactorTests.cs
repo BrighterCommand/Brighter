@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Paramore.Brighter.Base.Test.MessagingGateway;
+using Paramore.Brighter.Base.Test.MessagingGateway.Reactor;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;

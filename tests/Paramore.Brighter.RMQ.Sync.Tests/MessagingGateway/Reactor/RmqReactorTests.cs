@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using Paramore.Brighter.Base.Test.MessagingGateway;
+using Paramore.Brighter.Base.Test.MessagingGateway.Reactor;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.MessagingGateway;
+using Paramore.Brighter.Base.Test.MessagingGateway.Reactor;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.Kafka;

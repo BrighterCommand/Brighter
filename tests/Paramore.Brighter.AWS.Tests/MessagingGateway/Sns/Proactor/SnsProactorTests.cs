@@ -7,15 +7,15 @@ using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.Base.Test.MessagingGateway;
+using Paramore.Brighter.Base.Test.MessagingGateway.Proactor;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 using Xunit.Sdk;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns;
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Proactor;
 
-public class SnsProactorTests : MessagingGatewayProactorTests<SnsPublication, SqsSubscription>
+public partial class SnsProactorTests : MessagingGatewayProactorTests<SnsPublication, SqsSubscription>
 {
     protected override bool HasSupportToDeadLetterQueue => true;
     protected override bool HasSupportToMoveToDeadLetterQueueAfterTooManyRetries => true;
@@ -163,76 +163,6 @@ public class SnsProactorTests : MessagingGatewayProactorTests<SnsPublication, Sq
             {
                 // Ignoring any error
             }
-        }
-    }
-
-    [Fact]
-    public async Task When_topic_missing_verify_throws_async()
-    {
-        // Arrange
-        Publication = CreatePublication(GetOrCreateRoutingKey());
-        Publication.MakeChannels = OnMissingChannel.Validate;
-        
-        
-        // act & assert
-        try
-        {
-            Producer = await CreateProducerAsync(Publication);
-            Assert.Fail("Expecting an exception");
-        }
-        catch (Exception e) when(e is not XunitException)
-        {
-            Assert.IsType<BrokerUnreachableException>(e);
-        }
-    }
-    
-    [Fact]
-    public async Task When_queues_missing_verify_throws_async()
-    {
-        // Arrange
-        Publication = CreatePublication(GetOrCreateRoutingKey());
-        Subscription = CreateSubscription(Publication.Topic!,
-            GetOrCreateChannelName(),
-            OnMissingChannel.Validate);
-        
-        // act & assert
-        try
-        {
-            // Ensure the topic is created
-            Producer = await CreateProducerAsync(Publication);
-            Channel = await CreateChannelAsync(Subscription);
-            Assert.Fail("Expecting an exception");
-        }
-        catch (Exception e) when(e is not XunitException)
-        {
-            Assert.IsType<QueueDoesNotExistException>(e);
-        }
-    }
-    
-    [Fact]
-    public async Task When_queues_missing_assume_throws_async()
-    {
-        // Arrange
-        Publication = CreatePublication(GetOrCreateRoutingKey());
-        Subscription = CreateSubscription(Publication.Topic!,
-            GetOrCreateChannelName(),
-            OnMissingChannel.Assume);
-        
-        Producer = await CreateProducerAsync(Publication);
-        Channel = await CreateChannelAsync(Subscription);
-        
-        
-        // act & assert
-        try
-        {
-            // Ensure the topic is created
-            await Producer.SendAsync(CreateMessage(Publication.Topic!));
-            await Channel.ReceiveAsync(ReceiveTimeout);
-            Assert.Fail("Expecting an exception");
-        }
-        catch (Exception e) when(e is not XunitException)
-        {
-            Assert.IsType<QueueDoesNotExistException>(e);
         }
     }
 }

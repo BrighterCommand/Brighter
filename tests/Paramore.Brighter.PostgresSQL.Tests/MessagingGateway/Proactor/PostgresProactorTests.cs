@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.Base.Test.MessagingGateway;
+using Paramore.Brighter.Base.Test.MessagingGateway.Proactor;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.Postgres;
 

@@ -1,13 +1,13 @@
 ﻿using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns;
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Reactor;
 
-public class SnsFifoProactorTests : SnsProactorTests
+public class SnsFifoReactorTests : SnsReactorTests
 {
     protected override SqsType TopicType => SqsType.Fifo;
     protected override bool HasSupportToPartitionKey => true;
-
+    
     protected override Message CreateMessage(RoutingKey routingKey, bool setTrace = true)
     {
         var message = base.CreateMessage(routingKey, setTrace);
