@@ -30,37 +30,12 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
 
-            var options = new ConsumersOptions();
+            if (configure == null)
+                throw new ArgumentNullException(nameof(configure));
 
-            if (configure != null)
-            {
-                using var tempProvider = services.BuildServiceProvider();
-                configure.Invoke(tempProvider, options);
-            }
+            using var tempProvider = services.BuildServiceProvider();
 
-            services.TryAddSingleton<IBrighterOptions>(options);
-            services.TryAddSingleton<IAmConsumerOptions>(options);
-
-            services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
-                BuildDispatcher,
-                ServiceLifetime.Singleton));
-
-            services.TryAddSingleton(options.InboxConfiguration);
-            var inbox = options.InboxConfiguration.Inbox;
-            if (inbox is IAmAnInboxSync)
-            {
-                services.TryAdd(
-                    new ServiceDescriptor(
-                        typeof(IAmAnInboxSync), BuildInbox<IAmAnInboxSync>, ServiceLifetime.Singleton));
-            }
-            if (inbox is IAmAnInboxAsync)
-            {
-                services.TryAdd(
-                    new ServiceDescriptor(
-                        typeof(IAmAnInboxAsync), BuildInbox<IAmAnInboxAsync>, ServiceLifetime.Singleton));
-            }
-
-            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
+            return services.AddConsumers(options => configure.Invoke(tempProvider, options));
         }
 
         public static IBrighterBuilder AddConsumers(

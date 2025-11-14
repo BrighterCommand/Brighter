@@ -151,104 +151,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (brighterBuilder is null)
                 throw new ArgumentNullException($"{nameof(brighterBuilder)} cannot be null.", nameof(brighterBuilder));
 
-            var busConfiguration = new ProducersConfiguration();
+            if (configure is null)
+                throw new ArgumentNullException($"{nameof(configure)} cannot be null.", nameof(configure));
 
-            if (configure != null)
-            {
-                using var tempProvider = brighterBuilder.Services.BuildServiceProvider();
-                configure.Invoke(tempProvider, busConfiguration);
-            }
+            using var tempProvider = brighterBuilder.Services.BuildServiceProvider();
 
-            if (busConfiguration.ProducerRegistry == null)
-                throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
-
-            if (busConfiguration.UseRpc && busConfiguration.ReplyQueueSubscriptions == null)
-                throw new ConfigurationException("If the you configure RPC, you must configure the ReplyQueueSubscriptions");
-
-            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
-            brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
-
-            //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
-            Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(InMemoryTransactionProvider);
-
-            //Find the transaction type from the provider
-            Type transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
-            Type? transactionType = null;
-            foreach (Type i in transactionProvider.GetInterfaces())
-            {
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
-                {
-                    transactionType = i.GetGenericArguments()[0];
-                }
-            }
-
-            if (transactionType == null)
-                throw new ConfigurationException(
-                    $"Unable to register provider of type {transactionProvider.Name}. It does not implement {typeof(IAmABoxTransactionProvider<>).Name}.");
-
-            //register the generic interface with the transaction type
-            var boxProviderType = transactionProviderInterface.MakeGenericType(transactionType);
-
-            // Register the transaction provider against both the generic and non-generic interface. The non-generic interface is needed by the CommandProcessor
-            brighterBuilder.Services.Add(new ServiceDescriptor(boxProviderType, transactionProvider, serviceLifetime));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), transactionProvider, serviceLifetime));
-
-            if (busConfiguration.ConnectionProvider != null)
-                RegisterConnectionAndTransactionProvider(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
-
-            //we always need an outbox in case of producer callbacks
-            var outbox = busConfiguration.Outbox ?? new InMemoryOutbox(TimeProvider.System);
-
-            //we create the outbox from interfaces from the determined transaction type to prevent the need
-            //to pass generic types as we know the transaction provider type
-            var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
-            var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
-
-            var outboxInterfaces = outbox.GetType().GetInterfaces();
-            var hasSyncOutbox = outboxInterfaces
-                .FirstOrDefault(i => i.IsGenericType && i == syncOutboxType) != null;
-            var hasAsyncOutbox = outboxInterfaces
-                .FirstOrDefault(i => i.IsGenericType && i == asyncOutboxType) != null;
-
-            if (!hasSyncOutbox && !hasAsyncOutbox)
-            {
-                throw new ConfigurationException(
-                    $"Unable to register outbox of type {outbox.GetType().Name} - no transaction provider has been registered that matches the outbox's transaction type");
-            }
-
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox), _ => outbox, ServiceLifetime.Singleton));
-
-            if (hasSyncOutbox)
-            {
-                var outboxDescriptor =
-                        new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
-                brighterBuilder.Services.Add(outboxDescriptor);
-            }
-
-            if (hasAsyncOutbox)
-            {
-                var asyncOutboxdescriptor =
-                        new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
-                brighterBuilder.Services.Add(asyncOutboxdescriptor);
-            }
-
-            // If no distributed locking service is added, then add the in memory variant
-            var distributedLock = busConfiguration.DistributedLock ?? new InMemoryLock();
-            brighterBuilder.Services.AddSingleton(distributedLock);
-
-            if (busConfiguration.UseRpc)
-                brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions!));
-
-            brighterBuilder.Services.TryAddSingleton<IAmProducersConfiguration>(busConfiguration);
-            brighterBuilder.ResiliencePolicyRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
-
-            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
-               (serviceProvider) => BuildOutBoxProducerMediator(
-                   serviceProvider, transactionType, busConfiguration, brighterBuilder.ResiliencePolicyRegistry, outbox
-               ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator; are you missing a registration?"),
-               ServiceLifetime.Singleton));
-
-            return brighterBuilder;
+            return brighterBuilder.AddProducers(
+                config => configure.Invoke(tempProvider, config),
+                serviceLifetime);
         }
 
         public static IBrighterBuilder AddProducers(
