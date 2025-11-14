@@ -380,7 +380,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UsePolicyRegistry(this IBrighterBuilder builder, Func<IServiceProvider, IPolicyRegistry<string>> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             return builder;
         }
 
@@ -392,7 +392,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseResiliencePipelineRegistry(this IBrighterBuilder builder, Func<IServiceProvider, ResiliencePipelineRegistry<string>> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             builder.ResiliencePolicyRegistry = null;
             return builder;
         }
@@ -405,7 +405,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseRequestContextFactory(this IBrighterBuilder builder, Func<IServiceProvider, IAmARequestContextFactory> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.Replace(ServiceDescriptor.Singleton(factory));
             return builder;
         }
 
@@ -417,7 +417,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseFeatureSwitchRegistry(this IBrighterBuilder builder, Func<IServiceProvider, IAmAFeatureSwitchRegistry> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             return builder;
         }
 
@@ -429,7 +429,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseProducerRegistry(this IBrighterBuilder builder, Func<IServiceProvider, IAmAProducerRegistry> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             return builder;
         }
 
@@ -441,7 +441,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseOutbox(this IBrighterBuilder builder, Func<IServiceProvider, IAmAnOutbox> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             return builder;
         }
 
@@ -453,7 +453,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseMessageMapperRegistry(this IBrighterBuilder builder, Func<IServiceProvider, IAmAMessageMapperRegistry> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             return builder;
         }
 
@@ -465,7 +465,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseDistributedLock(this IBrighterBuilder builder, Func<IServiceProvider, IDistributedLock> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             return builder;
         }
 
@@ -477,7 +477,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseArchiveProvider(this IBrighterBuilder builder, Func<IServiceProvider, IAmAnArchiveProvider> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             return builder;
         }
 
@@ -489,7 +489,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The builder for chaining</returns>
         public static IBrighterBuilder UseResponseChannelFactory(this IBrighterBuilder builder, Func<IServiceProvider, IAmAChannelFactory> factory)
         {
-            builder.Services.AddSingleton(factory);
+            builder.Services.TryAddSingleton(factory);
             return builder;
         }
 
@@ -572,6 +572,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = provider.GetRequiredService<IBrighterOptions>();
             var subscriberRegistry = provider.GetRequiredService<ServiceCollectionSubscriberRegistry>();
             var useRequestResponse = provider.GetService<IUseRpc>();
+            var requestContextFactory = provider.GetRequiredService<IAmARequestContextFactory>();
 
             var handlerFactory = new ServiceProviderHandlerFactory(provider);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory);
@@ -593,7 +594,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             var command = AddEventBus(provider, messagingBuilder, useRequestResponse)
                 .ConfigureInstrumentation(provider.GetService<IAmABrighterTracer>(), options.InstrumentationOptions)
-                .RequestContextFactory(provider.GetRequiredService<IAmARequestContextFactory>())
+                .RequestContextFactory(requestContextFactory)
                 .RequestSchedulerFactory(provider.GetRequiredService<IAmARequestSchedulerFactory>())
                 .Build();
             
