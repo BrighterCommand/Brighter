@@ -43,15 +43,37 @@ namespace Paramore.Brighter.Observability;
 /// <param name="serverAddress">Name of the database host</param>
 /// <param name="dbAttributes">Other attributes (key-value pairs) not covered by the standard attributes</param>
 public record BoxSpanInfo(
-    DbSystem dbSystem,                    
+    string dbSystemName,
     string dbName,
-    BoxDbOperation dbOperation, 
+    BoxDbOperation dbOperation,
     string dbTable,
-    int serverPort = 0, 
-    string? dbInstanceId = null, 
+    int serverPort = 0,
+    string? dbInstanceId = null,
     string? dbStatement = null,
     string? dbUser = null,
     string? networkPeerAddress = null,
     int networkPeerPort = 0,
     string? serverAddress = null,
-    Dictionary<string, string>? dbAttributes = null);
+    Dictionary<string, string>? dbAttributes = null)
+{
+    public BoxSpanInfo(
+        DbSystem dbSystem,
+        string dbName,
+        BoxDbOperation dbOperation, 
+        string dbTable,
+        int serverPort = 0, 
+        string? dbInstanceId = null, 
+        string? dbStatement = null,
+        string? dbUser = null,
+        string? networkPeerAddress = null,
+        int networkPeerPort = 0,
+        string? serverAddress = null,
+        Dictionary<string, string>? dbAttributes = null)
+        : this(dbSystem.ToDbName(), dbName, dbOperation, dbTable, serverPort, dbInstanceId, dbStatement, dbUser, networkPeerAddress, networkPeerPort, serverAddress, dbAttributes)
+    {
+        
+        this.dbSystem = dbSystem;
+    }
+    
+    public DbSystem dbSystem { get; }
+}
