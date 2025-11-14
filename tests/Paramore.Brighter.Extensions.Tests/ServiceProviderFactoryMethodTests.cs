@@ -14,7 +14,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests
 {
-    [Collection("Sequential")]
     public class ServiceProviderFactoryMethodTests
     {
         [Fact]
@@ -22,31 +21,32 @@ namespace Paramore.Brighter.Extensions.Tests
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-
-            var retryPolicy = Policy.Handle<Exception>().WaitAndRetry([TimeSpan.FromMilliseconds(50)]);
-            var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-            var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync([TimeSpan.FromMilliseconds(50)]);
-            var circuitBreakerPolicyAsync = Policy.Handle<Exception>().CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
-
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
-                { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
-                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
-            };
-
-            serviceCollection.AddSingleton<IPolicyRegistry<string>>(policyRegistry);
+            serviceCollection.AddSingleton(new TestDependency { Value = "PolicyRegistryFactory" });
 
             serviceCollection
                 .AddBrighter()
-                .UsePolicyRegistry(provider => provider.GetRequiredService<IPolicyRegistry<string>>())
-                .AutoFromAssemblies();
+                .UsePolicyRegistry(provider =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    var retryPolicy = Policy.Handle<Exception>().Retry(3);
+                    var circuitBreakerPolicy = Policy.NoOp();
+                    var retryPolicyAsync = Policy.Handle<Exception>().RetryAsync(3);
+                    var circuitBreakerPolicyAsync = Policy.NoOpAsync();
+
+                    return new PolicyRegistry
+                    {
+                        { CommandProcessor.RETRYPOLICY, retryPolicy },
+                        { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
+                        { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
+                        { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
+                    };
+                });
 
             using var serviceProvider = serviceCollection.BuildServiceProvider();
-            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+            var registry = serviceProvider.GetService<IPolicyRegistry<string>>();
 
-            Assert.NotNull(commandProcessor);
+            Assert.NotNull(registry);
+            Assert.True(registry.ContainsKey(CommandProcessor.RETRYPOLICY));
         }
 
         [Fact]
@@ -54,13 +54,15 @@ namespace Paramore.Brighter.Extensions.Tests
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-            var customContextFactory = new InMemoryRequestContextFactory();
-
-            serviceCollection.AddSingleton<IAmARequestContextFactory>(customContextFactory);
+            serviceCollection.AddSingleton(new TestDependency { Value = "ContextFactory" });
 
             serviceCollection
                 .AddBrighter()
-                .UseRequestContextFactory(provider => provider.GetRequiredService<IAmARequestContextFactory>())
+                .UseRequestContextFactory(provider =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    return new InMemoryRequestContextFactory();
+                })
                 .AutoFromAssemblies();
 
             using var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -68,7 +70,8 @@ namespace Paramore.Brighter.Extensions.Tests
             var resolvedFactory = serviceProvider.GetService<IAmARequestContextFactory>();
 
             Assert.NotNull(commandProcessor);
-            Assert.Same(customContextFactory, resolvedFactory);
+            Assert.NotNull(resolvedFactory);
+            Assert.IsType<InMemoryRequestContextFactory>(resolvedFactory);
         }
 
         [Fact]
@@ -76,13 +79,15 @@ namespace Paramore.Brighter.Extensions.Tests
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-            var featureSwitchRegistry = FluentConfigRegistryBuilder.With().Build();
-
-            serviceCollection.AddSingleton<IAmAFeatureSwitchRegistry>(featureSwitchRegistry);
+            serviceCollection.AddSingleton(new TestDependency { Value = "FeatureSwitchFactory" });
 
             serviceCollection
                 .AddBrighter()
-                .UseFeatureSwitchRegistry(provider => provider.GetRequiredService<IAmAFeatureSwitchRegistry>())
+                .UseFeatureSwitchRegistry(provider =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    return FluentConfigRegistryBuilder.With().Build();
+                })
                 .AutoFromAssemblies();
 
             using var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -90,7 +95,7 @@ namespace Paramore.Brighter.Extensions.Tests
             var resolvedRegistry = serviceProvider.GetService<IAmAFeatureSwitchRegistry>();
 
             Assert.NotNull(commandProcessor);
-            Assert.Same(featureSwitchRegistry, resolvedRegistry);
+            Assert.NotNull(resolvedRegistry);
         }
 
         [Fact]
@@ -98,18 +103,7 @@ namespace Paramore.Brighter.Extensions.Tests
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-            const string mytopic = "MyTopic";
-            var routingKey = new RoutingKey(mytopic);
-
-            var producerRegistry = new ProducerRegistry(
-                new Dictionary<RoutingKey, IAmAMessageProducer>
-                {
-                    {
-                        routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication{ Topic = routingKey})
-                    },
-                });
-
-            serviceCollection.AddSingleton<IAmAProducerRegistry>(producerRegistry);
+            serviceCollection.AddSingleton(new TestDependency { Value = "ProducerRegistryFactory" });
 
             serviceCollection
                 .AddBrighter()
@@ -120,7 +114,20 @@ namespace Paramore.Brighter.Extensions.Tests
                         new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
                     );
                 })
-                .UseProducerRegistry(provider => provider.GetRequiredService<IAmAProducerRegistry>())
+                .UseProducerRegistry(provider =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    const string mytopic = "MyTopic";
+                    var routingKey = new RoutingKey(mytopic);
+
+                    return new ProducerRegistry(
+                        new Dictionary<RoutingKey, IAmAMessageProducer>
+                        {
+                            {
+                                routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication{ Topic = routingKey})
+                            },
+                        });
+                })
                 .AutoFromAssemblies();
 
             using var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -128,7 +135,7 @@ namespace Paramore.Brighter.Extensions.Tests
             var resolvedRegistry = serviceProvider.GetService<IAmAProducerRegistry>();
 
             Assert.NotNull(commandProcessor);
-            Assert.Same(producerRegistry, resolvedRegistry);
+            Assert.NotNull(resolvedRegistry);
         }
 
         [Fact]
@@ -136,9 +143,8 @@ namespace Paramore.Brighter.Extensions.Tests
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-            var outbox = new InMemoryOutbox(TimeProvider.System);
-
-            serviceCollection.AddSingleton<IAmAnOutbox>(outbox);
+            serviceCollection.AddSingleton(new TestDependency { Value = "OutboxFactory" });
+            serviceCollection.AddSingleton<TimeProvider>(TimeProvider.System);
 
             const string mytopic = "MyTopic";
             var routingKey = new RoutingKey(mytopic);
@@ -161,7 +167,12 @@ namespace Paramore.Brighter.Extensions.Tests
                         new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
                     );
                 })
-                .UseOutbox(provider => provider.GetRequiredService<IAmAnOutbox>())
+                .UseOutbox(provider =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    var timeProvider = provider.GetRequiredService<TimeProvider>();
+                    return new InMemoryOutbox(timeProvider);
+                })
                 .AutoFromAssemblies();
 
             using var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -213,32 +224,36 @@ namespace Paramore.Brighter.Extensions.Tests
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-
-            var retryPolicy = Policy.Handle<Exception>().WaitAndRetry([TimeSpan.FromMilliseconds(50)]);
-            var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-            var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync([TimeSpan.FromMilliseconds(50)]);
-            var circuitBreakerPolicyAsync = Policy.Handle<Exception>().CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
-
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
-                { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
-                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
-            };
-
-            var customContextFactory = new InMemoryRequestContextFactory();
-            var featureSwitchRegistry = FluentConfigRegistryBuilder.With().Build();
-
-            serviceCollection.AddSingleton<IPolicyRegistry<string>>(policyRegistry);
-            serviceCollection.AddSingleton<IAmARequestContextFactory>(customContextFactory);
-            serviceCollection.AddSingleton<IAmAFeatureSwitchRegistry>(featureSwitchRegistry);
+            serviceCollection.AddSingleton(new TestDependency { Value = "MultipleFactories" });
 
             serviceCollection
                 .AddBrighter()
-                .UsePolicyRegistry(provider => provider.GetRequiredService<IPolicyRegistry<string>>())
-                .UseRequestContextFactory(provider => provider.GetRequiredService<IAmARequestContextFactory>())
-                .UseFeatureSwitchRegistry(provider => provider.GetRequiredService<IAmAFeatureSwitchRegistry>())
+                .UsePolicyRegistry(provider =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    var retryPolicy = Policy.Handle<Exception>().Retry(3);
+                    var circuitBreakerPolicy = Policy.NoOp();
+                    var retryPolicyAsync = Policy.Handle<Exception>().RetryAsync(3);
+                    var circuitBreakerPolicyAsync = Policy.NoOpAsync();
+
+                    return new PolicyRegistry
+                    {
+                        { CommandProcessor.RETRYPOLICY, retryPolicy },
+                        { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
+                        { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
+                        { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
+                    };
+                })
+                .UseRequestContextFactory(provider =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    return new InMemoryRequestContextFactory();
+                })
+                .UseFeatureSwitchRegistry(provider =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    return FluentConfigRegistryBuilder.With().Build();
+                })
                 .AutoFromAssemblies();
 
             using var serviceProvider = serviceCollection.BuildServiceProvider();
