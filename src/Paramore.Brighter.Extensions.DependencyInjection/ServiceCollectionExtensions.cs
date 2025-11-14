@@ -371,7 +371,128 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             builder.Services.AddSingleton(factory);
             return builder;
         }
-        
+
+        /// <summary>
+        /// Registers a policy registry factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the policy registry</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UsePolicyRegistry(this IBrighterBuilder builder, Func<IServiceProvider, IPolicyRegistry<string>> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers a resilience pipeline registry factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the resilience pipeline registry</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseResiliencePipelineRegistry(this IBrighterBuilder builder, Func<IServiceProvider, ResiliencePipelineRegistry<string>> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            builder.ResiliencePolicyRegistry = null;
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers a request context factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the request context factory</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseRequestContextFactory(this IBrighterBuilder builder, Func<IServiceProvider, IAmARequestContextFactory> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers a feature switch registry factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the feature switch registry</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseFeatureSwitchRegistry(this IBrighterBuilder builder, Func<IServiceProvider, IAmAFeatureSwitchRegistry> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers a producer registry factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the producer registry</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseProducerRegistry(this IBrighterBuilder builder, Func<IServiceProvider, IAmAProducerRegistry> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers an outbox factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the outbox</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseOutbox(this IBrighterBuilder builder, Func<IServiceProvider, IAmAnOutbox> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers a message mapper registry factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the message mapper registry</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseMessageMapperRegistry(this IBrighterBuilder builder, Func<IServiceProvider, IAmAMessageMapperRegistry> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers a distributed lock factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the distributed lock</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseDistributedLock(this IBrighterBuilder builder, Func<IServiceProvider, IDistributedLock> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers an archive provider factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the archive provider</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseArchiveProvider(this IBrighterBuilder builder, Func<IServiceProvider, IAmAnArchiveProvider> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers a response channel factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the response channel factory</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseResponseChannelFactory(this IBrighterBuilder builder, Func<IServiceProvider, IAmAChannelFactory> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
         private static INeedInstrumentation AddEventBus(
             IServiceProvider provider,
             INeedMessaging messagingBuilder,

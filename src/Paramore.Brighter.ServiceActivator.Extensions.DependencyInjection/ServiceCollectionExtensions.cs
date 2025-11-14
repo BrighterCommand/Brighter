@@ -57,6 +57,18 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
 
+        /// <summary>
+        /// Registers a default channel factory that will be resolved from the service provider
+        /// </summary>
+        /// <param name="builder">The builder</param>
+        /// <param name="factory">Factory function to create the channel factory</param>
+        /// <returns>The builder for chaining</returns>
+        public static IBrighterBuilder UseDefaultChannelFactory(this IBrighterBuilder builder, Func<IServiceProvider, IAmAChannelFactory> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
             var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
