@@ -69,4 +69,19 @@ public static class HeaderNames
     /// The data schema 
     /// </summary>
     public const string DataSchema = "ce-dataschema";
+    
+    /// <summary>
+    /// The Trace Parent 
+    /// </summary>
+    public const string TraceParent = "ce-traceparent";
+    
+    /// <summary>
+    /// The Trace State 
+    /// </summary>
+    public const string TraceState = "ce-tracestate";
+    
+    /// <summary>
+    /// The Baggage 
+    /// </summary>
+    public const string Baggage = "ce-baggage";
 }

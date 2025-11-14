@@ -16,9 +16,7 @@ public class RedisGoodMessageParsingTests
     [Fact]
     public void When_parsing_a_good_redis_message_to_brighter()
     {
-        var redisMessageCreator = new RedisMessageCreator();
-
-        Message message = redisMessageCreator.CreateMessage(GoodMessage);
+        Message message = RedisMessageCreator.CreateMessage(GoodMessage);
 
         // Assert existing properties
         Assert.Equal(DateTime.Parse("2018-02-07T09:38:36Z"), message.Header.TimeStamp);

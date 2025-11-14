@@ -32,6 +32,7 @@ using Amazon.SQS;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
@@ -46,7 +47,6 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         var topic = HeaderResult<RoutingKey>.Empty();
         var messageId = HeaderResult<Id?>.Empty();
 
-        Message message;
         try
         {
             var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
@@ -54,67 +54,67 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
             topic = ReadTopic();
             messageId = ReadMessageId();
-            var contentType = ReadContentType();
+            var cloudEvents = ReadMessageCloudEvents(); 
+            var contentType = ReadContentType(cloudEvents);
             var correlationId = ReadCorrelationId();
             var handledCount = ReadHandledCount();
             var messageType = ReadMessageType();
-            var timeStamp = ReadTimestamp();
+            var timeStamp = ReadTimestamp(cloudEvents);
             var replyTo = ReadReplyTo();
-            var subject = ReadMessageSubject(jsonDocument);
+            var subject = ReadMessageSubject(jsonDocument, cloudEvents);
             var receiptHandle = ReadReceiptHandle(sqsMessage);
             var partitionKey = ReadPartitionKey(sqsMessage);
             var deduplicationId = ReadDeduplicationId(sqsMessage);
-            var type = ReadType();
-            var source = ReadSource();
-            var dataSchema = ReadDataSchema();
-            var specVersion = ReadSpecVersion();
-
-            var messageHeader = new MessageHeader(
-                messageId: messageId.Result ?? Id.Empty,
-                topic: topic.Result ?? RoutingKey.Empty,
-                messageType: messageType.Result,
-                source: source.Result,
-                type: type.Result,
-                timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                correlationId: correlationId.Success ? correlationId.Result : string.Empty,
-                replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
-                contentType: contentType.Result ?? new ContentType(MediaTypeNames.Text.Plain),
-                handledCount: handledCount.Result,
-                dataSchema: dataSchema.Result,
-                subject: subject.Result,
-                delayed: TimeSpan.Zero,
-                partitionKey: partitionKey.Result ?? string.Empty
-            )
-            {
-                SpecVersion = specVersion.Result!
-            };
-
-            message = new Message(messageHeader, ReadMessageBody(jsonDocument));
-
-            //deserialize the bag 
+            var type = ReadType(cloudEvents);
+            var source = ReadSource(cloudEvents);
+            var dataSchema = ReadDataSchema(cloudEvents);
+            var specVersion = ReadSpecVersion(cloudEvents);
+            var traceParent = ReadCloudEventsTraceParent(cloudEvents);
+            var traceState = ReadCloudEventsTraceState(cloudEvents);
+            var baggage = ReadCloudEventsBaggage(cloudEvents);
+            
             var bag = ReadMessageBag();
-            foreach (var keyValue in bag)
-            {
-                message.Header.Bag.Add(keyValue.Key, keyValue.Value);
-            }
-
             if (deduplicationId.Success)
             {
-                message.Header.Bag[HeaderNames.DeduplicationId] = deduplicationId.Result;
+               bag[HeaderNames.DeduplicationId] = deduplicationId.Result;
             }
 
             if (receiptHandle.Success)
             {
-                message.Header.Bag.Add("ReceiptHandle", sqsMessage.ReceiptHandle);
+                bag["ReceiptHandle"] = sqsMessage.ReceiptHandle;
             }
+
+            var messageHeader = new MessageHeader(
+                messageId: messageId.Result!,
+                topic: topic.Result!,
+                messageType: messageType.Result,
+                source: source.Result,
+                type: type.Result,
+                timeStamp: timeStamp.Result,
+                correlationId: correlationId.Result,
+                replyTo: replyTo.Result,
+                contentType: contentType.Result,
+                handledCount: handledCount.Result,
+                dataSchema: dataSchema.Result,
+                subject: subject.Result,
+                delayed: TimeSpan.Zero,
+                partitionKey: partitionKey.Result,
+                traceParent: traceParent.Result,
+                traceState: traceState.Result
+            )
+            {
+                SpecVersion = specVersion.Result!,
+                Baggage = baggage.Result!,
+                Bag = bag
+            };
+
+            return new Message(messageHeader, ReadMessageBody(jsonDocument));
         }
         catch (Exception e)
         {
             Log.FailedToCreateMessageFromAwsSqsMessage(s_logger, e);
-            message = Message.FailureMessage(topic.Result, messageId.Result);
+            return Message.FailureMessage(topic.Result, messageId.Result);
         }
-
-        return message;
     }
 
     private static Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
@@ -138,21 +138,26 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return messageAttributes ?? new Dictionary<string, JsonElement>();
     }
 
-    private HeaderResult<ContentType?> ReadContentType()
+    private HeaderResult<ContentType> ReadContentType(Dictionary<string, string> headers)
     {
         if (_messageAttributes.TryGetValue(HeaderNames.DataContentType, out var contentType))
         {
             var result = contentType.GetValueInString();
-            return new HeaderResult<ContentType?>(result is not null ? new ContentType(result) : new ContentType(MediaTypeNames.Text.Plain), true);
+            return new HeaderResult<ContentType>(result is not null ? new ContentType(result) : new ContentType(MediaTypeNames.Text.Plain), true);
         }
         
         if (_messageAttributes.TryGetValue(HeaderNames.ContentType, out contentType))
         {
             var result = contentType.GetValueInString() ?? MediaTypeNames.Text.Plain;
-            return new HeaderResult<ContentType?>(new ContentType(result), true);
+            return new HeaderResult<ContentType>(new ContentType(result), true);
+        }
+        
+        if (headers.TryGetValue(HeaderNames.DataContentType, out var val))
+        {
+            return new HeaderResult<ContentType>(new ContentType(val), true);
         }
 
-        return new HeaderResult<ContentType?>(null, true);
+        return new HeaderResult<ContentType>(null, true);
     }
 
     private Dictionary<string, object> ReadMessageBag()
@@ -192,70 +197,96 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new HeaderResult<RoutingKey?>(RoutingKey.Empty, true);
     }
 
-    private HeaderResult<string?> ReadSpecVersion()
+    private HeaderResult<string> ReadSpecVersion(Dictionary<string, string> headers)
     {
         if (_messageAttributes.TryGetValue(HeaderNames.SpecVersion, out var specVersion))
         {
-            return new HeaderResult<string?>(specVersion.GetValueInString(), true);
+            return new HeaderResult<string>(specVersion.GetValueInString(), true);
+        }
+        
+        if (headers.TryGetValue(HeaderNames.SpecVersion, out var val))
+        {
+            return new HeaderResult<string>(val, true);
         }
 
-        return new HeaderResult<string?>(MessageHeader.DefaultSpecVersion, true);
+        return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
     }
 
-    private HeaderResult<CloudEventsType?> ReadType()
+    private HeaderResult<CloudEventsType> ReadType(Dictionary<string, string> headers)
     {
         if (_messageAttributes.TryGetValue(HeaderNames.Type, out var specVersion))
         {
-            return new HeaderResult<CloudEventsType?>(new CloudEventsType(specVersion.GetValueInString() ?? string.Empty), true);
+            var val = specVersion.GetValueInString();
+            if (!string.IsNullOrEmpty(val))
+            {
+                return new HeaderResult<CloudEventsType>(new CloudEventsType(val!), true);
+            };
+        }
+        
+        if (headers.TryGetValue(HeaderNames.Type, out var cloudEventType) 
+            && !string.IsNullOrEmpty(cloudEventType))
+        {
+            return new HeaderResult<CloudEventsType>(new CloudEventsType(cloudEventType), true);
         }
 
-        return new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, true);
+        return new HeaderResult<CloudEventsType>(CloudEventsType.Empty, true);
     }
     
-    private HeaderResult<Uri> ReadSource()
+    private HeaderResult<Uri> ReadSource(Dictionary<string, string> headers)
     {
-        if (_messageAttributes.TryGetValue(HeaderNames.Source, out var source))
+         if (_messageAttributes.TryGetValue(HeaderNames.Source, out var source)
+            && Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
         {
-            if (Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
-            {
-                return new HeaderResult<Uri>(uri, true);
-            }
+            return new HeaderResult<Uri>(uri, true);
+        }
+        
+        if (headers.TryGetValue(HeaderNames.Source, out var val)
+            && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out uri))
+        {
+            return new HeaderResult<Uri>(uri, true);
         }
 
         return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
     }
     
-     private HeaderResult<Uri?> ReadDataSchema()
+     private HeaderResult<Uri?> ReadDataSchema(Dictionary<string, string> headers)
      {
-         if (_messageAttributes.TryGetValue(HeaderNames.DataSchema, out var source))
+         if (_messageAttributes.TryGetValue(HeaderNames.DataSchema, out var source)
+             && Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
          {
-             if (Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
-             {
-                 return new HeaderResult<Uri?>(uri, true);
-             }
+             return new HeaderResult<Uri?>(uri, true);
+         }
+         
+         if (headers.TryGetValue(HeaderNames.DataSchema, out var val)
+             && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out uri))
+         {
+             return new HeaderResult<Uri?>(uri, true);
          }
     
          return new HeaderResult<Uri?>(null, true);
      }
 
-    private HeaderResult<DateTime> ReadTimestamp()
+    private HeaderResult<DateTimeOffset> ReadTimestamp(Dictionary<string, string> headers)
     {
-         if (_messageAttributes.TryGetValue(HeaderNames.Time, out var timeStamp))
-         {
-             if (DateTime.TryParse(timeStamp.GetValueInString(), out var value))
-             {
-                 return new HeaderResult<DateTime>(value, true);
-             }
+         if (headers.TryGetValue(HeaderNames.Timestamp, out var val) 
+            && DateTimeOffset.TryParse(val, out var value))
+         { 
+             return new HeaderResult<DateTimeOffset>(value, true); 
          }
-         if (_messageAttributes.TryGetValue(HeaderNames.Timestamp, out timeStamp))
+        
+         if (_messageAttributes.TryGetValue(HeaderNames.Time, out var timeStamp)
+             && DateTimeOffset.TryParse(timeStamp.GetValueInString(), out value))
          {
-             if (DateTime.TryParse(timeStamp.GetValueInString(), out var value))
-             {
-                 return new HeaderResult<DateTime>(value, true);
-             }
+             return new HeaderResult<DateTimeOffset>(value, true);
+         }
+         
+         if (_messageAttributes.TryGetValue(HeaderNames.Timestamp, out timeStamp)
+             && DateTimeOffset.TryParse(timeStamp.GetValueInString(), out value))
+         {
+             return new HeaderResult<DateTimeOffset>(value, true);
          }
 
-         return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+         return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
     }
 
     private HeaderResult<MessageType> ReadMessageType()
@@ -329,26 +360,31 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
     }
 
-    private HeaderResult<string?> ReadMessageSubject(JsonDocument jsonDocument)
+    private HeaderResult<string?> ReadMessageSubject(JsonDocument jsonDocument, Dictionary<string, string> headers)
     {
-          if (_messageAttributes.TryGetValue(HeaderNames.Subject, out var messageId))
-          {
-              return new HeaderResult<string?>(messageId.GetValueInString(), true);
-          }
+         if (_messageAttributes.TryGetValue(HeaderNames.Subject, out var messageId))
+         {
+             return new HeaderResult<string?>(messageId.GetValueInString(), true);
+         }
           
-          try
-          {
-              if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
-              {
-                  return new HeaderResult<string?>(value.GetString(), true);
-              }
-          }
-          catch (Exception ex)
-          {
-              Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
-          }
+         try
+         {
+             if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
+             {
+                 return new HeaderResult<string?>(value.GetString(), true);
+             }
+              
+             if (headers.TryGetValue(HeaderNames.Subject, out var subject))
+             {
+                 return new HeaderResult<string?>(subject, true);
+             }
+         }
+         catch (Exception ex)
+         {
+             Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
+         }
 
-          return new HeaderResult<string?>(null, true);
+         return new HeaderResult<string?>(null, true);
     }
 
     private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
@@ -388,6 +424,62 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
 
         return new HeaderResult<string>(string.Empty, false);
+    }
+    
+    private Dictionary<string, string> ReadMessageCloudEvents()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.CloudEventHeaders, out var headerBag))
+        {
+            try
+            {
+                var json = headerBag.GetValueInString();
+                if (string.IsNullOrEmpty(json))
+                {
+                    return new Dictionary<string, string>();
+                }
+
+                var bag = JsonSerializer.Deserialize<Dictionary<string, string>>(json!,
+                    JsonSerialisationOptions.Options);
+
+                return bag ?? new Dictionary<string, string>();
+            }
+            catch (Exception)
+            {
+                //suppress any errors in deserialization
+            }
+        }
+
+        return new Dictionary<string, string>();
+    }
+    
+    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string,string> cloudEventHeaders)
+    {
+        if (cloudEventHeaders.TryGetValue(HeaderNames.TraceParent, out var value))
+        {
+            return new HeaderResult<TraceParent>(new TraceParent(value), true);
+        }
+        
+        return new HeaderResult<TraceParent>(null, true);
+    }
+    
+    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string,string> cloudEventHeaders)
+    {
+        if (cloudEventHeaders.TryGetValue(HeaderNames.TraceState, out var value))
+        {
+            return new HeaderResult<TraceState>(new TraceState(value), true);
+        }  
+        return new HeaderResult<TraceState>(null, true);
+    }
+    
+    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string,string> cloudEventHeaders)
+    {
+        var baggage = new Baggage();
+        if (cloudEventHeaders.TryGetValue(HeaderNames.Baggage, out var value))
+        {
+            baggage.LoadBaggage(value);
+        }  
+        
+        return new HeaderResult<Baggage>(baggage, true);
     }
 
     private static partial class Log
