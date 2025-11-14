@@ -16,9 +16,6 @@
     <PackageReference Include="NJsonSchema" />
     <PackageReference Include="OpenTelemetry" />
     <PackageReference Include="Polly" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
