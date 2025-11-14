@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
@@ -19,6 +21,7 @@ namespace Paramore.Brighter.Extensions.Tests
         public void UsePolicyRegistry_ShouldResolveFromServiceProvider()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
 
             var retryPolicy = Policy.Handle<Exception>().WaitAndRetry([TimeSpan.FromMilliseconds(50)]);
             var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
@@ -40,7 +43,7 @@ namespace Paramore.Brighter.Extensions.Tests
                 .UsePolicyRegistry(provider => provider.GetRequiredService<IPolicyRegistry<string>>())
                 .AutoFromAssemblies();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             Assert.NotNull(commandProcessor);
@@ -50,6 +53,7 @@ namespace Paramore.Brighter.Extensions.Tests
         public void UseRequestContextFactory_ShouldResolveFromServiceProvider()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
             var customContextFactory = new InMemoryRequestContextFactory();
 
             serviceCollection.AddSingleton<IAmARequestContextFactory>(customContextFactory);
@@ -59,7 +63,7 @@ namespace Paramore.Brighter.Extensions.Tests
                 .UseRequestContextFactory(provider => provider.GetRequiredService<IAmARequestContextFactory>())
                 .AutoFromAssemblies();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
             var resolvedFactory = serviceProvider.GetService<IAmARequestContextFactory>();
 
@@ -71,6 +75,7 @@ namespace Paramore.Brighter.Extensions.Tests
         public void UseFeatureSwitchRegistry_ShouldResolveFromServiceProvider()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
             var featureSwitchRegistry = FluentConfigRegistryBuilder.With().Build();
 
             serviceCollection.AddSingleton<IAmAFeatureSwitchRegistry>(featureSwitchRegistry);
@@ -80,7 +85,7 @@ namespace Paramore.Brighter.Extensions.Tests
                 .UseFeatureSwitchRegistry(provider => provider.GetRequiredService<IAmAFeatureSwitchRegistry>())
                 .AutoFromAssemblies();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
             var resolvedRegistry = serviceProvider.GetService<IAmAFeatureSwitchRegistry>();
 
@@ -92,6 +97,7 @@ namespace Paramore.Brighter.Extensions.Tests
         public void UseProducerRegistry_ShouldResolveFromServiceProvider()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
             const string mytopic = "MyTopic";
             var routingKey = new RoutingKey(mytopic);
 
@@ -117,7 +123,7 @@ namespace Paramore.Brighter.Extensions.Tests
                 .UseProducerRegistry(provider => provider.GetRequiredService<IAmAProducerRegistry>())
                 .AutoFromAssemblies();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
             var resolvedRegistry = serviceProvider.GetService<IAmAProducerRegistry>();
 
@@ -129,6 +135,7 @@ namespace Paramore.Brighter.Extensions.Tests
         public void UseOutbox_ShouldResolveFromServiceProvider()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
             var outbox = new InMemoryOutbox(TimeProvider.System);
 
             serviceCollection.AddSingleton<IAmAnOutbox>(outbox);
@@ -157,7 +164,7 @@ namespace Paramore.Brighter.Extensions.Tests
                 .UseOutbox(provider => provider.GetRequiredService<IAmAnOutbox>())
                 .AutoFromAssemblies();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             Assert.NotNull(commandProcessor);
@@ -167,6 +174,7 @@ namespace Paramore.Brighter.Extensions.Tests
         public void UseDistributedLock_ShouldResolveFromServiceProvider()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
             const string mytopic = "MyTopic";
             var routingKey = new RoutingKey(mytopic);
 
@@ -191,7 +199,7 @@ namespace Paramore.Brighter.Extensions.Tests
                 .UseDistributedLock(provider => new InMemoryLock())
                 .AutoFromAssemblies();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
             var resolvedLock = serviceProvider.GetService<IDistributedLock>();
 
@@ -204,6 +212,7 @@ namespace Paramore.Brighter.Extensions.Tests
         public void MultipleFactoryMethods_ShouldChainCorrectly()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
 
             var retryPolicy = Policy.Handle<Exception>().WaitAndRetry([TimeSpan.FromMilliseconds(50)]);
             var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
@@ -232,7 +241,7 @@ namespace Paramore.Brighter.Extensions.Tests
                 .UseFeatureSwitchRegistry(provider => provider.GetRequiredService<IAmAFeatureSwitchRegistry>())
                 .AutoFromAssemblies();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             Assert.NotNull(commandProcessor);
@@ -242,6 +251,7 @@ namespace Paramore.Brighter.Extensions.Tests
         public void FactoryMethod_CanAccessOtherServicesFromProvider()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
 
             serviceCollection.AddSingleton(new TestDependency { Value = "TestValue" });
 
@@ -257,7 +267,7 @@ namespace Paramore.Brighter.Extensions.Tests
                 })
                 .AutoFromAssemblies();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             Assert.NotNull(commandProcessor);
