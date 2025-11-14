@@ -8,6 +8,8 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.FeatureSwitch.Providers;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -287,6 +289,74 @@ namespace Paramore.Brighter.Extensions.Tests
 
             Assert.NotNull(commandProcessor);
             Assert.Equal("TestValue", capturedValue);
+        }
+
+        [Fact]
+        public void AddProducers_WithServiceProviderLambda_ShouldResolveFromServiceProvider()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+            serviceCollection.AddSingleton(new TestDependency { Value = "ProducersConfig" });
+            serviceCollection.AddSingleton<TimeProvider>(TimeProvider.System);
+
+            const string mytopic = "MyTopic";
+            var routingKey = new RoutingKey(mytopic);
+
+            serviceCollection
+                .AddBrighter()
+                .AddProducers((provider, config) =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    config.ProducerRegistry = new ProducerRegistry(
+                        new Dictionary<RoutingKey, IAmAMessageProducer>
+                        {
+                            {
+                                routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication{ Topic = routingKey})
+                            },
+                        });
+                    config.MessageMapperRegistry = new MessageMapperRegistry(
+                        new SimpleMessageMapperFactory(type => new TestEventMessageMapper()),
+                        new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
+                    );
+                })
+                .AutoFromAssemblies();
+
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+            var producerRegistry = serviceProvider.GetService<IAmAProducerRegistry>();
+
+            Assert.NotNull(commandProcessor);
+            Assert.NotNull(producerRegistry);
+        }
+
+        [Fact]
+        public void AddConsumers_WithServiceProviderLambda_ShouldResolveFromServiceProvider()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+            serviceCollection.AddSingleton(new TestDependency { Value = "ConsumersConfig" });
+
+            serviceCollection
+                .AddConsumers((provider, options) =>
+                {
+                    var dependency = provider.GetRequiredService<TestDependency>();
+                    options.Subscriptions = new List<Subscription>
+                    {
+                        new Subscription(
+                            new SubscriptionName("TestSubscription"),
+                            new ChannelName("test:channel"),
+                            new RoutingKey("test.key"),
+                            typeof(TestEvent),
+                            messagePumpType: MessagePumpType.Reactor)
+                    };
+                    options.DefaultChannelFactory = new InMemoryChannelFactory(new InternalBus(), TimeProvider.System);
+                })
+                .AutoFromAssemblies();
+
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
+            var dispatcher = serviceProvider.GetService<IDispatcher>();
+
+            Assert.NotNull(dispatcher);
         }
 
         private class TestDependency

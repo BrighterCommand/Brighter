@@ -25,11 +25,51 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         /// <exception cref="ArgumentNullException">Throws if no .NET IoC container provided</exception>
         public static IBrighterBuilder AddConsumers(
             this IServiceCollection services,
+            Action<IServiceProvider, ConsumersOptions> configure)
+        {
+            if (services == null)
+                throw new ArgumentNullException(nameof(services));
+
+            var options = new ConsumersOptions();
+
+            if (configure != null)
+            {
+                using var tempProvider = services.BuildServiceProvider();
+                configure.Invoke(tempProvider, options);
+            }
+
+            services.TryAddSingleton<IBrighterOptions>(options);
+            services.TryAddSingleton<IAmConsumerOptions>(options);
+
+            services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
+                BuildDispatcher,
+                ServiceLifetime.Singleton));
+
+            services.TryAddSingleton(options.InboxConfiguration);
+            var inbox = options.InboxConfiguration.Inbox;
+            if (inbox is IAmAnInboxSync)
+            {
+                services.TryAdd(
+                    new ServiceDescriptor(
+                        typeof(IAmAnInboxSync), BuildInbox<IAmAnInboxSync>, ServiceLifetime.Singleton));
+            }
+            if (inbox is IAmAnInboxAsync)
+            {
+                services.TryAdd(
+                    new ServiceDescriptor(
+                        typeof(IAmAnInboxAsync), BuildInbox<IAmAnInboxAsync>, ServiceLifetime.Singleton));
+            }
+
+            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
+        }
+
+        public static IBrighterBuilder AddConsumers(
+            this IServiceCollection services,
             Action<ConsumersOptions>? configure = null)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
-            
+
             var options = new ConsumersOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
