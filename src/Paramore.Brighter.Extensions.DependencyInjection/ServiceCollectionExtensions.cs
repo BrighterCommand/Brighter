@@ -891,7 +891,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 {
                     IAmAStorageProviderAsync store = provider.GetRequiredService<TStoreProvider>();
                     store.Tracer = provider.GetRequiredService<IAmABrighterTracer>();
-                    store.EnsureStoreExistsAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                    store.EnsureStoreExistsAsync().GetAwaiter().GetResult();
                     return store;
                 });
         }
