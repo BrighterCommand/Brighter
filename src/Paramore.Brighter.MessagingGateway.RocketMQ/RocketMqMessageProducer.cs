@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NJsonSchema.Annotations;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
@@ -32,20 +33,45 @@ public class RocketMqMessageProducer(
 
     /// <inheritdoc />
     public void Send(Message message)
-        => SendWithDelay(message, TimeSpan.Zero);
+    {
+        SendWithDelay(message, TimeSpan.Zero);
+    }
 
     /// <inheritdoc />
     public void SendWithDelay(Message message, TimeSpan? delay)
-        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
-    
+    {
+        BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay, false));
+    }
 
     /// <inheritdoc />
     public Task SendAsync(Message message, CancellationToken cancellationToken = default)
-        => SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
+    {
+        return SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
+    }
 
     /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
     {
+        await SendWithDelayAsync(message, delay, true, cancellationToken);
+    }
+
+    private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken = default)
+    {
+        if (delay.HasValue && delay.Value != TimeSpan.Zero && mqPublication.TopicType != TopicType.Delay)
+        {
+            if (useAsyncScheduler)
+            {
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
+            }
+            
+            var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+            schedulerSync.Schedule(message, delay.Value);
+            return;
+        }
+        
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RocketMQ, message, instrumentation);
         var builder = new Org.Apache.Rocketmq.Message.Builder()
             .SetBody(message.Body.Bytes)
             .SetTopic(mqPublication.Topic!.Value);
@@ -56,7 +82,8 @@ public class RocketMqMessageProducer(
             .AddProperty(HeaderNames.MessageType, message.Header.MessageType.ToString())
             .AddProperty(HeaderNames.TimeStamp, message.Header.TimeStamp.ToRfc3339())
             .AddProperty(HeaderNames.Source, message.Header.Source.ToString())
-            .AddProperty(HeaderNames.SpecVersion, message.Header.SpecVersion);
+            .AddProperty(HeaderNames.SpecVersion, message.Header.SpecVersion)
+            .AddProperty(HeaderNames.Baggage, message.Header.Baggage.ToString());
 
         if (message.Header.Type != CloudEventsType.Empty)
         {
@@ -96,15 +123,26 @@ public class RocketMqMessageProducer(
             builder.AddProperty(HeaderNames.DataRef, message.Header.DataRef);
         }
         
-        if (delay.HasValue && delay.Value != TimeSpan.Zero)
+        if (!TraceParent.IsNullOrEmpty(message.Header.TraceParent))
         {
+            builder.AddProperty(HeaderNames.TraceParent, message.Header.TraceParent.Value);
+        }
+
+        if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
+        {
+            builder.AddProperty(HeaderNames.TraceState, message.Header.TraceState.Value);
+        }
+        
+        if (mqPublication.TopicType == TopicType.Delay || delay.HasValue && delay.Value != TimeSpan.Zero)
+        {
+            delay ??= TimeSpan.Zero;
             builder
                 .SetDeliveryTimestamp(connection.TimerProvider.GetUtcNow().Add(delay.Value).UtcDateTime);
         }
         
-        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        if (mqPublication.TopicType == TopicType.Fifo || !PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
         {
-            builder.SetMessageGroup(message.Header.PartitionKey);
+            builder.SetMessageGroup(message.Header.PartitionKey.Value);
         }
         
         foreach (var (key, val) in message.Header.Bag
@@ -139,7 +177,6 @@ public class RocketMqMessageProducer(
         }
         
         await producer.Send(builder.Build());
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RocketMQ, message, instrumentation);
     }
     
     /// <inheritdoc />

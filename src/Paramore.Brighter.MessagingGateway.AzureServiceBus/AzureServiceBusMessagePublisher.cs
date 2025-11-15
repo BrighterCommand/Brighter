@@ -80,6 +80,7 @@ public class AzureServiceBusMessagePublisher
         azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsId] = message.Id.ToString();
         azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsSpecVersion] = message.Header.SpecVersion;
         azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsType] = message.Header.Type.Value;
+        azureServiceBusMessage.ApplicationProperties[ASBConstants.Baggage] = message.Header.Baggage.ToString();
 
         //optional Cloud Event headers
         if (message.Header.ContentType is not null)
@@ -97,6 +98,16 @@ public class AzureServiceBusMessagePublisher
         //extension Cloud Event headers
         if (message.Header.DataRef is not null)
             azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventDataRef] = message.Header.DataRef;
+
+        if (!TraceParent.IsNullOrEmpty(message.Header.TraceParent))
+        {
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.TraceParent] = message.Header.TraceParent.Value;
+        }
+        
+        if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
+        {
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.TraceState] = message.Header.TraceState.Value;
+        }
         
         azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsParitionKey] = message.Header.PartitionKey.Value;
     }

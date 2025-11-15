@@ -72,7 +72,9 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
             var topicName = GetTopicName(publication.TopicAttributes.ProjectId, publication.TopicAttributes.Name);
 
             // Create the Google PublisherClient which is used to send messages
-            var client = await CreatePublisherClient(topicName, publication.PublisherClientConfiguration ?? _connection.PublisherConfiguration);
+            var client = await CreatePublisherClient(topicName, 
+                publication.EnableMessageOrdering,
+                publication.PublisherClientConfiguration ?? _connection.PublisherConfiguration);
 
             // Create the Brighter-specific producer wrapper and add it to the dictionary
             producers[new ProducerKey(publication.Topic, publication.Type)] = new GcpMessageProducer(
@@ -85,12 +87,18 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
         return producers;
     }
 
-    private async Task<PublisherClient> CreatePublisherClient(TopicName topicName, Action<PublisherClientBuilder>? configure)
+    private async Task<PublisherClient> CreatePublisherClient(TopicName topicName, 
+        bool enableMessageOrdering,
+        Action<PublisherClientBuilder>? configure)
     {
         var builder = new PublisherClientBuilder
         {
             Credential = _connection.Credential,
-            TopicName = topicName
+            TopicName = topicName,
+            Settings = new PublisherClient.Settings
+            {
+                EnableMessageOrdering = enableMessageOrdering
+            }
         };
         
         configure?.Invoke(builder);

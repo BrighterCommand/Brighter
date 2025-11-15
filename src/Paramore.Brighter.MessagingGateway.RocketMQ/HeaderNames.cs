@@ -95,4 +95,19 @@ public static class HeaderNames
     /// The data ref
     /// </summary>
     public const string DataRef = "CE_dataref";
+    
+    /// <summary>
+    /// The trace parent
+    /// </summary>
+    public const string TraceParent = "CE_traceparent";
+    
+    /// <summary>
+    /// The trace state 
+    /// </summary>
+    public const string TraceState = "CE_tracestate";
+    
+    /// <summary>
+    /// The baggage 
+    /// </summary>
+    public const string Baggage = "CE_baggage";
 }

@@ -27,6 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -56,10 +57,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher? _publisher;
         private bool _hasFatalProducerError;
+        private readonly InstrumentationOptions _instrumentation;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
-            KafkaPublication publication)
+            KafkaPublication publication,
+            InstrumentationOptions instrumentation = InstrumentationOptions.All)
         {
             if (publication is null)
                 throw new ArgumentNullException(nameof(publication));
@@ -119,6 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             ReplicationFactor = publication.ReplicationFactor;
             TopicFindTimeout = TimeSpan.FromMilliseconds(publication.TopicFindTimeoutMs);
             _headerBuilder = publication.MessageHeaderBuilder;
+            _instrumentation = instrumentation;
         }
         
         /// <summary>
@@ -239,10 +243,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             try
             {
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic, message.Body.Value);
-            
                 _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
-            
             }
             catch (ProduceException<string, string> pe)
             {
@@ -302,8 +305,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               
              try
              {
+                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
                  Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic, message.Body.Value);
-            
                  await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
             
              }

@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
@@ -53,7 +54,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
     public partial class RedisMessageProducer(
         RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
-        RedisMessagePublication publication)
+        RedisMessagePublication publication,
+        InstrumentationOptions instrumentation = InstrumentationOptions.All)
         : RedisMessageGateway(redisMessagingGatewayConfiguration, publication.Topic!), IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
 
@@ -134,6 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             using var client = s_pool.Value.GetClient();
             Topic = message.Header.Topic;
 
+            BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
             Log.PreparingToSend(s_logger);
   
             var redisMessage = CreateRedisMessage(message);
@@ -176,6 +179,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             await using var client = await s_pool.Value.GetClientAsync(token: cancellationToken);
             Topic = message.Header.Topic;
 
+            BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
             Log.PreparingToSend(s_logger);
   
             var redisMessage = CreateRedisMessage(message);

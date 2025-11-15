@@ -145,7 +145,8 @@ public partial class SqsMessageSender
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
             [HeaderNames.Type] = message.Header.Type,
             [HeaderNames.Source] = message.Header.Source.ToString(),
-            [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339()
+            [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339(),
+            [HeaderNames.Baggage] = message.Header.Baggage.ToString()
         };
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
@@ -156,6 +157,12 @@ public partial class SqsMessageSender
 
         if (message.Header.DataRef != null)
             cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
+        
+        if (message.Header.TraceParent != null)
+            cloudEventHeaders[HeaderNames.TraceParent] = message.Header.TraceParent.Value;
+
+        if (message.Header.TraceState != null)
+            cloudEventHeaders[HeaderNames.TraceState] = message.Header.TraceState.Value;
 
         var cloudEventHeadersJson = System.Text.Json.JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
         return cloudEventHeadersJson;

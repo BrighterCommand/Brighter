@@ -252,6 +252,12 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         {
             var response = await sqsClient.GetQueueUrlAsync(queueName, cancellationToken);
             queueUrl = response.QueueUrl;
+
+            await sqsClient.SetQueueAttributesAsync(new SetQueueAttributesRequest
+            {
+                Attributes = attributes,
+                QueueUrl = queueUrl
+            }, cancellationToken);
         }
 
         if (string.IsNullOrEmpty(queueUrl))

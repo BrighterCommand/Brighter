@@ -13,6 +13,12 @@ public class GcpPublication : Publication
     /// This includes settings such as the ProjectId, Topic Name, and potentially more advanced configurations.
     /// </summary>
     public TopicAttributes? TopicAttributes { get; set; }
+    
+    /// <summary>
+    /// Gets or sets a value indicating whether messages published to the topic are delivered in the order they were published,
+    /// provided they were published with an ordering key.
+    /// </summary>
+    public bool EnableMessageOrdering { get; set; }
 
     /// <summary>
     /// Gets or sets an <see cref="Action"/> to allow advanced customization of the <see cref="PublisherClientBuilder"/>.

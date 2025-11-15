@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -89,6 +90,9 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
         var dateSchema = ReadDataSchema(message);
         var subject = ReadSubject(message);
         var dataRef = ReadDataRef(message);
+        var traceParent = ReadTraceParent(message);
+        var traceState = ReadTraceState(message);
+        var baggage = ReadBaggage(message);
         
         var header = new MessageHeader(
             messageId: messageId,
@@ -104,11 +108,14 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
             handledCount: handledCount,
             dataSchema: dateSchema,
             subject: subject,
-            delayed: delay
+            delayed: delay,
+            traceParent: traceParent,
+            traceState: traceState
         )
         {
             DataRef = dataRef,
             SpecVersion = specVersion,
+            Baggage = baggage
         };
 
         foreach (var property in message.Properties)
@@ -286,6 +293,40 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
             }
 
             return null;
+        }
+        
+        static TraceParent? ReadTraceParent(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.TraceParent);
+            if (!string.IsNullOrEmpty(val))
+            {
+                return new TraceParent(val);
+            }
+
+            return null;
+        }
+        
+        static TraceState? ReadTraceState(MessageView message)
+        {
+            var val = message.Properties.GetValueOrDefault(HeaderNames.TraceState);
+            if (!string.IsNullOrEmpty(val))
+            {
+                return new TraceState(val);
+            }
+
+            return null;
+        }
+        
+        static Baggage ReadBaggage(MessageView message)
+        {
+            var baggage = new Baggage();
+            var val = message.Properties.GetValueOrDefault(HeaderNames.Baggage);
+            if (!string.IsNullOrEmpty(val))
+            {
+                baggage.LoadBaggage(val);
+            }
+
+            return baggage;
         }
     }
 

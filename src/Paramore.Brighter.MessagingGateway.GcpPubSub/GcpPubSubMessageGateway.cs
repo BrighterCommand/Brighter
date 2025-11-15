@@ -245,6 +245,12 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             await CreateSubscriptionAsync(projectId, subscriptionName, pubSubSubscription);
         }
 
+
+        if (pubSubSubscription.DeadLetter != null)
+        {
+            await UpdateIAmRoleForSubscriptionAsync(projectId, subscriptionName, pubSubSubscription);
+        }
+
         return;
 
         // Local function to parse or create the full SubscriptionName object
@@ -471,10 +477,9 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
     private async Task UpdateIAmRoleForDeadLetterAsync(string projectId, GcpPubSubSubscription pubSubSubscription)
     {
         var publishMember = pubSubSubscription.DeadLetter!.PublisherMember;
-        var subscriberMember = pubSubSubscription.DeadLetter.SubscriberMember;
 
         // If members aren't explicitly configured, derive the default Pub/Sub service account for the project
-        if (string.IsNullOrEmpty(publishMember) || string.IsNullOrEmpty(subscriberMember))
+        if (string.IsNullOrEmpty(publishMember))
         {
             var projectClient = await Connection.CreateProjectsClientAsync();
             var project = await projectClient.GetProjectAsync(new GetProjectRequest { ProjectName = new ProjectName(projectId) });
@@ -483,7 +488,6 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             // The project number is the last segment of the Project resource name
             var projectNumber = project.Name.Split('/').Last();
             publishMember ??= $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
-            subscriberMember ??= $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
         }
 
         var topicName = ParseOrCreateTopicName(pubSubSubscription.DeadLetter.TopicName, projectId);
@@ -506,7 +510,48 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             binding.Members.Add(publishMember);
             bindings.Add(binding);
         }
+        
+        // 3. If any bindings were added, update the policy
+        if (bindings.Count > 0)
+        {
+            policy.Bindings.AddRange(bindings);
+            await publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
+            {
+                Policy = policy, ResourceAsResourceName = topicName
+            });
+        }
+    }
+    
+    // Asynchronously updates the IAM policy on the Dead Letter Topic (DLT) to grant the Pub/Sub service account
+    // the `roles/pubsub.publisher` role, allowing the main subscription to forward messages to the DLT.
+    private async Task UpdateIAmRoleForSubscriptionAsync(string projectId, 
+        Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
+        GcpPubSubSubscription pubSubSubscription)
+    {
+        var subscriberMember = pubSubSubscription.SubscriberMember;
 
+        // If members aren't explicitly configured, derive the default Pub/Sub service account for the project
+        if (string.IsNullOrEmpty(subscriberMember))
+        {
+            var projectClient = await Connection.CreateProjectsClientAsync();
+            var project = await projectClient.GetProjectAsync(new GetProjectRequest { ProjectName = new ProjectName(projectId) });
+
+            // The service account for Pub/Sub in a project is service-<PROJECT_NUMBER>@gcp-sa-pubsub.iam.gserviceaccount.com
+            // The project number is the last segment of the Project resource name
+            var projectNumber = project.Name.Split('/').Last();
+            subscriberMember ??= $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
+        }
+
+        var publisher = await Connection.CreatePublisherServiceApiClientAsync();
+
+        // 1. Get the current IAM policy for the DLT
+        var policy = await publisher.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest
+        {
+            ResourceAsResourceName = subscriptionName,
+        });
+
+        var bindings = new List<Binding>();
+        
         const string subscriberRole = "roles/pubsub.subscriber";
         // Check if the DLT Subscriber role is missing for the service account
         if (!policy.Bindings.Any(x => x.Role == subscriberRole && x.Members.Contains(subscriberMember)))
@@ -524,7 +569,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             policy.Bindings.AddRange(bindings);
             await publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
             {
-                Policy = policy, ResourceAsResourceName = topicName
+                Policy = policy, ResourceAsResourceName = subscriptionName
             });
         }
     }

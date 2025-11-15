@@ -31,6 +31,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
@@ -41,6 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     public partial class MsSqlMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageProducer>();
+        private readonly InstrumentationOptions _instrumentation;
         private readonly MsSqlMessageQueue<Message> _sqlQ;
 
         /// <summary>
@@ -62,13 +64,16 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="msSqlConfiguration">The MS SQL configuration.</param>
         /// <param name="connectonProvider">The connection provider.</param>
         /// <param name="publication">The publication configuration.</param>
+        /// <param name="instrumentation">The <see cref="InstrumentationOptions"/></param>
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
             IAmARelationalDbConnectionProvider connectonProvider,
-            Publication? publication = null
+            Publication? publication = null,
+            InstrumentationOptions instrumentation = InstrumentationOptions.All
         )
         {
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
+            _instrumentation = instrumentation;
             Publication = publication ?? new Publication { MakeChannels = OnMissingChannel.Create };
         }
 
@@ -130,6 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 Log.NoSchedulerConfigured(s_logger);
             }
               
+            BrighterTracer.WriteProducerEvent(Span, "microsft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
             Log.SendMessage(s_logger, topic, message.Id);
@@ -165,6 +171,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 Log.NoSchedulerConfigured(s_logger);
             }
 
+            BrighterTracer.WriteProducerEvent(Span, "microsft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
             Log.SendMessageAsync(s_logger, topic, message.Id);
