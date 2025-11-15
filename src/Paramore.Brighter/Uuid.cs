@@ -70,4 +70,25 @@ public static class Uuid
         return Guid.NewGuid().ToString();
 #endif
     }
+
+    /// <summary>
+    /// Parses the provided <paramref name="id"/> string into a <see cref="Guid"/>.
+    /// </summary>
+    /// <param name="id">The string to parse. Accepts any format supported by <see cref="Guid.Parse"/>.</param>
+    /// <returns>The parsed <see cref="Guid"/>.</returns>
+    /// <exception cref="FormatException">Thrown when <paramref name="id"/> is not a valid GUID string.</exception>
+    /// <example>
+    /// <code>
+    /// var guid = Uuid.Parse(idString);
+    /// </code>
+    /// </example>
+    public static Guid Parse(string id)
+    {
+        if (Guid.TryParse(id, out var guid))
+        {
+            return guid;
+        }
+
+        throw new FormatException($"The input string '{id}' is not a valid GUID.");
+    }
 }
