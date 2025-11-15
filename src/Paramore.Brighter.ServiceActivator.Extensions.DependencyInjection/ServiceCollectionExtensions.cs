@@ -25,11 +25,26 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         /// <exception cref="ArgumentNullException">Throws if no .NET IoC container provided</exception>
         public static IBrighterBuilder AddConsumers(
             this IServiceCollection services,
+            Action<IServiceProvider, ConsumersOptions> configure)
+        {
+            if (services == null)
+                throw new ArgumentNullException(nameof(services));
+
+            if (configure == null)
+                throw new ArgumentNullException(nameof(configure));
+
+            using var tempProvider = services.BuildServiceProvider();
+
+            return services.AddConsumers(options => configure.Invoke(tempProvider, options));
+        }
+
+        public static IBrighterBuilder AddConsumers(
+            this IServiceCollection services,
             Action<ConsumersOptions>? configure = null)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
-            
+
             var options = new ConsumersOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
