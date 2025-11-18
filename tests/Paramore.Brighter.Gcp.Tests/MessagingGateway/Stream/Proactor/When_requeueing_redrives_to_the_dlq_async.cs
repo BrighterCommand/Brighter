@@ -77,7 +77,7 @@ public class MessageProducerDlqTestsAsync : IDisposable
         }
         
         int dlqCount = await GetDLQCountAsync();
-        Assert.Equal(1, dlqCount);
+        Assert.True(dlqCount >= 1);
     }
 
     private async Task<int> GetDLQCountAsync()

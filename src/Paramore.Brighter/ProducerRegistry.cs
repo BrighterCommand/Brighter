@@ -35,15 +35,13 @@ namespace Paramore.Brighter
         /// Constructs a <see cref="ProducerRegistry"/> from a dictionary of <see cref="ProducerKey"/> and <see cref="IAmAMessageProducer"/> pairs.
         /// For each producer, it checks that the producer has a valid <see cref="Publication"/> and that the <see cref="Publication.Topic"/> is set.
         /// It adds the producer to the registry using the provided <see cref="ProducerKey"/>.
+        /// An empty or null dictionary is valid and creates an empty registry.
         /// </summary>
-        /// <param name="messageProducers">The list of <see cref="IAmAMessageProducer"/> and their <see cref="ProducerKey"/>s</param>
-        /// <exception cref="ConfigurationException"></exception>
-        public ProducerRegistry(Dictionary<ProducerKey, IAmAMessageProducer> messageProducers)
+        /// <param name="messageProducers">The list of <see cref="IAmAMessageProducer"/> and their <see cref="ProducerKey"/>s. Can be null or empty.</param>
+        /// <exception cref="ConfigurationException">Thrown when a producer has an invalid Publication or Topic</exception>
+        public ProducerRegistry(Dictionary<ProducerKey, IAmAMessageProducer>? messageProducers)
         {
-            if (messageProducers is null || !messageProducers.Any())
-                throw new ConfigurationException("No producers found in the registry");
-
-            foreach (var producer in messageProducers.Values)
+            foreach (var producer in messageProducers?.Values ?? Enumerable.Empty<IAmAMessageProducer>())
             {
                 if (producer.Publication is null)
                     throw new ConfigurationException($"Producer {producer.GetType().Name} does not have a Publication set");
