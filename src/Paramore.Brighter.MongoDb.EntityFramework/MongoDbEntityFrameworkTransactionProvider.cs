@@ -1,8 +1,12 @@
+using System;
+using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using MongoDB.Driver;
+using MongoDB.EntityFrameworkCore.Storage;
 
 namespace Paramore.Brighter.MongoDb.EntityFramework
 {
@@ -10,45 +14,41 @@ namespace Paramore.Brighter.MongoDb.EntityFramework
     /// A transaction provider that uses the same session as EF Core for MongoDB
     /// </summary>
     /// <typeparam name="T">The Db Context to take the session from</typeparam>
-    public class MongoDbEntityFrameworkTransactionProvider<T> : IAmAMongoDbTransactionProvider where T : DbContext
+    public class MongoDbEntityFrameworkTransactionProvider<T> : IAmARelationalDbConnectionProvider, IAmABoxTransactionProvider<IClientSessionHandle>, IDisposable where T : DbContext
     {
         private readonly T _context;
-        private IClientSessionHandle? _session;
+    
+        private bool _disposed;
+    
+        private DbConnection? _connection;
+    
+        private DbTransaction? _transaction;
 
         /// <summary>
-        /// Constructs an instance from a database context
+        /// A transaction provider that uses the same session as EF Core for MongoDB
         /// </summary>
-        /// <param name="context">The database context to use</param>
+        /// <typeparam name="T">The Db Context to take the session from</typeparam>
         public MongoDbEntityFrameworkTransactionProvider(T context)
         {
             _context = context;
         }
 
-        /// <summary>
-        /// Get the MongoDB client from the database context
-        /// </summary>
-        public IMongoClient Client
-        {
-            get
-            {
-                // Get the MongoDB client from the DbContext
-                var database = _context.Database.GetService<IMongoDatabase>();
-                return database.Client;
-            }
-        }
-
-        /// <summary>
-        /// Close the session if one is open
-        /// </summary>
+        ~MongoDbEntityFrameworkTransactionProvider() => Dispose(false);
+    
         public void Close()
         {
-            if (_session != null)
+            if (!HasOpenTransaction)
             {
-                _session.Dispose();
-                _session = null;
+                _transaction?.Dispose();
+                _transaction = null;
+            }
+    
+            if (!IsSharedConnection)
+            {
+                _connection?.Close();
             }
         }
-
+    
         /// <summary>
         /// Commit the transaction
         /// </summary>
@@ -56,131 +56,135 @@ namespace Paramore.Brighter.MongoDb.EntityFramework
         {
             if (HasOpenTransaction)
             {
-                _session?.CommitTransaction();
-                _session?.Dispose();
-                _session = null;
+                _context.Database.CurrentTransaction?.Commit();
             }
         }
-
+    
         /// <summary>
-        /// Commit the transaction asynchronously
+        /// Commit the transaction
         /// </summary>
-        /// <param name="cancellationToken">A cancellation token</param>
         /// <returns>An awaitable Task</returns>
-        public async Task CommitAsync(CancellationToken cancellationToken = default)
+        public Task CommitAsync(CancellationToken cancellationToken)
         {
-            if (HasOpenTransaction && _session != null)
+            if (HasOpenTransaction)
             {
-                await _session.CommitTransactionAsync(cancellationToken);
-                _session.Dispose();
-                _session = null;
+                _context.Database.CurrentTransaction?.CommitAsync(cancellationToken);
             }
+    
+            return Task.CompletedTask;
         }
-
-        /// <summary>
-        /// Get the ambient session handle
-        /// </summary>
-        /// <returns>The IClientSessionHandle</returns>
-        public IClientSessionHandle GetTransaction()
-        {
-            if (_session == null)
-            {
-                // Try to get existing session from EF Core context, or create a new one
-                var database = _context.Database.GetService<IMongoDatabase>();
-                _session = database.Client.StartSession();
-                _session.StartTransaction();
-            }
-            return _session;
-        }
-
-        /// <summary>
-        /// Get the ambient session handle asynchronously
-        /// </summary>
-        /// <param name="cancellationToken">A cancellation token</param>
-        /// <returns>The IClientSessionHandle</returns>
-        public async Task<IClientSessionHandle> GetTransactionAsync(CancellationToken cancellationToken = default)
-        {
-            if (_session == null)
-            {
-                // Try to get existing session from EF Core context, or create a new one
-                var database = _context.Database.GetService<IMongoDatabase>();
-                _session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
-                _session.StartTransaction();
-            }
-            return _session;
-        }
-
-        /// <summary>
-        /// Get the transaction as IClientSession (for outbox/inbox compatibility)
-        /// </summary>
-        /// <returns>The IClientSession</returns>
-        IClientSession IAmABoxTransactionProvider<IClientSession>.GetTransaction()
-        {
-            return GetTransaction();
-        }
-
-        /// <summary>
-        /// Get the transaction asynchronously as IClientSession (for outbox/inbox compatibility)
-        /// </summary>
-        /// <param name="cancellationToken">A cancellation token</param>
-        /// <returns>The IClientSession</returns>
-        async Task<IClientSession> IAmABoxTransactionProvider<IClientSession>.GetTransactionAsync(CancellationToken cancellationToken)
-        {
-            return await GetTransactionAsync(cancellationToken);
-        }
-
-        /// <summary>
-        /// Is there a transaction open?
-        /// </summary>
-        public bool HasOpenTransaction => _session != null;
-
-        /// <summary>
-        /// Is there a shared connection? (Always true for EF Core integration)
-        /// </summary>
-        public bool IsSharedConnection => true;
-
-        /// <summary>
-        /// Rollback the transaction
-        /// </summary>
+    
         public void Rollback()
         {
-            if (HasOpenTransaction && _session != null)
+            if (!HasOpenTransaction)
             {
-                try
-                {
-                    _session.AbortTransaction();
-                }
-                catch
-                {
-                    // Ignore
-                }
-
-                _session.Dispose();
-                _session = null;
+                return;
             }
+    
+            try { _transaction!.Rollback(); } catch (Exception) { /*ignore*/ }
+            _transaction = null;
         }
-
+    
+        public Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            if (!HasOpenTransaction)
+            {
+                return Task.CompletedTask;
+            }
+    
+            try { _transaction!.Rollback(); } catch (Exception) { /*ignore*/ }
+            _transaction = null;
+    
+            return Task.CompletedTask;
+        }
+    
         /// <summary>
-        /// Rollback the transaction asynchronously
+        /// Get the current connection of the database context
+        /// </summary>
+        /// <returns>The NpgsqlConnection that is in use</returns>
+        public DbConnection GetConnection()
+        {
+            return _context.Database.GetDbConnection();
+        }
+    
+        /// <summary>
+        /// Get the current connection of the database context
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
-        /// <returns>An awaitable Task</returns>
-        public async Task RollbackAsync(CancellationToken cancellationToken = default)
+        /// <returns></returns>
+        public Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            if (HasOpenTransaction && _session != null)
-            {
-                try
-                {
-                    await _session.AbortTransactionAsync(cancellationToken);
-                }
-                catch
-                {
-                    // Ignore
-                }
-
-                _session.Dispose();
-                _session = null;
-            }
+            var tcs = new TaskCompletionSource<DbConnection>();
+            tcs.SetResult(_context.Database.GetDbConnection());
+            return tcs.Task;
         }
+    
+        /// <summary>
+        /// Get the ambient Transaction
+        /// </summary>
+        /// <returns>The NpgsqlTransaction</returns>
+        public IClientSessionHandle GetTransaction()
+        {
+            // If there is no current transaction, we create a new one
+            var currentTransaction = _context.Database.CurrentTransaction ?? _context.Database.BeginTransaction();
+            if (currentTransaction is not MongoTransaction mongoTransaction)
+            {
+                throw new InvalidOperationException("The current transaction is not a MongoTransaction");
+            }
+            // use reflection to access property named Session of type IClientSessionHandle that is in the mongoTransaction
+            // it is internal, so we need to use reflection to access it
+            // ideally we would use just DbTransaction directly, but it's currently impossible due to compatibility with the base mongodb outbox provider
+            if (MongoTransactionHelper.SessionProperty.GetValue(mongoTransaction) is not IClientSessionHandle session)
+            {
+                throw new InvalidOperationException("The current transaction does not have a session");
+            }
+            return session;
+        }
+    
+        public Task<IClientSessionHandle> GetTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            var tcs = new TaskCompletionSource<IClientSessionHandle>();
+    
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcs.SetCanceled(CancellationToken.None);
+            }
+    
+            tcs.SetResult(GetTransaction());
+            return tcs.Task;
+        }
+    
+        [MemberNotNullWhen(true, nameof(_transaction))]
+        public bool HasOpenTransaction => _transaction is not null;
+    
+        public bool IsSharedConnection => true;
+    
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+    
+        protected void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+    
+            if (disposing)
+            {
+                _connection?.Dispose();
+                _transaction?.Dispose();
+            }
+            _connection = null;
+            _transaction = null;
+            _disposed = true;
+        }
+    }
+    
+    static file class MongoTransactionHelper
+    {
+        public static PropertyInfo SessionProperty { get; } = typeof(MongoTransaction).GetProperty("Session", BindingFlags.Instance | BindingFlags.NonPublic)!;
     }
 }
