@@ -41,6 +41,7 @@
     <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="7.1.0" />
     <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="7.1.0" />
     <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="7.1.0" />
+    <PackageVersion Include="Fluid.Core" Version="2.31.0" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="2.4.1" />
     <PackageVersion Include="Google.Cloud.Firestore.V1" Version="3.11.0" />
     <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.29.0" />
@@ -119,6 +120,7 @@
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.9.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.10" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.3" />

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
-public abstract class OutboxTest<TTransaction>
+public abstract class OutboxTest<TTransaction> : IDisposable
 {
     protected abstract IAmAnOutboxSync<Message, TTransaction> Outbox { get; }
 
@@ -56,7 +56,7 @@ public abstract class OutboxTest<TTransaction>
             source:       new Uri(Uuid.NewAsString(), UriKind.Relative),
             type:         new CloudEventsType(Uuid.NewAsString()),
             timeStamp:    timestamp ?? DateTimeOffset.UtcNow,
-            correlationId:Id.Random(),
+            correlationId: Id.Random(),
             replyTo:      new RoutingKey(Uuid.NewAsString()),
             contentType:  new ContentType(MediaTypeNames.Text.Plain),
             partitionKey: Uuid.NewAsString(),
