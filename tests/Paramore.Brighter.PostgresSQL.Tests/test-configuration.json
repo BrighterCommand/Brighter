@@ -1,0 +1,9 @@
+{
+  "Namespace": "Paramore.Brighter.PostgresSQL.Tests",
+  "Outboxes": {
+    "Text": {
+      "Transaction": "System.Data.Common.DbTransaction",
+      "OutboxProvider": "PostgresTextOutboxProvider"
+    }
+  }
+}
