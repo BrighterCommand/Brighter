@@ -57,6 +57,61 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
 
+        /// <summary>
+        /// Adds a service activator to the .NET IoC Container with access to IServiceProvider for resolving dependencies.
+        /// Used to register one or more message pump for a subscription to messages on an external bus.
+        /// Registers as a singleton :-
+        /// - Brighter Options - how we are configuring the command processor used for dispatch of message to handler
+        /// - Dispatcher - the supervisor for the subscription workers
+        /// </summary>
+        /// <param name="services">The .NET IoC container to register with</param>
+        /// <param name="configure">The configuration of the subscriptions with access to IServiceProvider</param>
+        /// <returns>A brighter handler builder, used for chaining</returns>
+        /// <exception cref="ArgumentNullException">Throws if no .NET IoC container provided</exception>
+        public static IBrighterBuilder AddConsumers(
+            this IServiceCollection services,
+            Action<ConsumersOptions, IServiceProvider> configure)
+        {
+            if (services == null)
+                throw new ArgumentNullException(nameof(services));
+            if (configure == null)
+                throw new ArgumentNullException(nameof(configure));
+
+            var options = new ConsumersOptions();
+
+            services.AddSingleton<ConsumersOptions>(sp =>
+            {
+                var config = new ConsumersOptions();
+                configure(config, sp);
+                return config;
+            });
+
+            services.AddSingleton<IBrighterOptions>(sp => sp.GetRequiredService<ConsumersOptions>());
+            services.AddSingleton<IAmConsumerOptions>(sp => sp.GetRequiredService<ConsumersOptions>());
+
+            services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
+                BuildDispatcher,
+                ServiceLifetime.Singleton));
+
+            services.TryAdd(new ServiceDescriptor(typeof(InboxConfiguration),
+                sp =>
+                {
+                    var config = sp.GetRequiredService<ConsumersOptions>();
+                    return config.InboxConfiguration;
+                },
+                ServiceLifetime.Singleton));
+
+            services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxSync),
+                sp => BuildInbox<IAmAnInboxSync>(sp),
+                ServiceLifetime.Singleton));
+
+            services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxAsync),
+                sp => BuildInbox<IAmAnInboxAsync>(sp),
+                ServiceLifetime.Singleton));
+
+            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
+        }
+
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
             var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
