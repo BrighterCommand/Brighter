@@ -402,10 +402,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
                     var boxProviderType = transactionProviderInterface.MakeGenericType(transactionType);
 
-                    if (busConfiguration.ConnectionProvider != null)
-                        RegisterConnectionAndTransactionProvider(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
-
-                    // Setup outbox
                     var outbox = busConfiguration.Outbox ?? new InMemoryOutbox(TimeProvider.System);
                     var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
                     var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
