@@ -96,8 +96,6 @@
     <PackageVersion Include="RabbitMQ.Client" Version="7.1.2" />
     <PackageVersion Include="RocketMQ.Client" Version="5.1.0" />
     <PackageVersion Include="Serilog" Version="4.3.0" />
-    <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
-    <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.2" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.9.0" />
@@ -119,26 +117,6 @@
     <PackageVersion Include="FakeItEasy" Version="8.3.0" />
     <PackageVersion Include="xunit.v3" Version="3.1.0" />
     <PackageVersion Include="xunit.v3.runner.msbuild" Version="3.1.0" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'net472'">
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.11" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.11" />
-    <PackageVersion Include="System.Threading.Channels" Version="9.0.11" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
@@ -164,8 +142,12 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
     <PackageVersion Include="Npgsql" Version="8.0.8" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.3" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="System.Text.Json" Version="8.0.6" />
     <PackageVersion Include="System.Threading.Channels" Version="8.0.0" />
+    <PackageVersion Include="TickerQ" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.11" />
@@ -191,10 +173,14 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.11" />
     <PackageVersion Include="Npgsql" Version="9.0.4" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.2" />
     <PackageVersion Include="System.Text.Json" Version="9.0.11" />
     <PackageVersion Include="System.Threading.Channels" Version="9.0.11" />
+    <PackageVersion Include="TickerQ" Version="9.0.0" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0' OR '$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'net472'">
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.0" />
@@ -218,9 +204,12 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
-    <PackageVersion Include="Npgsql" Version="10.0.0-rc.1" />
+    <PackageVersion Include="Npgsql" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.2" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="System.Threading.Channels" Version="10.0.0" />
+    <PackageVersion Include="TickerQ" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>
     <GlobalPackageReference Include="MinVer" Version="6.0.0" />
