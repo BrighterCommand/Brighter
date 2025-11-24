@@ -29,17 +29,17 @@ using RabbitMQ.Client;
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
     public class RmqMessagingGatewayConnection : IAmGatewayConfiguration 
-    {
+    { 
         /// <summary>
-      /// Sets Unique name for the subscription
-      /// </summary>
-      public string Name { get; set; } = Environment.MachineName;
+        /// Sets Unique name for the subscription
+        /// </summary>
+        public string Name { get; set; } = Environment.MachineName;
 
-      /// <summary>
-      /// Gets or sets the ampq URI.
-      /// </summary>
-      /// <value>The ampq URI.</value>
-      public AmqpUriSpecification? AmpqUri { get; set; }
+        /// <summary>
+        /// Gets or sets the ampq URI.
+        /// </summary>
+        /// <value>The ampq URI.</value>
+        public AmqpUriSpecification? AmpqUri { get; set; }
 
         /// <summary>
         /// Gets or sets the exchange.
@@ -85,7 +85,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// </summary>
         /// <value>The URI.</value>
         public Uri Uri { get; set; } = uri;
-
 
         /// <summary>
         /// Gets or sets the retry count for when a subscription fails
