@@ -1,3 +1,27 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2025 Jakub Syty <jakub.nekro@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
 using System;
 using System.Data.Common;
 using System.Reflection;
@@ -15,15 +39,22 @@ namespace Paramore.Brighter.MongoDb.EntityFramework
     /// <typeparam name="T">The Db Context to take the session from</typeparam>
     public class MongoDbEntityFrameworkTransactionProvider<T> : IAmARelationalDbConnectionProvider, IAmABoxTransactionProvider<IClientSessionHandle> where T : DbContext
     {
-        private readonly T context;
+        private readonly T _context;
         
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MongoDbEntityFrameworkTransactionProvider{T}"/> class.
+        /// </summary>
+        /// <param name="context">The DbContext to use for transactions.</param>
         public MongoDbEntityFrameworkTransactionProvider(T context)
         {
-            this.context = context;
+            _context = context;
         }
+        /// <summary>
+        /// Close the transaction
+        /// </summary>
         public void Close()
         {
-            context.Database.CurrentTransaction?.Dispose();
+            _context.Database.CurrentTransaction?.Dispose();
         }
 
         /// <summary>
@@ -31,7 +62,7 @@ namespace Paramore.Brighter.MongoDb.EntityFramework
         /// </summary>
         public void Commit()
         {
-            context.Database.CurrentTransaction?.Commit();
+            _context.Database.CurrentTransaction?.Commit();
         }
 
         /// <summary>
@@ -40,21 +71,29 @@ namespace Paramore.Brighter.MongoDb.EntityFramework
         /// <returns>An awaitable Task</returns>
         public async Task CommitAsync(CancellationToken cancellationToken)
         {
-            var currentTransaction = context.Database.CurrentTransaction;
+            var currentTransaction = _context.Database.CurrentTransaction;
             if (currentTransaction is not null)
             {
                 await currentTransaction.CommitAsync(cancellationToken);
             }
         }
 
+        /// <summary>
+        /// Rollback the transaction
+        /// </summary>
         public void Rollback()
         {
-            context.Database.CurrentTransaction?.Rollback();
+            _context.Database.CurrentTransaction?.Rollback();
         }
 
+        /// <summary>
+        /// Rollback the transaction
+        /// </summary>
+        /// <param name="cancellationToken">A cancellation token</param>
+        /// <returns>An awaitable Task</returns>
         public async Task RollbackAsync(CancellationToken cancellationToken = default)
         {
-            var currentTransaction = context.Database.CurrentTransaction;
+            var currentTransaction = _context.Database.CurrentTransaction;
             if (currentTransaction is not null)
             {
                 await currentTransaction.RollbackAsync(cancellationToken);
@@ -64,35 +103,36 @@ namespace Paramore.Brighter.MongoDb.EntityFramework
         /// <summary>
         /// Get the current connection of the database context
         /// </summary>
-        /// <returns>The NpgsqlConnection that is in use</returns>
+        /// <returns>The DbConnection that is in use</returns>
         public DbConnection GetConnection()
         {
-            return context.Database.GetDbConnection();
+            return _context.Database.GetDbConnection();
         }
 
         /// <summary>
         /// Get the current connection of the database context
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
-        /// <returns></returns>
+        /// <returns>The DbConnection that is in use</returns>
         public Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(context.Database.GetDbConnection());
+            return Task.FromResult(_context.Database.GetDbConnection());
         }
 
         /// <summary>
         /// Get the ambient Transaction
         /// </summary>
-        /// <returns>The NpgsqlTransaction</returns>
+        /// <returns>The IClientSessionHandle</returns>
         public IClientSessionHandle GetTransaction()
         {
             // If there is no current transaction, we create a new one
-            var currentTransaction = context.Database.CurrentTransaction ?? context.Database.BeginTransaction();
+            var currentTransaction = _context.Database.CurrentTransaction ?? _context.Database.BeginTransaction();
             if (currentTransaction is not MongoTransaction mongoTransaction)
             {
                 throw new InvalidOperationException("The current transaction is not a MongoTransaction");
             }
             // use reflection to access property named Session of type IClientSessionHandle that is in the mongoTransaction
+            // this is brittle and I'm currently in a discussion with the Mongo team about making this public
             if (MongoTransactionHelper.SessionProperty.GetValue(mongoTransaction) is not IClientSessionHandle session)
             {
                 throw new InvalidOperationException("The current transaction does not have a session");
@@ -100,18 +140,36 @@ namespace Paramore.Brighter.MongoDb.EntityFramework
             return session;
         }
 
+        /// <summary>
+        /// Get the ambient Transaction
+        /// </summary>
+        /// <param name="cancellationToken">A cancellation token</param>
+        /// <returns>The IClientSessionHandle</returns>
         public Task<IClientSessionHandle> GetTransactionAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(GetTransaction());
         }
 
-        public bool HasOpenTransaction => context.Database.CurrentTransaction is not null;
+        /// <summary>
+        /// Gets a value indicating whether there is an open transaction.
+        /// </summary>
+        public bool HasOpenTransaction => _context.Database.CurrentTransaction is not null;
 
+        /// <summary>
+        /// Gets a value indicating whether the connection is shared.
+        /// </summary>
         public bool IsSharedConnection => true;
     }
     
+    /// <summary>
+    /// Helper class for accessing private properties of MongoTransaction.
+    /// This is a separate class to avoid a warning about static members in generic types.
+    /// </summary>
     file static class MongoTransactionHelper
     {
+        /// <summary>
+        /// Gets the PropertyInfo for the Session property. We are keeping that static for performance reasons.
+        /// </summary>
         public static PropertyInfo SessionProperty { get; } = typeof(MongoTransaction).GetProperty("Session", BindingFlags.Instance | BindingFlags.NonPublic)!;
     }
 }
