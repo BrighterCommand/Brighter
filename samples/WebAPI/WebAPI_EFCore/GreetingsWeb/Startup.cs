@@ -153,13 +153,14 @@ namespace GreetingsWeb
 
         private static void ConfigureMySql(IServiceCollection services, string connectionString)
         {
-            services.AddDbContextPool<GreetingsEntityGateway>(builder =>
-            {
-                builder
-                    .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
-                    .EnableDetailedErrors()
-                    .EnableSensitiveDataLogging();
-            });
+            throw new NotSupportedException("Waiting for Pomelo.EntityFrameworkCore.MySql");
+            // services.AddDbContextPool<GreetingsEntityGateway>(builder =>
+            // {
+            //     builder
+            //         .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+            //         .EnableDetailedErrors()
+            //         .EnableSensitiveDataLogging();
+            // });
         }
 
         private static void ConfigureSqlite(IServiceCollection services, string connectionString)
