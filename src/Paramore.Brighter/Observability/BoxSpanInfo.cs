@@ -27,10 +27,10 @@ using System.Collections.Generic;
 namespace Paramore.Brighter.Observability;
 
 /// <summary>
-/// Create a record to hold the span information for the outbox
-/// The span is named for "db.operation db.name db.sql.table" or "db.operation db.name" if db.sql.table is null or empty 
+/// Create a record to hold the span information for the outbox using a predefined DbSystem
+/// This constructor provides backward compatibility for existing code using the DbSystem enum
 /// </summary>
-/// <param name="dbSystem">The DBMS product identifier</param>
+/// <param name="dbSystemName">The DBMS product identifier from the <see cref="DbSystem"/> enum</param>
 /// <param name="dbName">The name of the database being accessed</param>
 /// <param name="dbOperation">The name of the operation being executed</param>
 /// <param name="dbTable">The name of the primary table that the operation is acting upon</param>
@@ -43,15 +43,36 @@ namespace Paramore.Brighter.Observability;
 /// <param name="serverAddress">Name of the database host</param>
 /// <param name="dbAttributes">Other attributes (key-value pairs) not covered by the standard attributes</param>
 public record BoxSpanInfo(
-    DbSystem dbSystem,                    
+    string dbSystemName,
     string dbName,
-    BoxDbOperation dbOperation, 
+    BoxDbOperation dbOperation,
     string dbTable,
-    int serverPort = 0, 
-    string? dbInstanceId = null, 
+    int serverPort = 0,
+    string? dbInstanceId = null,
     string? dbStatement = null,
     string? dbUser = null,
     string? networkPeerAddress = null,
     int networkPeerPort = 0,
     string? serverAddress = null,
-    Dictionary<string, string>? dbAttributes = null);
+    Dictionary<string, string>? dbAttributes = null)
+{
+    public BoxSpanInfo(
+        DbSystem dbSystem,
+        string dbName,
+        BoxDbOperation dbOperation, 
+        string dbTable,
+        int serverPort = 0, 
+        string? dbInstanceId = null, 
+        string? dbStatement = null,
+        string? dbUser = null,
+        string? networkPeerAddress = null,
+        int networkPeerPort = 0,
+        string? serverAddress = null,
+        Dictionary<string, string>? dbAttributes = null)
+        : this(dbSystem.ToDbName(), dbName, dbOperation, dbTable, serverPort, dbInstanceId, dbStatement, dbUser, networkPeerAddress, networkPeerPort, serverAddress, dbAttributes)
+    {
+        this.dbSystem = dbSystem;
+    }
+    
+    public DbSystem dbSystem { get; }
+}
