@@ -54,6 +54,7 @@ public static class DbSystemExtensions
         DbSystem.Elasticsearch=> "elasticsearch",
         DbSystem.FileMaker=> "filemaker",
         DbSystem.Firebird=> "firebird",
+        DbSystem.Firestore=> "firestore",
         DbSystem.FirstSql=> "firstsql",
         DbSystem.Geode=> "geode",
         DbSystem.H2=> "h2",

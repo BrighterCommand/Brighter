@@ -27,10 +27,10 @@ using System.Collections.Generic;
 namespace Paramore.Brighter.Observability;
 
 /// <summary>
-/// Create a record to hold the span information for the outbox
-/// The span is named for "db.operation db.name db.sql.table" or "db.operation db.name" if db.sql.table is null or empty 
+/// Create a record to hold the span information for the outbox using a predefined DbSystem
+/// This constructor provides backward compatibility for existing code using the DbSystem enum
 /// </summary>
-/// <param name="dbSystem">The DBMS product identifier</param>
+/// <param name="dbSystemName">The DBMS product identifier from the <see cref="DbSystem"/> enum</param>
 /// <param name="dbName">The name of the database being accessed</param>
 /// <param name="dbOperation">The name of the operation being executed</param>
 /// <param name="dbTable">The name of the primary table that the operation is acting upon</param>
@@ -71,7 +71,6 @@ public record BoxSpanInfo(
         Dictionary<string, string>? dbAttributes = null)
         : this(dbSystem.ToDbName(), dbName, dbOperation, dbTable, serverPort, dbInstanceId, dbStatement, dbUser, networkPeerAddress, networkPeerPort, serverAddress, dbAttributes)
     {
-        
         this.dbSystem = dbSystem;
     }
     
