@@ -174,13 +174,14 @@ static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection s
     }
     else
     {
-        services.AddDbContextPool<SalutationsEntityGateway>(builder =>
-        {
-            builder
-                .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
-                .EnableDetailedErrors()
-                .EnableSensitiveDataLogging();
-        });
+        throw new NotSupportedException("Waiting for Pomelo.EntityFrameworkCore.MySql");
+        // services.AddDbContextPool<SalutationsEntityGateway>(builder =>
+        // {
+        //     builder
+        //         .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+        //         .EnableDetailedErrors()
+        //         .EnableSensitiveDataLogging();
+        // });
     }
 }
 
