@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Configuration\Paramore.Brighter.Extensions.Configuration.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ.Async\Paramore.Brighter.MessagingGateway.RMQ.Async.csproj" />
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
   </ItemGroup>

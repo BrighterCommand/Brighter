@@ -12,6 +12,7 @@
     <PackageReference Include="Serilog.Sinks.Console" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Configuration\Paramore.Brighter.Extensions.Configuration.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ.Async\Paramore.Brighter.MessagingGateway.RMQ.Async.csproj" />
     <ProjectReference Include="..\Greetings\Greetings.csproj" />

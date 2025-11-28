@@ -25,9 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Greetings.Ports.Commands;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.Configuration;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Serilog;
@@ -44,6 +46,11 @@ namespace GreetingsSender
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
                 .CreateLogger();
+
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsetting.json")
+                .AddEnvironmentVariables()
+                .Build();
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
@@ -77,7 +84,7 @@ namespace GreetingsSender
                 .AddBrighter()
                 .AddProducers((configure) =>
                 {
-                    configure.ProducerRegistry = producerRegistry;
+                    configure.ProducerRegistry = configuration.CreateProducerRegistry();
                     configure.MaxOutStandingMessages = 5;
                     configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                 })
