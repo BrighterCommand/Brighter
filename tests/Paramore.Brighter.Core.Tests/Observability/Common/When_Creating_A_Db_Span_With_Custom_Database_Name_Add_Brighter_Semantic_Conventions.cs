@@ -121,7 +121,7 @@ public class BrighterSemanticConventionsDbSpanWithCustomNameTests
             Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbInstanceId && t.Value == dbInstanceId);
             Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.Add.ToSpanName());
             Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
-            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.MySql.ToDbName());
+            Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == databaseSystemName);
             Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);
             Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.DbUser && t.Value == "sa");
             Assert.Contains(childSpan.Tags, t => t.Key == BrighterSemanticConventions.NetworkPeerAddress && t.Value == "10.1.2.80");
