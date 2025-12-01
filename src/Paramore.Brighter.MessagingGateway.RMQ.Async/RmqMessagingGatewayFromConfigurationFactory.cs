@@ -94,6 +94,18 @@ public class RmqMessagingGatewayFromConfigurationFactory : IAmMessagingGatewayFr
         return new RmqMessageConsumerFactory(connection);
     }
 
+    public IAmAProducerRegistryFactory CreateProducerRegistryFactory(IAmAConfiguration configuration, string? name,
+        string? sectionName)
+    {
+        var rabbitMqConfiguration = GetRabbitMqConfiguration(configuration, name ?? string.Empty, sectionName);
+        var connection = rabbitMqConfiguration.Connection.ToMessagingGatewayConnection();
+
+        return new RmqProducerRegistryFactory(connection,
+            rabbitMqConfiguration.Publications
+                .Select(x => x.ToPublication())
+                .ToArray());
+    }
+    
     public IAmAMessageProducerFactory CreateMessageProducerFactory(IAmAConfiguration configuration,
         string? name,
         string? sectionName)
@@ -102,7 +114,9 @@ public class RmqMessagingGatewayFromConfigurationFactory : IAmMessagingGatewayFr
         var connection = rabbitMqConfiguration.Connection.ToMessagingGatewayConnection();
 
         return new RmqMessageProducerFactory(connection,
-            rabbitMqConfiguration.Publications.Select(x => x.ToPublication()));
+            rabbitMqConfiguration.Publications
+                .Select(x => x.ToPublication())
+                .ToArray());
     }
 
     /// <summary>
@@ -219,7 +233,7 @@ public class RmqMessagingGatewayFromConfigurationFactory : IAmMessagingGatewayFr
         /// Gets or sets the RabbitMQ gateway connection configuration.
         /// </summary>
         /// <value>A <see cref="GatewayConnection"/> containing connection details for RabbitMQ.</value>
-        public GatewayConnection Connection { get; set; } = null!;
+        public GatewayConnection Connection { get; set; } = new();
         
         /// <summary>
         /// Gets or sets the list of RabbitMQ subscriptions.

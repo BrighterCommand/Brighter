@@ -56,18 +56,8 @@ public interface IAmMessagingGatewayFromConfigurationFactory
     /// </remarks>
     IAmAMessageConsumerFactory CreateMessageConsumerFactory(IAmAConfiguration configuration, string? name, string? sectionName);
     
-    /// <summary>
-    /// Creates a producer registry factory from the provided configuration source.
-    /// </summary>
-    /// <param name="configuration">The <see cref="IAmAConfiguration"/> containing the producer registry factory settings.</param>
-    /// <param name="name">The optional name for named configuration instances, allowing multiple configurations for the same provider.</param>
-    /// <param name="sectionName">The optional override for the configuration section name. If null, uses the provider's default section name.</param>
-    /// <returns>An <see cref="IAmAProducerRegistryFactory"/> instance that creates producer registries for sending messages.</returns>
-    /// <remarks>
-    /// The producer registry factory creates registries that manage message producers (publishers) for sending
-    /// messages to the transport. Configuration includes connection settings, publication details, and producer-specific
-    /// options like confirmation mode, persistence settings, and routing strategies.
-    /// </remarks>
+    IAmAProducerRegistryFactory CreateProducerRegistryFactory(IAmAConfiguration configuration, string? name, string? sectionName);
+    
     IAmAMessageProducerFactory CreateMessageProducerFactory(IAmAConfiguration configuration, string? name, string? sectionName);
 
     /// <summary>

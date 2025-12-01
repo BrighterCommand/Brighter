@@ -35,90 +35,63 @@ using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Serilog;
 using Serilog.Extensions.Logging;
 
-namespace GreetingsSender
+namespace GreetingsSender;
+
+static class Program
 {
-    static class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .CreateLogger();
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+            .CreateLogger();
 
-            var configuration = new ConfigurationBuilder()
-                .AddJsonFile("appsetting.json")
-                .AddEnvironmentVariables()
-                .Build();
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .AddEnvironmentVariables()
+            .Build();
 
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
 
-            var rmqConnection = new RmqMessagingGatewayConnection
+        serviceCollection
+            .AddBrighter()
+            .AddProducers((configure) =>
             {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
-            };
+                configure.ProducerRegistry = configuration.CreateProducerRegistry<RmqProducerRegistryFactory>("messaging");
+                configure.MaxOutStandingMessages = 5;
+                configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+            })
+            .UsePublicationFinder<CustomPublicationFinder>()
+            .AutoFromAssemblies();
 
-            var producerRegistry = new RmqProducerRegistryFactory(
-                rmqConnection,
-                [
-                    new()
-                    {
-                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        MakeChannels =OnMissingChannel.Create,
-                        Topic = new RoutingKey("greeting.event"),
-                        RequestType = typeof(GreetingEvent)
-                    },
-                    new()
-                    {
-                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        MakeChannels =OnMissingChannel.Create,
-                        Topic = new RoutingKey("farewell.event"),
-                        RequestType = typeof(FarewellEvent)
-                    }
-                ]).Create();
-            
-            serviceCollection
-                .AddBrighter()
-                .AddProducers((configure) =>
-                {
-                    configure.ProducerRegistry = configuration.CreateProducerRegistry();
-                    configure.MaxOutStandingMessages = 5;
-                    configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
-                })
-                .UsePublicationFinder<CustomPublicationFinder>()
-                .AutoFromAssemblies();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
-
-            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-
-            commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
-            commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
-        }
+        commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
+        commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
     }
+}
 
-    public class CustomPublicationFinder : FindPublicationByPublicationTopicOrRequestType
+public class CustomPublicationFinder : FindPublicationByPublicationTopicOrRequestType
+{
+    private static readonly Dictionary<Type, string> s_typeRouteMapper = new()
     {
-        private static readonly Dictionary<Type, string> s_typeRouteMapper = new()
-        {
-            [typeof(GreetingEvent)] = "greeting.event",
-            [typeof(FarewellEvent)] = "farewell.event"
-        };
+        [typeof(GreetingEvent)] = "greeting.event",
+        [typeof(FarewellEvent)] = "farewell.event"
+    };
 
-        public override Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext context)
+    public override Publication Find<TRequest>(IAmAProducerRegistry registry, RequestContext context)
+    {
+        if (s_typeRouteMapper.TryGetValue(typeof(TRequest), out var topic))
         {
-            if (s_typeRouteMapper.TryGetValue(typeof(TRequest), out var topic))
-            {
-                // If you have a tenant topic you could have this 
-                // MAP: [typeof(A), "some-topic-{tenant}"
-                // topic.Replace("{tenant}", tenantContext.Tenant)
-                return registry.LookupBy(topic).Publication;
-            }
-            
-            return base.Find<TRequest>(registry, context);
+            // If you have a tenant topic you could have this 
+            // MAP: [typeof(A), "some-topic-{tenant}"
+            // topic.Replace("{tenant}", tenantContext.Tenant)
+            return registry.LookupBy(topic).Publication;
         }
+            
+        return base.Find<TRequest>(registry, context);
     }
 }

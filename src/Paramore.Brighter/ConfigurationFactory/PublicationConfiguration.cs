@@ -192,7 +192,7 @@ public abstract class PublicationConfiguration
         {
             var types = assembly.GetTypes();
             var type = types.FirstOrDefault(x => x.FullName == RequestType);
-            if (type != null && type.IsClass && !type.IsAbstract)
+            if (type is { IsClass: true })
             {
                 return type;
             }

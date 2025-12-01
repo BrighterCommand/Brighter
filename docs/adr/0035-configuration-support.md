@@ -463,28 +463,121 @@ This approach ensures that Brighter components can be configured through:
 - Standard connection strings for simple scenarios
 
 
-### Service Collection Integration
+### End-to-End Configuration Example
 
-```csharp
-// appsettings.json
+Here is a practical example of how to configure a sender and a receiver using `IConfiguration`.
+
+#### Sender Configuration
+
+The sender application sends `GreetingEvent` and `FarewellEvent` messages.
+
+**`appsettings.json`**
+
+```json
 {
   "Brighter": {
     "RabbitMQ": {
-        "Connection": { "AmqpUri": { "Uri": "amqp://guest:guest@localhost:5672" } }
+      "Connection": {
+        "Exchange": {
+          "Name": "paramore.brighter.exchange"
+        }
+      },
+      "Publications":[
+        {
+          "WaitForConfirmsTimeOutInMilliseconds": 1000,
+          "Topic": "greeting.event",
+          "RequestType": "Greetings.Ports.Commands.GreetingEvent"
+        },
+        {
+          "WaitForConfirmsTimeOutInMilliseconds": 1000,
+          "Topic": "farewell.event",
+          "RequestType": "Greetings.Ports.Commands.FarewellEvent"
+        }
+      ]
     }
   }
 }
+```
 
-// Program.cs
-builder.Services.AddConsumers(opt => 
+**`Program.cs`**
+
+```csharp
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json")
+    .Build();
+
+var serviceCollection = new ServiceCollection();
+
+serviceCollection
+    .AddBrighter()
+    .AddProducers((configure) =>
     {
-        opt.Subscriptions = builder.Configuration.CreateSubscription<RmqSubscription>();
-        opt.DefaultChannelFactory = builder.Configuration.CreateChannelFactory<ChannelFactory>();
+        configure.ProducerRegistry = configuration.CreateProducerRegistry<RmqProducerRegistryFactory>("messaging");
     })
-    .AddProducers(opt => 
+    .AutoFromAssemblies();
+
+var serviceProvider = serviceCollection.BuildServiceProvider();
+var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
+
+commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
+commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
+```
+
+#### Receiver Configuration
+
+The receiver application listens for `GreetingEvent` and `FarewellEvent` messages.
+
+**`appsettings.json`**
+
+```json
+{
+  "Brighter": {
+    "RabbitMq": {
+      "Connection": {
+        "Exchange": {
+          "Name": "paramore.brighter.exchange"
+        }
+      },
+      "Subscriptions":[
+        {
+          "SubscriptionName": "paramore.example.greeting",
+          "ChannelName": "greeting.event",
+          "RoutingKey": "greeting.event",
+          "RequestType": "Greetings.Ports.Commands.GreetingEvent"
+        },
+        {
+          "SubscriptionName": "paramore.example.farewell",
+          "ChannelName": "farewell.event",
+          "RoutingKey": "farewell.event",
+          "RequestType": "Greetings.Ports.Commands.FarewellEvent"
+        }
+      ]
+    }
+  }
+}
+```
+
+**`Program.cs`**
+
+```csharp
+var host = new HostBuilder()
+    .ConfigureAppConfiguration(c => c
+        .AddJsonFile("appsettings.json"))
+    .ConfigureServices((host, services) =>
     {
-        opt.ProducerRegistry = builder.Configuration.CreateProducerRegistry<RmqProducerRegistry>();
-    });
+        services.AddConsumers(options =>
+            {
+                options.Subscriptions = host.Configuration.CreateSubscriptions<RmqSubscription>("messaging",
+                        assemblies: [typeof(GreetingEvent).Assembly])
+                    .ToArray(); 
+            })
+            .AutoFromAssemblies();
+
+        services.AddHostedService<ServiceActivatorHostedService>();
+    })
+    .Build();
+
+await host.RunAsync();
 ```
 
 ## Consequences

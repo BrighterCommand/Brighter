@@ -46,39 +46,27 @@ public static class ConfigurationExtensions
         return (T)factory.CreateMessageConsumerFactory(new MicrosoftConfiguration(configuration), name, sectionName);
     }
 
-    public static Subscription[] CreateSubscriptions(this IConfiguration configuration, 
+    public static IEnumerable<Subscription> CreateSubscriptions<T>(this IConfiguration configuration, 
         string? name = null, 
-        string? sectionName = null)
+        string? sectionName = null,
+        Assembly[]? assemblies = null)
+    where T : Subscription
     {
         var cfg = new MicrosoftConfiguration(configuration);
-        var factories = GetAll<IAmMessagingGatewayFromConfigurationFactory>();
-        var subscriptions = new List<Subscription>();
-
-        foreach (var factory in factories)
-        {
-            subscriptions.AddRange(factory.CreateSubscriptions(cfg, name, sectionName));
-        }
-
-        return subscriptions.ToArray();
+        var factory = Get<IAmMessagingGatewayFromConfigurationFactory>(typeof(T).Assembly);
+        return factory.CreateSubscriptions(cfg, name, sectionName);
     }
-
-    public static IAmAProducerRegistry CreateProducerRegistry(this IConfiguration configuration,
+    
+    public static IAmAProducerRegistry  CreateProducerRegistry<T>(this IConfiguration configuration,
         string? name = null,
         string? sectionName = null)
+        where T: class, IAmAProducerRegistryFactory 
     {
         var cfg = new MicrosoftConfiguration(configuration);
-        var factories = GetAll<IAmMessagingGatewayFromConfigurationFactory>()
-            .ToList();
-        var messageProducerFactories = new List<IAmAMessageProducerFactory>();
-        
-        foreach (var factory in factories)
-        {
-            messageProducerFactories.Add(factory.CreateMessageProducerFactory(cfg, name, sectionName));
-        }
-
-        return new CombinedProducerRegistryFactory(messageProducerFactories.ToArray())
-            .Create();
+        var factory = Get<IAmMessagingGatewayFromConfigurationFactory>(typeof(T).Assembly);
+        return factory.CreateProducerRegistryFactory(cfg, name, sectionName).Create();
     }
+    
 
     /// <summary>
     /// Discovers and instantiates an implementation of the specified interface from the given assembly.
@@ -114,16 +102,19 @@ public static class ConfigurationExtensions
     private static IEnumerable<T> GetAll<T>()
     {
         var @interface = typeof(T);
-        foreach (var type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(x => x.GetTypes()))
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            if (!type.IsClass || type.IsAbstract)
+            foreach (var type in assembly.GetTypes())
             {
-                continue;
-            }
+                if (!type.IsClass || type.IsAbstract)
+                {
+                    continue;
+                }
 
-            if (@interface.IsAssignableFrom(type))
-            {
-                yield return (T)Activator.CreateInstance(type)!;
+                if (@interface.IsAssignableFrom(type))
+                {
+                    yield return (T)Activator.CreateInstance(type)!;
+                }
             }
         }
     }
