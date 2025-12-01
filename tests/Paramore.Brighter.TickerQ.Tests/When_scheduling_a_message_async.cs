@@ -73,6 +73,7 @@ public class TickerQSchedulerMessageAsyncTests : IClassFixture<TickerQMessageTes
 
         await Task.Delay(TimeSpan.FromSeconds(4));
 
+        
         Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
         Assert.Equivalent(message, await _fixture.Outbox.GetAsync(message.Id, new RequestContext()));
     }

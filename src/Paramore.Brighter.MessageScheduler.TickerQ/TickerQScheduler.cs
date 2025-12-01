@@ -27,8 +27,9 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using TickerQ.Utilities;
+using TickerQ.Utilities.Entities;
+using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
-using TickerQ.Utilities.Models.Ticker;
 
 namespace Paramore.Brighter.MessageScheduler.TickerQ
 {
@@ -40,7 +41,8 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
     /// <param name="getOrCreateSchedulerId">Function to generate or retrieve a scheduler identifier </param>
     /// <param name="parseSchedulerId">Function to parse a string scheduler ID into a Guid</param>
     public class TickerQScheduler(
-        ITimeTickerManager<TimeTicker> timeTickerManager,
+        ITimeTickerManager<TimeTickerEntity> timeTickerManager,
+        ITickerPersistenceProvider<TimeTickerEntity, CronTickerEntity> tickerPersistenceProvider,
         TimeProvider timeProvider,
         Func<string> getOrCreateSchedulerId,
         Func<string, Guid> parseSchedulerId
@@ -71,8 +73,12 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         public async Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at, CancellationToken cancellationToken = default)
         {
             var id = parseSchedulerId(schedulerId);
-            var result = await timeTickerManager.UpdateAsync(id, ua => ua.ExecutionTime = at.UtcDateTime, cancellationToken);
-            return result.IsSucceded;
+
+            var ticker = await tickerPersistenceProvider.GetTimeTickerById(id);
+            ticker.ExecutionTime = at.UtcDateTime;
+            var result = await timeTickerManager.UpdateAsync(ticker, cancellationToken);
+
+            return result.IsSucceeded;
         }
 
         /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.TimeSpan,System.Threading.CancellationToken)"/>
@@ -174,7 +180,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
             return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
         }
 
-        private TimeTicker CreateTimeTicker<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, bool isAsync) where TRequest : class, IRequest
+        private TimeTickerEntity CreateTimeTicker<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, bool isAsync) where TRequest : class, IRequest
         {
             var id = getOrCreateSchedulerId();
             var tickerRequest = JsonSerializer.Serialize(
@@ -188,7 +194,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
                  },
                  JsonSerialisationOptions.Options);
 
-            var ticker = new TimeTicker
+            var ticker = new TimeTickerEntity
             {
                 Id = parseSchedulerId(id),
                 ExecutionTime = at.UtcDateTime,
@@ -197,13 +203,13 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
             };
             return ticker;
         }
-        private TimeTicker CreateTimeTicker(Message message, DateTimeOffset at, bool isAsync)
+        private TimeTickerEntity CreateTimeTicker(Message message, DateTimeOffset at, bool isAsync)
         {
             var id = getOrCreateSchedulerId();
             var tickerRequest = JsonSerializer.Serialize(
                  new FireSchedulerMessage { Id = id, Async = isAsync, Message = message },
                  JsonSerialisationOptions.Options);
-            var ticker = new TimeTicker
+            var ticker = new TimeTickerEntity
             {
                 Id = parseSchedulerId(id),
                 ExecutionTime = at.UtcDateTime,
