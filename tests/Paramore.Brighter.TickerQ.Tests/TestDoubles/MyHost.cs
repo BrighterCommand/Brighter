@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace ParamoreBrighter.TickerQ.Tests.TestDoubles
 {
+    /*
     public class MyHost : IHost
     {
         public IServiceProvider Services { get; set; }
@@ -29,4 +30,5 @@ namespace ParamoreBrighter.TickerQ.Tests.TestDoubles
             throw new NotImplementedException();
         }
     }
+    */
 }

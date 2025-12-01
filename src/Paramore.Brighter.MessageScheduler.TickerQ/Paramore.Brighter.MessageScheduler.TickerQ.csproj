@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TickerQ" />
+    <PackageReference Include="TickerQ"/>
   </ItemGroup>
 
 </Project>

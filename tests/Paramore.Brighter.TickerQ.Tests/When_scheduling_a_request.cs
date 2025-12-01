@@ -14,7 +14,6 @@ namespace Paramore.Brighter.TickerQ.Tests
             _fixture = tickerQTestFixture;
         }
 
-        #region Scheduler
         [Fact]
         public void When_scheduler_send_request_with_a_datetimeoffset()
         {
@@ -182,9 +181,6 @@ namespace Paramore.Brighter.TickerQ.Tests
             Assert.NotEqual(Message.Empty, _fixture.Outbox.Get(req.Id, new RequestContext()));
         }
 
-        #endregion
-
-        #region Rescheduler
 
         [Theory]
         [InlineData(RequestSchedulerType.Send)]
@@ -261,10 +257,6 @@ namespace Paramore.Brighter.TickerQ.Tests
             Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
         }
 
-        #endregion
-
-        #region Cancel
-
         [Theory]
         [InlineData(RequestSchedulerType.Send)]
         [InlineData(RequestSchedulerType.Post)]
@@ -337,8 +329,6 @@ namespace Paramore.Brighter.TickerQ.Tests
             Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
             Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
         }
-
-        #endregion
 
         public void Dispose()
         {

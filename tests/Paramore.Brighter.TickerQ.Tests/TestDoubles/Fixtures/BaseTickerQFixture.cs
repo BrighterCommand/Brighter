@@ -1,15 +1,16 @@
-﻿using System;
-using System.Transactions;
+﻿using System.Transactions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.MessageScheduler.TickerQ;
 using Paramore.Brighter.Observability;
-using ParamoreBrighter.TickerQ.Tests.TestDoubles;
 using Polly;
 using Polly.Registry;
 using TickerQ.DependencyInjection;
-using TickerQ.DependencyInjection.Hosting;
+using TickerQ.Utilities.Entities;
 using TickerQ.Utilities.Interfaces.Managers;
-using TickerQ.Utilities.Models.Ticker;
+using TickerQ.EntityFrameworkCore.DependencyInjection;
+using TickerQ.EntityFrameworkCore.DbContextFactory;
+using TickerQ.Utilities.Interfaces;
 
 namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 {
@@ -32,12 +33,23 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
             ReceivedMessages = new();
             RoutingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
             TimeProvider = TimeProvider.System;
+            
             _serviceCollection = new ServiceCollection();
             _serviceCollection.AddLogging();
-            _serviceCollection.AddTickerQ();
+            _serviceCollection.AddTickerQ(options =>
+            {
+                options.AddOperationalStore(efConfiguration =>
+                {
+                    efConfiguration.UseTickerQDbContext<TickerQDbContext>(optionsBuilder =>
+                    {
+                        optionsBuilder.UseSqlite("Data Source=:memory:;Version=3;New=True;");
+                    });
+                });
+            });
+            
             _serviceCollection.AddSingleton(TimeProvider);
+            
             var handlerFactory = GetHandlerFactory();
-
             var subscriberRegistry = GetSubscriberServiceRegistry();
 
             var policyRegistry = new PolicyRegistry
@@ -70,9 +82,10 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 
             _serviceCollection.AddSingleton(sp =>
             {
-                var tickerManager = sp.GetRequiredService<ITimeTickerManager<TimeTicker>>();
+                var tickerManager = sp.GetRequiredService<ITimeTickerManager<TimeTickerEntity>>();
                 var timeProvider = sp.GetRequiredService<TimeProvider>();
-                return new TickerQSchedulerFactory(tickerManager, timeProvider);
+                var persistenceProvider = sp.GetRequiredService<ITickerPersistenceProvider<TimeTickerEntity, CronTickerEntity>>();
+                return new TickerQSchedulerFactory(tickerManager, persistenceProvider, timeProvider);
             });
 
             _serviceCollection.AddSingleton<IAmAMessageSchedulerFactory>(sp =>
@@ -85,22 +98,22 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
             {
                 var scheduler = sp.GetRequiredService<TickerQSchedulerFactory>();
                 return new CommandProcessor(
-               subscriberRegistry,
-               handlerFactory,
-               new InMemoryRequestContextFactory(),
-               policyRegistry,
-               new ResiliencePipelineRegistry<string>(),
-               outboxBus,
-               scheduler);
+                    subscriberRegistry,
+                    handlerFactory,
+                    new InMemoryRequestContextFactory(),
+                    policyRegistry,
+                    new ResiliencePipelineRegistry<string>(),
+                    outboxBus,
+                    scheduler
+                    );
             });
 
             CommandProcessor.ClearServiceBus();
             ServiceProvider = _serviceCollection.BuildServiceProvider();
             Processor = ServiceProvider.GetRequiredService<IAmACommandProcessor>();
             SchedulerFactory = ServiceProvider.GetRequiredService<TickerQSchedulerFactory>();
-            var myHost = new MyHost() { Services = ServiceProvider };
-            myHost.UseTickerQ();
         }
+        
         protected abstract IAmAHandlerFactory GetHandlerFactory();
         protected abstract IAmASubscriberRegistry GetSubscriberServiceRegistry();
         protected abstract IAmAMessageMapperRegistry GetMapperRegistery();
