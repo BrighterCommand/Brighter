@@ -28,7 +28,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
     public class RmqSubscription : Subscription
     {
-
         /// <summary>
         /// The name of  the queue to send rejects messages to
         /// </summary>
