@@ -11,7 +11,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.Sync;
 
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
 {
-    private readonly IAmAnOutboxProvider _outboxProvider;
+    private readonly IAmAnOutboxProviderSync _outboxProvider;
     private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 

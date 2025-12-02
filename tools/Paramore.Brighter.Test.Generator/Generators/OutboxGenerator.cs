@@ -44,8 +44,13 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                     outboxConfiguration);
                 
                 await GenerateAsync(configuration, 
-                    Path.Combine("Outbox", prefix, "Sync"),
+                    Path.Combine("Outbox", prefix, "Generated", "Sync"),
                     Path.Combine("Outbox", "Sync"),
+                    outboxConfiguration);
+                
+                await GenerateAsync(configuration, 
+                    Path.Combine("Outbox", prefix, "Generated", "Async"),
+                    Path.Combine("Outbox", "Async"),
                     outboxConfiguration);
             }
         }

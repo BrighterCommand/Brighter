@@ -394,7 +394,7 @@ public abstract class OutboxTest<TTransaction> : IDisposable
         Assert.Equal(message.Header.DataSchema,   storedMessage.Header.DataSchema);
         Assert.Equal(message.Header.Subject,      storedMessage.Header.Subject);
         Assert.Equal(message.Header.TraceParent,  storedMessage.Header.TraceParent);
-        Assert.Equal(message.Header.TraceState,   storedMessage.Header.TraceState);        
+        Assert.Equal(message.Header.TraceState,   storedMessage.Header.TraceState);
     }
     
      [Fact]

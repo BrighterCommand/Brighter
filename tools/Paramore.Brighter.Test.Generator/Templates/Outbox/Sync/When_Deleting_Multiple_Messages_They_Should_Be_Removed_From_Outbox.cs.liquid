@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace {{ Namespace }}.Outbox{{ Prefix }}.Sync;
 
-public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
+public class WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutbox : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
     private readonly IAmAMessageFactory _messageFactory;
@@ -24,7 +24,7 @@ public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
     }
 
     [Fact]
-    public void When_Deleting_One_Message_It_Should_Be_Removed_From_Outbox()
+    public void WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutbox()
     {
         // Arrange
         var context = new RequestContext();
@@ -42,7 +42,7 @@ public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
         outbox.Add(secondMessage, context);
         outbox.Add(thirdMessage, context);
         
-        outbox.Delete([firstMessage.Id], context);
+        outbox.Delete([firstMessage.Id, secondMessage.Id, thirdMessage.Id], context);
         
         // Assert
         var messages = outbox
@@ -50,8 +50,8 @@ public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
             .ToArray();
         
         Assert.DoesNotContain(firstMessage.Id, messages.Select(x => x.Id));
-        Assert.Contains(secondMessage.Id, messages.Select(x => x.Id));
-        Assert.Contains(thirdMessage.Id, messages.Select(x => x.Id));   
+        Assert.DoesNotContain(secondMessage.Id, messages.Select(x => x.Id));
+        Assert.DoesNotContain(thirdMessage.Id, messages.Select(x => x.Id));   
     }
 
     public void Dispose()

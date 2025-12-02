@@ -3,28 +3,29 @@
 // </auto-generated>
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text;
+namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Async;
 
 /// <summary>
 /// Provider for managing outbox storage and creating outbox instances.
 /// </summary>
-public interface IAmAnOutboxProvider
+public interface IAmAnOutboxProviderAsync
 {
     /// <summary>
     /// Creates the outbox data store.
     /// </summary>
-    void CreateStore();
+    Task CreateStoreAsync();
 
     /// <summary>
     /// Deletes the outbox data store and removes the specified messages.
     /// </summary>
     /// <param name="messages">The messages to remove from the store.</param>
-    void DeleteStore(IEnumerable<Message> messages);
+    Task DeleteStoreAsync(IEnumerable<Message> messages);
 
     /// <summary>
     /// Creates a new outbox instance for storing and retrieving messages.
     /// </summary>
     /// <returns>A new <see cref="IAmAnOutboxSync{TMessage, TTransaction}"/> instance.</returns>
-    IAmAnOutboxSync<Message, System.Data.Common.DbTransaction> CreateOutbox();
+    IAmAnOutboxAsync<Message, System.Data.Common.DbTransaction> CreateOutboxAsync();
 }

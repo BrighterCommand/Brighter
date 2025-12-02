@@ -4,6 +4,10 @@
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "PostgresTextOutboxProvider"
+    },
+    "Binary": {
+      "Transaction": "System.Data.Common.DbTransaction",
+      "OutboxProvider": "PostgresBinaryOutboxProvider"
     }
   }
 }

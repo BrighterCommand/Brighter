@@ -3,14 +3,14 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.Async;
-using Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.Sync;
+using Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Async;
+using Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Sync;
 
-namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text;
+namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary;
 
-public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
 {
-    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, $"Table{Uuid.New():N}");
+    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, $"Table{Uuid.New():N}", binaryMessagePayload: true);
     
     public void CreateStore()
     {
@@ -35,11 +35,6 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
         return new PostgreSqlOutbox(_configuration);
     }
 
-    public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
-    {
-        return new PostgreSqlOutbox(_configuration);
-    }
-    
     public async Task CreateStoreAsync()
     {
         await using var connection = new NpgsqlConnection(_configuration.ConnectionString);
@@ -49,12 +44,13 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
         await command.ExecuteNonQueryAsync();
     }
 
-    public async Task DeleteStoreAsync(IEnumerable<Message> messages)
+    public Task DeleteStoreAsync(IEnumerable<Message> messages)
     {
-        await using var connection = new NpgsqlConnection(_configuration.ConnectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE {_configuration.OutBoxTableName}";
-        await command.ExecuteNonQueryAsync();
+        throw new System.NotImplementedException();
+    }
+
+    public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
+    {
+        throw new System.NotImplementedException();
     }
 }
