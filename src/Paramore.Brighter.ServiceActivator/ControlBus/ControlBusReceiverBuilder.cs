@@ -252,6 +252,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                  return new Message(){Header = new MessageHeader("",new RoutingKey(""), MessageType.MT_NONE)};
             }
 
+            public IEnumerable<Message> Get(IEnumerable<Id> messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+            {
+                return [];
+            }
+
             public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
             {
                 //ignore
@@ -284,6 +289,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince)
             {
                return []; 
+            }
+
+            public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
+            {
+                return 0;
             }
         }
     }

@@ -9,6 +9,7 @@ services:
       - mysql-data:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: BrighterTests
 
 volumes:
   mysql-data:

@@ -38,7 +38,6 @@ public enum MessagingSystem
     PubSub,
     RabbitMQ,
     RocketMQ,
-    ServiceBus,
-    Pulsar
+    ServiceBus
 }
 

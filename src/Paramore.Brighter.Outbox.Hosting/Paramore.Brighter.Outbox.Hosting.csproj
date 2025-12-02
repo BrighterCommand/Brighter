@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Hosted services for Paramore.Brighter Outbox. Provides background services for outbox sweeping and archiving, enabling automatic dispatching of unprocessed messages and archival of old outbox entries.</Description>
+    <Authors>Paul Reardon</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Outbox;Hosted Service;Background Service;Sweeper;Archiver;Command;Event;Command Processor;Messaging;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
@@ -13,8 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
   </ItemGroup>
 
 </Project>

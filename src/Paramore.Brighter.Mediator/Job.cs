@@ -163,7 +163,7 @@ public class Job<TData> : Job
 
         lock (LockObject)
         {
-            var success = _pendingResponses.Remove(eventType, out _);
+            var success = _pendingResponses.TryRemove(eventType, out _);
             _step.OnCompletion?.Invoke();
             _step = _step.Next;
             if (success) State = JobState.Running;

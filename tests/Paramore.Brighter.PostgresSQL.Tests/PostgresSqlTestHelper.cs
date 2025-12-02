@@ -2,9 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.Outbox.PostgreSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests
 {
@@ -13,14 +11,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests
         private readonly bool _binaryMessagePayload;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlTestHelper>();
         private readonly PostgreSqlSettings _postgreSqlSettings;
-        private string _tableName;
-        private readonly object syncObject = new object();
+        private readonly string _tableName;
+        private readonly object _syncObject = new();
 
-        public RelationalDatabaseConfiguration Configuration 
-            => new(_postgreSqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
-        
-        public RelationalDatabaseConfiguration InboxConfiguration 
-            => new(_postgreSqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+        public RelationalDatabaseConfiguration Configuration => new(PostgreSqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName, binaryMessagePayload: _binaryMessagePayload);
 
         public PostgresSqlTestHelper(bool binaryMessagePayload = false)
         {
@@ -35,18 +29,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests
         }
 
 
-        public void SetupMessageDb()
-        {
-            CreateDatabase();
-            CreateOutboxTable();
-        }
-        
-        public void SetupCommandDb()
-        {
-            CreateDatabase();
-            CreateInboxTable();
-        }
-
         public void SetupDatabase()
         {
             CreateDatabase();
@@ -54,10 +36,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests
         
         private void CreateDatabase()
         {
-            lock (syncObject)
+            lock (_syncObject)
             {
                 var createDatabase = false;
-                using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString))
+                using (var connection = new NpgsqlConnection(PostgreSqlSettings.TestsMasterConnectionString))
                 {
                     connection.Open();
                     using (var command = connection.CreateCommand())
@@ -73,7 +55,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
                 if (createDatabase)
                     try
                     {
-                        using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString);
+                        using var connection = new NpgsqlConnection(PostgreSqlSettings.TestsMasterConnectionString);
                         connection.Open();
                         using var command = connection.CreateCommand();
                         command.CommandText = @"CREATE DATABASE brightertests";
@@ -84,53 +66,17 @@ namespace Paramore.Brighter.PostgresSQL.Tests
                         if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                         {
                             s_logger.LogWarning("PostgresSQL: We tried our best with errors around already created database, but failed");
-                            return;
                         }
 
                     }
             }
         }
-
-        private void CreateOutboxTable()
-        {
-            using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
-            _tableName = $"message_{_tableName}";
-            var createTableSql = PostgreSqlOutboxBuilder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
-
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = createTableSql;
-            command.ExecuteNonQuery();
-        }
-        public void CreateInboxTable()
-        {
-            using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
-            _tableName = $"command_{_tableName}";
-            var createTableSql = PostgreSqlInboxBuilder.GetDDL(_tableName);
-
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = createTableSql;
-            command.ExecuteNonQuery();
-        }
-
-        public void CleanUpDb()
-        {
-            using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
-            command.ExecuteNonQuery();
-        }
     }
-
 
     internal sealed class PostgreSqlSettings
     {
-        public string TestsBrighterConnectionString { get; set; }
-            = "Host=localhost;Username=postgres;Password=password;Database=brightertests;Include Error Detail=true;";
+        public static string TestsBrighterConnectionString  => "Host=localhost;Username=postgres;Password=password;Database=brightertests;Include Error Detail=true;";
 
-        public string TestsMasterConnectionString { get; set; }
-            = "Host=localhost;Username=postgres;Password=password;Include Error Detail=true;";
+        public static string TestsMasterConnectionString => "Host=localhost;Username=postgres;Password=password;Include Error Detail=true;";
     }
 }

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "ask": [],
+    "deny": [
+      "Read(./.env*)",
+      "Read(./secrets/**)",
+      "Read(./config/**)",
+      "Read(./**/credentials*)",
+      "Read(./**/*.key)",
+      "Read(./**/*.pem)",
+      "WebFetch",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(ssh:*)"
+    ]
+  }
+}

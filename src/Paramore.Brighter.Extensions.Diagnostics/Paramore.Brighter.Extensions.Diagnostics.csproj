@@ -1,7 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>OpenTelemetry diagnostics integration for Paramore.Brighter Command Processor. Provides distributed tracing, metrics, and observability capabilities for command and event processing pipelines.</Description>
+    <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>OpenTelemetry;Diagnostics;Tracing;Metrics;Observability;Command;Event;Command Processor;Telemetry;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

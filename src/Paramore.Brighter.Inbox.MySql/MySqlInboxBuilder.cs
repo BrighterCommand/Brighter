@@ -31,15 +31,31 @@ namespace Paramore.Brighter.Inbox.MySql
     /// </summary>
     public class MySqlInboxBuilder
     {
-        private const string OutboxDDL = @"CREATE TABLE {0} 
+        private const string TextInboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
             ( 
-                `CommandId` VARCHAR(255) NOT NULL , 
-                `CommandType` VARCHAR(256) NOT NULL , 
-                `CommandBody` TEXT NOT NULL , 
-                `Timestamp` TIMESTAMP(4) NOT NULL , 
-                `ContextKey` VARCHAR(256)  NULL , 
+                `CommandId` VARCHAR(255) NOT NULL,
+                `CommandType` VARCHAR(256) NOT NULL,
+                `CommandBody` TEXT NOT NULL,
+                `Timestamp` TIMESTAMP(4) NOT NULL,
+                `ContextKey` VARCHAR(256)  NULL,
                 PRIMARY KEY (`CommandId`)
-            ) ENGINE = InnoDB;";
+            ) ENGINE = InnoDB;
+            """;
+
+        private const string BinaryInboxxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            ( 
+                `CommandId` VARCHAR(255) NOT NULL,
+                `CommandType` VARCHAR(256) NOT NULL,
+                `CommandBody` BLOB NOT NULL,
+                `Timestamp` TIMESTAMP(4) NOT NULL,
+                `ContextKey` VARCHAR(256)  NULL,
+                PRIMARY KEY (`CommandId`)
+            ) ENGINE = InnoDB;
+            """;
 
         const string InboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '{0}' AND table_name = '{1}') AS TableExists;";
 
@@ -48,9 +64,14 @@ namespace Paramore.Brighter.Inbox.MySql
         /// </summary>
         /// <param name="inboxTableName">The Inbox Table Name</param>
         /// <returns></returns>
-        public static string GetDDL(string inboxTableName)
+        public static string GetDDL(string inboxTableName, bool binaryMessage = false)
         {
-            return string.Format(OutboxDDL, inboxTableName);
+            if (binaryMessage)
+            {
+                return string.Format(BinaryInboxxDDL, inboxTableName);
+            }
+
+            return string.Format(TextInboxDDL, inboxTableName);
         }
 
         /// <summary>

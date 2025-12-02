@@ -34,6 +34,7 @@ using Azure.Messaging;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 using Polly;
 using Polly.Retry;
@@ -46,6 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
 {
     private readonly IServiceBusSenderProvider _serviceBusSenderProvider;
+    private readonly InstrumentationOptions _options;
     private AzureServiceBusPublication _publication;
     protected bool TopicCreated;
         
@@ -78,15 +80,18 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
     /// <param name="publication">Configuration of a producer</param>
     /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
+    /// <param name="options"></param>
     protected AzureServiceBusMessageProducer(
         IServiceBusSenderProvider serviceBusSenderProvider, 
         AzureServiceBusPublication publication, 
-        int bulkSendBatchSize = 10
+        int bulkSendBatchSize = 10,
+        InstrumentationOptions options = InstrumentationOptions.All
     )
     {
         _serviceBusSenderProvider = serviceBusSenderProvider;
         _publication = publication;
         _bulkSendBatchSize = bulkSendBatchSize;
+        _options = options;
     }
         
     /// <summary>
@@ -216,6 +221,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
                 "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}",
                 message.Header.Topic, delay, message.Body.Value, message.Id);
 
+            BrighterTracer.WriteProducerEvent(Span, "azure_service_bus", message, _options);
             var azureServiceBusMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
             if (delay == TimeSpan.Zero)
             {

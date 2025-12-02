@@ -415,7 +415,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName());
             tags.Add(BrighterSemanticConventions.DbName, info.dbName);
             tags.Add(BrighterSemanticConventions.DbTable, info.dbTable);
-            tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName());
+            tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystemName);
 
             if (!string.IsNullOrEmpty(info.dbStatement))
                 tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
@@ -814,7 +814,21 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="messagingSystem">Which <see cref="MessagingSystem"/> is the producer</param>
     /// <param name="message">The <see cref="Message"/> being produced</param>
     /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
-    public static void WriteProducerEvent(Activity? span, MessagingSystem messagingSystem, Message message,InstrumentationOptions instrumentationOptions)
+    public static void WriteProducerEvent(Activity? span, MessagingSystem messagingSystem, Message message, InstrumentationOptions instrumentationOptions)
+    {
+        WriteProducerEvent(span, messagingSystem.ToMessagingSystemName(), message, instrumentationOptions);
+    }
+    
+    /// <summary>
+    /// Writes a producer event to the current span
+    /// This is generic and requires details of the message and the transport (messaging system)
+    /// NOTE: Events are static, as we only need the instance state to create an activity
+    /// </summary>
+    /// <param name="span">The owning <see cref="Activity"/> to which we will write the event; nothing written if null</param>
+    /// <param name="messagingSystem">Which <see cref="MessagingSystem"/> is the producer</param>
+    /// <param name="message">The <see cref="Message"/> being produced</param>
+    /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
+    public static void WriteProducerEvent(Activity? span, string messagingSystem, Message message,InstrumentationOptions instrumentationOptions)
     {
         if (span == null) return;
 
@@ -822,9 +836,8 @@ public class BrighterTracer : IAmABrighterTracer
 
         if (instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
         {
-            tags.Add(BrighterSemanticConventions.MessagingOperationType,
-                CommandProcessorSpanOperation.Publish.ToSpanName());
-            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName());
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem);
             tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
             tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);

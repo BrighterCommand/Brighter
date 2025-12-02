@@ -130,26 +130,25 @@ public class AsyncCommandProcessorClearObservabilityTests
         Assert.Equal(parentActivity?.Id, createActivity.ParentId);
         Assert.Contains(createActivity.Tags, t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" });
 
-        
+        var events = createActivity.Events.ToList();
+
+        //retrieving the message should be an event on the batch
+        var message = _internalBus.Stream(new RoutingKey(_topic)).Single();
+        var getEvent = events.Single(e => e.Name == BoxDbOperation.Get.ToSpanName());
+        Assert.Contains(getEvent.Tags, a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false);
+        Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.OutboxType && a.Value as string == "async");
+        Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageId && a.Value as string == message.Id.Value);
+        Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestination && a.Value?.ToString() == message.Header.Topic.ToString());
+        Assert.Contains(getEvent.Tags, a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length);
+        Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageBody && a.Value as string == message.Body.Value);
+        Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageType && a.Value as string == message.Header.MessageType.ToString());
+        Assert.Contains(getEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && a.Value as string == message.Header.PartitionKey.Value);
+
         //there should be a clear span for each message id
         var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
         Assert.NotNull(clearActivity);
         Assert.Contains(clearActivity.Tags, t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" });
         Assert.Contains(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value == messageId.Value);
-
-        var events = clearActivity.Events.ToList();
-        
-        //retrieving the message should be an event
-        var message = _internalBus.Stream(new RoutingKey(_topic)).Single();
-        var depositEvent = events.Single(e => e.Name == BoxDbOperation.Get.ToSpanName());
-        Assert.Contains(depositEvent.Tags, a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false);
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.OutboxType && a.Value as string == "async");
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageId && a.Value as string == message.Id.Value);
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestination && a.Value?.ToString() == message.Header.Topic.ToString());
-        Assert.Contains(depositEvent.Tags, a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length);
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageBody && a.Value as string == message.Body.Value);
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageType && a.Value as string == message.Header.MessageType.ToString());
-        Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && a.Value as string == message.Header.PartitionKey.Value);
         
         //there should be a span in the Db for retrieving the message
         var outBoxActivity = _exportedActivities.Single(a => a.DisplayName == $"{BoxDbOperation.Get.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");

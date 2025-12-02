@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Quartz.NET integration for Paramore.Brighter Command Processor. Provides advanced message scheduling capabilities using Quartz.NET for background job processing, delayed message delivery, and complex recurring task scheduling.</Description>
+    <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Quartz;Quartz.NET;Scheduler;Message Scheduling;Delayed Messages;Command Processor;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

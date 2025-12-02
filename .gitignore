@@ -117,6 +117,7 @@ $tf/
 _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
+*.sln.DotSettings
 
 # JustCode is a .NET coding add-in
 .JustCode
@@ -246,6 +247,11 @@ ServiceFabricBackup/
 *.ldf
 *.ndf
 
+# SQLite files
+*.db
+*.sqlite
+*.sqlite3
+
 # Business Intelligence projects
 *.rdl.data
 *.bim.layout
@@ -331,3 +337,4 @@ ASALocalRun/
 broker/
 /zoo/
 .DS_Store
+.claude/settings.local.json

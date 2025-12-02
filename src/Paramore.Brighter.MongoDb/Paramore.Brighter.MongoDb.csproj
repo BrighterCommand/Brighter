@@ -1,6 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
+    <Description>MongoDB provider for Paramore.Brighter Command Processor. Provides base MongoDB connectivity and transaction management for inbox, outbox, and locking implementations.</Description>
+    <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>MongoDB;NoSQL;Database;Document Database;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -12,4 +17,5 @@
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver"/>
   </ItemGroup>
+
 </Project>

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Tranformers.Gcp;
+using Paramore.Brighter.Transformers.Gcp;
 using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;

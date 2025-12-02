@@ -47,15 +47,14 @@ namespace Paramore.Brighter.PostgreSql
         /// Commit the transaction
         /// </summary>
         /// <returns>An awaitable Task</returns>
-        public override Task CommitAsync(CancellationToken cancellationToken)
+        public override async Task CommitAsync(CancellationToken cancellationToken)
         {
             if (HasOpenTransaction)
             {
-                ((NpgsqlTransaction)Transaction!).CommitAsync(cancellationToken);
+                var transaction = (NpgsqlTransaction)Transaction!;
+                await transaction.CommitAsync(cancellationToken);
                 Transaction = null;
             }
-            
-            return Task.CompletedTask;
         }
 
         /// <summary>

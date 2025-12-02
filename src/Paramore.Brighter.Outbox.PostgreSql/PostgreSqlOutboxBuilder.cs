@@ -29,8 +29,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     /// </summary>
     public class PostgreSqlOutboxBuilder
     {
-        const string TextOutboxDdl = @"
-       CREATE TABLE {0}
+        private const string TextOutboxDdl =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
             (
                 Id bigserial PRIMARY KEY,
                 MessageId character varying(255) UNIQUE NOT NULL,
@@ -56,10 +57,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 DataRef character varying (255) NULL,
                 SpecVersion character varying (255) NULL
             );
-        ";
-        
-        const string BinaryOutboxDdl = @"
-       CREATE TABLE {0}
+            """;
+
+        private const string BinaryOutboxDdl =
+            """
+            CREATE TABLE {0}
             (
                 Id bigserial PRIMARY KEY,
                 MessageId character varying(255) UNIQUE NOT NULL,
@@ -85,8 +87,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 DataRef character varying (255) NULL,
                 SpecVersion character varying (255) NULL
             );
-        ";
-        
+            """;
+
         private const string OutboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG = '{0}' AND TABLE_NAME = '{1}')";
 
         /// <summary>

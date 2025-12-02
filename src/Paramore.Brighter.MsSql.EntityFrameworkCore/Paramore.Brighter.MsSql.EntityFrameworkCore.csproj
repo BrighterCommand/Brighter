@@ -1,22 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>This is the MsSql Connection provider to obtain the connection from Entity Framework Core.</Description>
+    <Description>Entity Framework Core integration for Microsoft SQL Server provider in Paramore.Brighter Command Processor. Provides connection and transaction providers to obtain SQL Server connections from Entity Framework Core DbContext.</Description>
     <Authors>Paul Reardon</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
-    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageTags>SQL Server;MSSQL;Entity Framework Core;EF Core;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
   </ItemGroup>
  
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
   </ItemGroup>
 
 </Project>
