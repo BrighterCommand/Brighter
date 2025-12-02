@@ -28,4 +28,16 @@ public interface IAmAnOutboxProviderAsync
     /// </summary>
     /// <returns>A new <see cref="IAmAnOutboxSync{TMessage, TTransaction}"/> instance.</returns>
     IAmAnOutboxAsync<Message, {{ Transaction }}> CreateOutboxAsync();
+
+    /// <summary>
+    /// Gets all the messages in the outbox.
+    /// </summary>
+    /// <returns>A list of all messages in the outbox.</returns>
+    Task<IEnumerable<Message>> GetAllMessagesAsync();
+
+    /// <summary>
+    /// Creates a new transaction provider.
+    /// </summary>
+    /// <returns>A new <see cref="IAmABoxTransactionProvider{TTransaction}"/> instance.</returns>
+    IAmABoxTransactionProvider<{{ Transaction }}> CreateTransactionProvider();
 }

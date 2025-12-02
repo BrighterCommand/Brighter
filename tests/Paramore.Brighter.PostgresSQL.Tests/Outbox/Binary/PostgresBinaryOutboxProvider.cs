@@ -38,7 +38,14 @@ public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutbox
 
     public IEnumerable<Message> GetAllMessages()
     {
-        throw new System.NotImplementedException();
+        var outbox = new PostgreSqlOutbox(_configuration);
+        return outbox.Get(new RequestContext());
+    }
+
+    public async Task<IEnumerable<Message>> GetAllMessagesAsync()
+    {
+        var outbox = new PostgreSqlOutbox(_configuration);
+        return await outbox.GetAsync(new RequestContext());
     }
 
     public IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
@@ -55,13 +62,17 @@ public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutbox
         await command.ExecuteNonQueryAsync();
     }
 
-    public Task DeleteStoreAsync(IEnumerable<Message> messages)
+    public async Task DeleteStoreAsync(IEnumerable<Message> messages)
     {
-        throw new System.NotImplementedException();
+        await using var connection = new NpgsqlConnection(_configuration.ConnectionString);
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"DROP TABLE {_configuration.OutBoxTableName}";
+        await command.ExecuteNonQueryAsync();
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        throw new System.NotImplementedException();
+        return new PostgreSqlOutbox(_configuration);
     }
 }

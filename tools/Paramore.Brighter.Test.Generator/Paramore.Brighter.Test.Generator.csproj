@@ -84,6 +84,46 @@
     <None Update="Templates\Outbox\Sync\When_Adding_A_Message_Within_Transaction_And_Rollback_It_Should_Not_Be_Stored.cs.liquid">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    
+    <None Update="Templates\Outbox\Async\When_Adding_A_Duplicate_Message_It_Should_Not_Throw_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Adding_A_Message_Within_Transaction_And_Rollback_It_Should_Not_Be_Stored_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Adding_A_Message_Within_Transaction_It_Should_Be_Stored_After_Commit_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Retrieving_A_Message_By_Id_It_Should_Return_The_Correct_Message_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Retrieving_A_Non_Existent_Message_It_Should_Return_Empty_Message_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Retrieving_All_Messages_They_Should_Include_Dispatched_And_Undispatched_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Retrieving_Dispatched_Messages_It_Should_Filter_By_Age_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Retrieving_Messages_By_Ids_It_Should_Return_Only_Requested_Messages_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    
+    <None Update="Templates\Outbox\Async\When_Retrieving_Outstanding_Messages_It_Should_Filter_By_Age_Async.cs.liquid">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

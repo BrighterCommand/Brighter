@@ -42,6 +42,12 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
         return outbox.Get(new RequestContext());
     }
 
+    public async Task<IEnumerable<Message>> GetAllMessagesAsync()
+    {
+        var outbox = new PostgreSqlOutbox(_configuration);
+        return await outbox.GetAsync(new RequestContext());
+    }
+
     public IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
     {
         return new PostgreSqlTransactionProvider(_configuration);
