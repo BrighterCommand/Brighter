@@ -31,6 +31,8 @@ public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer,
     TimeProvider time,
     InstrumentationOptions instrumentation) : IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
+    private const string Pulsar = "pulsar";
+    
     /// <inheritdoc />
     public async ValueTask DisposeAsync() => await producer.DisposeAsync();
 
@@ -81,7 +83,7 @@ public class PulsarMessageProducer(IProducer<ReadOnlySequence<byte>> producer,
     /// <param name="cancellationToken">A cancellation token to end the operation</param>
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
     {
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Pulsar, message, instrumentation);
+        BrighterTracer.WriteProducerEvent(Span, Pulsar, message, instrumentation);
         await producer.Send(CreateMessageMetadata(message, delay), 
             new ReadOnlySequence<byte>(message.Body.Bytes), 
             cancellationToken);
