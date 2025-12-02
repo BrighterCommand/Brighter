@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.Outbox.PostgreSql;
+using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.Async;
 using Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.Sync;
 
@@ -33,6 +34,17 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
         return new PostgreSqlOutbox(_configuration);
+    }
+
+    public IEnumerable<Message> GetAllMessages()
+    {
+        var outbox = new PostgreSqlOutbox(_configuration);
+        return outbox.Get(new RequestContext());
+    }
+
+    public IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
+    {
+        return new PostgreSqlTransactionProvider(_configuration);
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()

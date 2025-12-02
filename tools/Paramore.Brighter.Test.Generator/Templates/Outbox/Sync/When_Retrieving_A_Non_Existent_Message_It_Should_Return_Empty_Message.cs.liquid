@@ -32,7 +32,7 @@ public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessage : IDisp
         var outbox = _outboxProvider.CreateOutbox();
         
         // Act
-        var message = Outbox.Get(Id.Random(), context);
+        var message = outbox.Get(Id.Random(), context);
 
         // Assert
         Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);

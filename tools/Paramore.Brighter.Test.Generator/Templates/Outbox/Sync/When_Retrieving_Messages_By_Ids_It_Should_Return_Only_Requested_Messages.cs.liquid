@@ -42,7 +42,7 @@ public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages : ID
         outbox.MarkDispatched(dispatched.Id, context);
         
         // Act
-        var messages =  Outbox
+        var messages = outbox
             .Get([earliest.Id, undispatched.Id], context)
             .ToArray();
 

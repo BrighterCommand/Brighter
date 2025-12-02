@@ -28,7 +28,15 @@ public interface IAmAnOutboxProviderSync
     /// <returns>A new <see cref="IAmAnOutboxSync{TMessage, TTransaction}"/> instance.</returns>
     IAmAnOutboxSync<Message, {{ Transaction }}> CreateOutbox();
 
-     IEnumable<Message> GetAllMessages();
+    /// <summary>
+    /// Gets all the messages in the outbox.
+    /// </summary>
+    /// <returns>A list of all messages in the outbox.</returns>
+    IEnumerable<Message> GetAllMessages();
 
+    /// <summary>
+    /// Creates a new transaction provider.
+    /// </summary>
+    /// <returns>A new <see cref="IAmABoxTransactionProvider{TTransaction}"/> instance.</returns>
     IAmABoxTransactionProvider<{{ Transaction }}> CreateTransactionProvider();
 }

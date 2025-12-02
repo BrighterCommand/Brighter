@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Security;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
@@ -23,7 +22,8 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
             await GenerateAsync(configuration, 
                 Path.Combine("Outbox", prefix, "Sync"),
                 Path.Combine("Outbox", "Sync"),
-                configuration.Outbox);
+                configuration.Outbox,
+                filename => SkipTest(configuration.Outbox, filename));
         }
         else if (configuration.Outboxes != null)
         {
@@ -41,27 +41,42 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                 await GenerateAsync(configuration,
                     Path.Combine("Outbox", prefix),
                     "Outbox", 
-                    outboxConfiguration);
+                    outboxConfiguration,
+                    filename => SkipTest(outboxConfiguration, filename));
                 
                 await GenerateAsync(configuration, 
                     Path.Combine("Outbox", prefix, "Generated", "Sync"),
                     Path.Combine("Outbox", "Sync"),
-                    outboxConfiguration);
+                    outboxConfiguration,
+                    filename => SkipTest(outboxConfiguration, filename));
                 
                 await GenerateAsync(configuration, 
                     Path.Combine("Outbox", prefix, "Generated", "Async"),
                     Path.Combine("Outbox", "Async"),
-                    outboxConfiguration);
+                    outboxConfiguration,
+                    filename => SkipTest(outboxConfiguration, filename));
             }
         }
         else
         {
             logger.LogInformation("No outbox configured");
         }
+        
     }
+    
+    private static bool SkipTest(OutboxConfiguration outboxConfiguration, string fileName)
+    {
+        if (!outboxConfiguration.HasSupportToTransaction && fileName.Contains("Transaction"))
+        {
+            return true;
+        }
 
-    protected override Task GenerateAsync(TestConfigurationConfiguration configuration, string prefix, string templateFolderName,
-        object model)
+        return false;
+    }
+    
+    protected override Task GenerateAsync(TestConfigurationConfiguration configuration, 
+        string prefix, string templateFolderName,
+        object model, Func<string, bool>? ignore = null)
     {
         if (model is OutboxConfiguration outboxConfiguration)
         {

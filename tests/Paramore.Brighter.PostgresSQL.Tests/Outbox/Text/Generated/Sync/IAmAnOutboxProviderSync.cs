@@ -27,4 +27,16 @@ public interface IAmAnOutboxProviderSync
     /// </summary>
     /// <returns>A new <see cref="IAmAnOutboxSync{TMessage, TTransaction}"/> instance.</returns>
     IAmAnOutboxSync<Message, System.Data.Common.DbTransaction> CreateOutbox();
+
+    /// <summary>
+    /// Gets all the messages in the outbox.
+    /// </summary>
+    /// <returns>A list of all messages in the outbox.</returns>
+    IEnumerable<Message> GetAllMessages();
+
+    /// <summary>
+    /// Creates a new transaction provider.
+    /// </summary>
+    /// <returns>A new <see cref="IAmABoxTransactionProvider{TTransaction}"/> instance.</returns>
+    IAmABoxTransactionProvider<System.Data.Common.DbTransaction> CreateTransactionProvider();
 }

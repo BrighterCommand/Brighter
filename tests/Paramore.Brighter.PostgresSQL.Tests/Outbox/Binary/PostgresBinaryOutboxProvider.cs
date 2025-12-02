@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.Outbox.PostgreSql;
+using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Async;
 using Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Sync;
 
@@ -33,6 +34,16 @@ public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutbox
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
         return new PostgreSqlOutbox(_configuration);
+    }
+
+    public IEnumerable<Message> GetAllMessages()
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
+    {
+        return new PostgreSqlTransactionProvider(_configuration);
     }
 
     public async Task CreateStoreAsync()

@@ -7,4 +7,5 @@ public class OutboxConfiguration
     public string OutboxProvider { get; set; } = string.Empty;
     public string? Namespace { get; set; }
     public string? MessageFactory { get; set; }
+    public bool HasSupportToTransaction { get; set; } = true;
 }

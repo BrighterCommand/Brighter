@@ -13,7 +13,8 @@ public abstract class BaseGenerator(ILogger logger)
     protected virtual async Task GenerateAsync(TestConfigurationConfiguration configuration, 
         string prefix, 
         string templateFolderName,
-        object model)
+        object model,
+        Func<string, bool>? ignore = null)
     {
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", templateFolderName);
         var fileNames = Directory.GetFiles(templatePath , "*.liquid", SearchOption.TopDirectoryOnly);
@@ -22,12 +23,18 @@ public abstract class BaseGenerator(ILogger logger)
         
         var destinyPath = Path.Combine(configuration.DestinyFolder, prefix);
         logger.LogInformation("Base destiny Path {FileCount}", destinyPath);
+        
+        ignore  ??= _ => false;
 
         foreach (var fileName in fileNames)
         {
+            if (ignore(fileName))
+            {
+                continue;
+            }
+            
             var file = new FileInfo(fileName);
-            var destinyTemplateFile = new FileInfo(
-                Path.Combine(destinyPath, file.Name.Replace(".liquid", string.Empty)));
+            var destinyTemplateFile = new FileInfo(Path.Combine(destinyPath, file.Name.Replace(".liquid", string.Empty)));
             
             destinyTemplateFile.Directory!.Create();
             
