@@ -85,8 +85,6 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
             {
                 ticker.ExecutionTime = at.UtcDateTime;
                 var result = await timeTickerManager.UpdateAsync(ticker, cancellationToken);
-                await Task.Delay(6000);
-                var ticker2 = await tickerPersistenceProvider.GetTimeTickerById(id);
                 return result.IsSucceeded;
             }
             return false;

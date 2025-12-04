@@ -63,19 +63,17 @@ public class TickerQSchedulerMessageAsyncTests : IClassFixture<TickerQMessageTes
         var scheduler = (IAmAMessageSchedulerAsync)_fixture.SchedulerFactory.Create(_fixture.Processor);
         var id = await scheduler.ScheduleAsync(message, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(2)));
 
-
         Assert.True((id)?.Any());
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
-        //await scheduler.ReSchedulerAsync(id, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
+        await scheduler.ReSchedulerAsync(id, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
 
-        //await Task.Delay(TimeSpan.FromSeconds(2));
-        //Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
 
-        await Task.Delay(TimeSpan.FromSeconds(7));
+        await Task.Delay(TimeSpan.FromSeconds(5));
 
-
-        //Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
-        //Assert.Equivalent(message, await _fixture.Outbox.GetAsync(message.Id, new RequestContext()));
+        Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
+        Assert.Equivalent(message, await _fixture.Outbox.GetAsync(message.Id, new RequestContext()));
     }
 
     [Fact]
@@ -85,7 +83,7 @@ public class TickerQSchedulerMessageAsyncTests : IClassFixture<TickerQMessageTes
 
         var scheduler = (IAmAMessageSchedulerAsync)_fixture.SchedulerFactory.Create(_fixture.Processor);
         var id = await scheduler.ScheduleAsync(message, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(2)));
-        await Task.Delay(TimeSpan.FromSeconds(6));
+
         Assert.True((id)?.Any());
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
         var reScheduled = await scheduler.ReSchedulerAsync(id, TimeSpan.FromSeconds(5));
