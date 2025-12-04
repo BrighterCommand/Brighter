@@ -26,7 +26,6 @@ using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
-using TickerQ;
 using TickerQ.Utilities;
 using TickerQ.Utilities.Entities;
 using TickerQ.Utilities.Enums;

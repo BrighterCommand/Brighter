@@ -1,19 +1,13 @@
-﻿using System;
-using System.Transactions;
+﻿using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.MessageScheduler.TickerQ;
 using Paramore.Brighter.Observability;
-using ParamoreBrighter.TickerQ.Tests.TestDoubles;
 using Polly;
 using Polly.Registry;
-using TickerQ;
 using TickerQ.DependencyInjection;
-using TickerQ.Utilities;
 using TickerQ.Utilities.Entities;
 using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 {
@@ -23,10 +17,8 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
         public IAmACommandProcessor Processor { get; }
         public InMemoryOutbox Outbox { get; }
         public InternalBus InternalBus { get; } = new();
-
         public RoutingKey RoutingKey { get; }
         public TimeProvider TimeProvider { get; }
-
         private readonly IServiceCollection _serviceCollection;
         public IServiceProvider ServiceProvider { get; }
         public Dictionary<string, string> ReceivedMessages { get; }
@@ -108,7 +100,6 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
             TickerQModuleInitializer.EnsureOneTimeSetupTickerQ();
             var scheduler = ServiceProvider.GetRequiredService<ITickerQHostScheduler>();
             scheduler.StartAsync().GetAwaiter().GetResult();
-            
         }
         protected abstract IAmAHandlerFactory GetHandlerFactory();
         protected abstract IAmASubscriberRegistry GetSubscriberServiceRegistry();

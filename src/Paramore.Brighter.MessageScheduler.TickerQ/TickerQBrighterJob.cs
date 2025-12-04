@@ -26,7 +26,6 @@ using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using TickerQ.Utilities.Base;
-using TickerQ.Utilities.Enums;
 
 namespace Paramore.Brighter.MessageScheduler.TickerQ
 {

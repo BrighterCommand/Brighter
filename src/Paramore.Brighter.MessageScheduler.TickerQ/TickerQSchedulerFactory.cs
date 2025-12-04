@@ -22,8 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-
-using TickerQ;
 using TickerQ.Utilities.Entities;
 using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
