@@ -45,7 +45,6 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
     public class TickerQScheduler(
         ITimeTickerManager<TimeTickerEntity> timeTickerManager,
         ITickerPersistenceProvider<TimeTickerEntity, CronTickerEntity> tickerPersistenceProvider,
-        ITickerQHostScheduler tickerQHostScheduler,
         TimeProvider timeProvider,
         Func<string> getOrCreateSchedulerId,
         Func<string, Guid> parseSchedulerId
@@ -81,16 +80,16 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
             }
             var id = parseSchedulerId(schedulerId);
             var ticker = await tickerPersistenceProvider.GetTimeTickerById(id);
-            var newTicker = CloneTicker(ticker);
 
-            newTicker.ExecutionTime = at.UtcDateTime;
-
-            ticker.ExecutionTime = at.UtcDateTime;
-            var res = await timeTickerManager.AddAsync(newTicker, cancellationToken);
-            tickerQHostScheduler.Restart();
-            //   var result = await timeTickerManager.UpdateAsync(ticker, cancellationToken);
-            //   return result.IsSucceeded;
-            return true;
+            if (ticker.Status == TickerStatus.Idle || ticker.Status == TickerStatus.Queued)
+            {
+                ticker.ExecutionTime = at.UtcDateTime;
+                var result = await timeTickerManager.UpdateAsync(ticker, cancellationToken);
+                await Task.Delay(6000);
+                var ticker2 = await tickerPersistenceProvider.GetTimeTickerById(id);
+                return result.IsSucceeded;
+            }
+            return false;
         }
 
         /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.TimeSpan,System.Threading.CancellationToken)"/>
@@ -229,17 +228,6 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
                 Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
             };
             return ticker;
-        }
-        private TimeTickerEntity CloneTicker(TimeTickerEntity ticker)
-        {
-            return new TimeTickerEntity
-            {
-                Id = Guid.NewGuid(),// ticker.Id,
-                ExecutionTime = ticker.ExecutionTime,
-                Function = nameof(BrighterTickerQSchedulerJob.ReFireSchedulerMessageAsync),
-                Request = ticker.Request,
-                RunCondition
-            };
         }
     }
 }

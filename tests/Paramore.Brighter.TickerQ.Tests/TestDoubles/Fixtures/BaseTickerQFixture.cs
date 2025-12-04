@@ -37,13 +37,7 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
             TimeProvider = TimeProvider.System;
             _serviceCollection = new ServiceCollection();
             _serviceCollection.AddLogging();
-            _serviceCollection.AddTickerQ(o =>
-            {
-                o.ConfigureScheduler(c =>
-                {
-                    c.SchedulerTimeZone = TimeZoneInfo.Utc;
-                });
-            });
+            _serviceCollection.AddTickerQ();
             _serviceCollection.AddSingleton(TimeProvider);
             var handlerFactory = GetHandlerFactory();
 
@@ -83,8 +77,7 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 
                 var tickerPersesitence = sp.GetRequiredService<ITickerPersistenceProvider<TimeTickerEntity, CronTickerEntity>>();
                 var timeProvider = sp.GetRequiredService<TimeProvider>();
-                var tickerQHostScheduler = sp.GetRequiredService<ITickerQHostScheduler>();
-                return new TickerQSchedulerFactory(tickerManager, tickerPersesitence, tickerQHostScheduler, timeProvider);
+                return new TickerQSchedulerFactory(tickerManager, tickerPersesitence, timeProvider);
             });
 
             _serviceCollection.AddSingleton<IAmAMessageSchedulerFactory>(sp =>
