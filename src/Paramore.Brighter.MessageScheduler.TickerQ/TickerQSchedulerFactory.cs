@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 
+using TickerQ;
 using TickerQ.Utilities.Entities;
 using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
@@ -38,6 +39,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
     public class TickerQSchedulerFactory(
         ITimeTickerManager<TimeTickerEntity> timeTickerManager,
         ITickerPersistenceProvider<TimeTickerEntity, CronTickerEntity> tickerPersistenceProvider,
+        ITickerQHostScheduler tickerQHostScheduler,
         TimeProvider timeProvider) : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
     {
         /// <summary>
@@ -70,7 +72,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
 
         private TickerQScheduler GetTickerQScheduler()
         {
-            return new TickerQScheduler(timeTickerManager, tickerPersistenceProvider,timeProvider, GetOrCreateSchedulerId, ParseSchedulerId);
+            return new TickerQScheduler(timeTickerManager, tickerPersistenceProvider, tickerQHostScheduler, timeProvider, GetOrCreateSchedulerId, ParseSchedulerId);
         }
     }
 }

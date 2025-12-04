@@ -6,47 +6,25 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles
 {
     public class MyApplicationBuilder : IApplicationBuilder
     {
+        public required IServiceProvider ApplicationServices { get ; set; }
 
-        private readonly List<Func<RequestDelegate, RequestDelegate>> _components =
-            new List<Func<RequestDelegate, RequestDelegate>>();
+        public IFeatureCollection ServerFeatures => throw new NotImplementedException();
 
-        public MyApplicationBuilder(IServiceProvider serviceProvider)
+        public IDictionary<string, object?> Properties => throw new NotImplementedException();
+
+        public RequestDelegate Build()
         {
-            ApplicationServices = serviceProvider;
-            Properties = new Dictionary<string, object?>();
-            ServerFeatures = new FeatureCollection();
-        }
-
-        public IServiceProvider ApplicationServices { get; set; }
-
-        public IDictionary<string, object?> Properties { get; set; }
-
-        public IFeatureCollection ServerFeatures { get; }
-
-        public IApplicationBuilder Use(Func<RequestDelegate, RequestDelegate> middleware)
-        {
-
-            return this;
+            throw new NotImplementedException();
         }
 
         public IApplicationBuilder New()
         {
-            return new MyApplicationBuilder(ApplicationServices)
-            {
-                Properties = this.Properties,
-                ApplicationServices = this.ApplicationServices
-            };
+            throw new NotImplementedException();
         }
 
-        public RequestDelegate Build()
+        public IApplicationBuilder Use(Func<RequestDelegate, RequestDelegate> middleware)
         {
-            RequestDelegate app = context =>
-            {
-                return context.Response.WriteAsync("Hello from MyApplicationBuilder");
-            };
-
-
-            return app;
+            throw new NotImplementedException();
         }
     }
 }

@@ -6,10 +6,13 @@ using Paramore.Brighter.Observability;
 using ParamoreBrighter.TickerQ.Tests.TestDoubles;
 using Polly;
 using Polly.Registry;
+using TickerQ;
 using TickerQ.DependencyInjection;
+using TickerQ.Utilities;
 using TickerQ.Utilities.Entities;
 using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 {
@@ -34,7 +37,13 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
             TimeProvider = TimeProvider.System;
             _serviceCollection = new ServiceCollection();
             _serviceCollection.AddLogging();
-            _serviceCollection.AddTickerQ();
+            _serviceCollection.AddTickerQ(o =>
+            {
+                o.ConfigureScheduler(c =>
+                {
+                    c.SchedulerTimeZone = TimeZoneInfo.Utc;
+                });
+            });
             _serviceCollection.AddSingleton(TimeProvider);
             var handlerFactory = GetHandlerFactory();
 
@@ -72,9 +81,10 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
             {
                 var tickerManager = sp.GetRequiredService<ITimeTickerManager<TimeTickerEntity>>();
 
-                var tickerPersesitence = sp.GetRequiredService<ITickerPersistenceProvider<TimeTickerEntity,CronTickerEntity>>();
+                var tickerPersesitence = sp.GetRequiredService<ITickerPersistenceProvider<TimeTickerEntity, CronTickerEntity>>();
                 var timeProvider = sp.GetRequiredService<TimeProvider>();
-                return new TickerQSchedulerFactory(tickerManager, tickerPersesitence, timeProvider);
+                var tickerQHostScheduler = sp.GetRequiredService<ITickerQHostScheduler>();
+                return new TickerQSchedulerFactory(tickerManager, tickerPersesitence, tickerQHostScheduler, timeProvider);
             });
 
             _serviceCollection.AddSingleton<IAmAMessageSchedulerFactory>(sp =>
@@ -100,9 +110,9 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
             ServiceProvider = _serviceCollection.BuildServiceProvider();
             Processor = ServiceProvider.GetRequiredService<IAmACommandProcessor>();
             SchedulerFactory = ServiceProvider.GetRequiredService<TickerQSchedulerFactory>();
-            var myAppBuilder = new MyApplicationBuilder(ServiceProvider);
+            var myAppBuilder = new MyApplicationBuilder() { ApplicationServices = ServiceProvider };
 
-            myAppBuilder.UseTickerQ();
+            TickerQModuleInitializer.EnsureOneTimeSetupTickerQ(myAppBuilder);
         }
         protected abstract IAmAHandlerFactory GetHandlerFactory();
         protected abstract IAmASubscriberRegistry GetSubscriberServiceRegistry();

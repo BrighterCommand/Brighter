@@ -22,17 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using TickerQ.Utilities.Base;
-using TickerQ.Utilities.Models;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using TickerQ.Utilities.Enums;
 
 namespace Paramore.Brighter.MessageScheduler.TickerQ
 {
@@ -48,7 +42,12 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
             var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerMessage>(tickerContext.Request, JsonSerialisationOptions.Options)!;
             await processor.SendAsync(schedulerRequest);
         }
-
+        [TickerFunction(nameof(ReFireSchedulerMessageAsync))]
+        public async Task ReFireSchedulerMessageAsync(TickerFunctionContext<string> tickerContext, CancellationToken cancellationToken)
+        {
+            var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerMessage>(tickerContext.Request, JsonSerialisationOptions.Options)!;
+            await processor.SendAsync(schedulerRequest);
+        }
         [TickerFunction(nameof(FireSchedulerRequestAsync))]
         public async Task FireSchedulerRequestAsync(TickerFunctionContext<string> tickerContext, CancellationToken cancellationToken)
         {

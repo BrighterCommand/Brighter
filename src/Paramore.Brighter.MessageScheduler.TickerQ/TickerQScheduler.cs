@@ -26,8 +26,10 @@ using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
+using TickerQ;
 using TickerQ.Utilities;
 using TickerQ.Utilities.Entities;
+using TickerQ.Utilities.Enums;
 using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
 
@@ -43,6 +45,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
     public class TickerQScheduler(
         ITimeTickerManager<TimeTickerEntity> timeTickerManager,
         ITickerPersistenceProvider<TimeTickerEntity, CronTickerEntity> tickerPersistenceProvider,
+        ITickerQHostScheduler tickerQHostScheduler,
         TimeProvider timeProvider,
         Func<string> getOrCreateSchedulerId,
         Func<string, Guid> parseSchedulerId
@@ -72,13 +75,22 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
         public async Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at, CancellationToken cancellationToken = default)
         {
+            if (at < timeProvider.GetUtcNow())
+            {
+                throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
+            }
             var id = parseSchedulerId(schedulerId);
-
             var ticker = await tickerPersistenceProvider.GetTimeTickerById(id);
-            ticker.ExecutionTime = at.UtcDateTime;
-            var result = await timeTickerManager.UpdateAsync(ticker, cancellationToken);
+            var newTicker = CloneTicker(ticker);
 
-            return result.IsSucceeded;
+            newTicker.ExecutionTime = at.UtcDateTime;
+
+            ticker.ExecutionTime = at.UtcDateTime;
+            var res = await timeTickerManager.AddAsync(newTicker, cancellationToken);
+            tickerQHostScheduler.Restart();
+            //   var result = await timeTickerManager.UpdateAsync(ticker, cancellationToken);
+            //   return result.IsSucceeded;
+            return true;
         }
 
         /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.TimeSpan,System.Threading.CancellationToken)"/>
@@ -217,6 +229,17 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
                 Request = TickerHelper.CreateTickerRequest<string>(tickerRequest),
             };
             return ticker;
+        }
+        private TimeTickerEntity CloneTicker(TimeTickerEntity ticker)
+        {
+            return new TimeTickerEntity
+            {
+                Id = Guid.NewGuid(),// ticker.Id,
+                ExecutionTime = ticker.ExecutionTime,
+                Function = nameof(BrighterTickerQSchedulerJob.ReFireSchedulerMessageAsync),
+                Request = ticker.Request,
+                RunCondition
+            };
         }
     }
 }
