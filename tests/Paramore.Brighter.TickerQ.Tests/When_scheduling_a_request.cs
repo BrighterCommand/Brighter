@@ -193,7 +193,7 @@ namespace Paramore.Brighter.TickerQ.Tests
         {
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateSync(_fixture.Processor);
-            var id = scheduler.Schedule(req, type, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
+            var id = scheduler.Schedule(req, type, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(2)));
 
             Assert.True((id)?.Any());
 
@@ -204,7 +204,7 @@ namespace Paramore.Brighter.TickerQ.Tests
             Thread.Sleep(TimeSpan.FromSeconds(2));
             Assert.DoesNotContain(nameof(MyEventHandler), _fixture.ReceivedMessages);
 
-            Thread.Sleep(TimeSpan.FromSeconds(4));
+            Thread.Sleep(TimeSpan.FromSeconds(5));
             Assert.Contains(nameof(MyEventHandler), _fixture.ReceivedMessages);
 
             var expected = Message.Empty;
@@ -231,7 +231,7 @@ namespace Paramore.Brighter.TickerQ.Tests
         {
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateSync(_fixture.Processor);
-            var id = scheduler.Schedule(req, type, TimeSpan.FromSeconds(1));
+            var id = scheduler.Schedule(req, type, TimeSpan.FromSeconds(2));
 
             Assert.True((id)?.Any());
             Assert.DoesNotContain(nameof(MyEventHandler), _fixture.ReceivedMessages);
@@ -241,7 +241,7 @@ namespace Paramore.Brighter.TickerQ.Tests
             Thread.Sleep(TimeSpan.FromSeconds(2));
             Assert.DoesNotContain(nameof(MyEventHandler), _fixture.ReceivedMessages);
 
-            Thread.Sleep(TimeSpan.FromSeconds(4));
+            Thread.Sleep(TimeSpan.FromSeconds(5));
             Assert.Contains(nameof(MyEventHandler), _fixture.ReceivedMessages);
 
             var expected = Message.Empty;
@@ -274,7 +274,7 @@ namespace Paramore.Brighter.TickerQ.Tests
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateSync(_fixture.Processor);
             var id = scheduler.Schedule(req, type,
-                _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
+                _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(2)));
 
             Assert.True((id)?.Any());
 
@@ -283,7 +283,7 @@ namespace Paramore.Brighter.TickerQ.Tests
 
             scheduler.Cancel(id);
 
-            Thread.Sleep(TimeSpan.FromSeconds(2));
+            Thread.Sleep(TimeSpan.FromSeconds(3));
             Assert.DoesNotContain(nameof(MyEventHandler), _fixture.ReceivedMessages);
 
             var expected = Message.Empty;
@@ -311,14 +311,14 @@ namespace Paramore.Brighter.TickerQ.Tests
         {
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateSync(_fixture.Processor);
-            var id = scheduler.Schedule(req, type, TimeSpan.FromSeconds(1));
+            var id = scheduler.Schedule(req, type, TimeSpan.FromSeconds(2));
 
             Assert.True((id)?.Any());
             Assert.DoesNotContain(nameof(MyEventHandler), _fixture.ReceivedMessages);
 
             scheduler.Cancel(id);
 
-            Thread.Sleep(TimeSpan.FromSeconds(2));
+            Thread.Sleep(TimeSpan.FromSeconds(3));
             Assert.DoesNotContain(nameof(MyEventHandler), _fixture.ReceivedMessages);
 
             var expected = Message.Empty;

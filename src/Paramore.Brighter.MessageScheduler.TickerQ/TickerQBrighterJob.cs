@@ -22,17 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using TickerQ.Utilities.Base;
-using TickerQ.Utilities.Models;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Paramore.Brighter.MessageScheduler.TickerQ
 {

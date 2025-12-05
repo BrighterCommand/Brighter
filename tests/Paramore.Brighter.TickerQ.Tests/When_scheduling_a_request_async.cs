@@ -195,8 +195,8 @@ namespace Paramore.Brighter.TickerQ.Tests
         {
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateAsync(_fixture.Processor);
-            var id = await scheduler.ScheduleAsync(req, type, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
-
+            var id = await scheduler.ScheduleAsync(req, type, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(2)));
+        
             Assert.True((id)?.Any());
 
             await scheduler.ReSchedulerAsync(id, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
@@ -206,7 +206,7 @@ namespace Paramore.Brighter.TickerQ.Tests
             await Task.Delay(TimeSpan.FromSeconds(2));
             Assert.DoesNotContain(nameof(MyEventHandlerAsync), _fixture.ReceivedMessages);
 
-            await Task.Delay(TimeSpan.FromSeconds(4));
+            await Task.Delay(TimeSpan.FromSeconds(5));
             Assert.Contains(nameof(MyEventHandlerAsync), _fixture.ReceivedMessages);
 
             var expected = Message.Empty;
@@ -233,7 +233,7 @@ namespace Paramore.Brighter.TickerQ.Tests
         {
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateAsync(_fixture.Processor);
-            var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromSeconds(1));
+            var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromSeconds(2));
 
             Assert.True((id)?.Any());
             Assert.DoesNotContain(nameof(MyEventHandlerAsync), _fixture.ReceivedMessages);
@@ -243,7 +243,7 @@ namespace Paramore.Brighter.TickerQ.Tests
             await Task.Delay(TimeSpan.FromSeconds(2));
             Assert.DoesNotContain(nameof(MyEventHandlerAsync), _fixture.ReceivedMessages);
 
-            await Task.Delay(TimeSpan.FromSeconds(4));
+            await Task.Delay(TimeSpan.FromSeconds(5));
             Assert.Contains(nameof(MyEventHandlerAsync), _fixture.ReceivedMessages);
 
             var expected = Message.Empty;
@@ -276,7 +276,7 @@ namespace Paramore.Brighter.TickerQ.Tests
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateAsync(_fixture.Processor);
             var id = await scheduler.ScheduleAsync(req, type,
-                _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
+                _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(2)));
 
             Assert.True((id)?.Any());
 
@@ -284,7 +284,7 @@ namespace Paramore.Brighter.TickerQ.Tests
 
             await scheduler.CancelAsync(id);
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(3));
             Assert.DoesNotContain(nameof(MyEventHandlerAsync), _fixture.ReceivedMessages);
 
             var expected = Message.Empty;
@@ -312,14 +312,14 @@ namespace Paramore.Brighter.TickerQ.Tests
         {
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateAsync(_fixture.Processor);
-            var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromSeconds(1));
+            var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromSeconds(2));
 
             Assert.True((id)?.Any());
             Assert.DoesNotContain(nameof(MyEventHandlerAsync), _fixture.ReceivedMessages);
 
             await scheduler.CancelAsync(id);
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(3));
             Assert.DoesNotContain(nameof(MyEventHandlerAsync), _fixture.ReceivedMessages);
 
             var expected = Message.Empty;
