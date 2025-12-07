@@ -20,7 +20,7 @@
     <PackageVersion Include="AWSSDK.Scheduler" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.SQS" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="Azure.Identity" Version="1.17.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.17.1" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.26.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.12.0" />
