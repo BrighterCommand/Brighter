@@ -174,8 +174,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _maxBatchSize = commitBatchSize;
             _sweepUncommittedInterval = TimeSpan.FromMilliseconds(sweepUncommittedOffsetsIntervalMs);
             _readCommittedOffsetsTimeoutMs = readCommittedOffsetsTimeoutMs;
+
+            if (timeProvider == null)
+            {
+                timeProvider = TimeProvider.System;
+            }
             
-            timeProvider ??= TimeProvider.System;
             _timer = timeProvider.CreateTimer(_ => SweepOffsets(), null, _sweepUncommittedInterval, _sweepUncommittedInterval);
 
             _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
