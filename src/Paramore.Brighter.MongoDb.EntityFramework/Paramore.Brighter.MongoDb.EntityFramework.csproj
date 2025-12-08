@@ -3,7 +3,8 @@
   <PropertyGroup>
     <Description>Entity Framework Core integration for MongoDB provider in Paramore.Brighter Command Processor. Provides connection and transaction providers to obtain MongoDB connections from Entity Framework Core DbContext.</Description>
     <Authors>Jakub Syty</Authors>
-    <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <!-- <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks> -->
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <PackageTags>MongoDB;Entity Framework Core;EF Core;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
