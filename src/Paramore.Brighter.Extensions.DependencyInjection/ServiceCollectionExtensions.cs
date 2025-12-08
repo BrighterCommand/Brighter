@@ -288,7 +288,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// We use AddProducers to register an external bus with access to IServiceProvider for resolving dependencies.
         /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer to a consumer.
         /// Registers singletons with the service collection :-
-        ///     -- An Outbox Producer Mediatory - used to send message externally via an Outbox:
+        ///     -- An Outbox Producer Mediator - used to send message externally via an Outbox:
         ///     -- Producer Registry - A list of producers we can send middleware messages with
         ///     -- Outbox - stores messages so that they can be written in the same transaction as entity writes
         ///     -- Outbox Transaction Provider - used to provide a transaction that spans the Outbox write and
