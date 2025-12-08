@@ -338,12 +338,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             Type transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
             Type? defaultTransactionType = null;
 
-            foreach (Type i in defaultTransactionProvider.GetInterfaces())
+            foreach (Type i in defaultTransactionProvider.GetInterfaces()
+                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface))
             {
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
-                {
-                    defaultTransactionType = i.GetGenericArguments()[0];
-                }
+                defaultTransactionType = i.GetGenericArguments()[0];
             }
 
             if (defaultTransactionType != null)
