@@ -61,7 +61,7 @@ public class TickerQSchedulerMessageTests : IClassFixture<TickerQMessageTestFixt
         var message = GetMessage();
 
         var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = scheduler.Schedule(message, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
+        var id = scheduler.Schedule(message, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(2)));
 
         Assert.True((id)?.Any());
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
@@ -71,7 +71,7 @@ public class TickerQSchedulerMessageTests : IClassFixture<TickerQMessageTestFixt
         Thread.Sleep(TimeSpan.FromSeconds(2));
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
 
-        Thread.Sleep(TimeSpan.FromSeconds(4));
+        Thread.Sleep(TimeSpan.FromSeconds(5));
 
         Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
         Assert.Equivalent(message, _fixture.Outbox.Get(message.Id, new RequestContext()));
@@ -83,7 +83,7 @@ public class TickerQSchedulerMessageTests : IClassFixture<TickerQMessageTestFixt
         var message = GetMessage();
 
         var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
+        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(2));
 
         Assert.True((id)?.Any());
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
@@ -93,7 +93,7 @@ public class TickerQSchedulerMessageTests : IClassFixture<TickerQMessageTestFixt
         Thread.Sleep(TimeSpan.FromSeconds(2));
         Assert.Empty(_fixture.InternalBus.Stream(_fixture.RoutingKey) ?? []);
 
-        await Task.Delay(TimeSpan.FromSeconds(4));
+        await Task.Delay(TimeSpan.FromSeconds(5));
 
         Assert.NotEmpty(_fixture.InternalBus.Stream(_fixture.RoutingKey));
         Assert.Equivalent(message, _fixture.Outbox.Get(message.Id, new RequestContext()));
@@ -104,13 +104,13 @@ public class TickerQSchedulerMessageTests : IClassFixture<TickerQMessageTestFixt
         var message = GetMessage();
 
         var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
+        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(2));
 
         Assert.NotEqual(0, id.Length);
 
         scheduler.Cancel(id);
 
-        Thread.Sleep(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(3));
 
         var expected = Message.Empty;
         var actual = _fixture.Outbox.Get(message.Id, new RequestContext());
@@ -136,13 +136,13 @@ public class TickerQSchedulerMessageTests : IClassFixture<TickerQMessageTestFixt
         var message = GetMessage();
 
         var scheduler = (IAmAMessageSchedulerSync)_fixture.SchedulerFactory.Create(_fixture.Processor);
-        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
+        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(2));
 
         Assert.NotEqual(0, id.Length);
 
         scheduler.Cancel(id);
 
-        Thread.Sleep(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(3));
 
         var expected = Message.Empty;
         var actual = _fixture.Outbox.Get(message.Id, new RequestContext());

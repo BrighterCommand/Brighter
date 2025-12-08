@@ -1,18 +1,6 @@
-﻿using System;
-using System.Transactions;
-using Microsoft.Extensions.DependencyInjection;
-using Paramore.Brighter.MessageScheduler.TickerQ;
-using Paramore.Brighter.Observability;
-using Paramore.Brighter.Scheduler.Events;
+﻿using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
-using Paramore.Brighter.TickerQ.Tests.TestDoubles;
-using ParamoreBrighter.TickerQ.Tests.TestDoubles;
-using Polly;
-using Polly.Registry;
-using TickerQ.DependencyInjection;
-using TickerQ.DependencyInjection.Hosting;
-using TickerQ.Utilities.Interfaces.Managers;
-using TickerQ.Utilities.Models.Ticker;
+
 
 
 namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
