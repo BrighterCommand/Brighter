@@ -56,6 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private DateTime _lastFlushAt = DateTime.UtcNow;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new(1, 1);
+        private readonly ITimer _sweeperTimer;
         private bool _hasFatalError;
         private bool _isClosed;
 
@@ -88,6 +89,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="topicFindTimeout">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created.</param>
+        /// <param name="timeProvider">The <see cref="TimeProvider"/> for sweeping uncommitted offset.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -105,7 +107,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             short replicationFactor = 1,
             TimeSpan? topicFindTimeout = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            Action<ConsumerConfig>? configHook = null
+            Action<ConsumerConfig>? configHook = null,
+            TimeProvider? timeProvider = null
             )
         {
             if (configuration is null)
@@ -171,6 +174,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _maxBatchSize = commitBatchSize;
             _sweepUncommittedInterval = sweepUncommittedOffsetsInterval.Value;
             _readCommittedOffsetsTimeout = readCommittedOffsetsTimeout.Value;
+
+            if (timeProvider == null)
+            {
+                timeProvider ??= TimeProvider.System;
+            }
+
+            _sweeperTimer = timeProvider.CreateTimer(_ => SweepOffsets(), null, _sweepUncommittedInterval, _sweepUncommittedInterval);
 
             _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
                 .SetPartitionsAssignedHandler((_, list) =>
@@ -265,8 +275,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 if (_offsetStorage.Count % _maxBatchSize == 0)
                     FlushOffsets();
-                else
-                    SweepOffsets();
 
                 Log.CurrentKafkaBatchCount(s_logger, _offsetStorage.Count.ToString(), _maxBatchSize.ToString());
             }
@@ -750,6 +758,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (disposing)
             {
+                _sweeperTimer.Dispose();
                 Close();
                 _consumer?.Dispose();
                 _flushToken?.Dispose();
