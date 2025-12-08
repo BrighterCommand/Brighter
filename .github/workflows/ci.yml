@@ -139,6 +139,24 @@ jobs:
       - name: Quartz Tests
         run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
+  tickerq:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [ build ]
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: TickerQ Tests
+        run: dotnet test ./tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
   redis-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
