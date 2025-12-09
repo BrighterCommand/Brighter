@@ -70,7 +70,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 replicationFactor: kafkaSubscription.ReplicationFactor,
                 topicFindTimeout: kafkaSubscription.TopicFindTimeout,
                 makeChannels: kafkaSubscription.MakeChannels,
-                configHook: kafkaSubscription.ConfigHook
+                configHook: kafkaSubscription.ConfigHook,
+                timeProvider: kafkaSubscription.TimeProvider
                 );
         }
 

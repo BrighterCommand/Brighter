@@ -141,7 +141,5 @@ public class BrighterSemanticConventionsDbSpanTests
             Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.ServerPort);
             Assert.DoesNotContain(childSpan.Tags, t => t.Key == BrighterSemanticConventions.NetworkPeerPort);
         }
-        
-        
     }
 }

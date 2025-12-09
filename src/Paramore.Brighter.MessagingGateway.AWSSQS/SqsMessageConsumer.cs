@@ -221,7 +221,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var request = new ReceiveMessageRequest(_channelUrl)
                 {
                     MaxNumberOfMessages = _batchSize,
-                    WaitTimeSeconds = timeOut.Value.Seconds,
+                    WaitTimeSeconds = Convert.ToInt32(timeOut.Value.TotalSeconds),
                     MessageAttributeNames = ["All"],
                     MessageSystemAttributeNames = ["All"]
                 };
@@ -293,7 +293,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     await EnsureChannelUrl(client, cancellationToken);
                     await client.ChangeMessageVisibilityAsync(
-                        new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, delay.Value.Seconds),
+                        new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, Convert.ToInt32(delay.Value.TotalSeconds)),
                         cancellationToken
                     );
                 }
