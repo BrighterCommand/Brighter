@@ -28,6 +28,13 @@ if (commandParser.Errors.Count > 0)
 }
 
 var configurationFile = commandParser.GetRequiredValue(configurationFileOptions);
+
+if(!File.Exists(configurationFile))
+{
+    logger.LogCritical("The configuration file path {Path} is a directory", configurationFile);
+    return 0;
+}
+
 await using var fs = File.OpenRead(configurationFile);
 var configuration = JsonSerializer.Deserialize<TestConfigurationConfiguration>(fs)!;
 if (string.IsNullOrEmpty(configuration.DestinyFolder))
