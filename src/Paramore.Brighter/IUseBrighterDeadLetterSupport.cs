@@ -22,23 +22,21 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+namespace Paramore.Brighter;
 
-namespace Paramore.Brighter
+/// <summary>
+/// Indicates that the channel does not have native support for a DLQ, and that instead Brighter will provision
+/// a DLQ channel. If a DLQ is defined, Brighter will produce messages to it from a `MessagePump` on a call to `Reject`.
+/// We call `Reject` in response to a `DeferMessageAction` exceeding the permitted number of retries, or the code calls
+/// `RejectMessageAction` to force the message to `Reject` and then be placed on the DLQ. 
+/// </summary>
+/// <remarks>When implementing a Consumer, that does not have native support for a DLQ, use this interface to indicate
+/// that your consumer can forward messages to a DLQ
+/// </remarks>
+public interface IUseBrighterDeadLetterSupport
 {
     /// <summary>
-    /// If this producer support a callback for confirmation of message send then it will return after calling send, but before the message is successfully
-    /// persisted to the broker. It will then callback to confirm that the message has persisted to the broker, or not.
-    /// Implementing producers should raise the OnMessagePublished event (using a threadpool thread) when the broker returns results
-    /// The CommandProcessor will only mark a message as dispatched from the Outbox when this confirmation is received.
+    /// The Routing Key used for the Dead Letter Channel
     /// </summary>
-    public interface ISupportPublishConfirmation
-    {
-        /// <summary>
-        /// Fired when a confirmation is received that a message has been published
-        /// bool => was the message published
-        /// Guid => what was the id of the published message
-        /// </summary>
-        event Action<bool, string> OnMessagePublished;
-   }
+    RoutingKey DeadLetterRoutingKey { get; }    
 }

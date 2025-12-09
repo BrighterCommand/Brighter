@@ -4,7 +4,7 @@ Date: 2025-11-25
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -34,7 +34,11 @@ Some middleware directly supports a Dead Letter Channel. We should defer to that
 
 Because there is no harm in adding a Dead Letter Channel for transports that don't have native support for one, we should add one.
 
-The current use of Dead Letter Channel is triggered when the code throws a `DeferMessageAction` and the maximum number of retries is exceeded. In the case of a stream, there may be no desire to retry first. In addtion, to support usage for an Invalid Message Channel, we don't have that option. As such we will add a new exception `RejectMessageAction` that will call `Reject` on the `IAmAProducer`. We MUST advise that for most errors, you should simply throw a normal exception, you only want to use this option if you want to move the `Message` to the DLQ. The `RejectMessageAction` should support an enum that indicates whether you want to send to the Invalid Message Channel or Dead Letter Channel. For the Dead Letter Channel it adds an optional string that describes why you are Dead Lettering. We should record this information in logs and traces, but also add it into the `Bag` in the `MessageHeader`.
+The current use of Dead Letter Channel is triggered when the code throws a `DeferMessageAction` and the maximum number of retries is exceeded. In the case of a stream, there may be no desire to retry first. As such we will add a new exception `RejectMessageAction` that will call `Reject` on the `IAmAProducer`. We MUST advise that for most errors, you should simply throw a normal exception, you only want to use this option if you want to move the `Message` to the DLQ. 
+
+In addtion, to support usage for an Invalid Message Channel, the framework should throw `InvalidMessageAction` for a failed mapper, to force the message into any supported Invalid Message Channel.   
+
+We MUST advise that for most errors, you should simply throw a normal exception, you only want to use this option if you want to move the `Message` to the DLQ.
 
 We will need to extend the `Subscription` to allow for the declaration of the Dead Letter `RoutingKey`; we should also allow an Invalid Message `RoutingKey`. Both can be the same. To allow for middleware that supports native Dead Letter Channels, alongside middleware that needs Brighter support, we should create an interface `IUseBrighterDeadLetterSupport` and an `IUseBrighterInvalidMessageSupport` to hold the declaration. The topic should be nullable, even if we support a Dead Letter Channel, users may choose not to use it, for reasons described above.
 
@@ -55,6 +59,11 @@ We will extend `Subscription` with a `Publication` for the Dead Letter Channel a
 
 Note that we don't write dead letter or invalid to the `IAmAnOutbox`. We believe that this is accpetable, and that we don't require Transactional Messaging on the error path.
 
-We will add a new exception We will change the behaviour when rejecting a message, where there is a dead letter channel or invalid message channel, as appropriate, if that is supported. We will support existing `Reject` behavious, such as committing the offset on a stream. 
+We will change the behaviour when rejecting a message, where there is a dead letter channel or invalid message channel, as appropriate, if that is supported.  We will support existing `Reject` behavious, such as committing the offset on a stream.
+
+We will add a new exception `RejectMessageAction`.
+
+
+
 
 

@@ -1,6 +1,6 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Toby Henderson
+Copyright © 2025 Ian Cooper
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -27,11 +27,21 @@ using System;
 namespace Paramore.Brighter.Actions;
 
 /// <summary>
-/// Thrown to indicate that a message should be deferred.  Its purpose is to allow messages that cannot be processed
-/// immediately to be delayed. Call `throw new DeferMessageAction()` from within a <see cref="RequestHandler{TRequest}"/>
-/// or a <see cref="RequestHandlerAsync{TRequest}"/> to requeue the message with a delay.
+/// Thrown to indicate that a message should be rejected. Its purpose is end processing of a message. If there is a DLQ
+/// then the message will move to the DLQ. Call `throw new RejectMessageAction()` from within a
+/// <see cref="RequestHandler{TRequest}"/> or <see cref="RequestHandlerAsync{TRequest}"/> to end processing of a message.
+/// The provided `reason` can be used to indicate the reason for the failure. 
 /// </summary>
-/// <remarks>How the delay works depends on whether the transport natively implements delay. If not, we rely on the
-/// configuration of an <see cref="IAmARequestScheduler"/> or <see cref="IAmARequestSchedulerAsync"/>.
+/// Although it seems we are using an exception for "flow control", we do not recommend using `RejectMessageAction` to
+/// move messages that cannot be processed to a DLQ, instead just treating it as an application error. However, for those
+/// with workflows that operate around the DLQ for monitoring errors, as this should be an exceptional path, we provide
+/// it for use.
+/// <remarks>
+/// 
 /// </remarks>
-public class DeferMessageAction : Exception;
+public class RejectMessageAction : Exception
+{
+    public RejectMessageAction() {}
+    public RejectMessageAction(string? reason) : base(reason) {}
+    public RejectMessageAction(string? reason, Exception? innerException) : base(reason, innerException) {}
+}
