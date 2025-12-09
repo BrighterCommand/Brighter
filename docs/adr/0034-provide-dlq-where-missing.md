@@ -16,7 +16,7 @@ When load-shedding, because a stream does not delete an undeliverable message, b
 
 Why then would we need a Dead Letter Channel for a stream?
 
-Normally the answer is process, with monitoring of Dead Letter Channels a process that a team adheres too. Reviewing the channel, because it has more than zero records is easier than looking for the offset of records that failed in the logs, and examining the instead. Replaying from the channel is easier than reprocessing the record in its original position in the stream.
+Normally the answer is process, with monitoring of Dead Letter Channels a process that a team adheres too. Reviewing the channel, because it has more than zero records is easier than looking for the offset of records that failed in the logs, and examining the instead. Replaying from the channel is easier than reprocessing the record in its original position in the stream. Teams may automatic alerts set to any DLQ in their system. If there is a DLQ and it has entries - the team has red lights in their dashboard and inboxes.
 
 The other answer is that developers are using Kafka as a queue, not a stream. Records can be processed individually, and partition assignment is random. Typically this occurs because developers are working in environments without a queue. We note that Kafka is adding queues to resolve this situation, but we also note that a Dead Letter Channel is not in the early releases.
 
