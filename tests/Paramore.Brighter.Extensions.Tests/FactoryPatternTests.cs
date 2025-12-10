@@ -182,13 +182,4 @@ namespace Paramore.Brighter.Extensions.Tests
             Assert.NotNull(commandProcessor);
         }
     }
-
-    // Test helper classes
-    public class TestRequestContextFactory : IAmARequestContextFactory
-    {
-        public RequestContext Create()
-        {
-            return new RequestContext();
-        }
-    }
 }

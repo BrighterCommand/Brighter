@@ -147,7 +147,6 @@ namespace Paramore.Brighter.Extensions.Tests
 
             // Register multiple services
             var factory1 = new TestRequestContextFactory();
-            var factory2 = new TestRequestContextFactory();
             var outbox = new InMemoryOutbox(TimeProvider.System);
 
             serviceCollection.AddSingleton<IAmARequestContextFactory>(factory1);
