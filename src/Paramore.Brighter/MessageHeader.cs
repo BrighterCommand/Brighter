@@ -245,7 +245,7 @@ namespace Paramore.Brighter
         /// <value>The topic.</value>
         [JsonConverter(typeof(RoutingKeyConvertor))]
         [Newtonsoft.Json.JsonConverter(typeof(RoutingKeyConvertor))]
-        public RoutingKey Topic { get; init; } = RoutingKey.Empty;
+        public RoutingKey Topic { get; set; } = RoutingKey.Empty;
 
         /// <summary>
         /// REQUIRED

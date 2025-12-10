@@ -25,19 +25,15 @@ THE SOFTWARE. */
 namespace Paramore.Brighter;
 
 /// <summary>
-/// Indicates that the channel does not have native support for a DLQ, and that instead the consumer will provision
-/// a dead letter channel. If a dead letter channel is defined, Brighter will produce messages to it from
-/// a `MessagePump` on a call to `Reject`.
-/// We call `Reject` in response to a `DeferMessageAction` exceeding the permitted number of retries, or the code calls
-/// `RejectMessageAction` to force the message to `Reject` and then be placed on the DLQ. 
+/// Indicates that the channel will support an `Invalid Message Channel` which the consumer will provision an invalid
+/// message channel. If deserialization of a message raises an error, and the consumer implements
+/// IUseBrighterInvalidMessage support then the consumer will produce a message to the channel. If the consumer
+/// does not implement this interface but does implement <see cref="IUseBrighterDeadLetterSupport"/> 
 /// </summary>
-/// <remarks>When implementing a Consumer, that does not have native support for a DLQ, use this interface to indicate
-/// that your consumer can forward messages to a DLQ
-/// </remarks>
-public interface IUseBrighterDeadLetterSupport
+public interface IUseBrighterInvalidMessageSupport
 {
     /// <summary>
-    /// The Routing Key used for the Dead Letter Channel
+    /// The Routing Key used for the Invalid Message Channel
     /// </summary>
-    RoutingKey? DeadLetterRoutingKey { get; }    
+    RoutingKey? InvalidMessageRoutingKey { get; }
 }

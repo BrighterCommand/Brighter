@@ -41,7 +41,21 @@ namespace Paramore.Brighter.Actions;
 /// </remarks>
 public class RejectMessageAction : Exception
 {
+    /// <summary>
+    /// Throw to indicate that a <see cref="Message"/> should be rejected.
+    /// </summary>
     public RejectMessageAction() {}
+    
+    /// <summary>
+    /// Throw to indicate that a <see cref="Message"/> should be rejected.
+    /// </summary>
+    /// <param name="reason">The reason that a <see cref="Message"/> should be rejected</param>
     public RejectMessageAction(string? reason) : base(reason) {}
+    
+    /// <summary>
+    /// Throw to indicate that a <see cref="Message"/> should be rejected.
+    /// </summary>
+    /// <param name="reason">The reason that a <see cref="Message"/> should be rejected</param>
+    /// <param name="innerException">The exception that led to rejection of the <see cref="Message"/></param>
     public RejectMessageAction(string? reason, Exception? innerException) : base(reason, innerException) {}
 }

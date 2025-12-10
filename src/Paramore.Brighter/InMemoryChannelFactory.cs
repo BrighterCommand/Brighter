@@ -60,7 +60,7 @@ namespace Paramore.Brighter
             return new Channel(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, _ackTimeout),
+                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, ackTimeout: _ackTimeout),
                 subscription.BufferSize
             );
         }
@@ -75,7 +75,7 @@ namespace Paramore.Brighter
             return new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, _ackTimeout),
+                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, ackTimeout: _ackTimeout),
                 subscription.BufferSize
             );
         }
@@ -91,7 +91,7 @@ namespace Paramore.Brighter
             IAmAChannelAsync channel = new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, _ackTimeout),
+                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, ackTimeout: _ackTimeout),
                 subscription.BufferSize
             );
             return Task.FromResult(channel);

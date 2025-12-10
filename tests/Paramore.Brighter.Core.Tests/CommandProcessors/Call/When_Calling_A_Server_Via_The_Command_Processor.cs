@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             //start a message pump on a new thread, to recieve the Call message
             Channel channel = new(
                 new("MyChannel"), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000))
             );
             
             var messagePump = new Reactor(_commandProcessor, (message) => typeof(MyRequest),_messageMapperRegistry, 

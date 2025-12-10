@@ -6,14 +6,16 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
-public class AsyncInMemoryConsumerRejectTests
+public class InMemoryConsumerRejectWithDeadLetterTestsAsync 
 {
     [Fact]
-    public async Task When_a_dequeued_item_is_rejected()
+    public async Task When_rejecting_a_message_with_a_dead_letter_channel_async()
     {
         //arrange
         const string myTopic = "my topic";
         var routingKey = new RoutingKey(myTopic);
+        const string deadLetterTopic = "dlq";
+        var deadLetterRoutingKey = new RoutingKey(deadLetterTopic);
 
         var expectedMessage = new Message(
             new MessageHeader(Id.Random(), routingKey, MessageType.MT_EVENT),
@@ -23,15 +25,17 @@ public class AsyncInMemoryConsumerRejectTests
         bus.Enqueue(expectedMessage);
 
         var timeProvider = new FakeTimeProvider();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, deadLetterRoutingKey, TimeSpan.FromMilliseconds(1000));
         
         //act
-        var receivedMessage = await consumer.ReceiveAsync();
-        await consumer.RejectAsync(receivedMessage.Single());
+        var receivedMessage = (await consumer.ReceiveAsync()).Single();
+        await consumer.RejectAsync(receivedMessage);
         
         timeProvider.Advance(TimeSpan.FromSeconds(2));  //-- the message should be returned to the bus if there is no Acknowledge or Reject
         
         //assert
-        Assert.Empty(bus.Stream(routingKey));
+        Assert.Empty(bus.Stream(routingKey)); 
+        Assert.NotEmpty(bus.Stream(deadLetterRoutingKey));
+        
     }
 }
