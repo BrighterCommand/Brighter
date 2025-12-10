@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
@@ -181,5 +182,178 @@ namespace Paramore.Brighter.Extensions.Tests
             // Assert
             Assert.NotNull(commandProcessor);
         }
+
+        [Fact]
+        public void AddBrighter_SimpleOverload_RespectsHandlerLifetimeConfiguration()
+        {
+            // Arrange
+            var serviceCollection = new ServiceCollection();
+
+            // Act - use simple overload with Scoped lifetime
+            serviceCollection.AddBrighter(options =>
+            {
+                options.HandlerLifetime = ServiceLifetime.Scoped;
+            }).AutoFromAssemblies();
+
+            // Assert - verify TestEventHandler is registered as Scoped
+            var handlerDescriptor = serviceCollection.FirstOrDefault(
+                sd => sd.ServiceType == typeof(TestEventHandler));
+
+            Assert.NotNull(handlerDescriptor);
+            Assert.Equal(ServiceLifetime.Scoped, handlerDescriptor.Lifetime);
+        }
+
+        [Fact]
+        public void AddBrighter_SimpleOverload_RespectsMapperLifetimeConfiguration()
+        {
+            // Arrange
+            var serviceCollection = new ServiceCollection();
+
+            // Act - use simple overload with Singleton mapper lifetime
+            serviceCollection.AddBrighter(options =>
+            {
+                options.MapperLifetime = ServiceLifetime.Singleton;
+            }).AutoFromAssemblies();
+
+            // Assert - verify TestEventMessageMapper is registered as Singleton
+            var mapperDescriptor = serviceCollection.FirstOrDefault(
+                sd => sd.ServiceType == typeof(TestEventMessageMapper));
+
+            Assert.NotNull(mapperDescriptor);
+            Assert.Equal(ServiceLifetime.Singleton, mapperDescriptor.Lifetime);
+        }
+
+        [Fact]
+        public void AddBrighter_SimpleOverload_RespectsTransformerLifetimeConfiguration()
+        {
+            // Arrange
+            var serviceCollection = new ServiceCollection();
+
+            // Act - use simple overload with Scoped transformer lifetime
+            serviceCollection.AddBrighter(options =>
+            {
+                options.TransformerLifetime = ServiceLifetime.Scoped;
+            }).AutoFromAssemblies();
+
+            // Assert - verify TestTransform is registered as Scoped
+            var transformDescriptor = serviceCollection.FirstOrDefault(
+                sd => sd.ServiceType == typeof(TestTransform));
+
+            Assert.NotNull(transformDescriptor);
+            Assert.Equal(ServiceLifetime.Scoped, transformDescriptor.Lifetime);
+        }
+
+        [Fact]
+        public void AddBrighter_ServiceProviderOverload_UsesDefaultLifetimes()
+        {
+            // Arrange
+            var serviceCollection = new ServiceCollection();
+
+            // Act - use SP overload and try to set Scoped lifetime
+            // Note: SP overload cannot honor lifetime settings because they are needed
+            // at registration time, but the callback is deferred to resolution time
+            serviceCollection.AddBrighter((options, sp) =>
+            {
+                options.HandlerLifetime = ServiceLifetime.Scoped; // This will NOT be honored
+            }).AutoFromAssemblies();
+
+            // Assert - handler should be registered with default (Transient) lifetime
+            var handlerDescriptor = serviceCollection.FirstOrDefault(
+                sd => sd.ServiceType == typeof(TestEventHandler));
+
+            Assert.NotNull(handlerDescriptor);
+            Assert.Equal(ServiceLifetime.Transient, handlerDescriptor.Lifetime);
+        }
+
+        [Fact]
+        public void AddConsumers_SimpleOverload_RespectsHandlerLifetimeConfiguration()
+        {
+            // Arrange
+            var serviceCollection = new ServiceCollection();
+
+            // Act - use simple overload with Scoped lifetime
+            serviceCollection.AddConsumers(options =>
+            {
+                options.HandlerLifetime = ServiceLifetime.Scoped;
+                options.Subscriptions = new List<Subscription>();
+            }).AutoFromAssemblies();
+
+            // Assert - verify TestEventHandler is registered as Scoped
+            var handlerDescriptor = serviceCollection.FirstOrDefault(
+                sd => sd.ServiceType == typeof(TestEventHandler));
+
+            Assert.NotNull(handlerDescriptor);
+            Assert.Equal(ServiceLifetime.Scoped, handlerDescriptor.Lifetime);
+        }
+
+        [Fact]
+        public void AddConsumers_ServiceProviderOverload_UsesDefaultLifetimes()
+        {
+            // Arrange
+            var serviceCollection = new ServiceCollection();
+
+            // Act - use SP overload and try to set Scoped lifetime
+            serviceCollection.AddConsumers((options, sp) =>
+            {
+                options.HandlerLifetime = ServiceLifetime.Scoped; // This will NOT be honored
+                options.Subscriptions = new List<Subscription>();
+            }).AutoFromAssemblies();
+
+            // Assert - handler should be registered with default (Transient) lifetime
+            var handlerDescriptor = serviceCollection.FirstOrDefault(
+                sd => sd.ServiceType == typeof(TestEventHandler));
+
+            Assert.NotNull(handlerDescriptor);
+            Assert.Equal(ServiceLifetime.Transient, handlerDescriptor.Lifetime);
+        }
+
+        [Fact]
+        public void AddBrighter_SimpleOverload_UsesRequestContextFactoryDirectly()
+        {
+            // Arrange
+            var serviceCollection = new ServiceCollection();
+            var customFactory = new TestRequestContextFactory();
+
+            // Act - use simple overload with custom factory
+            serviceCollection.AddBrighter(options =>
+            {
+                options.RequestContextFactory = customFactory;
+            }).AutoFromAssemblies();
+
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+            var resolvedFactory = serviceProvider.GetService<IAmARequestContextFactory>();
+
+            // Assert - factory should be the one we set directly
+            Assert.NotNull(resolvedFactory);
+            Assert.Same(customFactory, resolvedFactory);
+        }
+
+        [Fact]
+        public void AddBrighter_ServiceProviderOverload_ResolvesRequestContextFactoryAtRuntime()
+        {
+            // Arrange
+            var serviceCollection = new ServiceCollection();
+            var customFactory = new TestRequestContextFactory();
+            serviceCollection.AddSingleton<ICustomDependency>(new CustomDependency());
+
+            // Act - use SP overload to resolve factory based on other DI services
+            serviceCollection.AddBrighter((options, sp) =>
+            {
+                // Verify we can access other services from DI
+                var dep = sp.GetRequiredService<ICustomDependency>();
+                Assert.NotNull(dep);
+                options.RequestContextFactory = customFactory;
+            }).AutoFromAssemblies();
+
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+            var resolvedOptions = serviceProvider.GetService<IBrighterOptions>();
+
+            // Assert - factory should be resolved at runtime through the options
+            Assert.NotNull(resolvedOptions);
+            Assert.Same(customFactory, resolvedOptions.RequestContextFactory);
+        }
+
+        private interface ICustomDependency { }
+        private sealed class CustomDependency : ICustomDependency { }
     }
 }

@@ -29,31 +29,30 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
-            
+
             var options = new ConsumersOptions();
             configure?.Invoke(options);
+
             services.TryAddSingleton<IBrighterOptions>(options);
             services.TryAddSingleton<IAmConsumerOptions>(options);
-            
+
             services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
                 BuildDispatcher,
                 ServiceLifetime.Singleton));
-            
+
             services.TryAddSingleton(options.InboxConfiguration);
             var inbox = options.InboxConfiguration.Inbox;
             if (inbox is IAmAnInboxSync)
             {
-                services.TryAdd(
-                    new ServiceDescriptor(
-                        typeof(IAmAnInboxSync), BuildInbox<IAmAnInboxSync>, ServiceLifetime.Singleton));
+                services.TryAdd(new ServiceDescriptor(
+                    typeof(IAmAnInboxSync), BuildInbox<IAmAnInboxSync>, ServiceLifetime.Singleton));
             }
             if (inbox is IAmAnInboxAsync)
             {
-                services.TryAdd(
-                    new ServiceDescriptor(
-                        typeof(IAmAnInboxAsync), BuildInbox<IAmAnInboxAsync>, ServiceLifetime.Singleton));
+                services.TryAdd(new ServiceDescriptor(
+                    typeof(IAmAnInboxAsync), BuildInbox<IAmAnInboxAsync>, ServiceLifetime.Singleton));
             }
-            
+
             return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
 
@@ -70,46 +69,38 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         /// <exception cref="ArgumentNullException">Throws if no .NET IoC container provided</exception>
         public static IBrighterBuilder AddConsumers(
             this IServiceCollection services,
-            Action<ConsumersOptions, IServiceProvider> configure)
+            Action<ConsumersOptions, IServiceProvider>? configure)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
-            if (configure == null)
-                throw new ArgumentNullException(nameof(configure));
 
-            var options = new ConsumersOptions();
-
-            services.AddSingleton<ConsumersOptions>(sp =>
+            services.TryAddSingleton<ConsumersOptions>(sp =>
             {
-                var config = new ConsumersOptions();
-                configure(config, sp);
-                return config;
+                var options = new ConsumersOptions();
+                configure?.Invoke(options, sp);
+                return options;
             });
 
-            services.AddSingleton<IBrighterOptions>(sp => sp.GetRequiredService<ConsumersOptions>());
-            services.AddSingleton<IAmConsumerOptions>(sp => sp.GetRequiredService<ConsumersOptions>());
+            services.TryAddSingleton<IBrighterOptions>(sp => sp.GetRequiredService<ConsumersOptions>());
+            services.TryAddSingleton<IAmConsumerOptions>(sp => sp.GetRequiredService<ConsumersOptions>());
 
             services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
                 BuildDispatcher,
                 ServiceLifetime.Singleton));
 
             services.TryAdd(new ServiceDescriptor(typeof(InboxConfiguration),
-                sp =>
-                {
-                    var config = sp.GetRequiredService<ConsumersOptions>();
-                    return config.InboxConfiguration;
-                },
+                sp => sp.GetRequiredService<ConsumersOptions>().InboxConfiguration,
                 ServiceLifetime.Singleton));
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxSync),
-                sp => BuildInbox<IAmAnInboxSync>(sp),
+                BuildInbox<IAmAnInboxSync>,
                 ServiceLifetime.Singleton));
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxAsync),
-                sp => BuildInbox<IAmAnInboxAsync>(sp),
+                BuildInbox<IAmAnInboxAsync>,
                 ServiceLifetime.Singleton));
 
-            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
+            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, new ConsumersOptions());
         }
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)

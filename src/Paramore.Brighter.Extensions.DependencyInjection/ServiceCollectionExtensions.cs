@@ -65,7 +65,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var options = new BrighterOptions();
             configure?.Invoke(options);
-            services.TryAddSingleton<IBrighterOptions>(options);
 
             return BrighterHandlerBuilder(services, options);
         }
@@ -87,45 +86,34 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <exception cref="ArgumentNullException">Thrown if we have no IoC provided ServiceCollection</exception>
         public static IBrighterBuilder AddBrighter(
             this IServiceCollection services,
-            Action<BrighterOptions, IServiceProvider> configure)
+            Action<BrighterOptions, IServiceProvider>? configure)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
-            if (configure == null)
-                throw new ArgumentNullException(nameof(configure));
 
-            var options = new BrighterOptions();
-
-            services.AddSingleton<BrighterOptions>(sp =>
+            services.TryAddSingleton<BrighterOptions>(sp =>
             {
-                var config = new BrighterOptions();
-                configure(config, sp);
-                return config;
+                var options = new BrighterOptions();
+                configure?.Invoke(options, sp);
+                return options;
             });
 
-            services.AddSingleton<IBrighterOptions>(sp => sp.GetRequiredService<BrighterOptions>());
+            services.TryAddSingleton<IBrighterOptions>(sp => sp.GetRequiredService<BrighterOptions>());
 
-            return BrighterHandlerBuilder(services, options);
+            return BrighterHandlerBuilder(services, new BrighterOptions());
         }
 
         /// <summary>
-        /// This is public so that we can call it from <see cref="ServiceCollectionExtensions.AddServiceActivator"/>
-        /// which allows that extension method to be called with a <see cref="ServiceActivatorOptions"/> configuration
-        /// that derives from <see cref="BrighterOptions"/>.
-        /// DON'T CALL THIS DIRECTLY
-        /// Registers the following with the service collection :-
-        ///  - BrighterOptions - how should we configure Brighter
-        ///  - Feature Switch Registry - optional if features switch support is desired
-        ///  - Inbox - defaults to InMemoryInbox if none supplied 
-        ///  - SubscriberRegistry - what handlers subscribe to what requests
-        ///  - MapperRegistry - what mappers translate what messages
-        ///  - Request Context Factory - how do we create a request context for a pipeline
+        /// This is public so that we can call it from ServiceActivator extensions.
+        /// DON'T CALL THIS DIRECTLY - use AddBrighter or AddConsumers instead.
         /// </summary>
         /// <param name="services">The collection of services that we want to add registrations to</param>
-        /// <param name="options"></param>
-        /// <returns></returns>
+        /// <param name="options">The options containing lifetime configurations for registries</param>
+        /// <returns>A builder for further configuration</returns>
         public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
         {
+            services.TryAddSingleton<IBrighterOptions>(options);
+
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
             services.TryAddSingleton(subscriberRegistry);
 
@@ -134,20 +122,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
-            
-            services.TryAddSingleton(options.RequestContextFactory);
+
+            services.TryAddSingleton<IAmARequestContextFactory>(sp =>
+                sp.GetRequiredService<IBrighterOptions>().RequestContextFactory);
 
             if (options.FeatureSwitchRegistry != null)
                 services.TryAddSingleton(options.FeatureSwitchRegistry);
 
-            //Add the policy registry
 #pragma warning disable CS0618 // Type or member is obsolete
             var policyRegistry = options.PolicyRegistry == null ? new DefaultPolicy() : AddDefaults(options.PolicyRegistry);
 #pragma warning restore CS0618 // Type or member is obsolete
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, ServiceLifetime.Singleton));
 
-            var builder =  new ServiceCollectionBrighterBuilder(
+            var builder = new ServiceCollectionBrighterBuilder(
                 services,
                 subscriberRegistry,
                 mapperRegistry,
