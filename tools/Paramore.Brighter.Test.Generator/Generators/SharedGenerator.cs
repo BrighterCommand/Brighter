@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 
 public class SharedGenerator(ILogger<SharedGenerator> logger) : BaseGenerator(logger)
 {
-    public async Task GenerateAsync(TestConfigurationConfiguration configuration)
+    public async Task GenerateAsync(TestConfiguration configuration)
     {
         if (string.IsNullOrEmpty(configuration.MessageFactory))
         {

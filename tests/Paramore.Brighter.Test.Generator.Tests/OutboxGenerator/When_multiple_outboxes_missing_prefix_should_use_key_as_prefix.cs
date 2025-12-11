@@ -26,7 +26,7 @@ public class WhenMultipleOutboxesMissingPrefixShouldUseKeyAsPrefix: IDisposable
     public async Task When_multiple_outboxes_missing_prefix_should_use_key_as_prefix()
     {
         // Arrange
-        var configuration = new TestConfigurationConfiguration
+        var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,

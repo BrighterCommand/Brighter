@@ -25,7 +25,7 @@ public class WhenGeneratingWithSingleOutboxShouldCompleteWithoutError : IDisposa
     public async Task When_generating_with_single_outbox_should_complete_without_error()
     {
         // Arrange
-        var configuration = new TestConfigurationConfiguration
+        var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,

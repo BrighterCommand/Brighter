@@ -27,11 +27,33 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Test.Generator.Configuration;
 
-public class TestConfigurationConfiguration
+/// <summary>
+/// Represents the configuration for generating test code.
+/// </summary>
+public class TestConfiguration
 {
+    /// <summary>
+    /// Gets or sets the namespace for the generated test code.
+    /// </summary>
     public string Namespace { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Gets or sets the destination folder where the generated test files will be written.
+    /// </summary>
     public string DestinationFolder { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Gets or sets the message factory to use for creating test messages.
+    /// </summary>
     public string? MessageFactory { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the outbox configuration for generating outbox tests.
+    /// </summary>
     public OutboxConfiguration? Outbox { get; set; }
+    
+    /// <summary>
+    /// Gets or sets a dictionary of named outbox configurations for generating multiple outbox tests.
+    /// </summary>
     public Dictionary<string, OutboxConfiguration>? Outboxes { get; set; }
 }

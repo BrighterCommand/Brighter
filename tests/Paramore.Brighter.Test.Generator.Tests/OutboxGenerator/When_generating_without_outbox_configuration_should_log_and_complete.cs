@@ -25,7 +25,7 @@ public class WhenGeneratingWithoutOutboxConfigurationShouldLogAndComplete : IDis
     public async Task When_generating_without_outbox_configuration_should_log_and_complete()
     {
         // Arrange
-        var configuration = new TestConfigurationConfiguration
+        var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,

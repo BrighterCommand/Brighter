@@ -35,7 +35,7 @@ public abstract class BaseGenerator(ILogger logger)
 {
     private readonly Parser _parser = new();
     
-    protected virtual async Task GenerateAsync(TestConfigurationConfiguration configuration, 
+    protected virtual async Task GenerateAsync(TestConfiguration configuration, 
         string prefix, 
         string templateFolderName,
         object model,
@@ -46,8 +46,8 @@ public abstract class BaseGenerator(ILogger logger)
         
         logger.LogInformation("Founded {FileCount} liquid files", fileNames.Length);
         
-        var destinyPath = Path.Combine(configuration.DestinationFolder, prefix);
-        logger.LogInformation("Base destiny Path {FileCount}", destinyPath);
+        var destinationFolder = Path.Combine(configuration.DestinationFolder, prefix);
+        logger.LogInformation("Base destination folder {FileCount}", destinationFolder);
         
         ignore  ??= _ => false;
 
@@ -59,14 +59,19 @@ public abstract class BaseGenerator(ILogger logger)
             }
             
             var file = new FileInfo(fileName);
-            var destinyTemplateFile = new FileInfo(Path.Combine(destinyPath, file.Name.Replace(".liquid", string.Empty)));
+            var destinationTemplateFile = new FileInfo(Path.Combine(destinationFolder, file.Name.Replace(".liquid", string.Empty)));
+            if (destinationTemplateFile.Directory == null)
+            {
+                logger.LogError("Destination folder {DestinationFolder} does not exist", destinationFolder);
+                continue;
+            }
             
-            destinyTemplateFile.Directory!.Create();
+            destinationTemplateFile.Directory.Create();
             
-            logger.LogInformation("Generating file from {TemplatePath} to {DestinyPath}", file.FullName, destinyTemplateFile.FullName);
+            logger.LogInformation("Generating file from {TemplatePath} to {DestinationPath}", file.FullName, destinationTemplateFile.FullName);
             
             await _parser.ParseAsync(new ParseContext(file.FullName,
-                destinyTemplateFile.FullName,
+                destinationTemplateFile.FullName,
                 model));
         }
     }

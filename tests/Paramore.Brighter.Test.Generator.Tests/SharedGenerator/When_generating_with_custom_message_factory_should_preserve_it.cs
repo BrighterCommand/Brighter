@@ -25,7 +25,7 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
     public async Task When_generating_with_custom_message_factory_should_preserve_it()
     {
         // Arrange
-        var configuration = new TestConfigurationConfiguration
+        var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,

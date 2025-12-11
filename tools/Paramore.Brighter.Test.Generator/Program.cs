@@ -37,10 +37,12 @@ var logger = factory.CreateLogger<Program>();
 
 var configurationFileOptions = new Option<string>("--file")
 {
-    Description = "<Add description>", DefaultValueFactory = _ => "test-configuration.json", Required = false,
+    Description = "Path to the test configuration JSON file", 
+    DefaultValueFactory = _ => "test-configuration.json",
+    Required = false,
 };
 
-var command = new RootCommand("<Add description>");
+var command = new RootCommand("Generates test code for Brighter shared and outbox components from a configuration file");
 command.Options.Add(configurationFileOptions);
 
 var commandParser = command.Parse(args);
@@ -62,7 +64,7 @@ if (!File.Exists(configurationFile))
 try
 {
     await using var fs = File.OpenRead(configurationFile);
-    var configuration = JsonSerializer.Deserialize<TestConfigurationConfiguration>(fs);
+    var configuration = JsonSerializer.Deserialize<TestConfiguration>(fs);
     if (configuration == null)
     {
         logger.LogCritical("The configuration file {Path} could not be deserialized", configurationFile);
@@ -72,7 +74,7 @@ try
     if (string.IsNullOrEmpty(configuration.DestinationFolder))
     {
         configuration.DestinationFolder = Directory.GetCurrentDirectory();
-        logger.LogInformation("No destiny folder specified, going to use {Folder}", configuration.DestinationFolder);
+        logger.LogInformation("No destination folder specified, going to use {Folder}", configuration.DestinationFolder);
     }
 
     await new SharedGenerator(factory.CreateLogger<SharedGenerator>()).GenerateAsync(configuration);

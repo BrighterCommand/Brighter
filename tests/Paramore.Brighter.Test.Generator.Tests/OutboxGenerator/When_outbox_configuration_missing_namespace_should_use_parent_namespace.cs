@@ -25,7 +25,7 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
     public async Task When_outbox_configuration_missing_namespace_should_use_parent_namespace()
     {
         // Arrange
-        var configuration = new TestConfigurationConfiguration
+        var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,

@@ -25,12 +25,38 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Test.Generator.Configuration;
 
+/// <summary>
+/// Represents the configuration for generating outbox tests.
+/// </summary>
 public class OutboxConfiguration
 {
+    /// <summary>
+    /// Gets or sets the prefix to use for the generated test class names.
+    /// </summary>
     public string Prefix { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Gets or sets the transaction type used by the outbox implementation.
+    /// </summary>
     public string Transaction { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Gets or sets the outbox provider implementation to test.
+    /// </summary>
     public string OutboxProvider { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Gets or sets the namespace for the generated outbox test code. If null, uses the parent configuration's namespace.
+    /// </summary>
     public string? Namespace { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the message factory for creating test messages. If null, uses the parent configuration's message factory.
+    /// </summary>
     public string? MessageFactory { get; set; }
+    
+    /// <summary>
+    /// Gets or sets a value indicating whether the outbox provider supports transactions.
+    /// </summary>
     public bool HasSupportToTransaction { get; set; } = true;
 }

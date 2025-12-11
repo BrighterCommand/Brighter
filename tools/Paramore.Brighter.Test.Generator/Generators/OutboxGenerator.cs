@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(logger)
 {
     
-    public async Task GenerateAsync(TestConfigurationConfiguration configuration)
+    public async Task GenerateAsync(TestConfiguration configuration)
     {
         if (configuration.Outbox != null)
         {
@@ -99,7 +99,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         return false;
     }
     
-    protected override Task GenerateAsync(TestConfigurationConfiguration configuration, 
+    protected override Task GenerateAsync(TestConfiguration configuration, 
         string prefix, string templateFolderName,
         object model, Func<string, bool>? ignore = null)
     {

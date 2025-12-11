@@ -14,8 +14,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests;
 /// </summary>
 public class DefaultMessageFactory : IAmAMessageFactory
 {
-    private static Random s_random = new();
-
     /// <summary>
     /// Creates a new message instance with randomly generated header values and body content for testing purposes.
     /// </summary>

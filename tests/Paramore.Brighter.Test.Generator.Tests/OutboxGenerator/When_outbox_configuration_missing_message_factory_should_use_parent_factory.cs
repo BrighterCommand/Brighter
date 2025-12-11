@@ -25,7 +25,7 @@ public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory:
     public async Task When_outbox_configuration_missing_message_factory_should_use_parent_factory()
     {
         // Arrange
-        var configuration = new TestConfigurationConfiguration
+        var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,

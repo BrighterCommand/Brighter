@@ -25,7 +25,7 @@ public class WhenGeneratingWithOutboxWithoutTransactionSupportShouldComplete : I
     public async Task When_generating_with_outbox_without_transaction_support_should_complete()
     {
         // Arrange
-        var configuration = new TestConfigurationConfiguration
+        var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,

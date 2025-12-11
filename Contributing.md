@@ -8,7 +8,7 @@ Use this file to follow our coding guidelines when submitting to Brighter.
 
 - If adding a new capability to our framework, write an Architecture Decision Record (ADR)
   - The ADR should focus on the why of your decision, over implementation details, which can be better found in the code.
-  - Follow the format defined in [ADR 0001](/Users/ian.cooper/CSharpProjects/github/BrighterCommand/Brighter/docs/adr/0001-record-architecture-decisions.md)
+  - Follow the format defined in [ADR 0001](docs/adr/0001-record-architecture-decisions.md)
   - Use the ADR to agree what you want to do, before you do it.
   - Use the ADR to signal to others why Brighter is built the way it is, to others, including future maintainers.
 

@@ -25,7 +25,7 @@ public class WhenGeneratingWithNoMessageFactoryShouldUseDefault : IDisposable
     public async Task When_generating_with_no_message_factory_should_use_default()
     {
         // Arrange
-        var configuration = new TestConfigurationConfiguration
+        var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory
