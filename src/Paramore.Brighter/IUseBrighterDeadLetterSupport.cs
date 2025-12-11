@@ -39,5 +39,5 @@ public interface IUseBrighterDeadLetterSupport
     /// <summary>
     /// The Routing Key used for the Dead Letter Channel
     /// </summary>
-    RoutingKey? DeadLetterRoutingKey { get; }    
+    RoutingKey? DeadLetterRoutingKey { get; set; }
 }

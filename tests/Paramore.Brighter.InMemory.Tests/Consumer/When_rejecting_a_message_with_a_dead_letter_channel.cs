@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.Extensions;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
@@ -24,7 +25,8 @@ public class InMemoryConsumerRejectWithDeadLetterTests
         bus.Enqueue(expectedMessage);
 
         var timeProvider = new FakeTimeProvider();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, deadLetterRoutingKey, TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, TimeSpan.FromMilliseconds(1000)) as IAmAMessageConsumerSync;
+        consumer.AddDeadLetterChannel(deadLetterTopic);
         
         //act
         var receivedMessage = consumer.Receive().Single();

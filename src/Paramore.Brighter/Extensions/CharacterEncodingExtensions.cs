@@ -27,6 +27,18 @@ namespace Paramore.Brighter.Extensions;
 
 public static class CharacterEncodingExtensions
 {
+    /// <summary>
+    /// Turns a character encoding into a standard string representation
+    /// We support:
+    ///
+    /// CharacterEncoding.ASCII => "us-ascii",
+    /// CharacterEncoding.UTF8 => "utf-8",
+    /// CharacterEncoding.UTF16 => "utf-16",
+    /// CharacterEncoding.Base64 => "base64",
+    /// 
+    /// </summary>
+    /// <param name="characterEncoding">The string representation of the <see cref="CharacterEncoding"/>; null if not known </param>
+    /// <returns></returns>
     public static string? FromCharacterEncoding(this CharacterEncoding characterEncoding) =>
         characterEncoding switch
         {
@@ -37,6 +49,20 @@ public static class CharacterEncodingExtensions
             _ => null
         };
 
+    /// <summary>
+    /// Turns a string into a character encoding
+    /// We support:
+    /// 
+    ///  "us-ascii" => CharacterEncoding.ASCII,
+    /// "utf-8" => CharacterEncoding.UTF8,
+    /// "utf-16" => CharacterEncoding.UTF16,
+    /// "base64" => CharacterEncoding.Base64,
+    ///
+    /// If the string is not known we assume CharacterEncoding.Raw 
+    /// 
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
     public static CharacterEncoding ToCharacterEncoding(this string name) =>
         name.ToLowerInvariant() switch
         {
