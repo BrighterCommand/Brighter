@@ -153,6 +153,43 @@ Use this file to follow our coding guidelines when submitting to Brighter.
 - Only add code needed to satisfy a behavioral requirement expressed in a test.
   - Do not add speculative code, the need for which is not indicated by test.
 
+### Generated Tests
+
+- Brighter uses a test generation tool to ensure consistency across provider implementations (e.g., outbox/inbox implementations for different databases).
+- Generated tests provide a baseline test suite that all providers must pass, ensuring consistent behavior across implementations.
+- The test generator uses Liquid templates to create test code based on a `test-configuration.json` file in each test project.
+
+#### How to Generate Tests
+
+To generate tests for all test projects, run one of the following scripts from the root directory:
+
+**On Linux/macOS:**
+```bash
+./generate-test.sh
+```
+
+**On Windows:**
+```powershell
+.\generate-test.ps1
+```
+
+**For a specific test project:**
+```bash
+dotnet run --project tools/Paramore.Brighter.Test.Generator -- --file tests/[YourTestProject]/test-configuration.json
+```
+
+#### When to Regenerate Tests
+
+- When templates are updated in `tools/Paramore.Brighter.Test.Generator/Templates/`
+- When adding a new provider implementation that needs the standard test suite
+- When updating test patterns to ensure all providers follow the new pattern
+
+#### Customizing Generated Tests
+
+- Generated tests can be customized after generation for provider-specific edge cases
+- Each test project should have a `test-configuration.json` file specifying provider-specific details
+- See [ADR 0035](docs/adr/0035-geneated-test.md) for more details on the test generation architecture
+
 ## Documentation
 
 - Update or add Documentation comments for all exports from assemblies.
