@@ -11,7 +11,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text;
 
 public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
 {
-    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, $"Table{Uuid.New():N}");
+    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, 
+        databaseName: "brightertests",
+        outBoxTableName: $"Table{Uuid.New():N}",
+        binaryMessagePayload: false);
     
     public void CreateStore()
     {

@@ -11,14 +11,17 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary;
 
 public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
 {
-    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, $"Table{Uuid.New():N}", binaryMessagePayload: true);
+    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, 
+        databaseName: "brightertests",
+        outBoxTableName: $"Table{Uuid.New():N}",
+        binaryMessagePayload: true);
     
     public void CreateStore()
     {
         using var connection = new NpgsqlConnection(_configuration.ConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = PostgreSqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
+        command.CommandText = PostgreSqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName, true);
         command.ExecuteNonQuery();
     }
 
@@ -58,7 +61,7 @@ public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutbox
         await using var connection = new NpgsqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = PostgreSqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
+        command.CommandText = PostgreSqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName, true);
         await command.ExecuteNonQueryAsync();
     }
 

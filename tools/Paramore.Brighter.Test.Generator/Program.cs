@@ -57,7 +57,7 @@ var configurationFile = commandParser.GetRequiredValue(configurationFileOptions)
 
 if (!File.Exists(configurationFile))
 {
-    logger.LogInformation("The configuration file path {Path} is a directory, skipping it", configurationFile);
+    logger.LogInformation("The configuration file: '{Path}' not exists, skipping it", configurationFile);
     return 0;
 }
 
