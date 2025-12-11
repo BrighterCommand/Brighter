@@ -58,5 +58,5 @@ public class OutboxConfiguration
     /// <summary>
     /// Gets or sets a value indicating whether the outbox provider supports transactions.
     /// </summary>
-    public bool HasSupportToTransaction { get; set; } = true;
+    public bool SupportsTransactions { get; set; } = true;
 }

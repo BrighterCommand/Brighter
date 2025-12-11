@@ -91,7 +91,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     
     private static bool SkipTest(OutboxConfiguration outboxConfiguration, string fileName)
     {
-        if (!outboxConfiguration.HasSupportToTransaction && fileName.Contains("Transaction"))
+        if (!outboxConfiguration.SupportsTransactions && fileName.Contains("Transaction"))
         {
             return true;
         }

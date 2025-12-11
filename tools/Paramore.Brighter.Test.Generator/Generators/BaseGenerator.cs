@@ -44,7 +44,7 @@ public abstract class BaseGenerator(ILogger logger)
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", templateFolderName);
         var fileNames = Directory.GetFiles(templatePath , "*.liquid", SearchOption.TopDirectoryOnly);
         
-        logger.LogInformation("Founded {FileCount} liquid files", fileNames.Length);
+        logger.LogInformation("Found {FileCount} liquid files", fileNames.Length);
         
         var destinationFolder = Path.Combine(configuration.DestinationFolder, prefix);
         logger.LogInformation("Base destination folder {FileCount}", destinationFolder);

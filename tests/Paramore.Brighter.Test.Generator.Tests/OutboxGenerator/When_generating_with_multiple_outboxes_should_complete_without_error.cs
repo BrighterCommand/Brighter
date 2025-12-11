@@ -35,7 +35,7 @@ public class WhenGeneratingWithMultipleOutboxesShouldCompleteWithoutError : IDis
                 Prefix = "SqlServer",
                 Transaction = "SqlTransaction",
                 OutboxProvider = "MsSqlOutbox",
-                HasSupportToTransaction = true
+                SupportsTransactions = true
             }
         };
         var generator = new Generators.OutboxGenerator(_logger);

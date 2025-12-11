@@ -38,7 +38,7 @@ public class WhenMultipleOutboxesMissingPrefixShouldUseKeyAsPrefix: IDisposable
                     new OutboxConfiguration 
                     { 
                         OutboxProvider = "MsSqlOutbox",
-                        HasSupportToTransaction = true
+                        SupportsTransactions = true
                     } 
                 }
             }

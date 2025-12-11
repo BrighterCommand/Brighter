@@ -34,7 +34,7 @@ public class WhenGeneratingWithOutboxWithoutTransactionSupportShouldComplete : I
             {
                 Prefix = "DynamoDb",
                 OutboxProvider = "DynamoDbOutbox",
-                HasSupportToTransaction = false
+                SupportsTransactions = false
             }
         };
         var generator = new Generators.OutboxGenerator(_logger);
