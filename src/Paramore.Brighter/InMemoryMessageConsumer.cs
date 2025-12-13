@@ -49,7 +49,11 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <summary>
     /// Sets the <see cref="RoutingKey"/> that represents the Dead Letter Channel this Consumer should use
     /// </summary>
-    public RoutingKey? DeadLetterRoutingKey { get; set; }
+    /// <remarks>
+    /// This property should only be set during initialization. It is not a constructor parameter as calling code will
+    /// test for the implementation of the <see cref="IUseBrighterDeadLetterSupport"/> before setting.
+    /// </remarks>
+    RoutingKey? IUseBrighterDeadLetterSupport.DeadLetterRoutingKey { get; set; }
 
     /// <summary>
     /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
@@ -109,9 +113,10 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     public bool Reject(Message message)
     {
         var removed =_lockedMessages.TryRemove(message.Id, out _);
-        if (!removed || DeadLetterRoutingKey is null) return removed;
+        var deadLetterSupport = this as IUseBrighterDeadLetterSupport;
+        if (!removed || deadLetterSupport.DeadLetterRoutingKey is null) return removed;
         
-        message.Header.Topic = DeadLetterRoutingKey;
+        message.Header.Topic = deadLetterSupport.DeadLetterRoutingKey;
         _bus.Enqueue(message);
 
         return removed;

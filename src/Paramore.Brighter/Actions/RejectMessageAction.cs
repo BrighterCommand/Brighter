@@ -32,12 +32,15 @@ namespace Paramore.Brighter.Actions;
 /// <see cref="RequestHandler{TRequest}"/> or <see cref="RequestHandlerAsync{TRequest}"/> to end processing of a message.
 /// The provided `reason` can be used to indicate the reason for the failure. 
 /// </summary>
-/// Although it seems we are using an exception for "flow control", we do not recommend using `RejectMessageAction` to
-/// move messages that cannot be processed to a DLQ, instead just treating it as an application error. However, for those
-/// with workflows that operate around the DLQ for monitoring errors, as this should be an exceptional path, we provide
-/// it for use.
 /// <remarks>
+/// Although it seems we are using an exception for "flow control", we do not recommend using `RejectMessageAction` to
+/// move messages that have non-transient errors to a dead letter channel, instead just treating it as an application error.
+/// For transient errors, use <see cref="DeferMessageAction"/> to retry. This will move a message to a dead letter channel
+/// when the retry count is exceeded (as we assume this is a good message but could not be processed 'now'. Use traces
+/// and logs to deal with application errors.
 /// 
+/// However, for support users whose workflow is to monitor a dead letter channel, over traces and logs, for operational
+/// errors, we provide RejectMessageAction to avoid the need to implement this via a Fallback Policy. 
 /// </remarks>
 public class RejectMessageAction : Exception
 {
