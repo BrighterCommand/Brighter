@@ -30,6 +30,10 @@ namespace Paramore.Brighter;
 /// IUseBrighterInvalidMessage support then the consumer will produce a message to the channel. If the consumer
 /// does not implement this interface but does implement <see cref="IUseBrighterDeadLetterSupport"/> 
 /// </summary>
+///<remarks>
+/// When deriving from <see cref="Subscription"/> when middleware does not have native support for a DLQ,
+/// use this interface to indicate that your consumer can forward messages to a DLQ
+/// </remarks>
 public interface IUseBrighterInvalidMessageSupport
 {
     /// <summary>

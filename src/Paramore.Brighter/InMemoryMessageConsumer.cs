@@ -36,24 +36,16 @@ namespace Paramore.Brighter;
 /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
 /// and re-queues them if they have been locked for longer than the timeout.
 /// </summary>
-public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IUseBrighterDeadLetterSupport
+public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
     private readonly ConcurrentDictionary<string, LockedMessage> _lockedMessages = new();
     private readonly RoutingKey _topic;
+    private readonly RoutingKey? _deadLetterTopic;
     private readonly InternalBus _bus;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _ackTimeout;
     private readonly ITimer _lockTimer;
     private ITimer? _requeueTimer;
-    
-    /// <summary>
-    /// Sets the <see cref="RoutingKey"/> that represents the Dead Letter Channel this Consumer should use
-    /// </summary>
-    /// <remarks>
-    /// This property should only be set during initialization. It is not a constructor parameter as calling code will
-    /// test for the implementation of the <see cref="IUseBrighterDeadLetterSupport"/> before setting.
-    /// </remarks>
-    RoutingKey? IUseBrighterDeadLetterSupport.DeadLetterRoutingKey { get; set; }
 
     /// <summary>
     /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
@@ -65,13 +57,16 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="topic">The <see cref="Paramore.Brighter.RoutingKey"/> that we want to consume from</param>
     /// <param name="bus">The <see cref="Paramore.Brighter.InternalBus"/> that we want to read the messages from</param>
     /// <param name="timeProvider">Allows us to use a timer that can be controlled from tests</param>
+    /// <param name="deadLetterTopic"></param>
     /// <param name="ackTimeout">The period before we requeue an unacknowledged message; defaults to -1ms or infinite</param>
     public InMemoryMessageConsumer(RoutingKey topic,
         InternalBus bus,
         TimeProvider timeProvider,
+        RoutingKey? deadLetterTopic = null,
         TimeSpan? ackTimeout = null)
     {
         _topic = topic;
+        _deadLetterTopic = deadLetterTopic;
         _bus = bus;
         _timeProvider = timeProvider;
         ackTimeout ??= TimeSpan.FromMilliseconds(-1);
@@ -113,10 +108,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     public bool Reject(Message message)
     {
         var removed =_lockedMessages.TryRemove(message.Id, out _);
-        var deadLetterSupport = this as IUseBrighterDeadLetterSupport;
-        if (!removed || deadLetterSupport.DeadLetterRoutingKey is null) return removed;
+        if (!removed || _deadLetterTopic is null) return removed;
         
-        message.Header.Topic = deadLetterSupport.DeadLetterRoutingKey;
+        message.Header.Topic = _deadLetterTopic;
         _bus.Enqueue(message);
 
         return removed;

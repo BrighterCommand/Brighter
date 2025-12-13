@@ -26,8 +26,7 @@ public class InMemoryConsumerRejectWithDeadLetterTestsAsync
         bus.Enqueue(expectedMessage);
 
         var timeProvider = new FakeTimeProvider();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, TimeSpan.FromMilliseconds(1000)) as IAmAMessageConsumerAsync;
-        consumer.AddDeadLetterChannel(deadLetterTopic);
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, deadLetterTopic, TimeSpan.FromMilliseconds(1000)) as IAmAMessageConsumerAsync;
         
         //act
         var receivedMessage = (await consumer.ReceiveAsync()).Single();

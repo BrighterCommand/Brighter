@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
 
         [Fact]
-        public async Task When_an_event_handler_throws_a_defer_message_Then_message_is_requeued_until_rejectedAsync()
+        public async Task When_an_event_handler_throws_a_defer_message_the_message_is_requeued_until_rejectedAsync()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);

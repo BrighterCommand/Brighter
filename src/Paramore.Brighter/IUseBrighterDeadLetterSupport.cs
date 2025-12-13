@@ -31,8 +31,9 @@ namespace Paramore.Brighter;
 /// We call `Reject` in response to a `DeferMessageAction` exceeding the permitted number of retries, or the code calls
 /// `RejectMessageAction` to force the message to `Reject` and then be placed on the DLQ. 
 /// </summary>
-/// <remarks>When implementing a Consumer, that does not have native support for a DLQ, use this interface to indicate
-/// that your consumer can forward messages to a DLQ
+/// <remarks>
+/// When deriving from <see cref="Subscription"/> when middleware does not have native support for a DLQ,
+/// use this interface to indicate that your consumer can forward messages to a DLQ
 /// </remarks>
 public interface IUseBrighterDeadLetterSupport
 {
