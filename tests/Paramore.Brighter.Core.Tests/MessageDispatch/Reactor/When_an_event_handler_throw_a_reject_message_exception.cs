@@ -28,6 +28,7 @@ public class MessageDispatchRejectMessageExceptionTests
 
         var mapperFactory = new SimpleMessageMapperFactory((r) => new MyRejectedEventHandlerMessageMapper());
         var messageMapperRegistry = new MessageMapperRegistry(mapperFactory, null, null, null);
+        messageMapperRegistry.Register<MyRejectedEvent, MyRejectedEventHandlerMessageMapper>();
             
 
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();

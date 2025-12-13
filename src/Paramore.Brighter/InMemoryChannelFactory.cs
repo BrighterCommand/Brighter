@@ -57,10 +57,18 @@ namespace Paramore.Brighter
         /// <returns>A synchronous channel instance.</returns>
         public IAmAChannelSync CreateSyncChannel(Subscription subscription)
         {
+            var deadLetterSupport = subscription as IUseBrighterDeadLetterSupport;
+            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey; 
+            
             return new Channel(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, ackTimeout: _ackTimeout),
+                new InMemoryMessageConsumer(
+                    subscription.RoutingKey, 
+                    _internalBus, 
+                    _timeProvider,
+                    deadLetterKey,  
+                    ackTimeout: _ackTimeout),
                 subscription.BufferSize
             );
         }
