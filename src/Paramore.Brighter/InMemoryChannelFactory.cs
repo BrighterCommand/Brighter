@@ -80,10 +80,18 @@ namespace Paramore.Brighter
         /// <returns>An asynchronous channel instance.</returns>
         public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
         {
+            var deadLetterSupport = subscription as IUseBrighterDeadLetterSupport;
+            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey; 
+            
             return new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, ackTimeout: _ackTimeout),
+                new InMemoryMessageConsumer(
+                    subscription.RoutingKey, 
+                    _internalBus, 
+                    _timeProvider, 
+                    deadLetterKey,
+                    ackTimeout: _ackTimeout),
                 subscription.BufferSize
             );
         }

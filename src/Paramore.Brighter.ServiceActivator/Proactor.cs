@@ -229,6 +229,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     var stop = false;
                     var defer = false;
+                    var reject = false;
   
                     foreach (var exception in aggregateException.InnerExceptions)
                     {
@@ -244,6 +245,12 @@ namespace Paramore.Brighter.ServiceActivator
                             defer = true;
                             continue;
                         }
+                        
+                        if (exception is RejectMessageAction)
+                        {
+                            reject = true;
+                            continue;
+                        }
 
                         Log.FailedToDispatchMessage(s_logger, exception, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     }
@@ -254,6 +261,13 @@ namespace Paramore.Brighter.ServiceActivator
                         span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
                         if (await RequeueMessage(message))
                             continue;
+                    }
+                    
+                    if (reject)
+                    {
+                        span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
+                        await RejectMessage(message);
+                        continue;
                     }
 
                     if (stop)
@@ -281,6 +295,14 @@ namespace Paramore.Brighter.ServiceActivator
                     span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
                     
                     if (await RequeueMessage(message)) continue;
+                }
+                catch (RejectMessageAction)
+                {
+                    span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
+                    
+                    await RejectMessage(message);
+
+                    continue;
                 }
                 catch (MessageMappingException messageMappingException)
                 {
@@ -448,7 +470,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         private bool UnacceptableMessageLimitReached()
         {
-            if (UnacceptableMessageLimit == 0) return false;
+            if (UnacceptableMessageLimit <= 0) return false;
             if (UnacceptableMessageCount < UnacceptableMessageLimit) return false;
             
             Log.UnacceptableMessageLimitReached(s_logger, UnacceptableMessageLimit, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
