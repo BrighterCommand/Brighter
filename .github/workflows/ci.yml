@@ -62,7 +62,7 @@ jobs:
           dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
 
       - name: Upload packages as artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: nuget packages
           path: "**/*.nupkg"
