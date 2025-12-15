@@ -73,13 +73,15 @@ public interface IUseBrighterInvalidMessageSupport
 
 The `IAmAMessageConsumerSync` or `IAmAMessageConsumerAsync` must manage the lifetime of the `IAmAMessageProducerSync` or `IAmAMessageProducerAsync` needed to post the the Dead Letter Channel or Invalid Message Channel. The 'sync' or 'async' of the producer should match the consumer i.e. `IAmAMessageConsumerSync` shold match up to an `IAmAMessageProducerSync`.
 
-Note: Messages sent to the Dead Letter Channel or Invalid Message Channel are produced directly via IAmAMessageProducer and do NOT go through the Outbox. This means they are not part of transactional messaging guarantees. We believe this is acceptable for the error path. We should extend Brighter's Open Telemetry support to ensure that the message contents can be read from the trace, for investigation.
+Note that messages sent to the Dead Letter Channel or Invalid Message Channel are produced directly via IAmAMessageProducer and do NOT go through the Outbox. This means they are not part of transactional messaging guarantees. We believe this is acceptable for the error path. We should extend Brighter's Open Telemetry support to ensure that the message contents can be read from the trace, for investigation.
 
-In `Reject`, the presence of the Dead Letter Channel or Invalid Message Channel topic indicates that we should produce the current message to the relevant channel, depending on the enum.
+In `Reject`, the presence of the Dead Letter Channel indicates that we should produce the current message to the relevant channel. When translating a message the presence of an Invalid Message Channel indicates that messages that we cannot deserialize should be moved to the Invalid Message Channel.
 
 Tests should be written against an `InMemoryConsumer` and `InternalBus` to prove the flow, and within individual transports.
 
 ## Consequences
+
+We will add a new exception `RejectMessageAction`.
 
 We will extend `Subscription` with a `Publication` for the Dead Letter Channel and the Invalid Message Channel. These will be provided by new interfaces that define these new roles. This is an additive and not a breaking change.
 
@@ -87,19 +89,17 @@ Note that we don't write dead letter or invalid to the `IAmAnOutbox`. We believe
 
 We will change the behaviour when rejecting a message, where there is a dead letter channel or invalid message channel, as appropriate, if that is supported.  We will support existing `Reject` behavious, such as committing the offset on a stream.
 
-We will add a new exception `RejectMessageAction`.
-
-Observability: DLQ operations should emit appropriate logs, traces, and metrics to enable monitoring and alerting on DLQ depth.
+We maintain an UnacceptableMessageCount which is incremented when we reject a message. Once we exceed the limit, we terminate the consumer. The intent is to prevent good messages being moved to a dead letter channel in bulk, due to a systemic issue (such as db failure). If we increase our propensity to reject messages by allowing code to throw a `RejectMessageAction` then we need to ensure that we document this behavior. We do not shut down if the UnacceptableMessageCount is zero; we should alter this to zero or less. In addition, we should add a time window for the UnacceptableMessageCount, to ensure that we shut down for a high number of rejections within that window, not in the programme lifetime.  
 
 Teams should consider whether messages in DLQ/Invalid Message channels contain sensitive data that requires special handling (encryption, access controls, retention policies). 
 
-Retention policies for DLQ messages should be defined at the transport level.
+Observability: DLQ operations should emit appropriate logs, traces, and metrics to enable monitoring and alerting on DLQ depth.
+
+Retention policies for DLQ messages should be defined at the transport level. 
 
 We will want to add a migration guide for users currently using fallback handlers for DLQ.
 
-We will want to add to our documentation examples of the new RejectMessageAction usage
-
-We will want to show configuration examples for each supported transport
+We will want to add to our documentation examples of the new RejectMessageAction usage. We will want to show configuration examples for each supported transport.
 
 
 

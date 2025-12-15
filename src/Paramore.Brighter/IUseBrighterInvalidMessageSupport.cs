@@ -28,7 +28,8 @@ namespace Paramore.Brighter;
 /// Indicates that the channel will support an `Invalid Message Channel` which the consumer will provision an invalid
 /// message channel. If deserialization of a message raises an error, and the consumer implements
 /// IUseBrighterInvalidMessage support then the consumer will produce a message to the channel. If the consumer
-/// does not implement this interface but does implement <see cref="IUseBrighterDeadLetterSupport"/> 
+/// does not implement this interface but does implement <see cref="IUseBrighterDeadLetterSupport"/> we will send
+/// invalid messages to the Dead Letter Channel instead.
 /// </summary>
 ///<remarks>
 /// When deriving from <see cref="Subscription"/> when middleware does not have native support for a DLQ,
@@ -39,5 +40,5 @@ public interface IUseBrighterInvalidMessageSupport
     /// <summary>
     /// The Routing Key used for the Invalid Message Channel
     /// </summary>
-    RoutingKey? InvalidMessageRoutingKey { get; }
+    RoutingKey? InvalidMessageRoutingKey { get; set; }
 }
