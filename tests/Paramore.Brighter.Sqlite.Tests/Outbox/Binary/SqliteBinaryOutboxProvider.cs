@@ -8,7 +8,7 @@ using Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Sync;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary;
 
-public class SqliteTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(Configuration.ConnectionString,
         databaseName: "brightertests",
