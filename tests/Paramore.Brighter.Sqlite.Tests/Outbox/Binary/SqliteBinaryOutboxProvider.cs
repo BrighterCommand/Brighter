@@ -1,61 +1,57 @@
 ﻿using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
-using Paramore.Brighter.MsSql;
-using Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Async;
-using Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Sync;
-using Paramore.Brighter.Outbox.MsSql;
+using Microsoft.Data.Sqlite;
+using Paramore.Brighter.Outbox.Sqlite;
+using Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Async;
+using Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Sync;
 
-namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary;
+namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary;
 
-public class MSSQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class SqliteTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
 {
-    private readonly RelationalDatabaseConfiguration _configuration = new(Configuration.DefaultConnectingString,
+    private readonly RelationalDatabaseConfiguration _configuration = new(Configuration.ConnectionString,
         databaseName: "brightertests",
-        outBoxTableName: $"Table{Uuid.New():N}",
+        outBoxTableName: $"table_{Uuid.New():N}",
         binaryMessagePayload: true);
+
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new MsSqlOutbox(_configuration);
+        return new SqliteOutbox(_configuration);
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new MsSqlOutbox(_configuration);
+        return new SqliteOutbox(_configuration);
     }
 
     public void CreateStore()
     {
-        Configuration.EnsureDatabaseExists(_configuration.ConnectionString);
-
-        using var connection = new SqlConnection(_configuration.ConnectionString);
+        using var connection = new SqliteConnection(_configuration.ConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = SqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
+        command.CommandText = SqliteOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
         command.ExecuteNonQuery();
     }
 
     public async Task CreateStoreAsync()
     {
-        await Configuration.EnsureDatabaseExistsAsync(_configuration.ConnectionString);
-
-        await using var connection = new SqlConnection(_configuration.ConnectionString);
+        using var connection = new SqliteConnection(_configuration.ConnectionString);
         await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = SqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
+        using var command = connection.CreateCommand();
+        command.CommandText = SqliteOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
         await command.ExecuteNonQueryAsync();
     }
 
     public IAmABoxTransactionProvider<DbTransaction> CreateTransactionProvider()
     {
-        return new MsSqlTransactionProvider(_configuration);
+        return new SqliteTransactionProvider(_configuration);
     }
 
     public void DeleteStore(IEnumerable<Message> messages)
     {
-        using var connection = new SqlConnection(_configuration.ConnectionString);
+        using var connection = new SqliteConnection(_configuration.ConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = $"DROP TABLE {_configuration.OutBoxTableName}";
@@ -64,7 +60,7 @@ public class MSSQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public async Task DeleteStoreAsync(IEnumerable<Message> messages)
     {
-        await using var connection = new SqlConnection(_configuration.ConnectionString);
+        await using var connection = new SqliteConnection(_configuration.ConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = $"DROP TABLE {_configuration.OutBoxTableName}";
@@ -73,13 +69,14 @@ public class MSSQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new MsSqlOutbox(_configuration);
+        var outbox = new SqliteOutbox(_configuration);
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new MsSqlOutbox(_configuration);
+        var outbox = new SqliteOutbox(_configuration);
         return await outbox.GetAsync(new RequestContext());
     }
+
 }
