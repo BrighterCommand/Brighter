@@ -42,7 +42,7 @@ We MUST advise that for most errors, you should simply throw a normal exception,
 - Use RejectMessageAction: Transient failures that exceed retry count, malformed messages, messages with wrong schema versions, explicit monitoring of failed messages due to inability to process, skipping over a message in a stream 
 - Avoid use RejectMessageAction: messages that violate business invariants in a way that retry won't fix, prefer application logging
 
-The `RejectMessageAction` should take an optional string that indicates why the message was rejected. If present the reason should be added to the `MessageHeader.Bag' property under a key of `REJECTION_REASON`.
+The `RejectMessageAction` should take an optional string that indicates why the message was rejected. If present the reason should be added to the `MessageHeader.Bag' property under a key of `RejectionReason`.
 
 In addtion, to support usage for an Invalid Message Channel, the framework should throw `InvalidMessageAction` for a failed deserialization of a message, to force the message into any supported Invalid Message Channel.   
 

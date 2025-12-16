@@ -44,6 +44,11 @@ namespace Paramore.Brighter
         /// Tag name for the redelivered header
         /// </summary>
         public const string RedeliveredHeaderName = "Redelivered";
+        
+        /// <summary>
+        /// Tag name for the reason a message was rejected
+        /// </summary>
+        public const string RejectionReasonHeaderName = "RejectionReason";
 
         /// <summary>
         /// Gets the header.

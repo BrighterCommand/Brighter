@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -70,12 +71,15 @@ public class MessageDispatchRejectMessageExceptionTests
     }
 
     [Fact]
+    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
     public void When_an_event_handler_throw_a_reject_message_exception()
     {
         _dispatcher.End().Wait();
         
         Assert.Empty(_bus.Stream(_routingKey));
         Assert.NotEmpty(_bus.Stream(_deadLetterRoutingKey));
+        var message = _bus.Dequeue(_deadLetterRoutingKey);
+        Assert.Equal(MyRejectedEventHandlerAsync.TestOfRejectionFlow, message.Header.Bag[Message.RejectionReasonHeaderName]);
     }
     
     

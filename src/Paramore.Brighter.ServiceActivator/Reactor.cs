@@ -190,6 +190,7 @@ namespace Paramore.Brighter.ServiceActivator
                     var stop = false;
                     var defer = false;
                     var reject = false;
+                    string? rejectReason = null; 
 
                     foreach (var exception in aggregateException.InnerExceptions)
                     {
@@ -198,6 +199,7 @@ namespace Paramore.Brighter.ServiceActivator
                             Log.StoppingReceivingMessages(s_logger, configurationException, Channel.Name,
                                 Channel.RoutingKey, Environment.CurrentManagedThreadId);
                             stop = true;
+                            rejectReason = configurationException.Message;
                             break;
                         }
 
@@ -207,9 +209,10 @@ namespace Paramore.Brighter.ServiceActivator
                             continue;
                         }
 
-                        if (exception is RejectMessageAction)
+                        if (exception is RejectMessageAction rejectMessageAction)
                         {
                             reject = true;
+                            rejectReason = rejectMessageAction.Message;
                             continue;
                         }
 
@@ -229,13 +232,13 @@ namespace Paramore.Brighter.ServiceActivator
                     if (reject)
                     {
                         span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
-                        RejectMessage(message);
+                        RejectMessage(message, rejectReason);
                         continue;
                     }
 
                     if (stop)
                     {
-                        RejectMessage(message);
+                        RejectMessage(message, $"Not processed due to configuration exception: {rejectReason}");
                         span?.SetStatus(ActivityStatusCode.Error,
                             $"MessagePump: Stopping receiving of messages from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
                         Channel.Dispose();
@@ -249,7 +252,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     Log.StoppingReceivingMessages2(s_logger, configurationException, Channel.Name, Channel.RoutingKey,
                         Environment.CurrentManagedThreadId);
-                    RejectMessage(message);
+                    RejectMessage(message, $"Not processed due to configuration exception: {configurationException.Message}");
                     span?.SetStatus(ActivityStatusCode.Error,
                         $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
                     Channel.Dispose();
@@ -263,11 +266,11 @@ namespace Paramore.Brighter.ServiceActivator
 
                     if (RequeueMessage(message)) continue;
                 }
-                catch (RejectMessageAction)
+                catch (RejectMessageAction rejectMessageAction)
                 {
                     span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
                     
-                    RejectMessage(message);
+                    RejectMessage(message, rejectMessageAction.Message);
 
                     continue;
                 }
@@ -341,10 +344,12 @@ namespace Paramore.Brighter.ServiceActivator
             return context;
         }
 
-        private bool RejectMessage(Message message)
+        private bool RejectMessage(Message message, string? reason = null)
         {
             Log.RejectingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
             IncrementUnacceptableMessageLimit();
+
+            if (reason is not null) message.Header.Bag[Message.RejectionReasonHeaderName] = reason;
 
             return Channel.Reject(message);
         }
@@ -424,7 +429,7 @@ namespace Paramore.Brighter.ServiceActivator
                             ? string.Empty
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
-                    return RejectMessage(message);
+                    return RejectMessage(message, "Handle count of messages reached; rejecting at limit");
                 }
             }
 

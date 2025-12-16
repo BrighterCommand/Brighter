@@ -6,8 +6,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 
 public class MyRejectedEventHandlerAsync : RequestHandlerAsync<MyRejectedEvent>
 {
+    public const string? TestOfRejectionFlow = "Test of rejection flow";
+
     public override Task<MyRejectedEvent> HandleAsync(MyRejectedEvent request, CancellationToken cancellationToken)
     {
-        throw new RejectMessageAction("Test of rejection flow");
+        throw new RejectMessageAction(TestOfRejectionFlow);
     }
 }
