@@ -78,5 +78,4 @@ public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
         var outbox = new SqliteOutbox(_configuration);
         return await outbox.GetAsync(new RequestContext());
     }
-
 }

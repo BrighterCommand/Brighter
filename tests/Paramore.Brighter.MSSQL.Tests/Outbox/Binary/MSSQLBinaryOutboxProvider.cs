@@ -9,7 +9,7 @@ using Paramore.Brighter.Outbox.MsSql;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary;
 
-public class MSSQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class MSSQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(Configuration.DefaultConnectingString,
         databaseName: "brightertests",
