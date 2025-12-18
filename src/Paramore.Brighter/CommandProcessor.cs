@@ -935,7 +935,7 @@ namespace Paramore.Brighter
             Type transactionType
         ) where TRequest : class, IRequest
         {
-            var requestType = typeof(TRequest).Name;
+            var requestType = typeof(TRequest).FullName;
             if (!s_boundBulkDepositCalls.TryGetValue(requestType, out MethodInfo? bulkDeposit))
             {
                 var bulkDepositMethod = typeof(CommandProcessor)
@@ -973,7 +973,7 @@ namespace Paramore.Brighter
         {
             var actualRequestType = actualRequest.GetType();
 
-            if (!s_boundDepositCalls.TryGetValue(actualRequestType.Name, out MethodInfo? deposit))
+            if (!s_boundDepositCalls.TryGetValue(actualRequestType.FullName, out MethodInfo? deposit))
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -985,7 +985,7 @@ namespace Paramore.Brighter
 
                 deposit = depositMethod?.MakeGenericMethod(actualRequestType, transactionType)!;
 
-                s_boundDepositCalls[actualRequestType.Name] = deposit;
+                s_boundDepositCalls[actualRequestType.FullName] = deposit;
             }
 
             return CallMethodAndPreserveException(() =>
@@ -1172,7 +1172,7 @@ namespace Paramore.Brighter
             Type transactionType
         ) where TRequest : class, IRequest
         {
-            var requestType = typeof(TRequest).Name;
+            var requestType = typeof(TRequest).FullName;
             if (!s_boundBulkDepositCallsAsync.TryGetValue(requestType, out MethodInfo? bulkDeposit))
             {
                 var bulkDepositMethod = typeof(CommandProcessor)
@@ -1210,7 +1210,7 @@ namespace Paramore.Brighter
         {
             var actualRequestType = actualRequest.GetType();
 
-            if (!s_boundDepositCallsAsync.TryGetValue(actualRequestType.Name, out MethodInfo? deposit))
+            if (!s_boundDepositCallsAsync.TryGetValue(actualRequestType.FullName, out MethodInfo? deposit))
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -1221,7 +1221,7 @@ namespace Paramore.Brighter
                     .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 7);
 
                 deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), transactionType)!;
-                s_boundDepositCallsAsync[actualRequestType.Name] = deposit;
+                s_boundDepositCallsAsync[actualRequestType.FullName] = deposit;
             }
 
             return CallMethodAndPreserveException(
