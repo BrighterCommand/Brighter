@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
 
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -30,6 +30,7 @@
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.MsSql\Paramore.Brighter.MessagingGateway.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
     </ItemGroup>
 
 </Project>

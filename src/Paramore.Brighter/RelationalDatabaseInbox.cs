@@ -262,7 +262,7 @@ namespace Paramore.Brighter
             {
                 command.ExecuteNonQuery();
             }
-            catch (DbException exception)
+            catch (Exception exception)
             {
                 if (!IsExceptionUniqueOrDuplicateIssue(exception))
                 {
@@ -298,7 +298,7 @@ namespace Paramore.Brighter
                     .ExecuteNonQueryAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
             }
-            catch (DbException exception)
+            catch (Exception exception)
             {
                 if (!IsExceptionUniqueOrDuplicateIssue(exception))
                 {
@@ -424,12 +424,15 @@ namespace Paramore.Brighter
         protected virtual IDbDataParameter[] CreateAddParameters<T>(T command, string contextKey)
             where T : class, IRequest
         {
-            var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+            var body = DatabaseConfiguration.BinaryMessagePayload
+                ? CreateSqlParameter("@CommandBody", JsonSerializer.SerializeToUtf8Bytes(command, JsonSerialisationOptions.Options))
+                : CreateSqlParameter("@CommandBody", JsonSerializer.Serialize(command, JsonSerialisationOptions.Options));
+
             return
             [
                 CreateSqlParameter("@CommandID", command.Id.Value),
                 CreateSqlParameter("@CommandType", typeof(T).Name),
-                CreateSqlParameter("@CommandBody", commandJson),
+                body,
                 CreateSqlParameter("@Timestamp", DateTime.UtcNow),
                 CreateSqlParameter("@ContextKey", contextKey)
             ];
@@ -453,15 +456,23 @@ namespace Paramore.Brighter
             ];
         }
 
-        protected virtual string CommandBodyColumnName => "CommandBody"; 
+        protected virtual string CommandBodyColumnName => "CommandBody";
         protected virtual T MapFunction<T>(DbDataReader dr, string commandId) where T : class, IRequest
         {
             try
             {
                 if (dr.Read())
                 {
-                    var body = dr.GetString(dr.GetOrdinal(CommandBodyColumnName));
-                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    if (DatabaseConfiguration.BinaryMessagePayload)
+                    {
+                        var body = dr.GetFieldValue<byte[]>(dr.GetOrdinal(CommandBodyColumnName));
+                        return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    }
+                    else
+                    {
+                        var body = dr.GetString(dr.GetOrdinal(CommandBodyColumnName));
+                        return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    }
                 }
             }
             finally
@@ -479,17 +490,25 @@ namespace Paramore.Brighter
             {
                 if (await dr.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                 {
-                    var body = dr.GetString(dr.GetOrdinal(CommandBodyColumnName));
-                    return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    if (DatabaseConfiguration.BinaryMessagePayload)
+                    {
+                        var body = dr.GetFieldValue<byte[]>(dr.GetOrdinal(CommandBodyColumnName));
+                        return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    }
+                    else
+                    {
+                        var body = dr.GetString(dr.GetOrdinal(CommandBodyColumnName));
+                        return JsonSerializer.Deserialize<T>(body, JsonSerialisationOptions.Options)!;
+                    }
                 }
             }
             finally
             {
-                
+
 #if NETSTANDARD
                 dr.Close();
 #else
-                await dr 
+                await dr
                     .CloseAsync()
                     .ConfigureAwait(ContinueOnCapturedContext);
 #endif
@@ -507,7 +526,7 @@ namespace Paramore.Brighter
             finally
             {
                 dr.Close();
-            } 
+            }
         }
 
 #if  NETSTANDARD

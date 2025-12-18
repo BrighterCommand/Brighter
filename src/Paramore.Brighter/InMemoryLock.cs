@@ -22,7 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -33,7 +33,7 @@ namespace Paramore.Brighter;
 /// </summary>
 public class InMemoryLock : IDistributedLock
 {
-    private readonly Dictionary<string, SemaphoreSlim> _semaphores = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphores = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Attempt to obtain a lock on a resource
@@ -43,11 +43,7 @@ public class InMemoryLock : IDistributedLock
     /// <returns>The id of the lock that has been acquired or null if no lock was able to be acquired</returns>
     public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
-        if (!_semaphores.TryGetValue(resource, out var semaphore))
-        {
-            semaphore = new SemaphoreSlim(1, 1);
-            _semaphores.Add(resource, semaphore);
-        }
+        var semaphore = _semaphores.GetOrAdd(resource, _ => new SemaphoreSlim(1, 1));
 
         return (await semaphore.WaitAsync(TimeSpan.Zero, cancellationToken)) ? "" : null;
     }
@@ -62,7 +58,7 @@ public class InMemoryLock : IDistributedLock
     public Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
     {
         if (_semaphores.TryGetValue(resource, out SemaphoreSlim? semaphore))
-            semaphore?.Release();
+            semaphore.Release();
         return Task.CompletedTask;
     }
 }

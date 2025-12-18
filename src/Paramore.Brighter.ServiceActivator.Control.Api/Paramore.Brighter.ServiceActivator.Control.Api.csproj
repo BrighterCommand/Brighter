@@ -1,18 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+    <Description>ASP.NET Core API extensions for Paramore.Brighter Service Activator Control module. Provides REST endpoints for querying service activator node status and health information.</Description>
+    <Authors>Paul Reardon</Authors>
     <OutputType>Library</OutputType>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Service Activator;Control;API;REST;Health Check;Node Status;ASP.NET Core;Command;Event;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-    <Authors>Paul Reardon</Authors>
     <IsPackable>true</IsPackable>
-    <Description>The API extensions for the Brighter Service Activator Control module</Description>
-    <PackageTags>Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.ServiceActivator.Control\Paramore.Brighter.ServiceActivator.Control.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.ServiceActivator.Control\Paramore.Brighter.ServiceActivator.Control.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\" />
   </ItemGroup>
 
 </Project>

@@ -39,13 +39,13 @@ public class CompressLargePayloadTests
 
         //mime types
         Assert.Equal(
-            new ContentType(MediaTypeNames.Application.GZip), 
+            new ContentType("application/gzip"), 
             compressedMessage.Header.ContentType);
         Assert.Equal(
             new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
             compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
         Assert.Equal(
-            new ContentType(MediaTypeNames.Application.GZip), 
+            new ContentType("application/gzip"), 
             compressedMessage.Body.ContentType);
     }
 

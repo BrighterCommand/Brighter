@@ -26,10 +26,7 @@ builder.Logging.AddConsole();
 builder.Logging.AddOpenTelemetry(otel =>
 {
     otel.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Greetings Sweeper"))
-        .AddOtlpExporter(options =>
-        {
-            options.Protocol = OtlpExportProtocol.Grpc;
-        })
+        .AddConsoleExporter()
         .IncludeScopes = true;
 });
 

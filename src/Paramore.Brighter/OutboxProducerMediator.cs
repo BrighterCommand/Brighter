@@ -74,7 +74,6 @@ namespace Paramore.Brighter
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
             
-        //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
         private bool _disposed;
         private readonly int _maxOutStandingMessages;
@@ -297,8 +296,7 @@ namespace Paramore.Brighter
         public void ClearOutbox(
             Id[] posts,
             RequestContext requestContext,
-            Dictionary<string, object>? args = null
-        )
+            Dictionary<string, object>? args = null)
         {
             if (!HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
@@ -309,30 +307,38 @@ namespace Paramore.Brighter
             var childSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
-                if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
-                foreach (var messageId in posts)
+                // Get all the messages being cleared in a batch to keep db operations down
+                var messages = _outBox!.Get(posts, requestContext).ToArray();
+                if (messages.Length != posts.Length)
                 {
-                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
-                        messageId, _instrumentationOptions);
-                    if (span is not null)
-                    {
-                        childSpans.TryAdd(messageId, span);
-                        requestContext.Span = span;
-                    }
-                    
-                    var message = _outBox.Get(messageId, requestContext);
-                    if (message is null || message.Header.MessageType == MessageType.MT_NONE)
-                        throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
-
-                    BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, message, span, false, false,
+                    var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
+                    throw new NullReferenceException($"Message(s) with Id(s) {string.Join(",", missingMessageIds)} not found in Outbox");
+                }
+                BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, false,
                         _instrumentationOptions);
 
-                    Dispatch([message], requestContext, args);
+                foreach (var message in messages)
+                {
+                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
+                        message.Id, _instrumentationOptions);
+                    if (span is not null)
+                    {
+                        childSpans.TryAdd(message.Id, span);
+                        requestContext.Span = span;
+                    }
+
+                    try
+                    {
+                        Dispatch([message], requestContext, args);
+                    }
+                    finally
+                    {
+                        _tracer?.EndSpan(span);
+                    }
                 }
             }
             finally
             {
-                _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
             }
 
@@ -365,29 +371,38 @@ namespace Paramore.Brighter
             var childSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
-                if(_asyncOutbox is null)throw new ArgumentException(NoAsyncOutboxError);
-                foreach (var messageId in posts)
+                // Get all the messages being cleared in a batch to keep db operations down
+                Message[] messages = (await _asyncOutbox!.GetAsync(posts, requestContext)).ToArray();
+                if (messages.Length != posts.ToArray().Length)
                 {
-                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
-                        messageId, _instrumentationOptions);
-                    if (span != null) childSpans.TryAdd(messageId, span);
-                    requestContext.Span = span;
-
-                    var message = await _asyncOutbox.GetAsync(messageId, requestContext, _outboxTimeout, args,
-                        cancellationToken);
-                    if (message is null || message.Header.MessageType == MessageType.MT_NONE)
-                        throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
-
-                    BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, message, requestContext.Span, false, true,
+                    var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
+                    throw new NullReferenceException($"Message(s) with Id(s) {string.Join(",", missingMessageIds)} not found in Outbox");
+                }
+                BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, true,
                         _instrumentationOptions);
 
-                    await DispatchAsync([message], requestContext, continueOnCapturedContext,
-                        cancellationToken);
+                foreach (var message in messages)
+                {
+                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
+                        message.Id, _instrumentationOptions);
+                    if (span != null)
+                    {
+                        childSpans.TryAdd(message.Id, span);
+                        requestContext.Span = span;
+                    }
+
+                    try
+                    {
+                        await DispatchAsync([message], requestContext, continueOnCapturedContext, cancellationToken);
+                    }
+                    finally
+                    {
+                        _tracer?.EndSpan(span);
+                    }
                 }
             }
             finally
             {
-                _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
             }
 
@@ -691,8 +706,15 @@ namespace Paramore.Brighter
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
             foreach (var producer in _producerRegistry.Producers)
             {
-                if (!ConfigurePublisherCallbackMaybe(producer, requestContext))
-                    ConfigureAsyncPublisherCallbackMaybe(producer, requestContext);
+                switch (producer)
+                {
+                    case IAmAMessageProducerAsync producerAsync:
+                        ConfigureAsyncPublisherCallbackMaybe(producerAsync, requestContext);
+                        break;
+                    case IAmAMessageProducerSync producerSync:
+                        ConfigurePublisherCallbackMaybe(producerSync, requestContext);
+                        break;
+                }
             }
         }
 
@@ -703,7 +725,7 @@ namespace Paramore.Brighter
         /// <param name="producer">The producer to add a callback for</param>
         /// <param name="requestContext">The request context for the pipeline</param>        
         /// <returns></returns>
-        private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducer producer, RequestContext requestContext)
+        private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducerAsync producer, RequestContext requestContext)
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
@@ -730,7 +752,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="producer">The producer to add a callback for</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-        private bool ConfigurePublisherCallbackMaybe(IAmAMessageProducer producer, RequestContext requestContext)
+        private bool ConfigurePublisherCallbackMaybe(IAmAMessageProducerSync producer, RequestContext requestContext)
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
@@ -1000,13 +1022,26 @@ namespace Paramore.Brighter
             {
                 if (_outBox != null)
                 {
-                    _outStandingCount = _outBox
-                        .OutstandingMessages(
-                            _maxOutStandingCheckInterval,
-                            requestContext,
-                            args: _outBoxBag
-                        )
-                        .Count();
+                    if (_maxOutStandingMessages >= 0)
+                    {
+                        _outStandingCount = _outBox
+                            .GetOutstandingMessageCount(
+                                _maxOutStandingCheckInterval,
+                                requestContext,
+                                _maxOutStandingMessages + 1,
+                                args: _outBoxBag
+                            );
+                    }
+                    else
+                    {
+                        _outStandingCount = _outBox
+                            .GetOutstandingMessageCount(
+                                _maxOutStandingCheckInterval,
+                                requestContext,
+                                args: _outBoxBag
+                            );
+                    }
+
                     return;
                 }
 
@@ -1014,8 +1049,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                //if we can't talk to the outbox, we would swallow the exception on this thread
-                //by setting the _outstandingCount to -1, we force an exception
+                //if we can't talk to the outbox, swallow the exception on this thread
                 Log.ErrorGettingOutstandingMessageCount(s_logger, ex);
                 _outStandingCount = 0;
             }

@@ -1,19 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-      <Description>This is the MsSql Connection providers for Access Token authentication using Azure.Idenity</Description>
-      <Authors>Paul Reardon</Authors>
-      <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
-      <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-      <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Description>Azure Identity integration for Microsoft SQL Server provider in Paramore.Brighter Command Processor. Provides connection providers for Access Token authentication using Azure.Identity, supporting managed identities and Azure AD authentication.</Description>
+    <Authors>Paul Reardon</Authors>
+    <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>SQL Server;MSSQL;Azure;Azure Identity;Managed Identity;Authentication;Access Token;Database;Command;Event;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Azure.Identity" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
 
 </Project>

@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Firestore outbox implementation for Paramore.Brighter Command Processor. Provides reliable message publishing with outbox pattern using Google Cloud Firestore for transactional consistency and guaranteed delivery.</Description>
+    <Authors>Rafael Andrade</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Firestore;Google Cloud;GCP;Outbox;Transactional;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Paramore.Brighter.Firestore\Paramore.Brighter.Firestore.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Google.Cloud.Firestore.V1" />
+    </ItemGroup>
+
+</Project>

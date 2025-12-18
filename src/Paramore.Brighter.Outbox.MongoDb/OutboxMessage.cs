@@ -45,13 +45,15 @@ public class OutboxMessage : IMongoDbCollectionTTL
         Source = message.Header.Source.ToString();
         EventType = message.Header.Type;
         SpecVersion = message.Header.SpecVersion;
-        DataSchema = message.Header.DataSchema?.AbsoluteUri;
+        DataSchema = message.Header.DataSchema?.ToString();
         DataRef = message.Header.DataRef;
         Baggage = message.Header.Baggage.ToString();
         TraceParent = message.Header.TraceParent?.Value;
         TraceState = message.Header.TraceState?.Value;
         Subject = message.Header.Subject;
         ExpireAfterSeconds = expireAfterSeconds;
+        WorkflowId =  message.Header.WorkflowId?.Value;
+        JobId = message.Header.JobId?.Value;
     }
 
 
@@ -79,7 +81,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// </summary>
     /// <value>The <see cref="string"/>of the body content type</value>
 # if NET472
-    public string BodyContentType { get; set; } = "appllcation/json";
+    public string BodyContentType { get; set; } = "application/json";
 #else
     public string BodyContentType { get; set; } = MediaTypeNames.Application.Json; 
 #endif    
@@ -99,7 +101,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// <summary>
     /// The correlation id.
     /// </summary>
-    /// <value>The <see cref="stirng"/> with the correlation id.</value>
+    /// <value>The <see cref="string"/> with the correlation id.</value>
     public string? CorrelationId { get; set; }
     
     /// <summary>
@@ -204,12 +206,12 @@ public class OutboxMessage : IMongoDbCollectionTTL
    /// <value>The <see cref="string"/> with the W3C Trace State</value>
     public string? TraceState { get; set; }
    
-   /// <summary>
-   /// The Workflow that this message is associated with
-   /// </summary>
-   /// <value>The <see cref="string"/> id of the workflo</value>
-   public string? WorkflowId { get; set; } 
-
+    /// <summary>
+    /// The Workflow that this message is associated with
+    /// </summary>
+    /// <value>The <see cref="string"/> id of the workflow</value>
+    public string? WorkflowId { get; set; } 
+    
     /// <summary>
     /// Convert the outbox message to <see cref="Message"/>
     /// </summary>
@@ -220,6 +222,18 @@ public class OutboxMessage : IMongoDbCollectionTTL
             ? (CharacterEncoding)Enum.Parse(typeof(CharacterEncoding), CharacterEncoding)
             : Brighter.CharacterEncoding.UTF8;
         var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
+        
+        Id? workflowId = null;
+        if (!string.IsNullOrWhiteSpace(WorkflowId))
+        {
+            workflowId = Id.Create(WorkflowId);
+        }
+        
+        Id? jobId = null;
+        if (!string.IsNullOrWhiteSpace(JobId))
+        {
+            jobId = Id.Create(JobId);
+        }
 
         var header = new MessageHeader(
             messageId: MessageId,
@@ -227,7 +241,9 @@ public class OutboxMessage : IMongoDbCollectionTTL
             messageType: messageType,
             timeStamp: TimeStamp,
             correlationId: CorrelationId is not null ? new Id(CorrelationId) : null,
-            replyTo: ReplyTo == null ? RoutingKey.Empty : new RoutingKey(ReplyTo));
+            replyTo: ReplyTo == null ? RoutingKey.Empty : new RoutingKey(ReplyTo),
+            workflowId: workflowId,
+            jobId: jobId);
 
         if (!string.IsNullOrEmpty(PartitionKey))
         {
@@ -236,7 +252,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
 
         if (!string.IsNullOrEmpty(ContentType))
         {
-            header.ContentType = new ContentType(ContentType);
+            header.ContentType = new ContentType(ContentType!);
         }
 
         if (!string.IsNullOrEmpty(HeaderBag))
@@ -248,18 +264,33 @@ public class OutboxMessage : IMongoDbCollectionTTL
                 header.Bag.Add(keyValue.Key, keyValue.Value);
             }
         }
+        
+        if (!Uri.TryCreate(Source, UriKind.RelativeOrAbsolute, out var source))
+        {
+            source = new Uri(MessageHeader.DefaultSource);
+        }
+        header.Source = source;
 
-        // restore additional header fields
-        if (!string.IsNullOrEmpty(Source))
-            header.Source = new Uri(Source!);
         if (!string.IsNullOrEmpty(EventType))
+        {
             header.Type = new CloudEventsType(EventType!);
+        }
+
         if (!string.IsNullOrEmpty(SpecVersion))
+        {
             header.SpecVersion = SpecVersion;
-        if (!string.IsNullOrEmpty(DataSchema))
-            header.DataSchema = new Uri(DataSchema!);
+        }
+
+        if (Uri.TryCreate(DataSchema, UriKind.RelativeOrAbsolute, out var dataSchema))
+        {
+            header.DataSchema = dataSchema;
+        }
+
         if (!string.IsNullOrEmpty(DataRef))
+        {
             header.DataRef = DataRef;
+        }
+        
         header.Delayed = TimeSpan.Zero;
         header.HandledCount = 0;
         if (!string.IsNullOrEmpty(Baggage))
@@ -268,15 +299,23 @@ public class OutboxMessage : IMongoDbCollectionTTL
             baggage.LoadBaggage(Baggage);
             header.Baggage = baggage;
         }
+
         if (!string.IsNullOrEmpty(TraceParent))
+        {
             header.TraceParent = new TraceParent(TraceParent!);
+        }
+
         if (!string.IsNullOrEmpty(TraceState))
+        {
             header.TraceState = new TraceState(TraceState!);
+        }
+
         if (!string.IsNullOrEmpty(Subject))
+        {
             header.Subject = Subject;
+        }
 
         var bodyContentType = new ContentType(BodyContentType) { CharSet = nameof(characterEncoding) };
-
         var body = new MessageBody(Body, bodyContentType, characterEncoding);
 
         return new Message(header, body);

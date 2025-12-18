@@ -28,6 +28,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
@@ -39,6 +40,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
 {
     private readonly SqsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
+    private readonly InstrumentationOptions _instrumentation;
 
     /// <summary>
     /// The publication configuration for this producer
@@ -58,13 +60,17 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// </summary>
     /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
     /// <param name="publication">Configuration of a producer. Required.</param>
-    public SqsMessageProducer(AWSMessagingGatewayConnection connection, SqsPublication publication)
+    /// <param name="instrumentation"></param>
+    public SqsMessageProducer(AWSMessagingGatewayConnection connection, 
+        SqsPublication publication,
+        InstrumentationOptions instrumentation = InstrumentationOptions.All)
         : base(connection)
     {
         _publication = publication ?? throw new ArgumentNullException(nameof(publication));
         if (_publication.ChannelName is null) 
             throw new InvalidOperationException($"We must have a valid Channel Name on the Publication, either a queue name or a Url");
         _clientFactory = new AWSClientFactory(connection);
+        _instrumentation = instrumentation;
 
         if (publication.FindQueueBy == QueueFindBy.Url)
         {
@@ -137,7 +143,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         
         delay ??= TimeSpan.Zero;
         // SQS support delay until 15min, more than that we are going to use scheduler
-        if (delay > TimeSpan.FromMinutes(15))
+        if (delay > TimeSpan.FromMinutes(15) && _publication.QueueAttributes.Type == SqsType.Standard)
         {
             if (useAsyncScheduler)
             {
@@ -151,12 +157,13 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             return;
         }
         
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.AWSSQS, message, _instrumentation);
         Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
 
         await ConfirmQueueExistsAsync(cancellationToken);
 
         using var client = _clientFactory.CreateSqsClient();
-        var sender = new SqsMessageSender(ChannelQueueUrl!, _publication.QueueAttributes!.Type, client);
+        var sender = new SqsMessageSender(ChannelQueueUrl!, client);
         var messageId = await sender.SendAsync(message, delay, cancellationToken);
 
         if (messageId == null)

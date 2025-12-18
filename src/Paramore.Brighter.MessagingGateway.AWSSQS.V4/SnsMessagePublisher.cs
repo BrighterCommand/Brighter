@@ -40,13 +40,11 @@ public class SnsMessagePublisher
 {
     private readonly string _topicArn;
     private readonly AmazonSimpleNotificationServiceClient _client;
-    private readonly SqsType _sqsType;
 
-    public SnsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, SqsType sqsType)
+    public SnsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client)
     {
         _topicArn = topicArn;
         _client = client;
-        _sqsType = sqsType;
     }
 
     public async Task<string?> PublishAsync(Message message)
@@ -67,7 +65,7 @@ public class SnsMessagePublisher
     {
         var publishRequest = new PublishRequest(_topicArn, message.Body.Value, message.Header.Subject);
         
-        ConfigureFifoSettings(_sqsType, message, publishRequest);
+        ConfigureFifoSettings(message, publishRequest);
 
         var cloudEventHeadersJson = CreateCloudEventHeadersJson(message);
         publishRequest.MessageAttributes = BuildMessageAttributes(message, cloudEventHeadersJson);
@@ -75,10 +73,12 @@ public class SnsMessagePublisher
         return publishRequest;
     }
 
-    private void ConfigureFifoSettings(SqsType sqsType, Message message, PublishRequest request)
+    private static void ConfigureFifoSettings(Message message, PublishRequest request)
     {
-        if (sqsType != SqsType.Fifo)
+        if (PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        {
             return;
+        }
         
         request.MessageGroupId = message.Header.PartitionKey;
         if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
@@ -125,7 +125,8 @@ public class SnsMessagePublisher
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
             [HeaderNames.Type] = message.Header.Type,
             [HeaderNames.Source] = message.Header.Source.ToString(),
-            [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339()
+            [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339(),
+            [HeaderNames.Baggage] = message.Header.Baggage.ToString()
         };
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
@@ -136,6 +137,12 @@ public class SnsMessagePublisher
 
         if (message.Header.DataRef != null)
             cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
+        
+        if (message.Header.TraceParent != null)
+            cloudEventHeaders[HeaderNames.TraceParent] = message.Header.TraceParent.Value;
+
+        if (message.Header.TraceState != null)
+            cloudEventHeaders[HeaderNames.TraceState] = message.Header.TraceState.Value;
 
         var cloudEventHeadersJson = JsonSerializer.Serialize(cloudEventHeaders, JsonSerialisationOptions.Options);
         return cloudEventHeadersJson;

@@ -24,6 +24,8 @@ namespace DbMaker;
 
 public static class SchemaCreation
 {
+    private const string GREETINGS_DB = "Greetings";
+    private const string SALUTATIONS_DB = "Salutations";
     private const string INBOX_TABLE_NAME = "Inbox";
     private const string OUTBOX_TABLE_NAME = "Outbox";
 
@@ -45,7 +47,7 @@ public static class SchemaCreation
         return webHost;
     }
 
-    public static IHost CreateInbox(this IHost host)
+    public static IHost CreateInbox(this IHost host, string tableSchema)
     {
         using IServiceScope scope = host.Services.CreateScope();
         IServiceProvider services = scope.ServiceProvider;
@@ -53,12 +55,12 @@ public static class SchemaCreation
         if (config == null)
             throw new InvalidOperationException("Could not resolve IConfiguration");
 
-        CreateInbox(config);
+        CreateInbox(tableSchema, config);
 
         return host;
     }
 
-    public static IHost CreateOutbox(this IHost webHost, ApplicationType applicationType, bool hasBinaryPayload)
+    public static IHost CreateOutbox(this IHost webHost, ApplicationType applicationType, string tableSchema, bool hasBinaryPayload)
     {
         using IServiceScope scope = webHost.Services.CreateScope();
         IServiceProvider services = scope.ServiceProvider;
@@ -66,7 +68,7 @@ public static class SchemaCreation
         if (config == null)
             throw new InvalidOperationException("Could not resolve IConfiguration");
 
-        CreateOutbox(config, hasBinaryPayload, applicationType);
+        CreateOutbox(tableSchema, config, hasBinaryPayload, applicationType);
 
         return webHost;
     }
@@ -143,7 +145,7 @@ public static class SchemaCreation
             return;
         
         //The migration does not create the Db, so we need to create it sot that it will add it
-        conn.Open();
+        if (conn.State != ConnectionState.Open)conn.Open();
         using DbCommand command = conn.CreateCommand();
 
         command.CommandText = rdbms switch
@@ -173,7 +175,7 @@ public static class SchemaCreation
         }
     }
 
-    private static void CreateInbox(IConfiguration config)
+    private static void CreateInbox(string tableSchema, IConfiguration config)
     {
         string? dbType = config[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (dbType == null)
@@ -187,7 +189,7 @@ public static class SchemaCreation
 
         try
         {
-            CreateInboxProduction(DbResolver.GetDatabaseType(dbType), connectionString);
+            CreateInboxProduction(DbResolver.GetDatabaseType(dbType), tableSchema, connectionString);
         }
         catch (Exception e)
         {
@@ -196,18 +198,18 @@ public static class SchemaCreation
         }
     }
 
-    private static void CreateInboxProduction(Rdbms rdbms, string connectionString)
+    private static void CreateInboxProduction(Rdbms rdbms, string tableSchema, string connectionString)
     {
         switch (rdbms)
         {
             case Rdbms.MySql:
-                CreateInboxMySql(connectionString);
+                CreateInboxMySql(tableSchema, connectionString);
                 break;
             case Rdbms.MsSql:
-                CreateInboxMsSql(connectionString);
+                CreateInboxMsSql(tableSchema, connectionString);
                 break;
             case Rdbms.Postgres:
-                CreateInboxPostgres(connectionString);
+                CreateInboxPostgres(tableSchema, connectionString);
                 break;
             case Rdbms.Sqlite:
                 CreateInboxSqlite(connectionString);
@@ -233,13 +235,13 @@ public static class SchemaCreation
         command.ExecuteScalar();
     }
 
-    private static void CreateInboxMySql(string connectionString)
+    private static void CreateInboxMySql(string tableSchema, string connectionString)
     {
         using MySqlConnection sqlConnection = new(connectionString);
         sqlConnection.Open();
 
         using MySqlCommand existsQuery = sqlConnection.CreateCommand();
-        existsQuery.CommandText = MySqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
+        existsQuery.CommandText = MySqlInboxBuilder.GetExistsQuery(tableSchema, INBOX_TABLE_NAME);
         object? findInbox = existsQuery.ExecuteScalar();
         bool exists = findInbox is long and > 0;
 
@@ -250,13 +252,13 @@ public static class SchemaCreation
         command.ExecuteScalar();
     }
 
-    private static void CreateInboxMsSql(string connectionString)
+    private static void CreateInboxMsSql(string tableSchema, string connectionString)
     {
         using SqlConnection sqlConnection = new(connectionString);
         sqlConnection.Open();
 
         using SqlCommand existsQuery = sqlConnection.CreateCommand();
-        existsQuery.CommandText = SqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
+        existsQuery.CommandText = SqlInboxBuilder.GetExistsQuery(tableSchema, INBOX_TABLE_NAME);
         object? findInbox = existsQuery.ExecuteScalar();
         bool exists = findInbox is > 0;
 
@@ -267,13 +269,13 @@ public static class SchemaCreation
         command.ExecuteScalar();
     }
 
-    private static void CreateInboxPostgres(string connectionString)
+    private static void CreateInboxPostgres(string tableSchema, string connectionString)
     {
         using NpgsqlConnection sqlConnection = new(connectionString);
         sqlConnection.Open();
 
         using NpgsqlCommand existsQuery = sqlConnection.CreateCommand();
-        existsQuery.CommandText = PostgreSqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME.ToLower());
+        existsQuery.CommandText = PostgreSqlInboxBuilder.GetExistsQuery(tableSchema, INBOX_TABLE_NAME.ToLower());
 
         object? findInbox = existsQuery.ExecuteScalar();
         bool exists = findInbox is true;
@@ -286,7 +288,7 @@ public static class SchemaCreation
         command.ExecuteScalar();
     }
 
-    private static void CreateOutbox(IConfiguration config, bool hasBinaryPayload, ApplicationType applicationType)
+    private static void CreateOutbox(string tableSchema, IConfiguration config, bool hasBinaryPayload, ApplicationType applicationType)
     {
         string? dbType = config[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (dbType == null)
@@ -294,15 +296,19 @@ public static class SchemaCreation
 
         try
         {
-            (Rdbms databaseType, string? connectionString) connectionString =
+            (Rdbms databaseType, string? serverConnectionString) connectionString =
                 ConnectionResolver.ServerConnectionString(config, applicationType);
-            if (connectionString.connectionString == null)
+            if (connectionString.serverConnectionString == null)
                 throw new InvalidOperationException(
-                    "Could not resolve connection string; did you set a connection string?");
+                    "Could not resolve connection string; did you set a server connection string?");
+            string? dbConnectionString = ConnectionResolver.DbConnectionString(config, applicationType);
+            if (dbConnectionString == null)
+                throw new InvalidOperationException(
+                    "Could not resolve connection string; did you set a db connection string?");
 
             CreateOutboxProduction(
                 DbResolver.GetDatabaseType(dbType),
-                connectionString,
+                (connectionString.databaseType, tableSchema, dbConnectionString),
                 hasBinaryPayload
             );
         }
@@ -325,36 +331,36 @@ public static class SchemaCreation
 
     private static void CreateOutboxProduction(
         Rdbms rdbms,
-        (Rdbms databaseType, string? connectionString) db,
+        (Rdbms databaseType, string tableSchema, string? serverConnectionString) db,
         bool hasBinaryPayload
     )
     {
         switch (rdbms)
         {
             case Rdbms.MySql:
-                CreateOutboxMySql(db.connectionString, hasBinaryPayload);
+                CreateOutboxMySql(db.tableSchema, db.serverConnectionString, hasBinaryPayload);
                 break;
             case Rdbms.MsSql:
-                CreateOutboxMsSql(db.connectionString, hasBinaryPayload);
+                CreateOutboxMsSql(db.tableSchema, db.serverConnectionString, hasBinaryPayload);
                 break;
             case Rdbms.Postgres:
-                CreateOutboxPostgres(db.connectionString, hasBinaryPayload);
+                CreateOutboxPostgres(db.tableSchema, db.serverConnectionString, hasBinaryPayload);
                 break;
             case Rdbms.Sqlite:
-                CreateOutboxSqlite(db.connectionString, hasBinaryPayload);
+                CreateOutboxSqlite(db.serverConnectionString, hasBinaryPayload);
                 break;
             default:
                 throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
         }
     }
 
-    private static void CreateOutboxMsSql(string? connectionString, bool hasBinaryPayload)
+    private static void CreateOutboxMsSql(string tableSchema, string? connectionString, bool hasBinaryPayload)
     {
         using SqlConnection sqlConnection = new(connectionString);
         sqlConnection.Open();
 
         using SqlCommand? existsQuery = sqlConnection.CreateCommand();
-        existsQuery.CommandText = SqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+        existsQuery.CommandText = SqlOutboxBuilder.GetExistsQuery(tableSchema, OUTBOX_TABLE_NAME);
         object? findOutbox = existsQuery.ExecuteScalar();
         bool exists = findOutbox is > 0;
 
@@ -365,13 +371,13 @@ public static class SchemaCreation
         command.ExecuteScalar();
     }
 
-    private static void CreateOutboxMySql(string? connectionString, bool hasBinaryPayload)
+    private static void CreateOutboxMySql(string tableSchema, string? connectionString, bool hasBinaryPayload)
     {
         using MySqlConnection sqlConnection = new(connectionString);
         sqlConnection.Open();
 
         using MySqlCommand existsQuery = sqlConnection.CreateCommand();
-        existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+        existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(tableSchema, OUTBOX_TABLE_NAME);
         object? findOutbox = existsQuery.ExecuteScalar();
         bool exists = findOutbox is long and > 0;
 
@@ -382,20 +388,20 @@ public static class SchemaCreation
         command.ExecuteScalar();
     }
 
-    private static void CreateOutboxPostgres(string? connectionString, bool hasBinaryPayload)
+    private static void CreateOutboxPostgres(string tableSchema, string? connectionString, bool hasBinaryPayload)
     {
         using NpgsqlConnection sqlConnection = new(connectionString);
         sqlConnection.Open();
 
         using NpgsqlCommand existsQuery = sqlConnection.CreateCommand();
-        existsQuery.CommandText = PostgreSqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+        existsQuery.CommandText = PostgreSqlOutboxBuilder.GetExistsQuery(tableSchema.ToLower(), OUTBOX_TABLE_NAME.ToLower());
         object? findOutbox = existsQuery.ExecuteScalar();
-        bool exists = findOutbox is long and > 0;
+        bool exists = (bool)findOutbox; 
 
         if (exists) return;
 
         using NpgsqlCommand command = sqlConnection.CreateCommand();
-        command.CommandText = PostgreSqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+        command.CommandText = PostgreSqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME.ToLower(), hasBinaryPayload);
         command.ExecuteScalar();
     }
 

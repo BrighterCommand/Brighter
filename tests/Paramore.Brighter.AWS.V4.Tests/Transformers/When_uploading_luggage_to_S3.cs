@@ -7,7 +7,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
-using Paramore.Brighter.Tranformers.AWS.V4;
+using Paramore.Brighter.Transformers.AWS.V4;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;

@@ -107,7 +107,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var policyRegistry = options.PolicyRegistry == null ? new DefaultPolicy() : AddDefaults(options.PolicyRegistry);
 #pragma warning restore CS0618 // Type or member is obsolete
 
-            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
+            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, ServiceLifetime.Singleton));
 
             var builder =  new ServiceCollectionBrighterBuilder(
                 services,
@@ -164,7 +164,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
-            Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(CommittableTransactionProvider);
+            Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(InMemoryTransactionProvider);
 
             //Find the transaction type from the provider
             Type transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
@@ -200,12 +200,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
 
             var outboxInterfaces = outbox.GetType().GetInterfaces();
-            var syncOutboxInterface = outboxInterfaces
-                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType);
-            var asyncOutboxInterface = outboxInterfaces
-                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == asyncOutboxType);
+            var hasSyncOutbox = outboxInterfaces
+                .FirstOrDefault(i => i.IsGenericType && i == syncOutboxType) != null;
+            var hasAsyncOutbox = outboxInterfaces
+                .FirstOrDefault(i => i.IsGenericType && i == asyncOutboxType) != null;
 
-            if (syncOutboxInterface == null && asyncOutboxType == null)
+            if (!hasSyncOutbox && !hasAsyncOutbox)
             {
                 throw new ConfigurationException(
                     $"Unable to register outbox of type {outbox.GetType().Name} - no transaction provider has been registered that matches the outbox's transaction type");
@@ -213,14 +213,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox), _ => outbox, ServiceLifetime.Singleton));
 
-            if (syncOutboxInterface != null)
+            if (hasSyncOutbox)
             {
                 var outboxDescriptor =
                         new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
                 brighterBuilder.Services.Add(outboxDescriptor);
             }
 
-            if (asyncOutboxInterface != null)
+            if (hasAsyncOutbox)
             {
                 var asyncOutboxdescriptor =
                         new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
@@ -334,7 +334,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="builder">The builder.</param>
         /// <param name="factory">The message scheduler factory</param>
         /// <returns></returns>
-        public static IBrighterBuilder UseRequestScheduler(this IBrighterBuilder builder, Func<IServiceProvider, IAmAMessageSchedulerFactory> factory)
+        public static IBrighterBuilder UseRequestScheduler(this IBrighterBuilder builder, Func<IServiceProvider, IAmARequestSchedulerFactory> factory)
         {
             builder.Services.AddSingleton(factory);
             return builder;
@@ -381,8 +381,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var hasEventBus = eventBus != null;
             
             var eventBusConfiguration = provider.GetService<IAmProducersConfiguration>();
-            var transactionProvider = provider.GetService<IAmABoxTransactionProvider>();
             var serviceActivatorOptions = provider.GetService<IAmConsumerOptions>();
+
+            //The transaction provider is often scoped, such as when we have a DbContext. We only need to pull
+            //the transaction type, so we create a scope to get the provider, then pull the type from it
+            Type? transactionType = null;
+            using (IServiceScope serviceScope = provider.CreateScope())
+            {
+                var transactionProvider = serviceScope.ServiceProvider.GetService<IAmABoxTransactionProvider>();
+                transactionType = CommandProcessor.GetTransactionTypeFromTransactionProvider(transactionProvider);
+            }
 
             INeedInstrumentation? instrumentationBuilder = null;
             bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
@@ -394,7 +402,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 instrumentationBuilder = messagingBuilder.ExternalBus(
                     ExternalBusType.FireAndForget,
                     eventBus!,
-                    transactionProvider,
+                    transactionType,
                     eventBusConfiguration!.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration);
@@ -405,7 +413,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 instrumentationBuilder = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus!,
-                    transactionProvider,
+                    transactionType,
                     eventBusConfiguration!.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration);
@@ -477,7 +485,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return command;
         }
         
-        private static IAmAnOutboxProducerMediator? BuildOutBoxProducerMediator(IServiceProvider serviceProvider,
+        private static IAmAnOutboxProducerMediator? BuildOutBoxProducerMediator(
+            IServiceProvider serviceProvider,
             Type transactionType,
             ProducersConfiguration busConfiguration,
             ResiliencePipelineRegistry<string>? resiliencePipelineRegistry,

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -33,22 +33,22 @@ namespace Paramore.Brighter.Outbox.MySql
     /// </summary>
     public class MySqlOutboxBuilder
     {
-        const string TextOutboxDdl = 
+        private const string TextOutboxDdl =
             """
-            CREATE TABLE {0} ( 
-                `MessageId`VARCHAR(255) NOT NULL , 
-                `Topic` VARCHAR(255) NOT NULL , 
-                `MessageType` VARCHAR(32) NOT NULL , 
-                `Timestamp` TIMESTAMP(3) NOT NULL , 
-                `CorrelationId`VARCHAR(255) NULL ,
-                `ReplyTo` VARCHAR(255) NULL ,
-                `ContentType` VARCHAR(128) NULL , 
-                `PartitionKey` VARCHAR(128) NULL , 
-                `WorkflowId` VARCHAR(255) NULL ,
-                `JobId` VARCHAR(255) NULL ,
-                `Dispatched` TIMESTAMP(3) NULL , 
-                `HeaderBag` TEXT NOT NULL , 
-                `Body` TEXT NOT NULL , 
+            CREATE TABLE IF NOT EXISTS {0} (
+                `MessageId`VARCHAR(255) NOT NULL,
+                `Topic` VARCHAR(255) NOT NULL,
+                `MessageType` VARCHAR(32) NOT NULL,
+                `Timestamp` TIMESTAMP(3) NOT NULL,
+                `CorrelationId`VARCHAR(255) NULL,
+                `ReplyTo` VARCHAR(255) NULL,
+                `ContentType` VARCHAR(128) NULL,
+                `PartitionKey` VARCHAR(128) NULL,
+                `WorkflowId` VARCHAR(255) NULL,
+                `JobId` VARCHAR(255) NULL,
+                `Dispatched` TIMESTAMP(3) NULL,
+                `HeaderBag` TEXT NOT NULL,
+                `Body` TEXT NOT NULL,
                 `Source`  VARCHAR(255) NULL,
                 `Type`  VARCHAR(255) NULL,
                 `DataSchema`  VARCHAR(255) NULL,
@@ -56,16 +56,18 @@ namespace Paramore.Brighter.Outbox.MySql
                 `TraceParent`  VARCHAR(255) NULL,
                 `TraceState`  VARCHAR(255) NULL,
                 `Baggage`  TEXT NULL,
+                `DataRef` VARCHAR(255) NULL,
+                `SpecVersion` VARCHAR(255) NULL,
                 `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
-                `CreatedID` INT(11) NOT NULL AUTO_INCREMENT, 
+                `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
                 UNIQUE(`CreatedID`),
                 PRIMARY KEY (`MessageId`)
             ) ENGINE = InnoDB;
             """;
-        
-        const string BinaryOutboxDdl = 
+
+        private const string BinaryOutboxDdl =
             """
-            CREATE TABLE {0} ( 
+            CREATE TABLE IF NOT EXISTS {0} ( 
                 `MessageId` VARCHAR(255) NOT NULL , 
                 `Topic` VARCHAR(255) NOT NULL , 
                 `MessageType` VARCHAR(32) NOT NULL , 
@@ -86,6 +88,8 @@ namespace Paramore.Brighter.Outbox.MySql
                 `TraceParent`  VARCHAR(255) NULL,
                 `TraceState`  VARCHAR(255) NULL,
                 `Baggage`  TEXT NULL,
+                `DataRef` VARCHAR(255) NULL,
+                `SpecVersion` VARCHAR(255) NULL,
                 `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
                 `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
                 UNIQUE(`CreatedID`),
@@ -93,7 +97,7 @@ namespace Paramore.Brighter.Outbox.MySql
             ) ENGINE = InnoDB;
             """;
 
-        const string outboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{0}') AS TableExists;";
+        private const string OutboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '{0}' AND table_name = '{1}') AS TableExists;";
 
         /// <summary>
         /// Get the DDL that describes the table we will store messages in
@@ -112,14 +116,15 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <summary>
         /// Gets the SQL statements required to check for the existence of an Outbox in MySQL
         /// </summary>
-        /// <param name="inboxTableName"></param>
+        /// <param name="tableSchema">What schema should we check for an outbox in</param>
+        /// <param name="outboxTableName">What is the name of the outbox table that we want to check for?</param>
         /// <returns></returns>
         /// <exception cref="InvalidEnumArgumentException"></exception>
-        public static string GetExistsQuery(string inboxTableName)
+        public static string GetExistsQuery(string tableSchema, string outboxTableName)
         {
-            if (string.IsNullOrEmpty(inboxTableName))
+            if (string.IsNullOrEmpty(tableSchema) || string.IsNullOrEmpty(outboxTableName))
                 throw new InvalidEnumArgumentException($"You must provide a tablename for the  OutBox table");
-            return string.Format(outboxExistsQuery, inboxTableName);
+            return string.Format(OutboxExistsQuery, tableSchema, outboxTableName);
         }
     }
 }

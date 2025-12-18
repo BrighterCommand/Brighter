@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -31,65 +31,79 @@ namespace Paramore.Brighter.Outbox.MsSql
     /// </summary>
     public class SqlOutboxBuilder
     {
-        const string TextOutboxDdl = @"
-        CREATE TABLE {0}
+        private const string TextOutboxDdl =
+            """
+            CREATE TABLE {0}
             (
-              [Id] [BIGINT] NOT NULL IDENTITY ,
-              [MessageId] NVARCHAR(255) NOT NULL,
-              [Topic] NVARCHAR(255) NULL,
-              [MessageType] NVARCHAR(32) NULL,
-              [Timestamp] DATETIME NULL,
-              [CorrelationId] NVARCHAR(255) NULL,
-              [ReplyTo] NVARCHAR(255) NULL,
-              [ContentType] NVARCHAR(128) NULL,  
-              [PartitionKey] NVARCHAR(255) NULL, 
-              [WorkflowId] NVARCHAR(255) NULL,
-              [JobId] NVARCHAR(255) NULL,
-              [Dispatched] DATETIME NULL,
-              [HeaderBag] NVARCHAR(MAX) NULL,
-              [Body] NVARCHAR(MAX) NULL,
-              [Source] NVARCHAR(255) NULL,
-              [Type] NVARCHAR(255) NULL,
-              [DataSchema] NVARCHAR(255) NULL,
-              [Subject] NVARCHAR(255) NULL,
-              [TraceParent] NVARCHAR(255) NULL,
-              [TraceState] NVARCHAR(255) NULL,
-              [Baggage] NVARCHAR(MAX) NULL,
-              PRIMARY KEY ( [Id] )
+                [Id] [BIGINT] NOT NULL IDENTITY ,
+                [MessageId] NVARCHAR(255) NOT NULL,
+                [Topic] NVARCHAR(255) NULL,
+                [MessageType] NVARCHAR(32) NULL,
+                [Timestamp] DATETIME NULL,
+                [CorrelationId] NVARCHAR(255) NULL,
+                [ReplyTo] NVARCHAR(255) NULL,
+                [ContentType] NVARCHAR(128) NULL,  
+                [PartitionKey] NVARCHAR(255) NULL, 
+                [WorkflowId] NVARCHAR(255) NULL,
+                [JobId] NVARCHAR(255) NULL,
+                [Dispatched] DATETIME NULL,
+                [HeaderBag] NVARCHAR(MAX) NULL,
+                [Body] NVARCHAR(MAX) NULL,
+                [Source] NVARCHAR(255) NULL,
+                [Type] NVARCHAR(255) NULL,
+                [DataSchema] NVARCHAR(255) NULL,
+                [Subject] NVARCHAR(255) NULL,
+                [TraceParent] NVARCHAR(255) NULL,
+                [TraceState] NVARCHAR(255) NULL,
+                [Baggage] NVARCHAR(MAX) NULL,
+                [DataRef] NVARCHAR(255) NULL,
+                [SpecVersion] NVARCHAR(255) NULL
+                PRIMARY KEY ( [Id] )
             );
-        ";
-        
-        const string BinaryOutboxDdl = @"
-        CREATE TABLE {0}
-            (
-              [Id] [BIGINT] NOT NULL IDENTITY,
-              [MessageId] NVARCHAR(255) NOT NULL,
-              [Topic] NVARCHAR(255) NULL,
-              [MessageType] NVARCHAR(32) NULL,
-              [Timestamp] DATETIME NULL,
-              [CorrelationId] NVARCHAR(255) NULL,
-              [ReplyTo] NVARCHAR(255) NULL,
-              [ContentType] NVARCHAR(128) NULL,  
-              [PartitionKey] NVARCHAR(255) NULL,
-              [WorkflowId] NVARCHAR(255) NULL,
-              [JobId] NVARCHAR(255) NULL,
-              [Dispatched] DATETIME NULL,
-              [HeaderBag] NVARCHAR(MAX) NULL,
-              [Body] VARBINARY(MAX) NULL,
-              [Source] NVARCHAR(255) NULL,
-              [Type] NVARCHAR(255) NULL,
-              [DataSchema] NVARCHAR(255) NULL,
-              [Subject] NVARCHAR(255) NULL,
-              [TraceParent] NVARCHAR(255) NULL,
-              [TraceState] NVARCHAR(255) NULL,
-              [Baggage] NVARCHAR(MAX) NULL,
-              PRIMARY KEY ( [Id] )
-            );
-        ";
- 
-        
-        private const string OutboxExistsSQL = @"IF EXISTS (SELECT 1  FROM sys.tables WHERE  name = '{0}')  SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
+            """;
 
+        private const string BinaryOutboxDdl =
+            """
+            CREATE TABLE {0}
+            (
+                [Id] [BIGINT] NOT NULL IDENTITY,
+                [MessageId] NVARCHAR(255) NOT NULL,
+                [Topic] NVARCHAR(255) NULL,
+                [MessageType] NVARCHAR(32) NULL,
+                [Timestamp] DATETIME NULL,
+                [CorrelationId] NVARCHAR(255) NULL,
+                [ReplyTo] NVARCHAR(255) NULL,
+                [ContentType] NVARCHAR(128) NULL,  
+                [PartitionKey] NVARCHAR(255) NULL,
+                [WorkflowId] NVARCHAR(255) NULL,
+                [JobId] NVARCHAR(255) NULL,
+                [Dispatched] DATETIME NULL,
+                [HeaderBag] NVARCHAR(MAX) NULL,
+                [Body] VARBINARY(MAX) NULL,
+                [Source] NVARCHAR(255) NULL,
+                [Type] NVARCHAR(255) NULL,
+                [DataSchema] NVARCHAR(255) NULL,
+                [Subject] NVARCHAR(255) NULL,
+                [TraceParent] NVARCHAR(255) NULL,
+                [TraceState] NVARCHAR(255) NULL,
+                [Baggage] NVARCHAR(MAX) NULL,
+                [DataRef] NVARCHAR(255) NULL,
+                [SpecVersion] NVARCHAR(255) NULL
+                PRIMARY KEY ( [Id] )
+            );
+            """;
+
+
+        private const string OUTBOX_EXISTS_SQL = @"
+        IF EXISTS (
+            SELECT 1
+            FROM sys.tables t
+            INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+            WHERE t.name = '{0}' AND s.name = '{1}'
+        )
+            SELECT 1 AS TableExists;
+        ELSE
+            SELECT 0 AS TableExists;";
         /// <summary>
         /// Gets the DDL statements required to create an Outbox in MSSQL
         /// </summary>
@@ -103,15 +117,16 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, outboxTableName);
         }
-        
+
         /// <summary>
-        /// Get the SQL statements required to test for the existence of an Inbox in MSSQL
+        /// Get the SQL statements required to test for the existence of an Inbox in MSSQL, checking both schema and table name.
         /// </summary>
-        /// <param name="inboxTableName">The name that was used for the Inbox table</param>
-        /// <returns>The required SQL</returns>
-        public static string GetExistsQuery(string inboxTableName)
+        /// <param name="inboxTableName">The name that was used for the Inbox table.</param>
+        /// <param name="schemaName">The schema that was used for the Inbox table.</param>
+        /// <returns>The required SQL.</returns>
+        public static string GetExistsQuery(string inboxTableName, string schemaName)
         {
-            return string.Format(OutboxExistsSQL, inboxTableName);
+            return string.Format(OUTBOX_EXISTS_SQL, inboxTableName, schemaName);
         }
     }
 }

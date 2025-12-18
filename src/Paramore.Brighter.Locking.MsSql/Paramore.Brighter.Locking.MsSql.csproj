@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Microsoft SQL Server distributed locking provider for Paramore.Brighter Command Processor. Provides distributed lock implementation using SQL Server for coordinating concurrent operations across multiple instances.</Description>
     <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>SQL Server;Microsoft;Distributed Locking;Concurrency;Lock;Command Processor;Database;MSSQL;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

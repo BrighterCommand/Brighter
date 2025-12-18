@@ -9,7 +9,7 @@
         public const string SessionIdKey = "SessionId";
         public const string CloudEventDataRef = "cloudEvents:dataref";
         public const string CloudEventsSchema = "cloudEvents:schema";
-        public const string CloudEventsSource = "clioudEvents:source";
+        public const string CloudEventsSource = "cloudEvents:source";
         public const string CloudEventsType = "cloudEvents:type";
         public const string CloudEventsId = "cloudEvents:id";
         public const string CloudEventsSpecVersion = "cloudEvents:specversion";

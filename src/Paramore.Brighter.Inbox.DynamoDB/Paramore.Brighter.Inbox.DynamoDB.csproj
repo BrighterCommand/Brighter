@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Description>Amazon DynamoDB inbox provider for Paramore.Brighter Command Processor. Enables inbox pattern implementation for idempotent command and event handling using DynamoDB as the persistence layer.</Description>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>DynamoDB;AWS;NoSQL;Inbox;Idempotent;Command;Event;Command Processor;Database;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

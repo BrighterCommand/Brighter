@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         Leader = 1,
     }
     
-    public class KafkaPublication : Publication
+    public class KafkaPublication: Publication
     {
         /// <summary>
         /// The acks parameter controls how many ISR nodes must receive the 

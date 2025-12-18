@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Firestore distributed locking provider for Paramore.Brighter Command Processor. Provides distributed lock implementation using Google Cloud Firestore for coordinating concurrent operations across multiple instances.</Description>
+        <Authors>Rafael Andrade</Authors>
+        <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+        <PackageTags>Firestore;Google Cloud;Distributed Locking;Concurrency;Lock;Command Processor;Cloud;GCP;Brighter</PackageTags>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Paramore.Brighter.Firestore\Paramore.Brighter.Firestore.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    </ItemGroup>
+</Project>

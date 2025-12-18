@@ -40,9 +40,9 @@ public class AsyncCompressLargePayloadTests
 
         //mime types
         Assert.Equal(
-            new ContentType(MediaTypeNames.Application.GZip){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
+            new ContentType("application/gzip"){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
             compressedMessage.Header.ContentType);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.GZip){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
+        Assert.Equal(new ContentType("application/gzip"){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}, 
             compressedMessage.Body.ContentType);
         Assert.Equal(
             new ContentType(MediaTypeNames.Application.Json) { CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }.ToString(), 

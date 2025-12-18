@@ -58,6 +58,7 @@ public class MessageItem
     /// </summary>
     /// <value>The outstanding creation time as a <see cref="long"/> in ticks. May be <c>null</c>.</value>
     [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
+    [DynamoDBGlobalSecondaryIndexHashKey(indexName: "OutstandingAllTopics")]
     [DynamoDBProperty]
     public long? OutstandingCreatedTime { get; set; }
         
@@ -65,7 +66,7 @@ public class MessageItem
     /// The <a href="https://cloudevents.io/">CloudEvents</a> data schema of the message, if any.
     /// </summary>
     /// <value>The data schema as a <see cref="string"/>. May be <c>null</c>.</value>
-    public string? DataSchema { get; }
+    public string? DataSchema { get; set; }
         
     /// <summary>
     /// The <a href="https://cloudevents.io/">CloudEvents</a> data ref for a claim check, if any.
@@ -91,6 +92,7 @@ public class MessageItem
     /// </summary>
     /// <value>The delivery time as a <see cref="long"/> in ticks. May be <c>null</c>.</value>
     [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Delivered")]
+    [DynamoDBGlobalSecondaryIndexHashKey(indexName: "DeliveredAllTopics")]
     [DynamoDBProperty]
     public long? DeliveryTime { get; set; }
         
@@ -115,6 +117,7 @@ public class MessageItem
     /// </summary>
     /// <value>The message ID as a <see cref="string"/>. May be <c>null</c>.</value>
     [DynamoDBHashKey]
+    [DynamoDBGlobalSecondaryIndexRangeKey(indexNames: ["OutstandingAllTopics", "DeliveredAllTopics"])]
     [DynamoDBProperty]
     public string? MessageId { get; set; }
 
@@ -160,15 +163,14 @@ public class MessageItem
     /// The Topic the message was published to
     /// </summary>
     /// <value>The topic as a <see cref="string"/>. May be <c>null</c>.</value>
-    [DynamoDBGlobalSecondaryIndexHashKey("Delivered")]
     [DynamoDBProperty]
     public string? Topic { get; set; }
-        
+
     /// <summary>
     /// The Topic suffixed with the shard number
     /// </summary>
     /// <value>The topic shard as a <see cref="string"/>. May be <c>null</c>.</value>
-    [DynamoDBGlobalSecondaryIndexHashKey("Outstanding")]
+    [DynamoDBGlobalSecondaryIndexHashKey(["Outstanding", "Delivered"])]
     [DynamoDBProperty]
     public string? TopicShard { get; set; }
 
@@ -176,13 +178,13 @@ public class MessageItem
     /// What is the W3C Trace Parent of the span publishing the message?
     /// </summary>
     /// <value>The trace parent as a <see cref="string"/>. May be <c>null</c>.</value>
-    public string? TraceParent { get; }
+    public string? TraceParent { get; set; }
         
     /// <summary>
     /// What is the W3C Trace State of the span publishing the message?
     /// </summary>
     /// <value>The trace state as a <see cref="string"/>. May be <c>null</c>.</value>
-    public string? TraceState { get; }
+    public string? TraceState { get; set; }
 
     /// <summary>
     /// What is the <a href="https://cloudevents.io/">CloudEvents</a> Type of the message? 
@@ -191,7 +193,21 @@ public class MessageItem
     public string? Type { get; set; }
 
     /// <value>The baggage as a <see cref="string"/>. May be <c>null</c>.</value>
-    public string? Baggage { get; }
+    public string? Baggage { get; set; }
+    
+    /// <summary>
+    /// The identifier for an instance of a workflow. This is used to correlate messages that are part of a workflow.
+    /// </summary>
+    /// <remarks> Reserved for future use, currently not used in Brighter</remarks>
+    /// <value>The job identifier.</value>
+    public string? JobId { get; set; }
+        
+    /// <summary>
+    /// The identity of the workflow this message was sent as part of. This is used to correlate messages that are part of a workflow.
+    /// </summary>
+    /// <value>The workflow identifier.</value>
+    /// <remarks> Reserved for future use, currently not used in Brighter</remarks>
+    public string? WorkflowId { get; set; }
 
     public MessageItem()
     {
@@ -225,12 +241,14 @@ public class MessageItem
         Type = message.Header.Type;
         SpecVersion = message.Header.SpecVersion;
         Subject = message.Header.Subject;
-        Source = message.Header.Source.AbsoluteUri;
-        DataSchema = message.Header.DataSchema?.AbsoluteUri;
+        Source = message.Header.Source.ToString();
+        DataSchema = message.Header.DataSchema?.ToString();
         DataRef = message.Header.DataRef;
         TraceParent = message.Header.TraceParent?.Value;
         TraceState = message.Header.TraceState?.Value;
         Baggage =message.Header.Baggage.ToString();
+        JobId = message.Header.JobId?.Value;
+        WorkflowId = message.Header.WorkflowId?.Value;
     }
 
     public Message ConvertToMessage()
@@ -244,7 +262,25 @@ public class MessageItem
         var contentType = ContentType is not null ? new ContentType(ContentType) : new ContentType(MediaTypeNames.Text.Plain);
         var baggage = new Baggage();
         baggage.LoadBaggage(Baggage);
+        
+        Uri.TryCreate(DataSchema, UriKind.RelativeOrAbsolute, out var dataSchema);
+        if (!Uri.TryCreate(Source, UriKind.RelativeOrAbsolute, out var source))
+        {
+            source = new Uri(MessageHeader.DefaultSource);
+        }
+        
+        Id? jobId = null;
+        if (!string.IsNullOrEmpty(JobId))
+        {
+            jobId = Id.Create(JobId);
+        }
             
+        Id? workflowId = null;
+        if (!string.IsNullOrEmpty(WorkflowId))
+        {
+            workflowId = Id.Create(WorkflowId);
+        }
+        
         var header = new MessageHeader(
             messageId: Id.Create(messageId),
             topic: Topic is not null ? new RoutingKey(Topic) :RoutingKey.Empty,
@@ -258,11 +294,13 @@ public class MessageItem
             delayed: TimeSpan.Zero,
             type:new CloudEventsType(Type ?? string.Empty),
             subject: Subject,
-            source: !string.IsNullOrEmpty(Source) ? new Uri(Source) : new Uri("https://paramore.io"),
-            dataSchema: !string.IsNullOrEmpty(DataSchema) ? new Uri(DataSchema) : new Uri("https://goparamore.io"),
+            source: source,
+            dataSchema: dataSchema,
             traceParent: !string.IsNullOrEmpty(TraceParent) ? new TraceParent(TraceParent!) : Brighter.TraceParent.Empty,
             traceState: !string.IsNullOrEmpty(TraceState) ? new TraceState(TraceState!) : Brighter.TraceState.Empty,
-            baggage: baggage
+            baggage: baggage,
+            jobId: jobId,
+            workflowId: workflowId
         )
         {
             DataRef = DataRef

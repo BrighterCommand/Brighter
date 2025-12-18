@@ -1,6 +1,7 @@
 ﻿using FluentMigrator;
+using GreetingsMigrations.Migrations;
 
-namespace Greetings_MySqlMigrations.Migrations;
+namespace GreetingsMigrations.Migrations;
 
 [Migration(1)]
 public class SqlInitialCreate : Migration 

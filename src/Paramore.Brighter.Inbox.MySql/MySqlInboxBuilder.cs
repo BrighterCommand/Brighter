@@ -31,39 +31,61 @@ namespace Paramore.Brighter.Inbox.MySql
     /// </summary>
     public class MySqlInboxBuilder
     {
-        private const string OutboxDDL = @"CREATE TABLE {0} 
+        private const string TextInboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
             ( 
-                `CommandId` VARCHAR(255) NOT NULL , 
-                `CommandType` VARCHAR(256) NOT NULL , 
-                `CommandBody` TEXT NOT NULL , 
-                `Timestamp` TIMESTAMP(4) NOT NULL , 
-                `ContextKey` VARCHAR(256)  NULL , 
+                `CommandId` VARCHAR(255) NOT NULL,
+                `CommandType` VARCHAR(256) NOT NULL,
+                `CommandBody` TEXT NOT NULL,
+                `Timestamp` TIMESTAMP(4) NOT NULL,
+                `ContextKey` VARCHAR(256)  NULL,
                 PRIMARY KEY (`CommandId`)
-            ) ENGINE = InnoDB;";
+            ) ENGINE = InnoDB;
+            """;
 
-        const string InboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{0}') AS TableExists;";
+        private const string BinaryInboxxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            ( 
+                `CommandId` VARCHAR(255) NOT NULL,
+                `CommandType` VARCHAR(256) NOT NULL,
+                `CommandBody` BLOB NOT NULL,
+                `Timestamp` TIMESTAMP(4) NOT NULL,
+                `ContextKey` VARCHAR(256)  NULL,
+                PRIMARY KEY (`CommandId`)
+            ) ENGINE = InnoDB;
+            """;
+
+        const string InboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '{0}' AND table_name = '{1}') AS TableExists;";
 
         /// <summary>
         /// Gets the DDL statements to create an Inbox in MySQL
         /// </summary>
         /// <param name="inboxTableName">The Inbox Table Name</param>
         /// <returns></returns>
-        public static string GetDDL(string inboxTableName)
+        public static string GetDDL(string inboxTableName, bool binaryMessage = false)
         {
-            return string.Format(OutboxDDL, inboxTableName);
+            if (binaryMessage)
+            {
+                return string.Format(BinaryInboxxDDL, inboxTableName);
+            }
+
+            return string.Format(TextInboxDDL, inboxTableName);
         }
 
         /// <summary>
         /// Gets the SQL statements required to check for the existence of an Inbox in MySQL
         /// </summary>
-        /// <param name="inboxTableName"></param>
+        /// <param name="tableSchema">What is the schema we should check for the table</param>
+        /// <param name="inboxTableName">What isthe name for the Inbox in the schema</param>
         /// <returns>The SQL to test for the existence of an Inbox</returns>
         /// <exception cref="InvalidEnumArgumentException"></exception>
-        public static string GetExistsQuery(string inboxTableName)
+        public static string GetExistsQuery(string tableSchema, string inboxTableName)
         {
-            if (string.IsNullOrEmpty(inboxTableName))
-                throw new InvalidEnumArgumentException($"You must provide a tablename for the inbox table");
-            return string.Format(InboxExistsQuery, inboxTableName);
+            if (string.IsNullOrEmpty(tableSchema) || string.IsNullOrEmpty(inboxTableName))
+                throw new InvalidEnumArgumentException($"You must provide a table schema and tablename for the inbox table");
+            return string.Format(InboxExistsQuery, tableSchema, inboxTableName);
         }
     }
 }

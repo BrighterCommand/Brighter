@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Google Cloud Spanner outbox implementation for Paramore.Brighter Command Processor. Provides reliable message publishing with outbox pattern using Cloud Spanner for transactional consistency and guaranteed delivery.</Description>
+    <Authors>Rafael Andrade</Authors>
+    <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Cloud Spanner;Google Cloud;GCP;Database;Outbox;Transactional;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.Spanner\Paramore.Brighter.Spanner.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Cloud.Spanner.Data" />
+  </ItemGroup>
+
+</Project>

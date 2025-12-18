@@ -29,38 +29,65 @@ namespace Paramore.Brighter.Inbox.MsSql
     /// </summary>
     public class SqlInboxBuilder
     {
-        private const string InboxDDL = @"
-                    CREATE TABLE {0}
-                        (
-                            [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
-                            [CommandId] [NVARCHAR](256) NOT NULL ,
-                            [CommandType] [NVARCHAR](256) NULL ,
-                            [CommandBody] [NVARCHAR](MAX) NULL ,
-                            [Timestamp] [DATETIME] NULL ,
-                            [ContextKey] [NVARCHAR](256) NULL,
-                            PRIMARY KEY ( [Id] )
-                        );";
+        private const string TextInboxDDL =
+            """
+            CREATE TABLE {0}
+            (
+                [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
+                [CommandId] [NVARCHAR](256) NOT NULL ,
+                [CommandType] [NVARCHAR](256) NULL ,
+                [CommandBody] [NVARCHAR](MAX) NULL ,
+                [Timestamp] [DATETIME] NULL ,
+                [ContextKey] [NVARCHAR](256) NULL,
+                PRIMARY KEY ( [Id] )
+            );
+            """;
 
-        private const string InboxExistsSQL = @"IF EXISTS (SELECT 1  FROM sys.tables WHERE  name = '{0}')  SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
-        
+        private const string BinaryInboxDDL =
+            """
+            CREATE TABLE {0}
+            (
+                [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
+                [CommandId] [NVARCHAR](256) NOT NULL ,
+                [CommandType] [NVARCHAR](256) NULL ,
+                [CommandBody] [VARBINARY](MAX) NULL ,
+                [Timestamp] [DATETIME] NULL ,
+                [ContextKey] [NVARCHAR](256) NULL,
+                PRIMARY KEY ( [Id] )
+            );
+            """;
+
+
+
+        private const string INBOX_EXISTS_SQL = @"IF EXISTS (
+            SELECT 1
+            FROM sys.tables t
+            INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+            WHERE t.name = '{0}' AND s.name = '{1}'
+        ) SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
+
         /// <summary>
         /// Get the DDL statements to create an Inbox in MSSQL
         /// </summary>
         /// <param name="inboxTableName">The name you want to use for the table</param>
         /// <returns>The required DDL</returns>
-         public static string GetDDL(string inboxTableName)
+        public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false)
         {
-            return string.Format(InboxDDL, inboxTableName);
+            if (binaryMessagePayload)
+            {
+                return string.Format(BinaryInboxDDL, inboxTableName);
+            }
+
+            return string.Format(TextInboxDDL, inboxTableName);
         }
-        
+
         /// <summary>
-        /// Get the SQL statements required to test for the existence of an Inbox in MSSQL
+        /// Get the SQL statements required to test for the existence of an Inbox in MSSQL.
         /// </summary>
-        /// <param name="inboxTableName">The name that was used for the Inbox table</param>
-        /// <returns>The required SQL</returns>
-        public static string GetExistsQuery(string inboxTableName)
-        {
-            return string.Format(InboxExistsSQL, inboxTableName);
-        }
+        /// <param name="inboxTableName">The name that was used for the Inbox table.</param>
+        /// <param name="schemaName">The schema name for the Inbox table. Defaults to 'dbo'.</param>
+        /// <returns>The required SQL.</returns>
+        public static string GetExistsQuery(string inboxTableName, string schemaName = "dbo") =>
+            string.Format(INBOX_EXISTS_SQL, inboxTableName, schemaName);
     }
 }

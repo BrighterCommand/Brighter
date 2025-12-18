@@ -56,9 +56,9 @@ namespace GreetingsReceiverConsole
                     {
                         new SqsSubscription<GreetingEvent>(
                             subscriptionName:new SubscriptionName("paramore.example.greeting"),
-                            channelName:new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            channelName:new ChannelName(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                             channelType: ChannelType.PubSub,
-                            routingKey: new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            routingKey: new RoutingKey(typeof(GreetingEvent).FullName!.ToValidSNSTopicName()),
                             queueAttributes: queueAttributes,
                             bufferSize: 10,
                             timeOut: TimeSpan.FromMilliseconds(20), 

@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        protected RedisSubscription(SubscriptionName subscriptionName,
+        public RedisSubscription(SubscriptionName subscriptionName,
             ChannelName channelName,
             RoutingKey routingKey,
             Type? requestType = null,
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
             : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
-                noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                noOfPerformers, timeOut ?? TimeSpan.FromSeconds(1), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
     }

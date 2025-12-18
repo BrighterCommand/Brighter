@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>MongoDB inbox provider for Paramore.Brighter Command Processor. Enables inbox pattern implementation for idempotent command and event handling using MongoDB as the document persistence layer.</Description>
+    <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>MongoDB;NoSQL;Inbox;Idempotent;Command;Event;Command Processor;Document Database;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

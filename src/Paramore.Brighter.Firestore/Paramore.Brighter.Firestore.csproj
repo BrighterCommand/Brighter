@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Google Cloud Firestore provider for Paramore.Brighter Command Processor. Provides common components for connecting to Firestore, including connection and transaction management for inbox, outbox, and locking implementations.</Description>
+    <Authors>Rafael Andrade</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Firestore;Google Cloud;NoSQL;Document Database;Connection Provider;Transaction;Command;Event;Command Processor;GCP;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Cloud.Firestore.V1" />
+  </ItemGroup>
+
+</Project>

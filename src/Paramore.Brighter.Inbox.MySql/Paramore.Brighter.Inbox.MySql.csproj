@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using MySql</Description>
+    <Description>MySQL inbox provider for Paramore.Brighter Command Processor. Enables inbox pattern implementation for idempotent command and event handling using MySQL as the persistence layer.</Description>
     <Authors>Derek Comartin</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
-    <PackageTags>MySql;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageTags>MySQL;Database;Inbox;Idempotent;Command;Event;Command Processor;Relational Database;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   

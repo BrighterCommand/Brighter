@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -20,37 +22,44 @@ namespace Tests
         public void BasicSetup()
         {
             var serviceCollection = new ServiceCollection();
-            
+
             serviceCollection.AddBrighter().AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-            
+
             Assert.NotNull(commandProcessor);
         }
 
         [Theory]
-        [InlineData(typeof(SomeSqlConnectionProvider), typeof(SomeSqlUnitOfBox))]
-        [InlineData(typeof(SomeSqlUnitOfBox), typeof(SomeSqlUnitOfBox))]
+        [InlineData(typeof(SomeSqlConnectionProvider), typeof(StubSqlTransactionProvider))]
+        [InlineData(typeof(StubSqlTransactionProvider), typeof(StubSqlTransactionProvider))]
         public void WithExternalBus(Type connectionProvider, Type transactionProvider)
         {
             var serviceCollection = new ServiceCollection();
             const string mytopic = "MyTopic";
             var routingKey = new RoutingKey(mytopic);
-            
+
             var producerRegistry = new ProducerRegistry(
                 new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { 
+                    {
                         routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication{ Topic = routingKey})
                     },
                 });
-            
+
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(type => new TestEventMessageMapper()), 
+                new SimpleMessageMapperFactory(type => new TestEventMessageMapper()),
                 new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
             );
+
+            var outbox = new StubSqlOutbox(
+                DbSystem.MySql,
+                new StubSqlDbConfiguration(),
+                new SomeSqlConnectionProvider(),
+                new StubRelationDatabaseOutboxQueries(),
+                new Logger<StubSqlOutbox>(new LoggerFactory()));
 
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
@@ -62,16 +71,17 @@ namespace Tests
                     config.MessageMapperRegistry = messageMapperRegistry;
                     config.ConnectionProvider = connectionProvider;
                     config.TransactionProvider = transactionProvider;
+                    config.Outbox = outbox;
                 })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-            
+
             Assert.NotNull(commandProcessor);
         }
-        
+
         [Fact]
         public void WithCustomPolicy()
         {
@@ -88,7 +98,7 @@ namespace Tests
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
             };
-            
+
             serviceCollection
                 .AddBrighter(options => options.PolicyRegistry = policyRegistry)
                 .AutoFromAssemblies();
@@ -96,7 +106,7 @@ namespace Tests
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-            
+
             Assert.NotNull(commandProcessor);
         }
 
@@ -104,19 +114,19 @@ namespace Tests
         public void WithScopedLifetime()
         {
             var serviceCollection = new ServiceCollection();
-            
-            serviceCollection.AddBrighter(options => options.CommandProcessorLifetime = ServiceLifetime.Scoped
+
+            serviceCollection.AddBrighter(
                 ).AutoFromAssemblies();
 
-            Assert.Equal( ServiceLifetime.Scoped, serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime);
+            Assert.Equal(ServiceLifetime.Singleton, serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime);
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-            
+
             Assert.NotNull(commandProcessor);
         }
-        
+
         public class SomeSqlConnectionProvider : RelationalDbConnectionProvider
         {
             public override DbConnection GetConnection()
@@ -124,9 +134,9 @@ namespace Tests
                 throw new NotImplementedException();
             }
         }
-        
-        
-        public class SomeSqlUnitOfBox :  RelationalDbTransactionProvider
+
+
+        public class StubSqlTransactionProvider : RelationalDbTransactionProvider
         {
             public override DbConnection GetConnection()
             {
@@ -134,5 +144,71 @@ namespace Tests
             }
         }
 
+        public class StubSqlOutbox : RelationDatabaseOutbox
+        {
+            public StubSqlOutbox(DbSystem dbSystem,
+                IAmARelationalDatabaseConfiguration configuration,
+                IAmARelationalDbConnectionProvider connectionProvider,
+                IRelationDatabaseOutboxQueries queries,
+                ILogger logger,
+                InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+                : base(dbSystem, configuration, connectionProvider, queries, logger, instrumentationOptions)
+            {
+            }
+
+            protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override IDbDataParameter CreateSqlParameter(string parameterName, DbType dbType, object? value)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public class StubSqlDbConfiguration : IAmARelationalDatabaseConfiguration
+        {
+            public string ConnectionString => throw new NotImplementedException();
+            public string OutBoxTableName => throw new NotImplementedException();
+            public string InBoxTableName => throw new NotImplementedException();
+            public bool BinaryMessagePayload => throw new NotImplementedException();
+
+            public string DatabaseName => throw new NotImplementedException();
+
+            public string QueueStoreTable => throw new NotImplementedException();
+        }
+
+        public class StubRelationDatabaseOutboxQueries : IRelationDatabaseOutboxQueries
+        {
+            public string PagedDispatchedCommand => throw new NotImplementedException();
+
+            public string PagedReadCommand => throw new NotImplementedException();
+
+            public string PagedOutstandingCommand => throw new NotImplementedException();
+
+            public string PagedOutstandingCommandInStatement => throw new NotImplementedException();
+
+            public string AddCommand => throw new NotImplementedException();
+
+            public string BulkAddCommand => throw new NotImplementedException();
+
+            public string MarkDispatchedCommand => throw new NotImplementedException();
+
+            public string MarkMultipleDispatchedCommand => throw new NotImplementedException();
+
+            public string GetMessageCommand => throw new NotImplementedException();
+
+            public string GetMessagesCommand => throw new NotImplementedException();
+
+            public string DeleteMessagesCommand => throw new NotImplementedException();
+
+            public string GetNumberOfOutstandingMessagesCommand => throw new NotImplementedException();
+        }
     }
 }

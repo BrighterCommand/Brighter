@@ -29,14 +29,29 @@ namespace Paramore.Brighter.Inbox.Sqlite
     /// </summary>
     public class SqliteInboxBuilder
     {
-        const string InboxDDL = @"CREATE TABLE IF NOT EXISTS {0} 
-                                    (
-                                        [CommandId] uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY,
-                                        [CommandType] nvarchar(256),
-                                        [CommandBody] ntext,
-                                        [Timestamp] TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                                        [ContextKey] nvarchar(256)
-                                    );";
+        private const string TextInboxDDL = """
+            CREATE TABLE IF NOT EXISTS {0} 
+            (
+                [CommandId] UNIQUEIDENTIFIER CONSTRAINT PK_MessageId PRIMARY KEY,
+                [CommandType] NVARCHAR(256),
+                [CommandBody] NTEXT,
+                [Timestamp] TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                [ContextKey] NVARCHAR(256)
+            );
+            """;
+
+        private const string BinaryInboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            (
+                [CommandId] UNIQUEIDENTIFIER CONSTRAINT PK_MessageId PRIMARY KEY,
+                [CommandType] NVARCHAR(256),
+                [CommandBody] BLOB NULL,
+                [Timestamp] TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                [ContextKey] NVARCHAR(256)
+            );
+            """;
+
 
         private const string InboxExistsSQL = "SELECT name FROM sqlite_master WHERE type='table' AND name='{0}'";
 
@@ -45,9 +60,14 @@ namespace Paramore.Brighter.Inbox.Sqlite
         /// </summary>
         /// <param name="inboxTableName">The name you want to use for the table</param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string inboxTableName)
+        public static string GetDDL(string inboxTableName, bool binary = false)
         {
-            return string.Format(InboxDDL, inboxTableName);
+            if (binary)
+            {
+                return string.Format(BinaryInboxDDL, inboxTableName);
+            }
+
+            return string.Format(TextInboxDDL, inboxTableName);
         }
 
         /// <summary>
