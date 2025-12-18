@@ -81,7 +81,7 @@ public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage : IDispos
         // Assert.Equal(TimeSpan.Zero, dispatched.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, dispatched.Header.CorrelationId);
         Assert.Equal(message.Header.ReplyTo, dispatched.Header.ReplyTo);
-        Assert.StartsWith(message.Header.ContentType.ToString(), dispatched.Header.ContentType.ToString());
+        Assert.StartsWith(message.Header.ContentType.MediaType, dispatched.Header.ContentType.ToString());
         Assert.Equal(message.Header.PartitionKey, dispatched.Header.PartitionKey); 
             
         //Bag serialization
