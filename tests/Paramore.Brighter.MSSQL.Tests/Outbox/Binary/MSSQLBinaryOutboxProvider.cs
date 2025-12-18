@@ -11,10 +11,12 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary;
 
 public class MSSQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
 {
-    private readonly RelationalDatabaseConfiguration _configuration = new(Configuration.DefaultConnectingString,
+    private readonly RelationalDatabaseConfiguration _configuration = new(
+        Configuration.DefaultConnectingString,
         databaseName: "brightertests",
         outBoxTableName: $"Table{Uuid.New():N}",
-        binaryMessagePayload: true);
+        binaryMessagePayload: true
+    );
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
@@ -33,7 +35,7 @@ public class MSSQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
         using var connection = new SqlConnection(_configuration.ConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = SqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
+        command.CommandText = SqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName, true);
         command.ExecuteNonQuery();
     }
 
@@ -44,7 +46,7 @@ public class MSSQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
         await using var connection = new SqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = SqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
+        command.CommandText = SqlOutboxBuilder.GetDDL(_configuration.OutBoxTableName, true);
         await command.ExecuteNonQueryAsync();
     }
 
