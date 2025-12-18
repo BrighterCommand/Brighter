@@ -103,7 +103,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
                 new ScanRequest
                 {
                     TableName = _tableName,
-                    AttributesToGet = { nameof(MessageItem.MessageId) },
+                    AttributesToGet = [nameof(MessageItem.MessageId)],
                     ExclusiveStartKey = lastKey,
                     Select = Select.SPECIFIC_ATTRIBUTES,
                 }

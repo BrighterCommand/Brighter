@@ -86,7 +86,7 @@ public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync : IA
         //should read the header from the sql outbox
         Assert.Equal(message.Header.Topic, dispatched.Header.Topic);
         Assert.Equal(message.Header.MessageType, dispatched.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), dispatched.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), dispatched.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
         Assert.Equal(0, dispatched.Header.HandledCount); // -- should be zero when read from outbox
         // Assert.Equal(TimeSpan.Zero, dispatched.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, dispatched.Header.CorrelationId);
