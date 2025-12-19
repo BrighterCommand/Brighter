@@ -50,9 +50,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel,
+                timeProvider:_timeProvider)
             {
-                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3,
+                UnacceptableMessageLimitWindow =  TimeSpan.FromMinutes(1)
             };
             
             var unacceptableMessage1 = new Message(
@@ -90,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             Assert.Empty(_bus.Stream(_routingKey));
             
-            //TODO: How to undersetand that the channel shut down without inspection. Observability?
+            Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status); 
         }
     }
 }
