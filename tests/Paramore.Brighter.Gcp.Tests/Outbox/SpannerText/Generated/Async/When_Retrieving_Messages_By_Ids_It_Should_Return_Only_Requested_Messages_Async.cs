@@ -35,6 +35,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Async;
 
+[Trait("Category", "Spanner")]
 public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

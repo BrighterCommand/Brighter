@@ -33,7 +33,8 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace {{ Namespace }}.Outbox{{ Prefix }}.Sync;
-
+{% if Category != null %}
+[Trait("Category", "{{Category}}")]{% endif %}
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Sync;
 
+[Trait("Category", "Spanner")]
 public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

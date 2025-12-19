@@ -7,11 +7,13 @@
     },
     "SpannerBinary": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "SpannerBinaryOutboxProvider"
+      "OutboxProvider": "SpannerBinaryOutboxProvider",
+      "Category": "Spanner"
     },
     "SpannerText": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "SpannerTextOutboxProvider"
+      "OutboxProvider": "SpannerTextOutboxProvider",
+      "Category": "Spanner"
     }
   }
 }

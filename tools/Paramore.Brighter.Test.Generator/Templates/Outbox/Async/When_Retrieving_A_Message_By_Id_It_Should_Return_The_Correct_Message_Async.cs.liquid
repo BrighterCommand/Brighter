@@ -34,7 +34,8 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace {{ Namespace }}.Outbox{{ Prefix }}.Async;
-
+{% if Category != null %}
+[Trait("Category", "{{Category}}")]{% endif %}
 public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

@@ -35,6 +35,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.Async;
 
+[Trait("Category", "Spanner")]
 public class WhenRetrievingAllMessagesTheyShouldIncludeDispatchedAndUndispatchedAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
