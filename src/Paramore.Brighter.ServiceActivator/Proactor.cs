@@ -43,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
     {
         private readonly Func<Message, Type> _mapRequestType;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilder;
-        
+
 
         /// <summary>
         /// Constructs a message pump 
@@ -56,6 +56,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="channel">The channel to read messages from</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="timeProvider">The <see cref="TimeProvider"/> used by the pump. Defaults to TimeProvider.System, intended for testing</param>
         public Proactor(
             IAmACommandProcessor commandProcessor,
             Func<Message, Type> mapRequestType,
@@ -64,8 +65,9 @@ namespace Paramore.Brighter.ServiceActivator
             IAmARequestContextFactory requestContextFactory,
             IAmAChannelAsync channel,
             IAmABrighterTracer? tracer = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
-            : base(commandProcessor, requestContextFactory, tracer, instrumentationOptions)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            TimeProvider? timeProvider = null) 
+            : base(commandProcessor, requestContextFactory, tracer, instrumentationOptions, timeProvider)
         {
             _mapRequestType = mapRequestType;
             _transformPipelineBuilder = new TransformPipelineBuilderAsync(messageMapperRegistry, messageTransformerFactory, instrumentationOptions);
@@ -140,6 +142,7 @@ namespace Paramore.Brighter.ServiceActivator
                 if (UnacceptableMessageLimitReached())
                 {
                     Channel.Dispose();
+                    Status = MessagePumpStatus.MP_LIMIT_EXCEEDED;
                     break;
                 }
 
@@ -180,6 +183,7 @@ namespace Paramore.Brighter.ServiceActivator
                     Channel.Dispose();
                     span?.SetStatus(ActivityStatusCode.Error, "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
                     Tracer?.EndSpan(span);
+                    Status = MessagePumpStatus.MP_ERROR;
                     throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
                 }
 
@@ -198,7 +202,7 @@ namespace Paramore.Brighter.ServiceActivator
                     Log.FailedToParseMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
                     Tracer?.EndSpan(span);
-                    IncrementUnacceptableMessageLimit();
+                    IncrementUnacceptableMessageCount();
                     await Acknowledge(message);
 
                     continue;
@@ -211,6 +215,7 @@ namespace Paramore.Brighter.ServiceActivator
                     span?.SetStatus(ActivityStatusCode.Ok);
                     Tracer?.EndSpan(span);
                     Channel.Dispose();
+                    Status = MessagePumpStatus.MP_STOPPED;
                     break;
                 }
 
@@ -238,6 +243,7 @@ namespace Paramore.Brighter.ServiceActivator
                         {
                             Log.StoppingReceivingMessages(s_logger, configurationException, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                             stop = true;
+                            Status = MessagePumpStatus.MP_ERROR;
                             break;
                         }
 
@@ -288,6 +294,7 @@ namespace Paramore.Brighter.ServiceActivator
                     await RejectMessage(message, $"Not processed due to configuration exception: {configurationException.Message}");
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
                     Channel.Dispose();
+                    Status = MessagePumpStatus.MP_ERROR;
                     break;
                 }
                 catch (DeferMessageAction)
@@ -310,7 +317,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     Log.FailedToMapMessage(s_logger, messageMappingException, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
 
-                    IncrementUnacceptableMessageLimit();
+                    IncrementUnacceptableMessageCount();
                     
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
@@ -404,14 +411,14 @@ namespace Paramore.Brighter.ServiceActivator
             context.Span = span;
             context.OriginatingMessage = message;
             context.Bag.AddOrUpdate("ChannelName", Channel.Name, (_, _) => Channel.Name);
-            context.Bag.AddOrUpdate("RequestStart", DateTime.UtcNow, (_, _) => DateTime.UtcNow);
+            context.Bag.AddOrUpdate("RequestStart", PumpTimeProvider.GetUtcNow(), (_, _) => PumpTimeProvider.GetUtcNow());
             return context;
         }
 
         private async Task<bool> RejectMessage(Message message, string? reason = null)
         {
             Log.RejectingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-            IncrementUnacceptableMessageLimit();
+            IncrementUnacceptableMessageCount();
             
             if (reason is not null) message.Header.Bag[Message.RejectionReasonHeaderName] = reason;
 

@@ -58,5 +58,10 @@ namespace Paramore.Brighter.ServiceActivator
         /// This method will block and run continuously until a quit message is received or an unrecoverable error occurs.
         /// </remarks>
         void Run();
+        
+        /// <summary>
+        /// The <see cref="MessagePumpStatus"/> of the pump
+        /// </summary>
+        public MessagePumpStatus Status { get; set; }
     }
 }
