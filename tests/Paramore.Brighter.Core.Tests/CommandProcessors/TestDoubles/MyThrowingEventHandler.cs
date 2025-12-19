@@ -36,9 +36,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             s_receivedEvent = null;
         }
 
-        public override MyEvent Handle(MyEvent command)
+        public override MyEvent Handle(MyEvent advanceTimerEvent)
         {
-            LogEvent(command);
+            LogEvent(advanceTimerEvent);
 
             throw new InvalidOperationException();
         }

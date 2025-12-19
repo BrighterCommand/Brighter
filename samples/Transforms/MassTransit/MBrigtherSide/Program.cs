@@ -122,9 +122,9 @@ public class GreetingMapper : IAmAMessageMapper<Greeting>, IAmAMessageMapperAsyn
 
 public class GreetingHandler(ILogger<GreetingHandler> logger) : RequestHandler<Greeting>
 {
-    public override Greeting Handle(Greeting command)
+    public override Greeting Handle(Greeting advanceTimerEvent)
     {
-        logger.LogInformation("Hello {Name}", command.Name);
-        return base.Handle(command);
+        logger.LogInformation("Hello {Name}", advanceTimerEvent.Name);
+        return base.Handle(advanceTimerEvent);
     }
 }

@@ -27,9 +27,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
     internal sealed class MyImplicitHandler : RequestHandler<MyCommand>
     {
         [MyLoggingHandler(1)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand advanceTimerEvent)
         {
-            return base.Handle(command);
+            return base.Handle(advanceTimerEvent);
         }
     }
 }

@@ -94,9 +94,9 @@ namespace Paramore.Brighter.Policies.Handlers
         /// Runs the remainder of the pipeline within a parentTask that will timeout if it does not complete within the
         /// configured number of milliseconds
         /// </summary>
-        /// <param name="command">The command.</param>
+        /// <param name="advanceTimerEvent">The command.</param>
         /// <returns>TRequest.</returns>
-        public override TRequest Handle(TRequest command)
+        public override TRequest Handle(TRequest advanceTimerEvent)
         {
             var cts = new CancellationTokenSource();
             var ct = cts.Token;
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.Policies.Handlers
                     ct.ThrowIfCancellationRequested();
                     //allow the handlers that can timeout to grab the cancellation token
                     Context?.Bag.AddOrUpdate(CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN, ct, (s, o) => o = ct);
-                    return base.Handle(command);
+                    return base.Handle(advanceTimerEvent);
                 },
                 cancellationToken: ct,
                 creationOptions: TaskCreationOptions.LongRunning,

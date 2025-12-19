@@ -36,10 +36,10 @@ namespace Greetings.Ports.CommandHandlers
             _commandProcessor = commandProcessor;
         }
         
-        public override GreetingRequest Handle(GreetingRequest request)
+        public override GreetingRequest Handle(GreetingRequest advanceTimerEvent)
         {
             string salutation;
-            switch (request.Language)
+            switch (advanceTimerEvent.Language)
             {
                 case ("en-gb"):
                 case ("en-us"):
@@ -59,16 +59,16 @@ namespace Greetings.Ports.CommandHandlers
                     break;
             }
 
-            salutation += " " + request.Name;
+            salutation += " " + advanceTimerEvent.Name;
 
-            var response = new GreetingReply(request.ReplyAddress)
+            var response = new GreetingReply(advanceTimerEvent.ReplyAddress)
             {
                 Salutation = salutation
             };
 
             _commandProcessor.Post(response);
             
-            return base.Handle(request);
+            return base.Handle(advanceTimerEvent);
         }
     }
 }

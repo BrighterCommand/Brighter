@@ -23,10 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter;
+using Polly;
+using Polly.Registry;
 using Polly.Retry;
 
-namespace Polly.Registry;
+namespace Paramore.Brighter.Extensions;
 
 public static class ResiliencePipelineRegistryExtensions
 {

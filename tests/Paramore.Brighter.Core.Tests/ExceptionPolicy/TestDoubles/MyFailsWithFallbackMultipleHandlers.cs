@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 
         [FallbackPolicy(true, false, 1)]
         [RequestLogging(2, HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand advanceTimerEvent)
         {
             ReceivedCommand = true;
             throw new DivideByZeroException();

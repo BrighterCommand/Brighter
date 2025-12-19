@@ -87,9 +87,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Handles the specified command.
         /// </summary>
-        /// <param name="request">The request.</param>
+        /// <param name="advanceTimerEvent">The request.</param>
         /// <returns>TRequest.</returns>
-        TRequest Handle(TRequest request);
+        TRequest Handle(TRequest advanceTimerEvent);
 
 
         /// <summary>

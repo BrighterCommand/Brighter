@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Xunit;

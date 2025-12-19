@@ -51,9 +51,9 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
         /// Checks the status of the feature switch and either stops passes the command on to the next handler
         /// or stops execution of the feature switched handler.
         /// </summary>
-        /// <param name="command">The command.</param>
+        /// <param name="advanceTimerEvent">The command.</param>
         /// <returns>TRequest.</returns>
-        public override TRequest Handle(TRequest command)
+        public override TRequest Handle(TRequest advanceTimerEvent)
         {
             var featureEnabled = _status;
 
@@ -63,8 +63,8 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
             }
 
             return featureEnabled is FeatureSwitchStatus.Off 
-                        ? command 
-                        : base.Handle(command);
+                        ? advanceTimerEvent 
+                        : base.Handle(advanceTimerEvent);
         }
     }
 }

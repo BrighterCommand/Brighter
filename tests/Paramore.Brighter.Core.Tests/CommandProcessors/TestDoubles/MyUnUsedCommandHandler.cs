@@ -29,10 +29,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         private static MyCommand s_command;
 
         [MyAbortingHandler(1, HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand advanceTimerEvent)
         {
-            LogCommand(command);
-            return base.Handle(command);
+            LogCommand(advanceTimerEvent);
+            return base.Handle(advanceTimerEvent);
         }
 
         public static bool Shouldreceive(MyCommand expectedCommand)

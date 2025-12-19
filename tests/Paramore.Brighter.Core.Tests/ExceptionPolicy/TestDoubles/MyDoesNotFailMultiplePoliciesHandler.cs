@@ -37,10 +37,10 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
         }
 
         [UsePolicy(new[] {"MyDivideByZeroRetryPolicy", "MyDivideByZeroBreakerPolicy"}, 1)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand advanceTimerEvent)
         {
             ReceivedCommand = true;
-            return base.Handle(command);
+            return base.Handle(advanceTimerEvent);
         }
 
         public static bool ShouldReceive(MyCommand myCommand)
