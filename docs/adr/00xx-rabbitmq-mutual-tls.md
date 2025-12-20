@@ -6,9 +6,6 @@
 
 Proposed (Draft PR for discussion)
 
-
-Proposed
-
 ## Context
 
 Brighter supports RabbitMQ as a messaging transport via dedicated messaging gateway assemblies. Today, RabbitMQ connections may be established either without TLS or using server-side TLS, depending on deployment configuration. However, Brighter does not currently offer first-class support for **mutual TLS (mTLS)**, where both client and server authenticate each other using X.509 certificates.
