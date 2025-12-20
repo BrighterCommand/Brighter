@@ -40,14 +40,14 @@ public class TaskCreatedHandler : RequestHandler<TaskCreated>
     /// <summary>
     /// Handles the <see cref="TaskCreated"/> event.
     /// </summary>
-    /// <param name="advanceTimerEvent">The <see cref="TaskCreated"/> event to handle.</param>
+    /// <param name="taskCreated">The <see cref="TaskCreated"/> event to handle.</param>
     /// <returns>The handled <see cref="TaskCreated"/> event.</returns>
-    public override TaskCreated Handle(TaskCreated advanceTimerEvent)
+    public override TaskCreated Handle(TaskCreated taskCreated)
     {
         //Instead of domain logic, just write out to console
-        Console.WriteLine(JsonSerializer.Serialize(advanceTimerEvent));
+        Console.WriteLine(JsonSerializer.Serialize(taskCreated));
 
-        return base.Handle(advanceTimerEvent);
+        return base.Handle(taskCreated);
     }
 }
 

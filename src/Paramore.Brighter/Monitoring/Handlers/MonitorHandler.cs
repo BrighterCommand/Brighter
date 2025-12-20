@@ -70,9 +70,9 @@ namespace Paramore.Brighter.Monitoring.Handlers
         /// <summary>
         /// Handles the specified command.
         /// </summary>
-        /// <param name="advanceTimerEvent">The command.</param>
+        /// <param name="request">The command.</param>
         /// <returns>TRequest.</returns>
-        public override TRequest Handle(TRequest advanceTimerEvent)
+        public override TRequest Handle(TRequest request)
         {
             if (_isMonitoringEnabled)
             {
@@ -85,12 +85,12 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.EnterHandler, 
                             _handlerName, 
                             _handlerFullAssemblyName,
-                            JsonSerializer.Serialize(advanceTimerEvent, JsonSerialisationOptions.Options), 
+                            JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), 
                             timeBeforeHandle,
                             0)
                         );
 
-                    base.Handle(advanceTimerEvent);
+                    base.Handle(request);
 
                     var timeAfterHandle = DateTime.UtcNow;
                     _controlBusSender.Post(
@@ -99,11 +99,11 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.ExitHandler, 
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonSerializer.Serialize(advanceTimerEvent, JsonSerialisationOptions.Options), 
+                            JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), 
                             timeAfterHandle,
                             Convert.ToInt32((timeAfterHandle-timeBeforeHandle).TotalMilliseconds)));
                         
-                    return advanceTimerEvent;
+                    return request;
                 }
                 catch (Exception e)
                 {
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.ExceptionThrown, 
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonSerializer.Serialize(advanceTimerEvent, JsonSerialisationOptions.Options), 
+                            JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), 
                             timeOnException,
                             Convert.ToInt32((timeOnException - timeBeforeHandle).TotalMilliseconds),
                             e));
@@ -123,7 +123,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
 
             }
 
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(request);
         }
 
     }

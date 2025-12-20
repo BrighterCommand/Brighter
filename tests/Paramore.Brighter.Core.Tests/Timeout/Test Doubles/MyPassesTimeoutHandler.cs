@@ -33,11 +33,11 @@ namespace Paramore.Brighter.Core.Tests.Timeout.Test_Doubles
     internal sealed class MyPassesTimeoutHandler : RequestHandler<MyCommand>
     {
         [TimeoutPolicy(10000, 0, HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand advanceTimerEvent)
+        public override MyCommand Handle(MyCommand myCommand)
         {
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
-            Task.Delay(100, ct).ContinueWith((antecedent) => { advanceTimerEvent.TaskCompleted = true; }, ct).Wait(ct);
-            return base.Handle(advanceTimerEvent);
+            Task.Delay(100, ct).ContinueWith((antecedent) => { myCommand.TaskCompleted = true; }, ct).Wait(ct);
+            return base.Handle(myCommand);
         }
     }
 }

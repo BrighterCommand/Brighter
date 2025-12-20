@@ -30,9 +30,9 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
     internal sealed class MyStoredCommandHandler : RequestHandler<MyCommand>
     {
         [UseInbox(1, onceOnly:true, contextKey: typeof(MyStoredCommandHandler), timing: HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand advanceTimerEvent)
+        public override MyCommand Handle(MyCommand myCommand)
         {
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(myCommand);
         }
     }
 }

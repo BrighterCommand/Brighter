@@ -39,10 +39,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         [MyPreValidationHandler(2, HandlerTiming.Before)]
         [MyPostLoggingHandler(1, HandlerTiming.After)]
         [Obsolete] // even with attributes non inheriting from MessageHandlerDecoratorAttribute it should not fail
-        public override MyCommand Handle(MyCommand advanceTimerEvent)
+        public override MyCommand Handle(MyCommand myCommand)
         {
-            LogCommand(advanceTimerEvent);
-            return base.Handle(advanceTimerEvent);
+            LogCommand(myCommand);
+            return base.Handle(myCommand);
         }
 #pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
 

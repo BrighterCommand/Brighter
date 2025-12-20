@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     public class MyAbortingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        public override TRequest Handle(TRequest advanceTimerEvent)
+        public override TRequest Handle(TRequest request)
         {
             throw new Exception("Aborting chain");
         }

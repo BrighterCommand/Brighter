@@ -50,13 +50,13 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// <summary>
         /// Handles the specified command.
         /// </summary>
-        /// <param name="advanceTimerEvent">The command.</param>
+        /// <param name="configurationCommand">The command.</param>
         /// <returns>TRequest.</returns>
-        public override ConfigurationCommand Handle(ConfigurationCommand advanceTimerEvent)
+        public override ConfigurationCommand Handle(ConfigurationCommand configurationCommand)
         {
-            Log.HandlingConfigurationCommand(s_logger, advanceTimerEvent.Type);
+            Log.HandlingConfigurationCommand(s_logger, configurationCommand.Type);
 
-            switch (advanceTimerEvent.Type)
+            switch (configurationCommand.Type)
             {
                 case ConfigurationCommandType.CM_STOPALL:
                     Log.StoppingAllConsumersBegin(s_logger, DateTime.UtcNow.ToString("o"));
@@ -74,21 +74,21 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
                     break;
                 case ConfigurationCommandType.CM_STOPCHANNEL:
                     Log.LogSeparator(s_logger);
-                    Log.StoppingChannel(s_logger, advanceTimerEvent.SubscriptionName);
+                    Log.StoppingChannel(s_logger, configurationCommand.SubscriptionName);
                     Log.LogSeparator(s_logger);
-                    _dispatcher.Shut(new SubscriptionName(advanceTimerEvent.SubscriptionName));
+                    _dispatcher.Shut(new SubscriptionName(configurationCommand.SubscriptionName));
                     break;
                 case ConfigurationCommandType.CM_STARTCHANNEL:
                     Log.LogSeparator(s_logger);
-                    Log.StartingChannel(s_logger, advanceTimerEvent.SubscriptionName);
+                    Log.StartingChannel(s_logger, configurationCommand.SubscriptionName);
                     Log.LogSeparator(s_logger);
-                    _dispatcher.Open(new SubscriptionName(advanceTimerEvent.SubscriptionName));
+                    _dispatcher.Open(new SubscriptionName(configurationCommand.SubscriptionName));
                     break;
                 default:
-                    throw new ArgumentException("{0} is an unknown Configuration Command", Enum.GetName(typeof(ConfigurationCommandType), advanceTimerEvent.Type));
+                    throw new ArgumentException("{0} is an unknown Configuration Command", Enum.GetName(typeof(ConfigurationCommandType), configurationCommand.Type));
             }
 
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(configurationCommand);
         }
 
         private static partial class Log

@@ -28,9 +28,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
     {
         [MyValidationHandler(2)]
         [MyLoggingHandler(1)]
-        public override MyCommand Handle(MyCommand advanceTimerEvent)
+        public override MyCommand Handle(MyCommand myCommand)
         {
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(myCommand);
         }
     }
 }

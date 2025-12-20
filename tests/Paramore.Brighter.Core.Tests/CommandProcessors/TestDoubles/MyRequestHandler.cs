@@ -9,10 +9,10 @@
             s_response = null;
         }
         
-        public override MyResponse Handle(MyResponse advanceTimerEvent)
+        public override MyResponse Handle(MyResponse myResponse)
         {
-            LogCommand(advanceTimerEvent);
-            return base.Handle(advanceTimerEvent);
+            LogCommand(myResponse);
+            return base.Handle(myResponse);
         }
 
         public static bool ShouldReceive(MyResponse expectedCommand)

@@ -37,10 +37,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             DisposeWasCalled = false;
         }
 
-        public override TRequest Handle(TRequest advanceTimerEvent)
+        public override TRequest Handle(TRequest request)
         {
-            LogCommand(advanceTimerEvent);
-            return base.Handle(advanceTimerEvent);
+            LogCommand(request);
+            return base.Handle(request);
         }
 
         public static bool Shouldreceive(TRequest expectedCommand)

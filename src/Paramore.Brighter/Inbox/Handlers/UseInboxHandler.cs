@@ -71,9 +71,9 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// Logs the command we received to the inbox.
         /// If the Once Only flag is set, it will reject commands that it has already seen from the pipeline
         /// </summary>
-        /// <param name="advanceTimerEvent">The command that we want to store.</param>
+        /// <param name="request">The command that we want to store.</param>
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
-        public override T Handle(T advanceTimerEvent)
+        public override T Handle(T request)
         {
             if (_contextKey is null)
                 throw new ArgumentException("ContextKey must be set before Handling");
@@ -82,28 +82,28 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             if (_onceOnly)
             {
-                 Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, advanceTimerEvent.Id);
+                 Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, request.Id);
 
-                 var exists = _inbox.Exists<T>(advanceTimerEvent.Id, _contextKey, requestContext); 
+                 var exists = _inbox.Exists<T>(request.Id, _contextKey, requestContext); 
                  
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {                    
-                    Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, advanceTimerEvent.Id);
-                    throw new OnceOnlyException($"A command with id {advanceTimerEvent.Id} has already been handled");
+                    Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, request.Id);
+                    throw new OnceOnlyException($"A command with id {request.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
-                    Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, advanceTimerEvent.Id);
-                    return advanceTimerEvent;
+                    Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, request.Id);
+                    return request;
                 }                
             }
             
-            T handledCommand = base.Handle(advanceTimerEvent);
+            T handledCommand = base.Handle(request);
 
-            Log.WritingCommandToTheInbox(s_logger, advanceTimerEvent.Id);
+            Log.WritingCommandToTheInbox(s_logger, request.Id);
 
-            _inbox.Add(advanceTimerEvent, _contextKey, requestContext);
+            _inbox.Add(request, _contextKey, requestContext);
 
             return handledCommand;
         }

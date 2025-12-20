@@ -30,9 +30,9 @@ namespace Paramore.Brighter.Core.Tests.Monitoring.TestDoubles
     internal sealed class MyMonitoredHandler : RequestHandler<MyCommand>
     {
         [Monitor(1, HandlerTiming.Before, typeof(MyMonitoredHandler))]
-        public override MyCommand Handle(MyCommand advanceTimerEvent)
+        public override MyCommand Handle(MyCommand myCommand)
         {
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(myCommand);
         }
     }
 }

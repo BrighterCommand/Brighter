@@ -6,9 +6,9 @@ namespace Paramore.Brighter.Core.Tests.Logging.TestDoubles
     sealed class MyLoggedHandler : RequestHandler<MyCommand>
     {
         [RequestLogging(0, HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand advanceTimerEvent)
+        public override MyCommand Handle(MyCommand myCommand)
         {
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(myCommand);
         }
     }
 }

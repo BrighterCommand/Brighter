@@ -13,17 +13,17 @@ namespace Greetings.Ports.CommandHandlers
             _commandProcessor = commandProcessor;
         }
 
-        public override GreetingEvent Handle(GreetingEvent advanceTimerEvent)
+        public override GreetingEvent Handle(GreetingEvent greetingEvent)
         {
             Console.WriteLine("Received Greeting. Message Follows");
             Console.WriteLine("----------------------------------");
-            Console.WriteLine(advanceTimerEvent.Greeting);
+            Console.WriteLine(greetingEvent.Greeting);
             Console.WriteLine("----------------------------------");
             Console.WriteLine("Message Ends");
 
             _commandProcessor.Post(new GreetingAsyncEvent("Greetings from Non Async"));
 
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(greetingEvent);
         }
     }
 }

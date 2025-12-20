@@ -33,11 +33,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
         public static int ReceivedCount { get; private set; }
         
         [UseInbox(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Warn, contextKey: typeof(MyStoredCommandToWarnHandler))]
-        public override MyCommand Handle(MyCommand advanceTimerEvent)
+        public override MyCommand Handle(MyCommand myCommand)
         {
             ReceivedCount++;
 
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(myCommand);
         }
     }
 }

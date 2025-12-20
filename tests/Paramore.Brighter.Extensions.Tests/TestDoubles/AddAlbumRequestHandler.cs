@@ -15,16 +15,16 @@ public class AddAlbumRequestHandler : RequestHandler<AddAlbum>
         _postbox = commandProcessor;
     }
     
-    public override AddAlbum Handle(AddAlbum advanceTimerEvent)
+    public override AddAlbum Handle(AddAlbum addAlbum)
     {
         var posts = new List<Id>();
         
-        var album = new Album(advanceTimerEvent.Artist, advanceTimerEvent.Title);
+        var album = new Album(addAlbum.Artist, addAlbum.Title);
         var tx = _uow.GetTransaction();
         try
         {
             _discography.Albums.Add(album);
-            posts.Add(_postbox.DepositPost(new AlbumAdded(album.Title, advanceTimerEvent.Id)));
+            posts.Add(_postbox.DepositPost(new AlbumAdded(album.Title, addAlbum.Id)));
             _discography.SaveChanges();
             _uow.Commit();
         }
@@ -34,6 +34,6 @@ public class AddAlbumRequestHandler : RequestHandler<AddAlbum>
         }
         
         _postbox.ClearOutbox(posts.ToArray());
-        return base.Handle(advanceTimerEvent);
+        return base.Handle(addAlbum);
     }
 }

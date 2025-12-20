@@ -38,7 +38,7 @@ internal sealed class MyFailsWithDivideByZeroWithResiliencePipelineHandler : Req
     }
 
     [UseResiliencePipeline("MyDivideByZeroPolicy", 1)]
-    public override MyCommand Handle(MyCommand advanceTimerEvent)
+    public override MyCommand Handle(MyCommand myCommand)
     {
         ReceivedCommand = true;
         throw new DivideByZeroException();

@@ -35,10 +35,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         [NoGlobalInbox]
-        public override MyCommand Handle(MyCommand advanceTimerEvent)
+        public override MyCommand Handle(MyCommand myCommand)
         {
-            LogCommand(advanceTimerEvent);
-            return base.Handle(advanceTimerEvent);
+            LogCommand(myCommand);
+            return base.Handle(myCommand);
         }
 
         private void LogCommand(MyCommand request)

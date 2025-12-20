@@ -69,25 +69,25 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <summary>
         /// Handles the specified command.
         /// </summary>
-        /// <param name="advanceTimerEvent">The command.</param>
+        /// <param name="request">The command.</param>
         /// <returns>TRequest.</returns>
-        public override TRequest Handle(TRequest advanceTimerEvent)
+        public override TRequest Handle(TRequest request)
         {
             if (_policies.Count == 1)
             {
-                return _policies[0].Execute(() => base.Handle(advanceTimerEvent));
+                return _policies[0].Execute(() => base.Handle(request));
             }
             else
             {
                 var policyWrap = _policies[0].Wrap(_policies[1]);
-                if (_policies.Count <= 2) return policyWrap.Execute(() => base.Handle(advanceTimerEvent));
+                if (_policies.Count <= 2) return policyWrap.Execute(() => base.Handle(request));
                 
                 //we have more than two policies, so we need to wrap them
                 for (int i = 2; i < _policies.Count; i++)
                 {
                     policyWrap = policyWrap.Wrap(_policies[i]);
                 }
-                return policyWrap.Execute(() => base.Handle(advanceTimerEvent));
+                return policyWrap.Execute(() => base.Handle(request));
             }
         }
     }

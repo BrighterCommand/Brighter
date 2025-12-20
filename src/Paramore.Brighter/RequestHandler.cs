@@ -99,9 +99,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Handles the specified command.
         /// </summary>
-        /// <param name="advanceTimerEvent">The command.</param>
+        /// <param name="request">The command.</param>
         /// <returns>TRequest.</returns>
-        public virtual TRequest Handle(TRequest advanceTimerEvent)
+        public virtual TRequest Handle(TRequest request)
         {
             if (Context?.Span != null)
             {
@@ -111,10 +111,10 @@ namespace Paramore.Brighter
             if (_successor != null)
             {
                 Log.PassingRequestFromTo(s_logger, Name, _successor.Name);
-                return _successor.Handle(advanceTimerEvent);
+                return _successor.Handle(request);
             }
 
-            return advanceTimerEvent;
+            return request;
         }
 
         /// <summary>

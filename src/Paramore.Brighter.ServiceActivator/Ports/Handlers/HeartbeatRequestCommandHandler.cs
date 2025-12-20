@@ -50,16 +50,16 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// We want to send a heartbeat back to the caller. The heartbeat consists of the set of channels we own
         /// and their current status.
         /// </summary>
-        /// <param name="advanceTimerEvent">The command.</param>
+        /// <param name="heartbeatRequest">The command.</param>
         /// <returns>TRequest.</returns>
-        public override HeartbeatRequest Handle(HeartbeatRequest advanceTimerEvent)
+        public override HeartbeatRequest Handle(HeartbeatRequest heartbeatRequest)
         {
-            var heartbeat = new HeartbeatReply(_dispatcher.HostName, advanceTimerEvent.ReplyAddress);
+            var heartbeat = new HeartbeatReply(_dispatcher.HostName, heartbeatRequest.ReplyAddress);
             _dispatcher.Consumers.Each((consumer) => heartbeat.Consumers.Add(new RunningConsumer(consumer.Name, consumer.State)));
             
             _commandProcessor?.Post(heartbeat);
 
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(heartbeatRequest);
         }
     }
 }

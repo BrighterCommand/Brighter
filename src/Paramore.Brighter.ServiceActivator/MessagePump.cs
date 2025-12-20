@@ -128,6 +128,7 @@ namespace Paramore.Brighter.ServiceActivator
         
         /// <summary>
         /// Gets the window in which we monitor the unacceptable message count. The count resets at the end of the window.
+        /// If null, the count never resets.
         /// </summary>
         public TimeSpan? UnacceptableMessageLimitWindow  { get; set; }
 

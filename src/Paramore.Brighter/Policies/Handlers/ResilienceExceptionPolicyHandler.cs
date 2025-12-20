@@ -81,19 +81,19 @@ public class ResilienceExceptionPolicyHandler<TRequest> : RequestHandler<TReques
     /// <summary>
     /// Handles the specified command.
     /// </summary>
-    /// <param name="advanceTimerEvent">The command.</param>
+    /// <param name="request">The command.</param>
     /// <returns>TRequest.</returns>
-    public override TRequest Handle(TRequest advanceTimerEvent)
+    public override TRequest Handle(TRequest request)
     {
         if(_pipeline != ResiliencePipeline.Empty)
         {
             return Context?.ResilienceContext != null 
-                ? _pipeline.Execute(_ => base.Handle(advanceTimerEvent), Context.ResilienceContext)
-                : _pipeline.Execute(() => base.Handle(advanceTimerEvent));
+                ? _pipeline.Execute(_ => base.Handle(request), Context.ResilienceContext)
+                : _pipeline.Execute(() => base.Handle(request));
         }
 
         return Context?.ResilienceContext != null 
-            ? _typePipeline.Execute(_ => base.Handle(advanceTimerEvent), Context.ResilienceContext)
-            : _typePipeline.Execute(() => base.Handle(advanceTimerEvent));
+            ? _typePipeline.Execute(_ => base.Handle(request), Context.ResilienceContext)
+            : _typePipeline.Execute(() => base.Handle(request));
     }
 }

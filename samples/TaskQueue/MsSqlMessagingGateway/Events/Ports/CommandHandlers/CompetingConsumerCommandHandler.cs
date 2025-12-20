@@ -15,15 +15,15 @@ namespace Events.Ports.CommandHandlers
             _commandCounter = commandCounter ?? throw new ArgumentNullException(nameof(commandCounter));
         }
 
-        public override CompetingConsumerCommand Handle(CompetingConsumerCommand advanceTimerEvent)
+        public override CompetingConsumerCommand Handle(CompetingConsumerCommand competingConsumerCommand)
         {
             try
             {
                 // Let's simulate that some subscription is failing and retry later
                 if (Generator.Next(100) % 10 == 0) throw new Exception("some exception occurred");
-                Console.WriteLine($"command number {advanceTimerEvent.CommandNumber}");
+                Console.WriteLine($"command number {competingConsumerCommand.CommandNumber}");
                 _commandCounter.CountCommand();
-                return base.Handle(advanceTimerEvent);
+                return base.Handle(competingConsumerCommand);
             }
             catch (Exception e)
             {

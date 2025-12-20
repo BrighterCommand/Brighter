@@ -35,10 +35,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             _receivedMessages = receivedMessages;
         }
 
-        public override MyEvent Handle(MyEvent advanceTimerEvent)
+        public override MyEvent Handle(MyEvent myEvent)
         {
-            _receivedMessages.Add(nameof(MyEventHandler), advanceTimerEvent.Id);
-            return base.Handle(advanceTimerEvent);
+            _receivedMessages.Add(nameof(MyEventHandler), myEvent.Id);
+            return base.Handle(myEvent);
         }
     }
 }

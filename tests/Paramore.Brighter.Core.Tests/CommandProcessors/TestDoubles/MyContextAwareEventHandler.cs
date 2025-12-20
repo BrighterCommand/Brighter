@@ -28,10 +28,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
     {
         public static string? TestString { get; set; }
 
-        public override MyEvent Handle(MyEvent advanceTimerEvent)
+        public override MyEvent Handle(MyEvent myEvent)
         {
             LogContext();
-            return base.Handle(advanceTimerEvent);
+            return base.Handle(myEvent);
         }
 
         private void LogContext()
