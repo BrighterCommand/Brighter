@@ -76,7 +76,7 @@ namespace Paramore.Brighter.ServiceActivator
         protected int UnacceptableMessageCount;
         protected readonly Dictionary<Type, MethodInfo> UnWrapPipelineFactoryCache = new();
         protected readonly Dictionary<Type, MethodInfo> DispatchMethodCache = new();
-        protected DateTimeOffset? UnaccpetableMessageWindowOpenedAt = null;
+        protected DateTimeOffset? UnacceptableMessageWindowOpenedA = null;
         
         /// <summary>
         /// The delay to wait when the channel has failed
@@ -166,13 +166,16 @@ namespace Paramore.Brighter.ServiceActivator
 
         protected void IncrementUnacceptableMessageCount()
         {
-            if (UnaccpetableMessageWindowOpenedAt is null)
-                UnaccpetableMessageWindowOpenedAt = PumpTimeProvider.GetUtcNow();
+            if (UnacceptableMessageWindowOpenedA is null)
+                UnacceptableMessageWindowOpenedA = PumpTimeProvider.GetUtcNow();
             
-            var timeSinceWindowOpened = PumpTimeProvider.GetUtcNow() - UnaccpetableMessageWindowOpenedAt.Value;
-            if (timeSinceWindowOpened > UnacceptableMessageLimitWindow)
+            var timeSinceWindowOpened = PumpTimeProvider.GetUtcNow() - UnacceptableMessageWindowOpenedA.Value;
+            if (UnacceptableMessageLimitWindow.HasValue && timeSinceWindowOpened > UnacceptableMessageLimitWindow)
+            {
                 UnacceptableMessageCount = 0;
-            
+                UnacceptableMessageWindowOpenedA = PumpTimeProvider.GetUtcNow();
+            }
+
             UnacceptableMessageCount++;
         }
 
