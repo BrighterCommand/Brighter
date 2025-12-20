@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Security.Cryptography.X509Certificates;
 using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
@@ -72,6 +73,29 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         ///     <see cref="ConnectionFactory.ContinuationTimeout" /> for more information.
         /// </summary>
         public ushort ContinuationTimeout { get; set; } = 20;
+
+        /// <summary>
+        /// Gets or sets the client certificate for mutual TLS authentication.
+        /// Optional - if not provided, connection will not use client certificates.
+        /// Takes precedence over <see cref="ClientCertificatePath"/> if both are set.
+        /// </summary>
+        /// <value>The X509 client certificate.</value>
+        public X509Certificate2? ClientCertificate { get; set; }
+
+        /// <summary>
+        /// Gets or sets the file path to the client certificate for mutual TLS authentication.
+        /// Supports .pfx (PKCS#12) format.
+        /// Optional - if not provided, connection will not use client certificates.
+        /// </summary>
+        /// <value>The path to the certificate file.</value>
+        public string? ClientCertificatePath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the password for the client certificate file.
+        /// Only used when <see cref="ClientCertificatePath"/> is provided and the certificate is password-protected.
+        /// </summary>
+        /// <value>The certificate password.</value>
+        public string? ClientCertificatePassword { get; set; }
     }
 
     /// <summary>
