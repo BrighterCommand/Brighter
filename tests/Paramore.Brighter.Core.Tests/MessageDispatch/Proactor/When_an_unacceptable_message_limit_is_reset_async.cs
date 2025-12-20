@@ -1,33 +1,33 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-    public class MessagePumpUnacceptableMessageLimitResetTests
+    public class MessagePumpUnacceptableMessageLimitResetTestsAsync
     {
         private const string Channel = "MyChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly InternalBus _bus;
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly RoutingKey _routingKey = new("MyTopic");
-        private readonly Channel _channel;
+        private readonly ChannelAsync _channel;
         private readonly Message _unacceptableMessage1;
         private readonly Message _unacceptableMessage2;
         private readonly Message _unacceptableMessage3;
         private readonly Message _unacceptableMessage4;
         private readonly Message _timeAdvanceMessage;
 
-        public MessagePumpUnacceptableMessageLimitResetTests()
+        public MessagePumpUnacceptableMessageLimitResetTestsAsync()
         {
             _bus = new InternalBus();
             
-            _channel = new Channel(
+            _channel = new ChannelAsync(
                 new(Channel),
                 _routingKey, 
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 
@@ -35,20 +35,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 );
             
             var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<MyAdvanceTimerEvent, MyAdvanceTimerEventHandler>();
+            subscriberRegistry.RegisterAsync<MyAdvanceTimerEvent, MyAdvanceTimerEventHandlerAsync>();
 
             var handlerFactory = new SimpleHandlerFactory(
-                (type) => new MyAdvanceTimerEventHandler(_timeProvider),
-                (type) => throw new NotImplementedException()
+                (type) => throw new NotImplementedException(),
+                (type) => new MyAdvanceTimerEventHandlerAsync(_timeProvider)
             );
 
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
             resiliencePipelineRegistry.AddBrighterDefault();            
             
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyAdvanceTimerEventMessageMapper()),
-                new SimpleMessageMapperFactoryAsync(_ => throw new NotImplementedException()));
-            messageMapperRegistry.Register<MyAdvanceTimerEvent, MyAdvanceTimerEventMessageMapper>();
+                new SimpleMessageMapperFactory(_ => throw new NotImplementedException() ),
+                new SimpleMessageMapperFactoryAsync(_ => new MyAdvanceTimerEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyAdvanceTimerEvent, MyAdvanceTimerEventMessageMapperAsync>();
 
             var commandProcessor = new CommandProcessor(
                 subscriberRegistry,
@@ -59,8 +59,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 new InMemorySchedulerFactory()
             );
             
-            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyAdvanceTimerEvent), 
-                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, 
+            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyAdvanceTimerEvent), 
+                messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel, 
                 timeProvider:_timeProvider)
             {
                 Channel = _channel, 
