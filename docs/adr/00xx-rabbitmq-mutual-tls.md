@@ -107,7 +107,7 @@ These may be revisited in future ADRs if requirements evolve.
 
 - Brighter Contributing Guide (`Contributing.md`)
 - Existing Architecture Decision Records under `docs/adr`
-- Issue #3902: RabbitMQ Mutual TLS support
+- Issue #3902: RabbitMQ Mutual TLS support (https://github.com/BrighterCommand/Brighter/issues/3902)
 - PATH-210X extracted Critical Review Guidelines for Brighter
 
 ---
