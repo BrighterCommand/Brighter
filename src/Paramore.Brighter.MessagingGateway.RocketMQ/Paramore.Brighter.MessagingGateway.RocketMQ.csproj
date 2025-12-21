@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.Core.Api" />
     <PackageReference Include="RocketMQ.Client" />
   </ItemGroup>
 

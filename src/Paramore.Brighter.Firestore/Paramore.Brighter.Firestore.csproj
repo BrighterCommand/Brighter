@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Cloud.Firestore.V1" />
+    <PackageReference Include="Grpc.Core.Api" />
   </ItemGroup>
 
 </Project>
