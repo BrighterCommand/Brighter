@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
@@ -62,7 +62,7 @@ jobs:
           dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
 
       - name: Upload packages as artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: nuget packages
           path: "**/*.nupkg"
@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: nuget packages
       - name: Push generated package to NuGet
@@ -451,7 +451,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
