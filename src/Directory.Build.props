@@ -32,6 +32,7 @@
     <BrighterTargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</BrighterTargetFrameworks>
     <BrighterFrameworkAndCoreTargetFrameworks>net462;net8.0;net9.0;net10.0</BrighterFrameworkAndCoreTargetFrameworks>
     <BrighterCoreTargetFrameworks>net8.0;net9.0;net10.0</BrighterCoreTargetFrameworks>
+    <BrighterNetNineEarlierTargetFrameworks>net8.0;net9.0</BrighterNetNineEarlierTargetFrameworks>
   </PropertyGroup>
 
   <!-- Deterministic builds ensure that the same binary is produced regardless of the machine building it -->
