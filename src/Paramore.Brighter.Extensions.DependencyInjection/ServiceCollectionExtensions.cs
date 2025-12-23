@@ -188,7 +188,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer
         /// to a consumer. 
         /// Registers singletons with the service collection :-
-        ///     -- An Outbox Producer Mediatory - used to send message externally via an Outbox:
+        ///     -- An Outbox Producer Mediator - used to send message externally via an Outbox:
         ///     -- Producer Registry - A list of producers we can send middleware messages with 
         ///     -- Outbox - stores messages so that they can be written in the same transaction as entity writes
         ///     -- Outbox Transaction Provider - used to provide a transaction that spans the Outbox write and
@@ -202,7 +202,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="configure">A callback that allows you to configure <see cref="ProducersConfiguration"/> options</param>
-        /// <param name="serviceLifetime">The lifetime of the transaction provider</param>
+        /// <param name="serviceLifetime">The DI container registration lifetime for the transaction provider (default: Transient)</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
@@ -313,7 +313,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer
         /// to a consumer.
         /// Registers singletons with the service collection :-
-        ///     -- An Outbox Producer Mediatory - used to send message externally via an Outbox:
+        ///     -- An Outbox Producer Mediator - used to send message externally via an Outbox:
         ///     -- Producer Registry - A list of producers we can send middleware messages with
         ///     -- Outbox - stores messages so that they can be written in the same transaction as entity writes
         ///     -- Outbox Transaction Provider - used to provide a transaction that spans the Outbox write and
@@ -327,7 +327,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="configure">A callback that receives IServiceProvider and returns configured ProducersConfiguration</param>
-        /// <param name="serviceLifetime">The lifetime of the transaction provider</param>
+        /// <param name="serviceLifetime">The DI container registration lifetime for the transaction provider (default: Transient)</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         /// <remarks>
         /// Note: This overload enables access to the service provider during configuration,
