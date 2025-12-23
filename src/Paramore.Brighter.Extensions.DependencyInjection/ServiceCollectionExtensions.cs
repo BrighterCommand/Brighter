@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Registers the following with the service collection :-
         ///  - BrighterOptions - how should we configure Brighter
         ///  - Feature Switch Registry - optional if features switch support is desired
-        ///  - Inbox - defaults to InMemoryInbox if none supplied 
+        ///  - Inbox - defaults to InMemoryInbox if none supplied
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
         /// </summary>
@@ -67,7 +67,26 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
 
-            return BrighterHandlerBuilder(services, options);
+            return BrighterHandlerBuilder(services, sp => (BrighterOptions)sp.GetRequiredService<IBrighterOptions>());
+        }
+
+        /// <summary>
+        /// Will add Brighter into the .NET IoC Container with access to IServiceProvider for runtime configuration.
+        /// </summary>
+        /// <param name="services">The collection of services</param>
+        /// <param name="configure">A callback that receives IServiceProvider and returns configured BrighterOptions</param>
+        /// <returns>A builder for further configuration</returns>
+        public static IBrighterBuilder AddBrighter(
+            this IServiceCollection services,
+            Func<IServiceProvider, BrighterOptions> configure)
+        {
+            if (services == null)
+                throw new ArgumentNullException(nameof(services));
+            if (configure == null)
+                throw new ArgumentNullException(nameof(configure));
+
+            services.TryAddSingleton<IBrighterOptions>(configure);
+            return BrighterHandlerBuilder(services, configure);
         }
 
         /// <summary>
@@ -78,7 +97,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Registers the following with the service collection :-
         ///  - BrighterOptions - how should we configure Brighter
         ///  - Feature Switch Registry - optional if features switch support is desired
-        ///  - Inbox - defaults to InMemoryInbox if none supplied 
+        ///  - Inbox - defaults to InMemoryInbox if none supplied
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
         ///  - Request Context Factory - how do we create a request context for a pipeline
@@ -88,6 +107,31 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
         {
+            return BrighterHandlerBuilder(services, _ => options);
+        }
+
+        /// <summary>
+        /// This is public so that we can call it from <see cref="ServiceCollectionExtensions.AddServiceActivator"/>
+        /// which allows that extension method to be called with a <see cref="ServiceActivatorOptions"/> configuration
+        /// that derives from <see cref="BrighterOptions"/>.
+        /// DON'T CALL THIS DIRECTLY
+        /// Registers the following with the service collection :-
+        ///  - BrighterOptions - how should we configure Brighter
+        ///  - Feature Switch Registry - optional if features switch support is desired
+        ///  - Inbox - defaults to InMemoryInbox if none supplied
+        ///  - SubscriberRegistry - what handlers subscribe to what requests
+        ///  - MapperRegistry - what mappers translate what messages
+        ///  - Request Context Factory - how do we create a request context for a pipeline
+        /// </summary>
+        /// <param name="services">The collection of services that we want to add registrations to</param>
+        /// <param name="optionsFunc"></param>
+        /// <returns></returns>
+        public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, Func<IServiceProvider, BrighterOptions> optionsFunc)
+        {
+            // Build intermediate provider to resolve options for registration-time configuration
+            using var intermediateProvider = services.BuildServiceProvider();
+            var options = optionsFunc(intermediateProvider);
+
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
             services.TryAddSingleton(subscriberRegistry);
 
@@ -96,7 +140,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
-            
+
             services.TryAddSingleton(options.RequestContextFactory);
 
             if (options.FeatureSwitchRegistry != null)
