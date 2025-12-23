@@ -126,18 +126,16 @@ namespace Paramore.Brighter
         public const string RETRYPOLICYASYNC = "Paramore.Brighter.CommandProcessor.RetryPolicy.Async";
 
         /// <summary>
-        /// STATIC FIELDS: Use ClearServiceBus() to reset for tests!
-        /// Bus: We want to hold a reference to the bus; use double lock to let us pass parameters to the constructor from the first instance
-        /// MethodCache: Used to reduce the cost of reflection for bulk calls
+        /// INSTANCE FIELDS: Each CommandProcessor has its own mediator instance
+        /// MethodCache: Static caches used to reduce the cost of reflection for bulk calls (stateless, safe to share)
         /// </summary>
-        private static IAmAnOutboxProducerMediator? s_mediator;
-        private static readonly object s_padlock = new();
+        private readonly IAmAnOutboxProducerMediator? _mediator;
+        private readonly Type _transactionType;
+        private readonly ConcurrentDictionary<string, MethodInfo> _boundMediatorMethods = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCallsAsync = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCalls = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCallsAsync = new();
-        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundMediatorMethods = new();
-        private static Type s_transactionType = typeof(CommittableTransaction);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class
@@ -184,6 +182,9 @@ namespace Paramore.Brighter
             _instrumentationOptions = instrumentationOptions;
             _schedulerFactory = requestSchedulerFactory;
             _resiliencePipelineRegistry = resilienceResiliencePipelineRegistry;
+
+            _mediator = null;
+            _transactionType = typeof(CommittableTransaction);
         }
 
         /// <summary>
@@ -220,7 +221,7 @@ namespace Paramore.Brighter
             IAmAChannelFactory? responseChannelFactory = null,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, 
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry,
                 resilienceResiliencePipelineRegistry, requestSchedulerFactory, featureSwitchRegistry, inboxConfiguration)
         {
             _responseChannelFactory = responseChannelFactory;
@@ -229,7 +230,8 @@ namespace Paramore.Brighter
             _replySubscriptions = replySubscriptions;
             _schedulerFactory = requestSchedulerFactory;
 
-            InitExtServiceBus(bus, transactionType);
+            _mediator = bus;
+            _transactionType = transactionType ?? typeof(CommittableTransaction);
         }
 
         /// <summary>
@@ -270,7 +272,8 @@ namespace Paramore.Brighter
             _instrumentationOptions = instrumentationOptions;
             _schedulerFactory = requestSchedulerFactory;
 
-            InitExtServiceBus(mediator, transactionType); 
+            _mediator = mediator;
+            _transactionType = transactionType ?? typeof(CommittableTransaction);
         }
 
         /// <summary>
@@ -669,12 +672,12 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of request</typeparam>
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<TRequest>(
-            TRequest request, 
-            RequestContext? requestContext = null, 
+            TRequest request,
+            RequestContext? requestContext = null,
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            ClearOutbox([CallDepositPost(request, null, requestContext, args, null, s_transactionType)], requestContext, args);
+            ClearOutbox([CallDepositPost(request, null, requestContext, args, null, _transactionType)], requestContext, args);
         }
 
         /// <inheritdoc />
@@ -735,7 +738,7 @@ namespace Paramore.Brighter
         ) where TRequest : class, IRequest
         {
 
-            var messageId = await CallDepositPostAsync(request, null, requestContext, args, continueOnCapturedContext, cancellationToken, null, s_transactionType);
+            var messageId = await CallDepositPostAsync(request, null, requestContext, args, continueOnCapturedContext, cancellationToken, null, _transactionType);
             await ClearOutboxAsync([messageId], requestContext, args, continueOnCapturedContext, cancellationToken);
         }
 
@@ -789,7 +792,7 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            return CallDepositPost(request, null, requestContext, args, null, s_transactionType);
+            return CallDepositPost(request, null, requestContext, args, null, _transactionType);
         }
 
         /// <summary>
@@ -824,12 +827,12 @@ namespace Paramore.Brighter
 
             try
             {
-                if (typeof(TTransaction) != s_transactionType)
+                if (typeof(TTransaction) != _transactionType)
                     throw new InvalidOperationException("Supplied transaction provider doesn't match configured transaction type.");
 
-                Message message = s_mediator!.CreateMessageFromRequest(request, context);
+                Message message = _mediator!.CreateMessageFromRequest(request, context);
 
-                if (!s_mediator.HasOutbox())
+                if (!_mediator.HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
 
                 CallAddToOutbox(message, context, transactionProvider, batchId);
@@ -860,12 +863,12 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
         public Id[] DepositPost<TRequest>(
-            IEnumerable<TRequest> requests, 
-            RequestContext? requestContext = null, 
+            IEnumerable<TRequest> requests,
+            RequestContext? requestContext = null,
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            return CallBulkDepositPost(requests, null, requestContext, args, s_transactionType); 
+            return CallBulkDepositPost(requests, null, requestContext, args, _transactionType);
         }
 
         /// <summary>
@@ -897,7 +900,7 @@ namespace Paramore.Brighter
             
             try
             {
-                if (typeof(TTransaction) != s_transactionType)
+                if (typeof(TTransaction) != _transactionType)
                     throw new InvalidOperationException("Supplied transaction provider doesn't match configured transaction type.");
 
                 var successfullySentMessage = new List<Id>();
@@ -913,7 +916,7 @@ namespace Paramore.Brighter
                 }
 
                 CallEndBatchAddToOutbox(batchId, transactionProvider, context);
-                
+
                 return successfullySentMessage.ToArray();
             }
             catch (Exception e)
@@ -1016,8 +1019,8 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            return await CallDepositPostAsync(request, null, requestContext, args, 
-                continueOnCapturedContext, cancellationToken, null, s_transactionType);
+            return await CallDepositPostAsync(request, null, requestContext, args,
+                continueOnCapturedContext, cancellationToken, null, _transactionType);
         }
 
         /// <summary>
@@ -1054,12 +1057,12 @@ namespace Paramore.Brighter
 
             try
             {
-                if (typeof(TTransaction) != s_transactionType)
+                if (typeof(TTransaction) != _transactionType)
                     throw new InvalidOperationException("Supplied transaction provider doesn't match configured transaction type.");
 
-                Message message = await s_mediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
-                
-                if (!s_mediator.HasAsyncOutbox())
+                Message message = await _mediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
+
+                if (!_mediator.HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
 
                 await CallAddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext,
@@ -1100,7 +1103,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await CallBulkDepositPostAsync(requests, null, requestContext, args,
-                continueOnCapturedContext, cancellationToken, s_transactionType);
+                continueOnCapturedContext, cancellationToken, _transactionType);
         }
 
         /// <summary>
@@ -1237,7 +1240,7 @@ namespace Paramore.Brighter
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.AddToOutbox));
             CallMethodAndPreserveException(
-                () => method.Invoke(s_mediator, [message, context, transactionProvider, batchId]));
+                () => method.Invoke(_mediator, [message, context, transactionProvider, batchId]));
         }
 
         private Task CallAddToOutboxAsync<TTransaction>(
@@ -1250,21 +1253,21 @@ namespace Paramore.Brighter
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.AddToOutboxAsync));
             return CallMethodAndPreserveException(
-                () => (Task)method.Invoke(s_mediator, [message, context, transactionProvider, continueOnCapturedContext, cancellationToken, batchId])!);
+                () => (Task)method.Invoke(_mediator, [message, context, transactionProvider, continueOnCapturedContext, cancellationToken, batchId])!);
         }
 
         private string CallStartBatchAddToOutbox()
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.StartBatchAddToOutbox));
             return CallMethodAndPreserveException(
-                () => (method.Invoke(s_mediator, null) as string)!);
+                () => (method.Invoke(_mediator, null) as string)!);
         }
 
         private void CallEndBatchAddToOutbox(string batchId, IAmABoxTransactionProvider? transactionProvider, RequestContext context)
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.EndBatchAddToOutbox));
             CallMethodAndPreserveException(
-                () => method.Invoke(s_mediator, [batchId, transactionProvider, context]));
+                () => method.Invoke(_mediator, [batchId, transactionProvider, context]));
         }
 
         private Task CallEndBatchAddToOutboxAsync(
@@ -1275,19 +1278,19 @@ namespace Paramore.Brighter
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.EndBatchAddToOutboxAsync));
             return CallMethodAndPreserveException(
-                () => (Task)method.Invoke(s_mediator, [batchId, transactionProvider, context, cancellationToken])!);
+                () => (Task)method.Invoke(_mediator, [batchId, transactionProvider, context, cancellationToken])!);
         }
 
-        private static MethodInfo GetMediatorMethod(string methodName)
+        private MethodInfo GetMediatorMethod(string methodName)
         {
-            if (!s_boundMediatorMethods.TryGetValue(methodName, out MethodInfo? method))
+            if (!_boundMediatorMethods.TryGetValue(methodName, out MethodInfo? method))
             {
-                method = s_mediator!
+                method = _mediator!
                     .GetType()
                     .GetMethods()
                     .Single(x => x.Name == methodName);
 
-                s_boundMediatorMethods[methodName] = method!;
+                _boundMediatorMethods[methodName] = method!;
             }
 
             return method;
@@ -1325,7 +1328,7 @@ namespace Paramore.Brighter
             
             try
             {
-                s_mediator!.ClearOutbox(ids, context, args);
+                _mediator!.ClearOutbox(ids, context, args);
             }
             catch (Exception e)
             {
@@ -1359,7 +1362,7 @@ namespace Paramore.Brighter
             
             try
             {
-                await s_mediator!.ClearOutboxAsync(posts, context, continueOnCapturedContext, args, cancellationToken);
+                await _mediator!.ClearOutboxAsync(posts, context, continueOnCapturedContext, args, cancellationToken);
             }
             catch (Exception e)
             {
@@ -1424,23 +1427,23 @@ namespace Paramore.Brighter
 
             try
             {
-                var outMessage = s_mediator!.CreateMessageFromRequest(request, context);
+                var outMessage = _mediator!.CreateMessageFromRequest(request, context);
 
-                //We don't store the message, if we continue to fail further retry is left to the sender 
+                //We don't store the message, if we continue to fail further retry is left to the sender
                 Log.SendingRequestWithRoutingkey(s_logger, channelName);
-                s_mediator.CallViaExternalBus<T, TResponse>(outMessage, requestContext);
+                _mediator.CallViaExternalBus<T, TResponse>(outMessage, requestContext);
 
                 Message? responseMessage = null;
 
             //now we block on the receiver to try and get the message, until timeout.
             Log.AwaitingResponseOn(s_logger, channelName);
             ExecuteWithResiliencePipeline(() => responseMessage = responseChannel.Receive(timeOut));
-            
+
                 if (responseMessage is not null && responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
                     Log.ReplyReceivedFrom(s_logger, channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                    s_mediator.CreateRequestFromMessage(responseMessage, context, out TResponse response);
+                    _mediator.CreateRequestFromMessage(responseMessage, context, out TResponse response);
                     Send(response);
 
                     return response;
@@ -1461,30 +1464,16 @@ namespace Paramore.Brighter
             }
         }
 
-            /// <summary>
-        /// The external service bus is a singleton as it has app lifetime to manage an Outbox.
-        /// This method clears the external service bus, so that the next attempt to use it will create a fresh one
-        /// It is mainly intended for testing, to allow the external service bus to be reset between tests
+        /// <summary>
+        /// Clears reflection caches. No longer needed to clear mediator state as it is now instance-based.
         /// </summary>
+        [Obsolete("No longer needed - each CommandProcessor instance has its own mediator. Will be removed in next major version.")]
         public static void ClearServiceBus()
         {
-            if (s_mediator != null)
-            {
-                lock (s_padlock)
-                {
-                    if (s_mediator != null)
-                    {
-                        s_mediator.Dispose();
-                        s_mediator = null;
-                        s_boundDepositCalls.Clear();
-                        s_boundDepositCallsAsync.Clear();
-                        s_boundBulkDepositCalls.Clear();
-                        s_boundBulkDepositCallsAsync.Clear();
-                        s_boundMediatorMethods.Clear();
-                    }
-                }
-            }
             s_boundDepositCalls.Clear();
+            s_boundDepositCallsAsync.Clear();
+            s_boundBulkDepositCalls.Clear();
+            s_boundBulkDepositCallsAsync.Clear();
         }
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
@@ -1513,24 +1502,6 @@ namespace Paramore.Brighter
                     return false;
                 default:
                     return true;
-            }
-        }
- 
-        // Create an instance of the OutboxProducerMediator if one not already set for this app. Note that we do not support reinitialization here, so once you have
-        // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
-        // if needed as a "get out of gaol" card.
-        private static void InitExtServiceBus(IAmAnOutboxProducerMediator bus, Type? transactionType)
-        {
-            if (s_mediator == null)
-            {
-                lock (s_padlock)
-                {
-                    if (s_mediator == null)
-                    {
-                        s_mediator = bus;
-                        s_transactionType = transactionType ?? typeof(CommittableTransaction);
-                    }
-                }
             }
         }
 
