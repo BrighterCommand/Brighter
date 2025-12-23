@@ -32,9 +32,10 @@ using Xunit;
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
-/// Tests DI registration lifetimes for handlers, mappers, and transformers.
-/// Note: As of the factory-managed lifetime refactoring, all components are registered as Transient in DI.
-/// Actual handler lifetime behavior is managed by ServiceProviderHandlerFactory at runtime.
+/// Tests DI container registration lifetimes for handlers, mappers, and transformers.
+/// Note: As of the factory-managed lifetime refactoring, all components are registered as Transient in the DI container.
+/// This Transient registration is only for DI resolution; actual runtime handler lifetime behavior (Singleton/Scoped/Transient)
+/// is determined by ServiceProviderHandlerFactory based on IBrighterOptions.HandlerLifetime.
 /// See FactoryLifetimeTests for runtime handler lifetime behavior tests.
 /// </summary>
 public class LifetimeConfigurationTests

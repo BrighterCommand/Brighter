@@ -127,6 +127,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return (T?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
         }
 
+        /// <summary>
+        /// Gets or creates a singleton handler instance. The lifetime parameter is accepted for interface
+        /// consistency but ignored - singletons are shared across all lifetime scopes by definition.
+        /// Uses Lazy&lt;T&gt; to ensure thread-safe single initialization even under concurrent access.
+        /// </summary>
         private T? GetOrCreateSingleton<T>(Type handlerType, IAmALifetime lifetime) where T : class
         {
             var lazy = _singletonInstances.GetOrAdd(handlerType, _ =>
@@ -139,7 +144,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if(!_scopes.TryGetValue(lifetime, out IServiceScope? scope))
                 return;
 
-            // Clear scoped instances for this lifetime
+            // Clear scoped instances for this lifetime.
+            // ToList() creates a snapshot of keys to avoid "collection modified during enumeration".
+            // This is safe because: (1) we only remove keys matching this lifetime, (2) adds for this
+            // lifetime won't happen during release as the caller owns the lifetime scope.
             var keysToRemove = _scopedInstances.Keys.Where(k => k.Item1 == lifetime).ToList();
             foreach (var key in keysToRemove)
                 _scopedInstances.TryRemove(key, out _);
