@@ -74,6 +74,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.10" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.10.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.5.0" />
