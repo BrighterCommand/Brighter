@@ -53,7 +53,7 @@ public static class CharacterEncodingExtensions
     /// Turns a string into a character encoding
     /// We support:
     /// 
-    ///  "us-ascii" => CharacterEncoding.ASCII,
+    /// "us-ascii" => CharacterEncoding.ASCII,
     /// "utf-8" => CharacterEncoding.UTF8,
     /// "utf-16" => CharacterEncoding.UTF16,
     /// "base64" => CharacterEncoding.Base64,
