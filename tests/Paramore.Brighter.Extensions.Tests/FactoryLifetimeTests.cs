@@ -220,6 +220,30 @@ public class FactoryLifetimeTests
         Assert.NotSame(handler1, handler2);
     }
 
+    [Fact]
+    public void Factory_HandlerWithDependency_ResolvesBothCorrectly()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IDependencyService, DependencyService>();
+        services.AddTransient<HandlerWithDependency>();
+        services.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Scoped
+        });
+
+        var provider = services.BuildServiceProvider();
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime = new TestLifetimeScope();
+
+        // Act
+        var handler = (HandlerWithDependency)((IAmAHandlerFactorySync)factory).Create(typeof(HandlerWithDependency), lifetime)!;
+
+        // Assert
+        Assert.NotNull(handler);
+        Assert.NotNull(handler.Dependency);
+    }
+
     private class TestHandler : RequestHandler<TestCommand>
     {
         public override TestCommand Handle(TestCommand command) => command;
@@ -241,5 +265,21 @@ public class FactoryLifetimeTests
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
         public void Dispose() { }
+    }
+
+    private interface IDependencyService { }
+
+    private class DependencyService : IDependencyService { }
+
+    private class HandlerWithDependency : RequestHandler<TestCommand>
+    {
+        public IDependencyService Dependency { get; }
+
+        public HandlerWithDependency(IDependencyService dependency)
+        {
+            Dependency = dependency;
+        }
+
+        public override TestCommand Handle(TestCommand command) => command;
     }
 }
