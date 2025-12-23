@@ -1,0 +1,13 @@
+{
+  "Namespace": "Paramore.Brighter.MySQL.Tests",
+  "Outboxes": {
+    "Text": {
+      "Transaction": "System.Data.Common.DbTransaction",
+      "OutboxProvider": "MySQLTextOutboxProvider"
+    },
+    "Binary": {
+      "Transaction": "System.Data.Common.DbTransaction",
+      "OutboxProvider": "MySQLBinaryOutboxProvider"
+    }
+  }
+}

@@ -43,11 +43,12 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - run: dotnet --info
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
@@ -62,7 +63,7 @@ jobs:
           dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
 
       - name: Upload packages as artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: nuget packages
           path: "**/*.nupkg"
@@ -79,7 +80,7 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: nuget packages
       - name: Push generated package to NuGet
@@ -91,13 +92,14 @@ jobs:
     needs: [build]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -109,13 +111,14 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Hangfire Tests
@@ -127,17 +130,37 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Quartz Tests
         run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
+  tickerq:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [ build ]
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: TickerQ Tests
+        run: dotnet test ./tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   redis-ci:
     runs-on: ubuntu-latest
@@ -156,13 +179,14 @@ jobs:
           --health-retries 5             
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -181,13 +205,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MQTT Transport Tests
@@ -211,13 +236,14 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Async Transport Tests
@@ -276,13 +302,14 @@ jobs:
     - name: docker check
       run: docker ps -a
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
     - name: Setup dotnet
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: |
           8.0.x
           9.0.x
+          10.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
@@ -307,13 +334,14 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
@@ -333,13 +361,14 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: Password123!
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -361,13 +390,14 @@ jobs:
         options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -392,13 +422,14 @@ jobs:
           - 8000:8000
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -422,7 +453,7 @@ jobs:
           SERVICES: s3,sqs,sns,sts,dynamodb,iam,scheduler
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
@@ -433,7 +464,8 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
-      - uses: actions/cache@v4
+            10.0.x
+      - uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
@@ -458,13 +490,14 @@ jobs:
       AWS_DEFAULT_OUTPUT: json    
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -492,13 +525,14 @@ jobs:
       AWS_DEFAULT_OUTPUT: json
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -518,13 +552,14 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
@@ -535,13 +570,14 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
@@ -567,13 +603,14 @@ jobs:
           --health-timeout 10s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MongoDB Tests
@@ -587,7 +624,7 @@ jobs:
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: 
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
@@ -609,6 +646,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
             
       - name: Install dependencies
         run: dotnet restore
@@ -656,7 +694,7 @@ jobs:
 #          AUTO_CREATE_TOPIC_ENABLE: "true"  # Auto-create topics
 #          
 #    steps:
-#      - uses: actions/checkout@v5
+#      - uses: actions/checkout@v6
 #        with:
 #          fetch-depth: 0 # Required to fetch the Git tags
 #          filter: tree:0

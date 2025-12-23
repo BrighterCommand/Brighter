@@ -415,7 +415,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName());
             tags.Add(BrighterSemanticConventions.DbName, info.dbName);
             tags.Add(BrighterSemanticConventions.DbTable, info.dbTable);
-            tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName());
+            tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystemName);
 
             if (!string.IsNullOrEmpty(info.dbStatement))
                 tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
