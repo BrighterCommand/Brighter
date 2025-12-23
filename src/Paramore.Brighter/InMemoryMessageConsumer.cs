@@ -107,7 +107,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="message">The message.</param>
     public bool Reject(Message message)
     {
-        var removed =_lockedMessages.TryRemove(message.Id, out _);
+        var removed = _lockedMessages.TryRemove(message.Id, out _);
         if (!removed || _deadLetterTopic is null) return removed;
         
         message.Header.Topic = _deadLetterTopic;
