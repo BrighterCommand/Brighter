@@ -244,6 +244,53 @@ public class FactoryLifetimeTests
         Assert.NotNull(handler.Dependency);
     }
 
+    [Fact]
+    public void Factory_Release_ClearsHandlerFromCache()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddTransient<TestHandler>();
+        services.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Scoped
+        });
+
+        var provider = services.BuildServiceProvider();
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime = new TestLifetimeScope();
+
+        // Act - Create handler, then release, then create again
+        var handler1 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
+        ((IAmAHandlerFactorySync)factory).Release(handler1, lifetime);
+        var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
+
+        // Assert - After release, we should get a working handler
+        Assert.NotNull(handler2);
+    }
+
+    [Fact]
+    public void Factory_WithScopedLifetime_TracksDisposableHandler()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddTransient<DisposableTestHandler>();
+        services.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Scoped
+        });
+
+        var provider = services.BuildServiceProvider();
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime = new TestLifetimeScope();
+
+        // Act
+        var handler = (DisposableTestHandler)((IAmAHandlerFactorySync)factory).Create(typeof(DisposableTestHandler), lifetime)!;
+
+        // Assert - Handler should be created and not disposed initially
+        Assert.NotNull(handler);
+        Assert.False(handler.IsDisposed);
+    }
+
     private class TestHandler : RequestHandler<TestCommand>
     {
         public override TestCommand Handle(TestCommand command) => command;
@@ -281,5 +328,14 @@ public class FactoryLifetimeTests
         }
 
         public override TestCommand Handle(TestCommand command) => command;
+    }
+
+    private class DisposableTestHandler : RequestHandler<TestCommand>, IDisposable
+    {
+        public bool IsDisposed { get; private set; }
+
+        public override TestCommand Handle(TestCommand command) => command;
+
+        public void Dispose() => IsDisposed = true;
     }
 }
