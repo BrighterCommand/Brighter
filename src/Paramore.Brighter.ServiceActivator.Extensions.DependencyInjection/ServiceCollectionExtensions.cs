@@ -118,10 +118,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             return ServiceCollectionExtensions.BrighterHandlerBuilder(
                 services,
-                configure,
-                ServiceLifetime.Transient,
-                ServiceLifetime.Transient,
-                ServiceLifetime.Transient);
+                sp => configure(sp));
         }
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
