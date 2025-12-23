@@ -131,7 +131,7 @@ namespace Paramore.Brighter
         /// </summary>
         private readonly IAmAnOutboxProducerMediator? _mediator;
         private readonly Type _transactionType;
-        private readonly ConcurrentDictionary<string, MethodInfo> _boundMediatorMethods = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundMediatorMethods = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCallsAsync = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCalls = new();
@@ -1283,17 +1283,17 @@ namespace Paramore.Brighter
 
         private MethodInfo GetMediatorMethod(string methodName)
         {
-            if (!_boundMediatorMethods.TryGetValue(methodName, out MethodInfo? method))
+            if (!s_boundMediatorMethods.TryGetValue(methodName, out MethodInfo? method))
             {
                 method = _mediator!
                     .GetType()
                     .GetMethods()
                     .Single(x => x.Name == methodName);
 
-                _boundMediatorMethods[methodName] = method!;
+                s_boundMediatorMethods[methodName] = method;
             }
 
-            return method;
+            return method!;
         }
 
         private TResult CallMethodAndPreserveException<TResult>(Func<TResult> method)

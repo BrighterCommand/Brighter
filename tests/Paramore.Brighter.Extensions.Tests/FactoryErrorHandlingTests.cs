@@ -69,8 +69,7 @@ public class FactoryErrorHandlingTests
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
 
-        // Act & Assert - For Transient, null lifetime may be handled differently
-        // The factory should either work or throw a clear exception
+        // Act & Assert - For Transient, null lifetime should either work or throw ArgumentNullException
         try
         {
             var handler = ((IAmAHandlerFactorySync)factory).Create(typeof(SimpleHandler), null!);
@@ -79,14 +78,10 @@ public class FactoryErrorHandlingTests
         }
         catch (ArgumentNullException)
         {
-            // Also acceptable - throwing ArgumentNullException for null lifetime
+            // Acceptable - throwing ArgumentNullException for null lifetime
             Assert.True(true);
         }
-        catch (NullReferenceException)
-        {
-            // Less ideal but acceptable - indicates null lifetime causes issues
-            Assert.True(true);
-        }
+        // Note: NullReferenceException would indicate a bug - null should be validated explicitly
     }
 
     [Fact]

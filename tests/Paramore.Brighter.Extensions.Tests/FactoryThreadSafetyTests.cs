@@ -157,7 +157,7 @@ public class FactoryThreadSafetyTests
         var handlers = new ConcurrentBag<IHandleRequests>();
 
         // Act - Resolve singleton from multiple threads simultaneously
-        var barrier = new Barrier(100);
+        using var barrier = new Barrier(100);
         var tasks = new Task[100];
         for (int i = 0; i < 100; i++)
         {

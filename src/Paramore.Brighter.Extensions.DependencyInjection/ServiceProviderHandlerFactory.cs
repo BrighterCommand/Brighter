@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceLifetime _handlerLifetime;
         private readonly ConcurrentDictionary<IAmALifetime, IServiceScope> _scopes = new();
-        private readonly ConcurrentDictionary<(IAmALifetime, Type), object> _scopedInstances = new();
+        private readonly ConcurrentDictionary<(IAmALifetime, Type), Lazy<object?>> _scopedInstances = new();
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
 
         /// <summary>
@@ -114,7 +114,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private T? GetOrCreateScoped<T>(Type handlerType, IAmALifetime lifetime) where T : class
         {
             var key = (lifetime, handlerType);
-            return (T?)_scopedInstances.GetOrAdd(key, _ => GetTransient<T>(handlerType, lifetime)!);
+            var lazy = _scopedInstances.GetOrAdd(key, _ =>
+                new Lazy<object?>(() => GetTransient<T>(handlerType, lifetime)));
+            return (T?)lazy.Value;
         }
 
         private T? GetTransient<T>(Type handlerType, IAmALifetime lifetime) where T : class
