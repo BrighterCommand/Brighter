@@ -150,6 +150,76 @@ public class FactoryLifetimeTests
         Assert.Same(handler1, handler2);
     }
 
+    [Fact]
+    public void AsyncFactory_WithScopedLifetime_ReturnsSameInstanceWithinScope()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddTransient<TestAsyncHandler>();
+        services.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Scoped
+        });
+
+        var provider = services.BuildServiceProvider();
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime = new TestLifetimeScope();
+
+        // Act
+        var handler1 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime);
+        var handler2 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime);
+
+        // Assert
+        Assert.Same(handler1, handler2);
+    }
+
+    [Fact]
+    public void AsyncFactory_WithScopedLifetime_ReturnsDifferentInstancesAcrossScopes()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddTransient<TestAsyncHandler>();
+        services.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Scoped
+        });
+
+        var provider = services.BuildServiceProvider();
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime1 = new TestLifetimeScope();
+        var lifetime2 = new TestLifetimeScope();
+
+        // Act
+        var handler1 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime1);
+        var handler2 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime2);
+
+        // Assert
+        Assert.NotSame(handler1, handler2);
+    }
+
+    [Fact]
+    public void AsyncFactory_WithTransientLifetime_ReturnsDifferentInstances()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddTransient<TestAsyncHandler>();
+        services.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Transient
+        });
+
+        var provider = services.BuildServiceProvider();
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime = new TestLifetimeScope();
+
+        // Act
+        var handler1 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime);
+        var handler2 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime);
+
+        // Assert
+        Assert.NotSame(handler1, handler2);
+    }
+
     private class TestHandler : RequestHandler<TestCommand>
     {
         public override TestCommand Handle(TestCommand command) => command;
