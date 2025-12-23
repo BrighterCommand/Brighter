@@ -73,12 +73,23 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             services.TryAddSingleton<IBrighterOptions>(sp =>
                 sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
 
-            return BrighterHandlerBuilder(services, sp =>
-                (BrighterOptions)sp.GetRequiredService<IBrighterOptions>());
+            // For Action<BrighterOptions> overload, resolve lifetimes from configured options
+            // Build a temporary options object to get the configured lifetimes for registration
+            var tempOptions = new BrighterOptions();
+            configure?.Invoke(tempOptions);
+
+            return BrighterHandlerBuilder(
+                services,
+                sp => (BrighterOptions)sp.GetRequiredService<IBrighterOptions>(),
+                tempOptions.HandlerLifetime,
+                tempOptions.TransformerLifetime,
+                tempOptions.MapperLifetime);
         }
 
         /// <summary>
         /// Will add Brighter into the .NET IoC Container with access to IServiceProvider for runtime configuration.
+        /// Note: When using this overload with dynamic configuration, handler/transformer/mapper lifetimes default to Transient.
+        /// If you need custom lifetimes, use the Action&lt;BrighterOptions&gt; overload instead.
         /// </summary>
         /// <param name="services">The collection of services</param>
         /// <param name="configure">A callback that receives IServiceProvider and returns configured BrighterOptions</param>
@@ -93,7 +104,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 throw new ArgumentNullException(nameof(configure));
 
             services.TryAddSingleton<IBrighterOptions>(configure);
-            return BrighterHandlerBuilder(services, configure);
+            // For Func overload, we cannot resolve lifetimes without building the provider,
+            // so we use default Transient lifetimes as documented
+            return BrighterHandlerBuilder(
+                services,
+                configure,
+                ServiceLifetime.Transient,
+                ServiceLifetime.Transient,
+                ServiceLifetime.Transient);
         }
 
         /// <summary>
@@ -114,7 +132,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
         {
-            return BrighterHandlerBuilder(services, _ => options);
+            return BrighterHandlerBuilder(
+                services,
+                _ => options,
+                options.HandlerLifetime,
+                options.TransformerLifetime,
+                options.MapperLifetime);
         }
 
         /// <summary>
@@ -132,18 +155,26 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services">The collection of services that we want to add registrations to</param>
         /// <param name="optionsFunc"></param>
+        /// <param name="handlerLifetime">The lifetime to use for handlers</param>
+        /// <param name="transformerLifetime">The lifetime to use for transformers</param>
+        /// <param name="mapperLifetime">The lifetime to use for mappers</param>
         /// <returns></returns>
-        public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, Func<IServiceProvider, BrighterOptions> optionsFunc)
+        public static IBrighterBuilder BrighterHandlerBuilder(
+            IServiceCollection services,
+            Func<IServiceProvider, BrighterOptions> optionsFunc,
+            ServiceLifetime handlerLifetime = ServiceLifetime.Transient,
+            ServiceLifetime transformerLifetime = ServiceLifetime.Transient,
+            ServiceLifetime mapperLifetime = ServiceLifetime.Transient)
         {
             // DO NOT build intermediate provider - defer all resolution
-            // Create registries with default lifetimes - actual lifetime from resolved options applied later
-            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, ServiceLifetime.Transient);
+            // Create registries with lifetimes from options
+            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, handlerLifetime);
             services.TryAddSingleton(subscriberRegistry);
 
-            var transformRegistry = new ServiceCollectionTransformerRegistry(services, ServiceLifetime.Transient);
+            var transformRegistry = new ServiceCollectionTransformerRegistry(services, transformerLifetime);
             services.TryAddSingleton(transformRegistry);
 
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, ServiceLifetime.Transient);
+            var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, mapperLifetime);
             services.TryAddSingleton(mapperRegistry);
 
             // Defer request context factory resolution
