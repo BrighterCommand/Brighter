@@ -3,5 +3,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);AD0001</NoWarn>
+
+    <BrighterTargetFramework>net10.0</BrighterTargetFramework>
   </PropertyGroup>
 </Project>
