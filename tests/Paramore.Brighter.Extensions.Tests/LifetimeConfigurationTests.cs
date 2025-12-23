@@ -31,90 +31,14 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
+/// <summary>
+/// Tests DI registration lifetimes for handlers, mappers, and transformers.
+/// Note: As of the factory-managed lifetime refactoring, all components are registered as Transient in DI.
+/// Actual handler lifetime behavior is managed by ServiceProviderHandlerFactory at runtime.
+/// See FactoryLifetimeTests for runtime handler lifetime behavior tests.
+/// </summary>
 public class LifetimeConfigurationTests
 {
-    [Fact]
-    public void AddBrighter_WithScopedHandlerLifetime_RegistersHandlersAsScoped()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-
-        // Act
-        services.AddBrighter(options =>
-        {
-            options.HandlerLifetime = ServiceLifetime.Scoped;
-        }).AutoFromAssemblies();
-
-        // Assert - Check that a handler is registered with Scoped lifetime
-        var handlerDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestEventHandler));
-        Assert.NotNull(handlerDescriptor);
-        Assert.Equal(ServiceLifetime.Scoped, handlerDescriptor.Lifetime);
-    }
-
-    [Fact]
-    public void AddBrighter_WithScopedMapperLifetime_RegistersMappersAsScoped()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-
-        // Act
-        services.AddBrighter(options =>
-        {
-            options.MapperLifetime = ServiceLifetime.Scoped;
-        }).AutoFromAssemblies();
-
-        // Assert - Check that a mapper is registered with Scoped lifetime
-        var mapperDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestEventMessageMapper));
-        Assert.NotNull(mapperDescriptor);
-        Assert.Equal(ServiceLifetime.Scoped, mapperDescriptor.Lifetime);
-    }
-
-    [Fact]
-    public void AddBrighter_WithSingletonTransformerLifetime_RegistersTransformersAsSingleton()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-
-        // Act
-        services.AddBrighter(options =>
-        {
-            options.TransformerLifetime = ServiceLifetime.Singleton;
-        }).AutoFromAssemblies();
-
-        // Assert - Check that a transformer is registered with Singleton lifetime
-        var transformerDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestTransform));
-        Assert.NotNull(transformerDescriptor);
-        Assert.Equal(ServiceLifetime.Singleton, transformerDescriptor.Lifetime);
-    }
-
-    [Fact]
-    public void AddBrighter_WithAllCustomLifetimes_RegistersAllCorrectly()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-
-        // Act
-        services.AddBrighter(options =>
-        {
-            options.HandlerLifetime = ServiceLifetime.Scoped;
-            options.MapperLifetime = ServiceLifetime.Singleton;
-            options.TransformerLifetime = ServiceLifetime.Scoped;
-        }).AutoFromAssemblies();
-
-        // Assert
-        var handlerDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestEventHandler));
-        Assert.NotNull(handlerDescriptor);
-        Assert.Equal(ServiceLifetime.Scoped, handlerDescriptor.Lifetime);
-
-        var mapperDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestEventMessageMapper));
-        Assert.NotNull(mapperDescriptor);
-        Assert.Equal(ServiceLifetime.Singleton, mapperDescriptor.Lifetime);
-
-        var transformerDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestTransform));
-        Assert.NotNull(transformerDescriptor);
-        Assert.Equal(ServiceLifetime.Scoped, transformerDescriptor.Lifetime);
-    }
-
     [Fact]
     public void AddBrighter_WithDefaultLifetimes_RegistersAllAsTransient()
     {
@@ -124,7 +48,8 @@ public class LifetimeConfigurationTests
         // Act - Don't configure any lifetimes
         services.AddBrighter().AutoFromAssemblies();
 
-        // Assert - All should default to Transient
+        // Assert - All components are registered as Transient in DI
+        // (Actual handler lifetime is managed by ServiceProviderHandlerFactory at runtime)
         var handlerDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestEventHandler));
         Assert.NotNull(handlerDescriptor);
         Assert.Equal(ServiceLifetime.Transient, handlerDescriptor.Lifetime);
