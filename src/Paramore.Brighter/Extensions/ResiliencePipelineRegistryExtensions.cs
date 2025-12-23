@@ -37,7 +37,7 @@ public static class ResiliencePipelineRegistryExtensions
     ///
     /// We add:
     ///
-    ///  CommandProcessor.OutboxProducer => new RetryStrategyOptions
+    /// CommandProcessor.OutboxProducer => new RetryStrategyOptions
     /// {
     ///    Delay = TimeSpan.FromMilliseconds(50),
     ///    MaxRetryAttempts = 3,
