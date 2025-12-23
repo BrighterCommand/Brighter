@@ -264,8 +264,9 @@ public class FactoryLifetimeTests
         ((IAmAHandlerFactorySync)factory).Release(handler1, lifetime);
         var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
 
-        // Assert - After release, we should get a working handler
+        // Assert - After release, we should get a new handler instance
         Assert.NotNull(handler2);
+        Assert.NotSame(handler1, handler2);
     }
 
     [Fact]
