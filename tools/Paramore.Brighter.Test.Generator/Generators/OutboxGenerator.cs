@@ -33,7 +33,6 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 
 public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(logger)
 {
-    
     public async Task GenerateAsync(TestConfiguration configuration)
     {
         if (configuration.Outbox != null)
@@ -45,8 +44,14 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
             
             var prefix = configuration.Outbox.Prefix;
             await GenerateAsync(configuration, 
-                Path.Combine("Outbox", prefix, "Sync"),
+                Path.Combine("Outbox", prefix, "Generated", "Sync"),
                 Path.Combine("Outbox", "Sync"),
+                configuration.Outbox,
+                filename => SkipTest(configuration.Outbox, filename));
+
+            await GenerateAsync(configuration, 
+                Path.Combine("Outbox", prefix, "Generated", "Async"),
+                Path.Combine("Outbox", "Async"),
                 configuration.Outbox,
                 filename => SkipTest(configuration.Outbox, filename));
         }
@@ -91,7 +96,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     
     private static bool SkipTest(OutboxConfiguration outboxConfiguration, string fileName)
     {
-        if (!outboxConfiguration.SupportsTransactions && fileName.Contains("Transaction"))
+        if (!outboxConfiguration.SupportsTransactions && fileName.Contains("Transaction", StringComparison.InvariantCultureIgnoreCase))
         {
             return true;
         }
@@ -100,8 +105,10 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     }
     
     protected override Task GenerateAsync(TestConfiguration configuration, 
-        string prefix, string templateFolderName,
-        object model, Func<string, bool>? ignore = null)
+        string prefix, 
+        string templateFolderName,
+        object model, 
+        Func<string, bool>? ignore = null)
     {
         if (model is OutboxConfiguration outboxConfiguration)
         {
@@ -116,6 +123,6 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
             }
         }
 
-        return base.GenerateAsync(configuration, prefix, templateFolderName, model);
+        return base.GenerateAsync(configuration, prefix, templateFolderName, model, ignore);
     }
 }
