@@ -43,6 +43,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - run: dotnet --info
       - uses: actions/checkout@v6
         with:
@@ -98,6 +99,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -116,6 +118,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Hangfire Tests
@@ -134,6 +137,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Quartz Tests
@@ -152,6 +156,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: TickerQ Tests
@@ -181,6 +186,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -206,6 +212,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MQTT Transport Tests
@@ -236,6 +243,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Async Transport Tests
@@ -301,6 +309,7 @@ jobs:
         dotnet-version: |
           8.0.x
           9.0.x
+          10.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
@@ -332,6 +341,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
@@ -358,6 +368,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -386,6 +397,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -417,6 +429,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -451,6 +464,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
@@ -483,6 +497,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -517,6 +532,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -543,6 +559,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
@@ -560,6 +577,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
@@ -592,6 +610,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MongoDB Tests
@@ -627,6 +646,7 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+            10.0.x
             
       - name: Install dependencies
         run: dotnet restore
