@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
@@ -103,5 +104,28 @@ public class ServiceProviderLambdaTests
         // Assert
         Assert.NotNull(config);
         Assert.Same(producerRegistry, config.ProducerRegistry);
+    }
+
+    [Fact]
+    public void AddConsumers_WithServiceProviderFunc_ResolvesServicesCorrectly()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var internalBus = new InternalBus();
+        var channelFactory = new InMemoryChannelFactory(internalBus, TimeProvider.System);
+        services.AddSingleton<IAmAChannelFactory>(channelFactory);
+
+        // Act
+        services.AddConsumers(sp => new ConsumersOptions
+        {
+            DefaultChannelFactory = sp.GetRequiredService<IAmAChannelFactory>()
+        });
+
+        var provider = services.BuildServiceProvider();
+        var options = provider.GetService<IAmConsumerOptions>();
+
+        // Assert
+        Assert.NotNull(options);
+        Assert.Same(channelFactory, options.DefaultChannelFactory);
     }
 }
