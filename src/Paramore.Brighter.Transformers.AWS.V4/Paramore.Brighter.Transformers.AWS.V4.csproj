@@ -13,12 +13,15 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" VersionOverride="$(AWSSDKV4)" />
     <PackageReference Include="AWSSDK.SecurityToken" VersionOverride="$(AWSSecurityTokenV4)" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" />
-    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
 </Project>
