@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -79,5 +80,28 @@ public class ServiceProviderLambdaTests
         // Assert - PostConfigure should have applied
         Assert.Same(customFactory, options.RequestContextFactory);
         Assert.Equal(ServiceLifetime.Scoped, options.HandlerLifetime);
+    }
+
+    [Fact]
+    public void AddProducers_WithServiceProviderFunc_DefersConfiguration()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>());
+        services.AddSingleton(producerRegistry);
+
+        // Act
+        services.AddBrighter()
+            .AddProducers(sp => new ProducersConfiguration
+            {
+                ProducerRegistry = sp.GetRequiredService<ProducerRegistry>()
+            });
+
+        var provider = services.BuildServiceProvider();
+        var config = provider.GetService<IAmProducersConfiguration>();
+
+        // Assert
+        Assert.NotNull(config);
+        Assert.Same(producerRegistry, config.ProducerRegistry);
     }
 }
