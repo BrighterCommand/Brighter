@@ -128,4 +128,39 @@ public class ServiceProviderLambdaTests
         Assert.NotNull(options);
         Assert.Same(channelFactory, options.DefaultChannelFactory);
     }
+
+    [Fact]
+    public void AddBrighter_WithActionOverload_StillWorks()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act - existing pattern
+        services.AddBrighter(options =>
+        {
+            options.HandlerLifetime = ServiceLifetime.Scoped;
+        });
+
+        var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IBrighterOptions>();
+
+        // Assert
+        Assert.Equal(ServiceLifetime.Scoped, options.HandlerLifetime);
+    }
+
+    [Fact]
+    public void AddBrighter_WithNoConfiguration_UsesDefaults()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddBrighter();
+
+        var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IBrighterOptions>();
+
+        // Assert
+        Assert.Equal(ServiceLifetime.Transient, options.HandlerLifetime);
+    }
 }
