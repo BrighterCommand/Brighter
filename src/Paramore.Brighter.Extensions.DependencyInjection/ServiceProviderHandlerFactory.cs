@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceLifetime _handlerLifetime;
         private readonly ConcurrentDictionary<IAmALifetime, IServiceScope> _scopes = new();
         private readonly ConcurrentDictionary<(IAmALifetime, Type), object> _scopedInstances = new();
+        private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             return _handlerLifetime switch
             {
-                ServiceLifetime.Singleton => (IHandleRequests?)_serviceProvider.GetService(handlerType),
+                ServiceLifetime.Singleton => GetOrCreateSingleton<IHandleRequests>(handlerType, lifetime),
                 ServiceLifetime.Scoped => GetOrCreateScoped<IHandleRequests>(handlerType, lifetime),
                 ServiceLifetime.Transient => GetTransient<IHandleRequests>(handlerType, lifetime),
                 _ => throw new InvalidOperationException($"Unsupported handler lifetime: {_handlerLifetime}")
@@ -79,7 +80,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             return _handlerLifetime switch
             {
-                ServiceLifetime.Singleton => (IHandleRequestsAsync?)_serviceProvider.GetService(handlerType),
+                ServiceLifetime.Singleton => GetOrCreateSingleton<IHandleRequestsAsync>(handlerType, lifetime),
                 ServiceLifetime.Scoped => GetOrCreateScoped<IHandleRequestsAsync>(handlerType, lifetime),
                 ServiceLifetime.Transient => GetTransient<IHandleRequestsAsync>(handlerType, lifetime),
                 _ => throw new InvalidOperationException($"Unsupported handler lifetime: {_handlerLifetime}")
@@ -113,15 +114,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private T? GetOrCreateScoped<T>(Type handlerType, IAmALifetime lifetime) where T : class
         {
             var key = (lifetime, handlerType);
-
-            if (_scopedInstances.TryGetValue(key, out var cached))
-                return (T?)cached;
-
-            var instance = GetTransient<T>(handlerType, lifetime);
-            if (instance != null)
-                _scopedInstances.TryAdd(key, instance);
-
-            return instance;
+            return (T?)_scopedInstances.GetOrAdd(key, _ => GetTransient<T>(handlerType, lifetime)!);
         }
 
         private T? GetTransient<T>(Type handlerType, IAmALifetime lifetime) where T : class
@@ -130,6 +123,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 _scopes.TryAdd(lifetime, _serviceProvider.CreateScope());
 
             return (T?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
+        }
+
+        private T? GetOrCreateSingleton<T>(Type handlerType, IAmALifetime lifetime) where T : class
+        {
+            var lazy = _singletonInstances.GetOrAdd(handlerType, _ =>
+                new Lazy<object?>(() => _serviceProvider.GetService(handlerType)));
+            return (T?)lazy.Value;
         }
 
         private void ReleaseScope(IAmALifetime lifetime)
