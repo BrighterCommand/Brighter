@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -100,9 +102,63 @@ public class FactoryLifetimeTests
         Assert.NotSame(handler1, handler2);
     }
 
+    [Fact]
+    public void Factory_WithSingletonLifetime_ReturnsSameInstanceAcrossScopes()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<TestHandler>();
+        services.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Singleton
+        });
+
+        var provider = services.BuildServiceProvider();
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime1 = new TestLifetimeScope();
+        var lifetime2 = new TestLifetimeScope();
+
+        // Act
+        var handler1 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime1);
+        var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime2);
+
+        // Assert - Singleton should return same instance regardless of scope
+        Assert.Same(handler1, handler2);
+    }
+
+    [Fact]
+    public void AsyncFactory_WithSingletonLifetime_ReturnsSameInstanceAcrossScopes()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<TestAsyncHandler>();
+        services.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Singleton
+        });
+
+        var provider = services.BuildServiceProvider();
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime1 = new TestLifetimeScope();
+        var lifetime2 = new TestLifetimeScope();
+
+        // Act
+        var handler1 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime1);
+        var handler2 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime2);
+
+        // Assert - Singleton should return same instance regardless of scope
+        Assert.Same(handler1, handler2);
+    }
+
     private class TestHandler : RequestHandler<TestCommand>
     {
         public override TestCommand Handle(TestCommand command) => command;
+    }
+
+    private class TestAsyncHandler : RequestHandlerAsync<TestCommand>
+    {
+        public override Task<TestCommand> HandleAsync(TestCommand command, CancellationToken cancellationToken = default)
+            => Task.FromResult(command);
     }
 
     private class TestCommand : Command
