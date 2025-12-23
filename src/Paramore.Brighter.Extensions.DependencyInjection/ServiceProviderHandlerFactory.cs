@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -34,8 +35,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public class ServiceProviderHandlerFactory : IAmAHandlerFactorySync, IAmAHandlerFactoryAsync
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly bool _isSingleton;
+        private readonly ServiceLifetime _handlerLifetime;
         private readonly ConcurrentDictionary<IAmALifetime, IServiceScope> _scopes = new();
+        private readonly ConcurrentDictionary<(IAmALifetime, Type), Lazy<object?>> _scopedInstances = new();
+        private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
@@ -45,7 +48,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             _serviceProvider = serviceProvider;
             var options = (IBrighterOptions?) serviceProvider.GetService(typeof(IBrighterOptions));
-            if (options == null) _isSingleton = false; else _isSingleton = options.HandlerLifetime == ServiceLifetime.Singleton;
+            _handlerLifetime = options?.HandlerLifetime ?? ServiceLifetime.Transient;
         }
 
         /// <summary>
@@ -57,13 +60,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>An instantiated request handler</returns>
         IHandleRequests? IAmAHandlerFactorySync.Create(Type handlerType, IAmALifetime lifetime)
         {
-            if (_isSingleton)
-                return (IHandleRequests?)_serviceProvider.GetService(handlerType);
-
-            if (!_scopes.ContainsKey(lifetime))
-                _scopes.TryAdd(lifetime, _serviceProvider.CreateScope());
-            
-            return (IHandleRequests?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
+            return _handlerLifetime switch
+            {
+                ServiceLifetime.Singleton => GetOrCreateSingleton<IHandleRequests>(handlerType, lifetime),
+                ServiceLifetime.Scoped => GetOrCreateScoped<IHandleRequests>(handlerType, lifetime),
+                ServiceLifetime.Transient => GetTransient<IHandleRequests>(handlerType, lifetime),
+                _ => throw new InvalidOperationException($"Unsupported handler lifetime: {_handlerLifetime}")
+            };
         }
 
         /// <summary>
@@ -75,13 +78,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>An instantiated request handler</returns>
         IHandleRequestsAsync? IAmAHandlerFactoryAsync.Create(Type handlerType, IAmALifetime lifetime)
         {
-            if (_isSingleton)
-                return (IHandleRequestsAsync?)_serviceProvider.GetService(handlerType);
-            
-            if (!_scopes.ContainsKey(lifetime))
-                _scopes.TryAdd(lifetime, _serviceProvider.CreateScope());
-            
-            return (IHandleRequestsAsync?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
+            return _handlerLifetime switch
+            {
+                ServiceLifetime.Singleton => GetOrCreateSingleton<IHandleRequestsAsync>(handlerType, lifetime),
+                ServiceLifetime.Scoped => GetOrCreateScoped<IHandleRequestsAsync>(handlerType, lifetime),
+                ServiceLifetime.Transient => GetTransient<IHandleRequestsAsync>(handlerType, lifetime),
+                _ => throw new InvalidOperationException($"Unsupported handler lifetime: {_handlerLifetime}")
+            };
         }
 
         /// <summary>
@@ -91,28 +94,64 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="lifetime">The brighter Handler lifetime</param>
         public void Release(IHandleRequests handler, IAmALifetime lifetime)
         {
-            if (_isSingleton) return;
-            
+            if (_handlerLifetime == ServiceLifetime.Singleton) return;
+
             var disposal = handler as IDisposable;
             disposal?.Dispose();
-            
+
             ReleaseScope(lifetime);
         }
 
         public void Release(IHandleRequestsAsync? handler, IAmALifetime lifetime)
         {
-            if (_isSingleton) return;
-            
+            if (_handlerLifetime == ServiceLifetime.Singleton) return;
+
             var disposal = handler as IDisposable;
             disposal?.Dispose();
             ReleaseScope(lifetime);
+        }
+
+        private T? GetOrCreateScoped<T>(Type handlerType, IAmALifetime lifetime) where T : class
+        {
+            var key = (lifetime, handlerType);
+            var lazy = _scopedInstances.GetOrAdd(key, _ =>
+                new Lazy<object?>(() => GetTransient<T>(handlerType, lifetime)));
+            return (T?)lazy.Value;
+        }
+
+        private T? GetTransient<T>(Type handlerType, IAmALifetime lifetime) where T : class
+        {
+            if (!_scopes.ContainsKey(lifetime))
+                _scopes.TryAdd(lifetime, _serviceProvider.CreateScope());
+
+            return (T?)_scopes[lifetime].ServiceProvider.GetService(handlerType);
+        }
+
+        /// <summary>
+        /// Gets or creates a singleton handler instance. The lifetime parameter is accepted for interface
+        /// consistency but ignored - singletons are shared across all lifetime scopes by definition.
+        /// Uses Lazy&lt;T&gt; to ensure thread-safe single initialization even under concurrent access.
+        /// </summary>
+        private T? GetOrCreateSingleton<T>(Type handlerType, IAmALifetime lifetime) where T : class
+        {
+            var lazy = _singletonInstances.GetOrAdd(handlerType, _ =>
+                new Lazy<object?>(() => _serviceProvider.GetService(handlerType)));
+            return (T?)lazy.Value;
         }
 
         private void ReleaseScope(IAmALifetime lifetime)
         {
             if(!_scopes.TryGetValue(lifetime, out IServiceScope? scope))
                 return;
-            
+
+            // Clear scoped instances for this lifetime.
+            // ToList() creates a snapshot of keys to avoid "collection modified during enumeration".
+            // This is safe because: (1) we only remove keys matching this lifetime, (2) adds for this
+            // lifetime won't happen during release as the caller owns the lifetime scope.
+            var keysToRemove = _scopedInstances.Keys.Where(k => k.Item1 == lifetime).ToList();
+            foreach (var key in keysToRemove)
+                _scopedInstances.TryRemove(key, out _);
+
             scope.Dispose();
             _scopes.TryRemove(lifetime, out _);
         }

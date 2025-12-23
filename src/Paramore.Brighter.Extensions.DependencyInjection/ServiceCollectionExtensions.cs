@@ -29,6 +29,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Registers the following with the service collection :-
         ///  - BrighterOptions - how should we configure Brighter
         ///  - Feature Switch Registry - optional if features switch support is desired
-        ///  - Inbox - defaults to InMemoryInbox if none supplied 
+        ///  - Inbox - defaults to InMemoryInbox if none supplied
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
         /// </summary>
@@ -63,11 +64,39 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
 
-            var options = new BrighterOptions();
-            configure?.Invoke(options);
-            services.TryAddSingleton<IBrighterOptions>(options);
+            // Register with Options pattern for extensibility (PostConfigure support)
+            services.AddOptions<BrighterOptions>();
+            if (configure != null)
+                services.Configure(configure);
 
-            return BrighterHandlerBuilder(services, options);
+            // Register IBrighterOptions resolved from IOptions<BrighterOptions>
+            services.TryAddSingleton<IBrighterOptions>(sp =>
+                sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
+
+            return BrighterHandlerBuilder(
+                services,
+                sp => (BrighterOptions)sp.GetRequiredService<IBrighterOptions>());
+        }
+
+        /// <summary>
+        /// Will add Brighter into the .NET IoC Container with access to IServiceProvider for runtime configuration.
+        /// </summary>
+        /// <param name="services">The collection of services</param>
+        /// <param name="configure">A callback that receives IServiceProvider and returns configured BrighterOptions</param>
+        /// <returns>A builder for further configuration</returns>
+        public static IBrighterBuilder AddBrighter(
+            this IServiceCollection services,
+            Func<IServiceProvider, BrighterOptions> configure)
+        {
+            if (services == null)
+                throw new ArgumentNullException(nameof(services));
+            if (configure == null)
+                throw new ArgumentNullException(nameof(configure));
+
+            services.TryAddSingleton<IBrighterOptions>(configure);
+            return BrighterHandlerBuilder(
+                services,
+                configure);
         }
 
         /// <summary>
@@ -78,7 +107,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Registers the following with the service collection :-
         ///  - BrighterOptions - how should we configure Brighter
         ///  - Feature Switch Registry - optional if features switch support is desired
-        ///  - Inbox - defaults to InMemoryInbox if none supplied 
+        ///  - Inbox - defaults to InMemoryInbox if none supplied
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
         ///  - Request Context Factory - how do we create a request context for a pipeline
@@ -88,24 +117,56 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
         {
-            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
+            return BrighterHandlerBuilder(
+                services,
+                _ => options);
+        }
+
+        /// <summary>
+        /// This is public so that we can call it from <see cref="ServiceCollectionExtensions.AddServiceActivator"/>
+        /// which allows that extension method to be called with a <see cref="ServiceActivatorOptions"/> configuration
+        /// that derives from <see cref="BrighterOptions"/>.
+        /// DON'T CALL THIS DIRECTLY
+        /// Registers the following with the service collection :-
+        ///  - BrighterOptions - how should we configure Brighter
+        ///  - Feature Switch Registry - optional if features switch support is desired
+        ///  - Inbox - defaults to InMemoryInbox if none supplied
+        ///  - SubscriberRegistry - what handlers subscribe to what requests
+        ///  - MapperRegistry - what mappers translate what messages
+        ///  - Request Context Factory - how do we create a request context for a pipeline
+        /// </summary>
+        /// <param name="services">The collection of services that we want to add registrations to</param>
+        /// <param name="optionsFunc"></param>
+        /// <returns></returns>
+        public static IBrighterBuilder BrighterHandlerBuilder(
+            IServiceCollection services,
+            Func<IServiceProvider, BrighterOptions> optionsFunc)
+        {
+            // DO NOT build intermediate provider - defer all resolution
+            // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
+            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
             services.TryAddSingleton(subscriberRegistry);
 
-            var transformRegistry = new ServiceCollectionTransformerRegistry(services, options.TransformerLifetime);
+            var transformRegistry = new ServiceCollectionTransformerRegistry(services);
             services.TryAddSingleton(transformRegistry);
 
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, options.MapperLifetime);
+            var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
             services.TryAddSingleton(mapperRegistry);
-            
-            services.TryAddSingleton(options.RequestContextFactory);
 
-            if (options.FeatureSwitchRegistry != null)
-                services.TryAddSingleton(options.FeatureSwitchRegistry);
+            // Defer request context factory resolution
+            services.TryAddSingleton<IAmARequestContextFactory>(sp =>
+            {
+                var options = sp.GetRequiredService<IBrighterOptions>();
+                return options.RequestContextFactory;
+            });
 
-            //Add the policy registry
-#pragma warning disable CS0618 // Type or member is obsolete
-            var policyRegistry = options.PolicyRegistry == null ? new DefaultPolicy() : AddDefaults(options.PolicyRegistry);
-#pragma warning restore CS0618 // Type or member is obsolete
+            // Defer feature switch registry resolution
+            // Note: May return null - BuildCommandProcessor uses GetService which handles null gracefully
+            services.TryAddSingleton<IAmAFeatureSwitchRegistry>(sp =>
+            {
+                var options = sp.GetRequiredService<IBrighterOptions>();
+                return options.FeatureSwitchRegistry!;
+            });
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, ServiceLifetime.Singleton));
 
@@ -114,7 +175,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 subscriberRegistry,
                 mapperRegistry,
                 transformRegistry,
-                policyRegistry
+                null // PolicyRegistry resolved at runtime
             );
 
             return builder
@@ -127,7 +188,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer
         /// to a consumer. 
         /// Registers singletons with the service collection :-
-        ///     -- An Outbox Producer Mediatory - used to send message externally via an Outbox:
+        ///     -- An Outbox Producer Mediator - used to send message externally via an Outbox:
         ///     -- Producer Registry - A list of producers we can send middleware messages with 
         ///     -- Outbox - stores messages so that they can be written in the same transaction as entity writes
         ///     -- Outbox Transaction Provider - used to provide a transaction that spans the Outbox write and
@@ -141,7 +202,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="configure">A callback that allows you to configure <see cref="ProducersConfiguration"/> options</param>
-        /// <param name="serviceLifetime">The lifetime of the transaction provider</param>
+        /// <param name="serviceLifetime">The DI container registration lifetime for the transaction provider (default: Transient)</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
@@ -240,8 +301,145 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
                (serviceProvider) => BuildOutBoxProducerMediator(
                    serviceProvider, transactionType, busConfiguration, brighterBuilder.ResiliencePolicyRegistry, outbox
-               ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator; are you missing a registration?"),
+               ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator. Ensure IAmProducersConfiguration, IAmABoxTransactionProvider, and IAmAnOutbox are registered."),
                ServiceLifetime.Singleton));
+
+            return brighterBuilder;
+        }
+
+        /// <summary>
+        /// Registers an external bus with deferred configuration via IServiceProvider.
+        /// We use AddProducers to register an external bus, which is a bus that is not the Brighter In-Memory Bus.
+        /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer
+        /// to a consumer.
+        /// Registers singletons with the service collection :-
+        ///     -- An Outbox Producer Mediator - used to send message externally via an Outbox:
+        ///     -- Producer Registry - A list of producers we can send middleware messages with
+        ///     -- Outbox - stores messages so that they can be written in the same transaction as entity writes
+        ///     -- Outbox Transaction Provider - used to provide a transaction that spans the Outbox write and
+        ///         your updates to your entities
+        ///     -- RelationalDb Connection Provider - if your transaction provider is for a relational db we register this
+        ///         interface to access your Db and make it available to your own classes
+        ///     -- Transaction Connection Provider  - if your transaction provider is also a relational db connection
+        ///         provider it will implement this interface which inherits from both
+        ///     -- External Bus Configuration - the configuration parameters for an external bus, mainly used internally
+        ///     -- UseRpc - do we want to use RPC i.e. a command blocks waiting for a response, over middleware.
+        /// </summary>
+        /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
+        /// <param name="configure">A callback that receives IServiceProvider and returns configured ProducersConfiguration</param>
+        /// <param name="serviceLifetime">The DI container registration lifetime for the transaction provider (default: Transient)</param>
+        /// <returns>The Brighter builder to allow chaining of requests</returns>
+        /// <remarks>
+        /// Note: This overload enables access to the service provider during configuration,
+        /// allowing resolution of other registered services when configuring producers.
+        /// </remarks>
+        public static IBrighterBuilder AddProducers(
+            this IBrighterBuilder brighterBuilder,
+            Func<IServiceProvider, ProducersConfiguration> configure,
+            ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+        {
+            if (brighterBuilder is null)
+                throw new ArgumentNullException($"{nameof(brighterBuilder)} cannot be null.", nameof(brighterBuilder));
+            if (configure == null)
+                throw new ArgumentNullException(nameof(configure));
+
+            // Register IAmProducersConfiguration with deferred resolution
+            brighterBuilder.Services.TryAddSingleton<IAmProducersConfiguration>(sp =>
+            {
+                var busConfiguration = configure(sp);
+
+                if (busConfiguration.ProducerRegistry == null)
+                    throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
+
+                if (busConfiguration.UseRpc && busConfiguration.ReplyQueueSubscriptions == null)
+                    throw new ConfigurationException("If the you configure RPC, you must configure the ReplyQueueSubscriptions");
+
+                return busConfiguration;
+            });
+
+            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
+
+            // Register producer registry with deferred resolution
+            brighterBuilder.Services.TryAddSingleton<IAmAProducerRegistry>(sp =>
+            {
+                var config = sp.GetRequiredService<IAmProducersConfiguration>();
+                return config.ProducerRegistry!;
+            });
+
+            // Register transaction provider with deferred resolution
+            // Note: We only register the non-generic IAmABoxTransactionProvider interface
+            // The generic IAmABoxTransactionProvider<T> interface is not registered with this overload
+            // because we don't know the transaction type until runtime when the configuration is resolved
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), sp =>
+            {
+                var busConfiguration = sp.GetRequiredService<IAmProducersConfiguration>();
+                Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(InMemoryTransactionProvider);
+                return ActivatorUtilities.CreateInstance(sp, transactionProvider);
+            }, serviceLifetime));
+
+            // Register outbox and other components with deferred resolution
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox), sp =>
+            {
+                var busConfiguration = sp.GetRequiredService<IAmProducersConfiguration>();
+                var transactionProvider = sp.GetService<IAmABoxTransactionProvider>();
+                var transactionType = CommandProcessor.GetTransactionTypeFromTransactionProvider(transactionProvider);
+
+                if (transactionType == null)
+                    throw new ConfigurationException("Unable to determine transaction type from transaction provider");
+
+                var outbox = busConfiguration.Outbox ?? new InMemoryOutbox(TimeProvider.System);
+
+                // Validate outbox interfaces
+                var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
+                var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
+
+                var outboxInterfaces = outbox.GetType().GetInterfaces();
+                var hasSyncOutbox = outboxInterfaces.FirstOrDefault(i => i.IsGenericType && i == syncOutboxType) != null;
+                var hasAsyncOutbox = outboxInterfaces.FirstOrDefault(i => i.IsGenericType && i == asyncOutboxType) != null;
+
+                if (!hasSyncOutbox && !hasAsyncOutbox)
+                {
+                    throw new ConfigurationException(
+                        $"Unable to register outbox of type {outbox.GetType().Name} - no transaction provider has been registered that matches the outbox's transaction type");
+                }
+
+                return outbox;
+            }, ServiceLifetime.Singleton));
+
+            brighterBuilder.Services.AddSingleton<IDistributedLock>(sp =>
+            {
+                var busConfiguration = sp.GetRequiredService<IAmProducersConfiguration>();
+                return busConfiguration.DistributedLock ?? new InMemoryLock();
+            });
+
+            brighterBuilder.Services.TryAddSingleton<IUseRpc>(sp =>
+            {
+                var busConfiguration = sp.GetRequiredService<IAmProducersConfiguration>();
+                if (busConfiguration.UseRpc)
+                    return new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions!);
+                return null!;
+            });
+
+            brighterBuilder.ResiliencePolicyRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator), sp =>
+            {
+                var busConfiguration = sp.GetRequiredService<IAmProducersConfiguration>();
+                var transactionProvider = sp.GetService<IAmABoxTransactionProvider>();
+                var transactionType = CommandProcessor.GetTransactionTypeFromTransactionProvider(transactionProvider);
+                var outbox = sp.GetRequiredService<IAmAnOutbox>();
+
+                if (transactionType == null)
+                    throw new ConfigurationException("Unable to determine transaction type from transaction provider");
+
+                return BuildOutBoxProducerMediator(
+                    sp, transactionType, busConfiguration as ProducersConfiguration ?? new ProducersConfiguration
+                    {
+                        ProducerRegistry = busConfiguration.ProducerRegistry,
+                        Outbox = outbox
+                    }, brighterBuilder.ResiliencePolicyRegistry, outbox
+                ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator. Ensure IAmProducersConfiguration, IAmABoxTransactionProvider, and IAmAnOutbox are registered.");
+            }, ServiceLifetime.Singleton));
 
             return brighterBuilder;
         }
