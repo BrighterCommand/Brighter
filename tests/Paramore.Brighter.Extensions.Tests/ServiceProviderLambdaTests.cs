@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
@@ -51,5 +52,32 @@ public class ServiceProviderLambdaTests
         // Assert
         Assert.NotNull(options);
         Assert.IsType<InMemoryRequestContextFactory>(options.RequestContextFactory);
+    }
+
+    [Fact]
+    public void AddBrighter_SupportsPostConfigure_ForTestOverrides()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var customFactory = new InMemoryRequestContextFactory();
+
+        // Normal registration
+        services.AddBrighter(options =>
+        {
+            options.HandlerLifetime = ServiceLifetime.Scoped;
+        });
+
+        // Test override via PostConfigure
+        services.PostConfigure<BrighterOptions>(options =>
+        {
+            options.RequestContextFactory = customFactory;
+        });
+
+        var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IBrighterOptions>();
+
+        // Assert - PostConfigure should have applied
+        Assert.Same(customFactory, options.RequestContextFactory);
+        Assert.Equal(ServiceLifetime.Scoped, options.HandlerLifetime);
     }
 }

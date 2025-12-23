@@ -29,6 +29,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
@@ -63,11 +64,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
 
-            var options = new BrighterOptions();
-            configure?.Invoke(options);
-            services.TryAddSingleton<IBrighterOptions>(options);
+            // Register with Options pattern for extensibility (PostConfigure support)
+            services.AddOptions<BrighterOptions>();
+            if (configure != null)
+                services.Configure(configure);
 
-            return BrighterHandlerBuilder(services, sp => (BrighterOptions)sp.GetRequiredService<IBrighterOptions>());
+            // Register IBrighterOptions resolved from IOptions<BrighterOptions>
+            services.TryAddSingleton<IBrighterOptions>(sp =>
+                sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
+
+            return BrighterHandlerBuilder(services, sp =>
+                (BrighterOptions)sp.GetRequiredService<IBrighterOptions>());
         }
 
         /// <summary>
