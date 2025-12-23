@@ -135,28 +135,31 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, Func<IServiceProvider, BrighterOptions> optionsFunc)
         {
-            // Build intermediate provider to resolve options for registration-time configuration
-            using var intermediateProvider = services.BuildServiceProvider();
-            var options = optionsFunc(intermediateProvider);
-
-            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
+            // DO NOT build intermediate provider - defer all resolution
+            // Create registries with default lifetimes - actual lifetime from resolved options applied later
+            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, ServiceLifetime.Transient);
             services.TryAddSingleton(subscriberRegistry);
 
-            var transformRegistry = new ServiceCollectionTransformerRegistry(services, options.TransformerLifetime);
+            var transformRegistry = new ServiceCollectionTransformerRegistry(services, ServiceLifetime.Transient);
             services.TryAddSingleton(transformRegistry);
 
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, options.MapperLifetime);
+            var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services, ServiceLifetime.Transient);
             services.TryAddSingleton(mapperRegistry);
 
-            services.TryAddSingleton(options.RequestContextFactory);
+            // Defer request context factory resolution
+            services.TryAddSingleton<IAmARequestContextFactory>(sp =>
+            {
+                var options = sp.GetRequiredService<IBrighterOptions>();
+                return options.RequestContextFactory;
+            });
 
-            if (options.FeatureSwitchRegistry != null)
-                services.TryAddSingleton(options.FeatureSwitchRegistry);
-
-            //Add the policy registry
-#pragma warning disable CS0618 // Type or member is obsolete
-            var policyRegistry = options.PolicyRegistry == null ? new DefaultPolicy() : AddDefaults(options.PolicyRegistry);
-#pragma warning restore CS0618 // Type or member is obsolete
+            // Defer feature switch registry resolution
+            // Note: May return null - BuildCommandProcessor uses GetService which handles null gracefully
+            services.TryAddSingleton<IAmAFeatureSwitchRegistry>(sp =>
+            {
+                var options = sp.GetRequiredService<IBrighterOptions>();
+                return options.FeatureSwitchRegistry!;
+            });
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, ServiceLifetime.Singleton));
 
@@ -165,7 +168,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 subscriberRegistry,
                 mapperRegistry,
                 transformRegistry,
-                policyRegistry
+                null // PolicyRegistry resolved at runtime
             );
 
             return builder
