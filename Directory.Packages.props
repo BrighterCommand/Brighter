@@ -173,7 +173,6 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
     <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="9.0.3" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
     <PackageVersion Include="Npgsql" Version="10.0.1" />
     <PackageVersion Include="TickerQ" Version="10.0.1" />
   </ItemGroup>
