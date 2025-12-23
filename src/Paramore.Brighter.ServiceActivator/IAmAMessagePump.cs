@@ -62,6 +62,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// The <see cref="MessagePumpStatus"/> of the pump
         /// </summary>
-        public MessagePumpStatus Status { get; set; }
+       MessagePumpStatus Status { get; set; }
     }
 }
