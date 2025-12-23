@@ -301,7 +301,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
                (serviceProvider) => BuildOutBoxProducerMediator(
                    serviceProvider, transactionType, busConfiguration, brighterBuilder.ResiliencePolicyRegistry, outbox
-               ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator; are you missing a registration?"),
+               ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator. Ensure IAmProducersConfiguration, IAmABoxTransactionProvider, and IAmAnOutbox are registered."),
                ServiceLifetime.Singleton));
 
             return brighterBuilder;
@@ -438,7 +438,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         ProducerRegistry = busConfiguration.ProducerRegistry,
                         Outbox = outbox
                     }, brighterBuilder.ResiliencePolicyRegistry, outbox
-                ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator; are you missing a registration?");
+                ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator. Ensure IAmProducersConfiguration, IAmABoxTransactionProvider, and IAmAnOutbox are registered.");
             }, ServiceLifetime.Singleton));
 
             return brighterBuilder;

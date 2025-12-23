@@ -77,9 +77,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             if (configure == null)
                 throw new ArgumentNullException(nameof(configure));
 
-            // Register options with deferred resolution
+            // Register options with deferred resolution - ensure both interfaces resolve to the same instance
             services.TryAddSingleton<IBrighterOptions>(configure);
-            services.TryAddSingleton<IAmConsumerOptions>(configure);
+            services.TryAddSingleton<IAmConsumerOptions>(sp =>
+                (IAmConsumerOptions)sp.GetRequiredService<IBrighterOptions>());
 
             // Defer dispatcher registration to use resolved options
             services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
