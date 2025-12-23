@@ -4,7 +4,7 @@ Date: 2025-12-23
 
 ## Status
 
-Proposal
+Accepted (supersedes static singleton decision in ADR 0033)
 
 ## Context
 
