@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring.TestDoubles
     internal sealed class MyMonitoredHandlerThatThrows : RequestHandler<MyCommand>
     {
         [Monitor(1, HandlerTiming.Before, typeof(MyMonitoredHandler))]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand myCommand)
         {
             throw new Exception("I am an exception in a monitored pipeline");
         }

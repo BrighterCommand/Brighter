@@ -35,11 +35,11 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles
         public bool CommandReceived { get; set; }
 
         [FeatureSwitch(typeof(MyFeatureSwitchedConfigHandler), FeatureSwitchStatus.Config, 1)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand myCommand)
         {
             CommandReceived = true;
 
-            return base.Handle(command);
+            return base.Handle(myCommand);
         }
 
         public bool DidReceive()

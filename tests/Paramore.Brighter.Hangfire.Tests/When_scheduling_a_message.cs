@@ -2,6 +2,7 @@
 using System.Transactions;
 using Hangfire;
 using Hangfire.InMemory;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Hangfire.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Hangfire;
 using Paramore.Brighter.Observability;

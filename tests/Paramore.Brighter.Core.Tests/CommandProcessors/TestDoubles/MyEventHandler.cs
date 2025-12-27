@@ -28,10 +28,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal sealed class MyEventHandler(IDictionary<string, string> receivedMessages) : RequestHandler<MyEvent>
     {
-        public override MyEvent Handle(MyEvent @event)
+        public override MyEvent Handle(MyEvent myEvent)
         {
-            receivedMessages.Add(nameof(MyEventHandler), @event.Id);
-            return base.Handle(@event);
+            receivedMessages.Add(nameof(MyEventHandler), myEvent.Id);
+            return base.Handle(myEvent);
         }
     }
 }

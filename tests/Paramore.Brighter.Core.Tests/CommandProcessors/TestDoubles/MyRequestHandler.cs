@@ -9,10 +9,10 @@
             s_response = null;
         }
         
-        public override MyResponse Handle(MyResponse command)
+        public override MyResponse Handle(MyResponse myResponse)
         {
-            LogCommand(command);
-            return base.Handle(command);
+            LogCommand(myResponse);
+            return base.Handle(myResponse);
         }
 
         public static bool ShouldReceive(MyResponse expectedCommand)

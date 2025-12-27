@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             
             _channel = new ChannelAsync(
                 new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
             );
             
             var messageMapperRegistry = new MessageMapperRegistry(

@@ -24,13 +24,14 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Actions
-{
-    /// <summary>
-    /// Class DeferMessageAction.
-    /// Used to indicate that a message should be deferred.
-    /// It's purpose is to allow messages received out of order to be delayed until
-    /// missing messages have been processed
-    /// </summary>
-    public class DeferMessageAction : Exception;
-}
+namespace Paramore.Brighter.Actions;
+
+/// <summary>
+/// Thrown to indicate that a message should be deferred.  Its purpose is to allow messages that cannot be processed
+/// immediately to be delayed. Call `throw new DeferMessageAction()` from within a <see cref="RequestHandler{TRequest}"/>
+/// or a <see cref="RequestHandlerAsync{TRequest}"/> to requeue the message with a delay.
+/// </summary>
+/// <remarks>How the delay works depends on whether the transport natively implements delay. If not, we rely on the
+/// configuration of an <see cref="IAmARequestScheduler"/> or <see cref="IAmARequestSchedulerAsync"/>.
+/// </remarks>
+public class DeferMessageAction : Exception;

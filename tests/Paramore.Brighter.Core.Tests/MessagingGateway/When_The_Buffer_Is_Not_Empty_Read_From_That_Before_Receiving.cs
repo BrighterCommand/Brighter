@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
         public BufferedChannelTests()
         {
-            _gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus,new FakeTimeProvider(), TimeSpan.FromMilliseconds(1000)); 
+            _gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus,new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000)); 
             _channel = new Channel(new (Channel), new (_routingKey), _gateway, BufferLimit);
         }
 

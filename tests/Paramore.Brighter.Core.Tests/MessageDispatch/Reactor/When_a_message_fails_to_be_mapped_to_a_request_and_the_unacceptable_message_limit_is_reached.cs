@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             _timeProvider = new FakeTimeProvider();
-            Channel channel = new(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
+            Channel channel = new(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
                 null);

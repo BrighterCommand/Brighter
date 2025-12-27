@@ -36,10 +36,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         [UseInbox(step:0, contextKey: typeof(MyCommandInboxedHandler), onceOnly: false)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand myCommand)
         {
-            LogCommand(command);
-            return base.Handle(command);
+            LogCommand(myCommand);
+            return base.Handle(myCommand);
         }
 
         public static bool ShouldReceive(MyCommand expectedCommand)

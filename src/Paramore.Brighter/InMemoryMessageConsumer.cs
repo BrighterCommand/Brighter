@@ -40,6 +40,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
 {
     private readonly ConcurrentDictionary<string, LockedMessage> _lockedMessages = new();
     private readonly RoutingKey _topic;
+    private readonly RoutingKey? _deadLetterTopic;
     private readonly InternalBus _bus;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _ackTimeout;
@@ -56,10 +57,16 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="topic">The <see cref="Paramore.Brighter.RoutingKey"/> that we want to consume from</param>
     /// <param name="bus">The <see cref="Paramore.Brighter.InternalBus"/> that we want to read the messages from</param>
     /// <param name="timeProvider">Allows us to use a timer that can be controlled from tests</param>
+    /// <param name="deadLetterTopic"></param>
     /// <param name="ackTimeout">The period before we requeue an unacknowledged message; defaults to -1ms or infinite</param>
-    public InMemoryMessageConsumer(RoutingKey topic, InternalBus bus, TimeProvider timeProvider, TimeSpan? ackTimeout = null)
+    public InMemoryMessageConsumer(RoutingKey topic,
+        InternalBus bus,
+        TimeProvider timeProvider,
+        RoutingKey? deadLetterTopic = null,
+        TimeSpan? ackTimeout = null)
     {
         _topic = topic;
+        _deadLetterTopic = deadLetterTopic;
         _bus = bus;
         _timeProvider = timeProvider;
         ackTimeout ??= TimeSpan.FromMilliseconds(-1);
@@ -99,7 +106,15 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// </summary>
     /// <param name="message">The message.</param>
     public bool Reject(Message message)
-        => _lockedMessages.TryRemove(message.Id, out _);
+    {
+        var removed = _lockedMessages.TryRemove(message.Id, out _);
+        if (!removed || _deadLetterTopic is null) return removed;
+        
+        message.Header.Topic = _deadLetterTopic;
+        _bus.Enqueue(message);
+
+        return removed;
+    }
 
     /// <summary>
     /// Rejects the specified message.
@@ -270,4 +285,5 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     }
 
     private sealed record LockedMessage(Message Message, DateTimeOffset LockedAt);
+
 }
