@@ -8,7 +8,7 @@
         bool BinaryMessagePayload { get; }
         
         /// <summary>
-        /// Will the message payload be stored as a native Json format in the database
+        /// Whether to persist the message payload using the database’s native JSON type
         /// </summary>
         bool JsonMessagePayload { get; }
 

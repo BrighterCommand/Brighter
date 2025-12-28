@@ -17,6 +17,7 @@
         /// <param name="queueStoreTable">Name of the queue store table.</param>
         /// <param name="schemaName">The schema name.</param>
         /// <param name="binaryMessagePayload">Is the message payload binary, or a UTF-8 string, default is false or UTF-8</param>
+        /// <param name="jsonMessagePayload">Whether to persist the message payload using the database’s native JSON type</param>
         public RelationalDatabaseConfiguration(
             string connectionString,
             string? databaseName = null,
@@ -44,7 +45,7 @@
         public bool BinaryMessagePayload { get; protected set; }
 
         /// <summary>
-        /// Will the message payload be stored as a native Json format in the database
+        /// Whether to persist the message payload using the database’s native JSON type
         /// </summary>
         public bool JsonMessagePayload { get; protected set; }
 
