@@ -187,12 +187,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             if (certificate != null)
             {
-                connectionFactory.Ssl = new SslOption
+                var sslOption = new SslOption
                 {
                     Enabled = true,
                     ServerName = connectionFactory.Uri.Host,
                     Certs = new X509CertificateCollection { certificate }
                 };
+
+                // Trust self-signed certificates if configured (for test/development environments)
+                if (connection.TrustServerSelfSignedCertificate)
+                {
+                    sslOption.AcceptablePolicyErrors = System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors |
+                                                        System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch;
+                }
+
+                connectionFactory.Ssl = sslOption;
             }
         }
 
@@ -221,9 +230,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 try
                 {
                     // Load certificate with password if provided, otherwise load without password
+#if NET9_0_OR_GREATER
                     return string.IsNullOrEmpty(connection.ClientCertificatePassword)
                         ? X509CertificateLoader.LoadPkcs12FromFile(connection.ClientCertificatePath, null)
                         : X509CertificateLoader.LoadPkcs12FromFile(connection.ClientCertificatePath, connection.ClientCertificatePassword);
+#else
+                    return string.IsNullOrEmpty(connection.ClientCertificatePassword)
+                        ? new X509Certificate2(connection.ClientCertificatePath)
+                        : new X509Certificate2(connection.ClientCertificatePath, connection.ClientCertificatePassword);
+#endif
                 }
                 catch (Exception ex)
                 {

@@ -96,6 +96,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         /// <value>The certificate password.</value>
         public string? ClientCertificatePassword { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether to trust self-signed server certificates during TLS handshake.
+        /// When true, certificate chain validation errors and hostname mismatches are ignored.
+        /// WARNING: Only use this in test/development environments. In production, use properly signed certificates.
+        /// </summary>
+        /// <value>True to trust self-signed certificates; otherwise false (default).</value>
+        public bool TrustServerSelfSignedCertificate { get; set; } = false;
     }
 
     /// <summary>
@@ -139,8 +147,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             if (_sanitizedUri != null) return _sanitizedUri;
 
             var uri = Uri.ToString();
+            var atIndex = uri.IndexOf('@');
+
+            // If there's no @ symbol, there's no username/password to sanitize (e.g., mTLS with client certificates)
+            if (atIndex == -1)
+            {
+                _sanitizedUri = uri;
+                return _sanitizedUri;
+            }
+
             var positionOfSlashSlash = uri.IndexOf("//", StringComparison.Ordinal) + 2;
-            var usernameAndPassword = uri.Substring(positionOfSlashSlash, uri.IndexOf('@') - positionOfSlashSlash);
+            var usernameAndPassword = uri.Substring(positionOfSlashSlash, atIndex - positionOfSlashSlash);
             _sanitizedUri = uri.Replace(usernameAndPassword, "*****");
 
             return _sanitizedUri;
