@@ -6,6 +6,11 @@
         /// Is the message payload binary, or a UTF-8 string. Default is false or UTF-8
         /// </summary>
         bool BinaryMessagePayload { get; }
+        
+        /// <summary>
+        /// Will the message payload be stored as a native Json format in the database
+        /// </summary>
+        bool JsonMessagePayload { get; }
 
         /// <summary>
         /// Gets the connection string.

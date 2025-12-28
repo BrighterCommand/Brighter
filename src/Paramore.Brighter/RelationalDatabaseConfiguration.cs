@@ -24,7 +24,8 @@
             string? inboxTableName = null,
             string? queueStoreTable = null,
             string? schemaName = null,
-            bool binaryMessagePayload = false
+            bool binaryMessagePayload = false,
+            bool jsonMessagePayload = false
         )
         {
             DatabaseName = databaseName ?? DATABASE_NAME;
@@ -34,12 +35,18 @@
             QueueStoreTable = queueStoreTable ?? QUEUE_TABLE_NAME;
             SchemaName = schemaName;
             BinaryMessagePayload = binaryMessagePayload;
+            JsonMessagePayload = jsonMessagePayload;
         }
 
         /// <summary>
         /// Is the message payload binary, or a UTF-8 string. Default is false or UTF-8
         /// </summary>
         public bool BinaryMessagePayload { get; protected set; }
+
+        /// <summary>
+        /// Will the message payload be stored as a native Json format in the database
+        /// </summary>
+        public bool JsonMessagePayload { get; protected set; }
 
         /// <summary>
         /// Gets the connection string.
