@@ -36,10 +36,8 @@ public abstract class BaseGenerator(ILogger logger)
     private readonly Parser _parser = new();
     
     protected virtual async Task GenerateAsync(TestConfiguration configuration, 
-        string prefix, 
-        string templateFolderName,
-        object model,
-        Func<string, bool>? ignore = null)
+        string prefix, string templateFolderName,
+        object model, Func<string, bool>? ignore = null)
     {
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", templateFolderName);
         var fileNames = Directory.GetFiles(templatePath , "*.liquid", SearchOption.TopDirectoryOnly);
@@ -55,6 +53,7 @@ public abstract class BaseGenerator(ILogger logger)
         {
             if (ignore(fileName))
             {
+                logger.LogInformation("Skipping {FileName}", fileName);
                 continue;
             }
             
