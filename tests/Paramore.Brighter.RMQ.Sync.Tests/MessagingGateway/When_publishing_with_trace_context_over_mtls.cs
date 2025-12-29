@@ -47,6 +47,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 [Trait("Category", "RMQ")]
 [Trait("Category", "MutualTLS")]
 [Trait("Category", "Observability")]
+[Trait("Requires", "Docker-mTLS")]
 public class RmqMutualTlsObservabilityTests : IDisposable
 {
     private readonly string _clientCertPath;
