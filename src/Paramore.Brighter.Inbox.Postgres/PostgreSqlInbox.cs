@@ -62,6 +62,5 @@ public class PostgreSqlInbox : RelationalDatabaseInbox
     protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
     {
         return new NpgsqlParameter { ParameterName = parameterName, NpgsqlDbType = DatabaseConfiguration.BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json,Value = value ?? DBNull.Value };
-        //return new NpgsqlParameter { ParameterName = parameterName, DataTypeName = DatabaseConfiguration.BinaryMessagePayload ? "jsonb" : "json",Value = value ?? DBNull.Value };
     }
 }
