@@ -237,6 +237,7 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
 [Trait("Category", "RabbitMQ")]
 [Trait("Category", "MutualTLS")]
 [Trait("Requires", "Docker-mTLS")]
+[Collection("RabbitMQ mTLS")]
 public class RmqMutualTlsAcceptanceTests : IDisposable
 {
     private readonly string _clientCertPath;
