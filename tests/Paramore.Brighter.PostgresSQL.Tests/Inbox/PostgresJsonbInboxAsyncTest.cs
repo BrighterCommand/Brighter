@@ -21,7 +21,7 @@
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Inbox;
 
-public class PostgresJsonbInboxAsyncTest:PostgresTextInboxAsyncTest
+public class PostgresJsonbInboxAsyncTest : PostgresTextInboxAsyncTest
 {
     protected override bool BinaryMessagePayload => true;
     protected override bool JsonMessagePayload => true;
