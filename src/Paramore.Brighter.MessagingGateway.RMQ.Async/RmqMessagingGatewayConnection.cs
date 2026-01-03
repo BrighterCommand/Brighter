@@ -94,7 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 
         /// <summary>
         /// Gets or sets whether to trust self-signed server certificates during TLS handshake.
-        /// When true, certificate chain validation errors and hostname mismatches are ignored.
+        /// When true, certificate chain validation errors are ignored.
         /// WARNING: Only use this in test/development environments. In production, use properly signed certificates.
         /// </summary>
         /// <value>True to trust self-signed certificates; otherwise false (default).</value>

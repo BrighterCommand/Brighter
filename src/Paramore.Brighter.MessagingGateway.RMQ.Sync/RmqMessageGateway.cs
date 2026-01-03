@@ -25,8 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Polly;
@@ -88,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             };
 
             // Configure SSL/TLS for mutual authentication if certificate is provided
-            ConfigureSsl(_connectionFactory, connection);
+            RmqTlsConfigurator.ConfigureIfEnabled(_connectionFactory, connection);
 
             DelaySupported = Connection.Exchange.SupportDelay;
         }
@@ -173,83 +171,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 throw new InvalidOperationException("RMQMessagingGateway: Connection must have a name");
 
             new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
-        }
-
-        /// <summary>
-        /// Configures SSL/TLS settings for the ConnectionFactory if client certificate is provided.
-        /// Supports mutual TLS authentication when RabbitMQ server requires client certificates.
-        /// </summary>
-        /// <param name="connectionFactory">The RabbitMQ connection factory to configure</param>
-        /// <param name="connection">The gateway connection configuration containing certificate settings</param>
-        private static void ConfigureSsl(ConnectionFactory connectionFactory, RmqMessagingGatewayConnection connection)
-        {
-            var certificate = LoadCertificate(connection);
-
-            if (certificate != null)
-            {
-                var sslOption = new SslOption
-                {
-                    Enabled = true,
-                    ServerName = connectionFactory.Uri.Host,
-                    Certs = new X509CertificateCollection { certificate }
-                };
-
-                // Trust self-signed certificates if configured (for test/development environments)
-                if (connection.TrustServerSelfSignedCertificate)
-                {
-                    sslOption.AcceptablePolicyErrors = System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors |
-                                                        System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch;
-                }
-
-                connectionFactory.Ssl = sslOption;
-            }
-        }
-
-        /// <summary>
-        /// Loads the client certificate for mutual TLS authentication.
-        /// Supports both X509Certificate2 objects and file paths (.pfx/PKCS#12 format).
-        /// ClientCertificate object takes precedence over ClientCertificatePath if both are set.
-        /// </summary>
-        /// <param name="connection">The gateway connection configuration containing certificate settings</param>
-        /// <returns>The loaded certificate, or null if no certificate is configured</returns>
-        /// <exception cref="FileNotFoundException">Thrown when certificate file path is specified but file does not exist</exception>
-        /// <exception cref="InvalidOperationException">Thrown when certificate file cannot be loaded</exception>
-        private static X509Certificate2? LoadCertificate(RmqMessagingGatewayConnection connection)
-        {
-            // Precedence: ClientCertificate object takes precedence over file path
-            if (connection.ClientCertificate != null)
-                return connection.ClientCertificate;
-
-            if (!string.IsNullOrEmpty(connection.ClientCertificatePath))
-            {
-                if (!File.Exists(connection.ClientCertificatePath))
-                    throw new FileNotFoundException(
-                        $"RMQMessagingGateway: Client certificate file not found: {connection.ClientCertificatePath}",
-                        connection.ClientCertificatePath);
-
-                try
-                {
-                    // Load certificate with password if provided, otherwise load without password
-#if NET9_0_OR_GREATER
-                    return string.IsNullOrEmpty(connection.ClientCertificatePassword)
-                        ? X509CertificateLoader.LoadPkcs12FromFile(connection.ClientCertificatePath, null)
-                        : X509CertificateLoader.LoadPkcs12FromFile(connection.ClientCertificatePath, connection.ClientCertificatePassword);
-#else
-                    return string.IsNullOrEmpty(connection.ClientCertificatePassword)
-                        ? new X509Certificate2(connection.ClientCertificatePath)
-                        : new X509Certificate2(connection.ClientCertificatePath, connection.ClientCertificatePassword);
-#endif
-                }
-                catch (Exception ex)
-                {
-                    throw new InvalidOperationException(
-                        $"RMQMessagingGateway: Failed to load client certificate from {connection.ClientCertificatePath}. " +
-                        $"Ensure the file is a valid .pfx (PKCS#12) certificate and the password is correct.",
-                        ex);
-                }
-            }
-
-            return null;
         }
 
         ~RmqMessageGateway()
