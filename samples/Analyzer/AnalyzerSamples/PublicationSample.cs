@@ -1,5 +1,4 @@
-﻿
-using Paramore.Brighter;
+﻿using Paramore.Brighter;
 
 namespace AnalyzerSamples
 {
@@ -16,7 +15,7 @@ namespace AnalyzerSamples
             return new PublicationSample()
             {
                 Subject = "test",
-                RequestType = typeof(string)
+                RequestType = typeof(EventSample2)
             };
         }
         public static Publication GetPublicationWithRequestType()
@@ -26,15 +25,24 @@ namespace AnalyzerSamples
                 Subject = "test",
                 RequestType = typeof(EventSample)
             };
-        } 
+        }
+        public static AnyClass GetAnyOtherClass()
+        {
+            return new AnyClass();
+        }
     }
     public class PublicationSample : Publication
     {
     }
-    public class EventSample : Event
+    public class EventSample(Id id) : Event(id)
     {
-        public EventSample(Id id) : base(id)
-        {
-        }
+    }
+    public class EventSample2
+    {
+    }
+
+    public class AnyClass
+    {
+
     }
 }

@@ -30,6 +30,7 @@ namespace Paramore.Brighter.Analyzer
     {
         public const string RequestTypeMissing = "BRT001";
         public const string WrongRequestType = "BRT002";
+        public const string MessagePumpMissing = "BRT003";
 
     }
 }

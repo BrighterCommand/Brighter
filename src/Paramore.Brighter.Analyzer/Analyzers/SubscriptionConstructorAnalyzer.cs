@@ -21,62 +21,48 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Paramore.Brighter.Analyzer.Vistiors.Operation;
+using Paramore.Brighter.Analyzer.Visitors.Operation;
 
 namespace Paramore.Brighter.Analyzer.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class PublicationRequestTypeAssignmentAnalyzer : DiagnosticAnalyzer
+    public class SubscriptionConstructorAnalyzer : DiagnosticAnalyzer
     {
-        private const string RequestPublicationCategory = "Paramore.Brighter.Publication";
+        private const string SubscriptionCategory = "Paramore.Brighter.Subscription";
 
-        public static DiagnosticDescriptor RequestTypeMissingRule => new DiagnosticDescriptor(
-               id: DiagnosticsIds.RequestTypeMissing,
-               title: "Request Type Missing",
-               messageFormat: "RequestType assignment is Missing from {0}",
-               category: RequestPublicationCategory,
+        public static DiagnosticDescriptor MessagePumpMissingRule => new DiagnosticDescriptor(
+               id: DiagnosticsIds.MessagePumpMissing,
+               title: "MessagePump Missing Missing",
+               messageFormat: "MessagePump assignment is Missing from {0}",
+               category: SubscriptionCategory,
                defaultSeverity: DiagnosticSeverity.Warning,
                isEnabledByDefault: true
          //   helpLinkUri: GetRuleUrl(Rule)
          );
-        public static DiagnosticDescriptor WrongRequestTypeRule => new DiagnosticDescriptor(
-               id: DiagnosticsIds.WrongRequestType,
-               title: "Wrong Request Type",
-               messageFormat: "RequestType '{0}' is not child of IRequest",
-               category: RequestPublicationCategory,
-               defaultSeverity: DiagnosticSeverity.Warning,
-               isEnabledByDefault: true
-         //   helpLinkUri: GetRuleUrl(Rule)
-         );
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get { return [RequestTypeMissingRule, WrongRequestTypeRule]; } }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [MessagePumpMissingRule];
 
         public override void Initialize(AnalysisContext context)
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            context.RegisterOperationAction(AnalyzerOperation, OperationKind.ObjectCreation);
+            context.RegisterOperationAction(AnalyzeOperation, OperationKind.ObjectCreation);
         }
 
-        private void AnalyzerOperation(OperationAnalysisContext context)
+        private void AnalyzeOperation(OperationAnalysisContext context)
         {
-            var visitor = new RequestTypeAssignmentVisitor();
+            var visitor = new SubscriptionConstructorVisitor();
             context.Operation.Accept(visitor);
-            if (visitor.IsPublicationType && !visitor.IsRequestTypeAssigned)
+            if (visitor.IsSubscriptionType && visitor.IsMessagePumpDefault)
             {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    RequestTypeMissingRule,
+                var diagnostic = Diagnostic.Create(
+                    MessagePumpMissingRule,
                     context.Operation.Syntax.GetLocation(),
-                    visitor.PublicationName));
-            }
-            else if (visitor.IsNotTypeOfIRequest)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    WrongRequestTypeRule,
-                   visitor.TypeOfLocation,
-                   visitor.TypeOfName));
+                    visitor.SubscriptionName);
+                context.ReportDiagnostic(diagnostic);
             }
         }
     }

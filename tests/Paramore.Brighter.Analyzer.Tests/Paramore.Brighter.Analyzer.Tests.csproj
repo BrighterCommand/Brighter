@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>$(BrighterTestNineOnlyTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -18,12 +18,13 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
   </ItemGroup>
 
-
-
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.Analyzer\Paramore.Brighter.Analyzer.csproj" />
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Analyzer\Paramore.Brighter.Analyzer.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
+
+
+
 
   <ItemGroup>
     <Using Include="Xunit" />

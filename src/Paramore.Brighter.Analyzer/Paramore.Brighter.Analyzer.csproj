@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>$(BrighterNetStandardTargetFrameworks)</TargetFrameworks>
+    <Authors>Aboubakr Nasef</Authors>
+    <Description>Anlyzers for the brighter library</Description>
+    <PackageTags>Analyzer;Scheduler;Message Scheduling;Command Processor;Brighter</PackageTags>
     <IsPackable>false</IsPackable>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <developmentDependency>true</developmentDependency>

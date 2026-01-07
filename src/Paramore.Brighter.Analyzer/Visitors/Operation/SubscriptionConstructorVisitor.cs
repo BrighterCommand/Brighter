@@ -21,26 +21,35 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-using Microsoft.CodeAnalysis;
 
-namespace Paramore.Brighter.Analyzer.Vistiors.Symbol
+
+using System;
+using Microsoft.CodeAnalysis.Operations;
+using Paramore.Brighter.Analyzer.Vistiors.Symbol;
+
+namespace Paramore.Brighter.Analyzer.Visitors.Operation
 {
-    public class ChildOfVisitor(string className, string assmeblyName) : SymbolVisitor<bool>
+    public class SubscriptionConstructorVisitor : OperationWalker
     {
+        public bool IsMessagePumpDefault { get; private set; } = false;
+        public string SubscriptionName { get; private set; }
+        public bool IsSubscriptionType { get; private set; }
 
-        public override bool VisitNamedType(INamedTypeSymbol symbol)
+        public override void VisitObjectCreation(IObjectCreationOperation operation)
         {
-            var type = symbol;
-            var assembly = type.ContainingAssembly;
-            if (symbol.Name == className && assembly.Name == assmeblyName)
+            if (operation.Type!.Accept(new ChildOfVisitor(BrighterAnalyzerGlobals.SubscriptionClassName, BrighterAnalyzerGlobals.BrighterAssembly)))
             {
-                return true;
+                SubscriptionName = operation.Type.Name;
+                IsSubscriptionType = true;
+                base.VisitObjectCreation(operation);
             }
-            if (symbol.BaseType != null)
+        }
+        public override void VisitArgument(IArgumentOperation operation)
+        {
+            if (operation.Value.Type.Name == BrighterAnalyzerGlobals.MessagePumpTypeEnumName && operation.ArgumentKind == ArgumentKind.DefaultValue)
             {
-                return symbol.BaseType.Accept(this);
+                IsMessagePumpDefault = true;
             }
-            return false;
         }
     }
 }

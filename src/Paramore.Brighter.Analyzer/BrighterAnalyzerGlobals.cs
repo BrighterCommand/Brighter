@@ -31,5 +31,8 @@ namespace Paramore.Brighter.Analyzer
         public const string BrighterAssembly = "Paramore.Brighter";
         public const string RequestTypeProperty = "RequestType";
         public const string IRequestInterface = "IRequest";
+       
+        public const string MessagePumpTypeEnumName = "MessagePumpType";
+        public const string SubscriptionClassName = "Subscription";
     }
 }

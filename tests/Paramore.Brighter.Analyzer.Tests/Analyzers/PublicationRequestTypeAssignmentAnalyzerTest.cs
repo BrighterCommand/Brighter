@@ -1,23 +1,12 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Testing;
-using Microsoft.CodeAnalysis.Testing;
+﻿using Microsoft.CodeAnalysis.Testing;
 using Paramore.Brighter.Analyzer.Analyzers;
+using Paramore.Brighter.Analyzer.Tests.Analyzers;
 
 
-namespace Paramore.Brighter.Analyzer.Test.PublicationRequestTypeMissing
+namespace Paramore.Brighter.Analyzer.Test.Analyzers
 {
-    public class PublicationRequestTypeAssignmentAnalyzerTest
+    public class PublicationRequestTypeAssignmentAnalyzerTest : BaseAnalyzerTest<PublicationRequestTypeAssignmentAnalyzer>
     {
-        private readonly CSharpAnalyzerTest<PublicationRequestTypeAssignmentAnalyzer, DefaultVerifier> testContext;
-
-        public PublicationRequestTypeAssignmentAnalyzerTest()
-        {
-            testContext = new CSharpAnalyzerTest<PublicationRequestTypeAssignmentAnalyzer, DefaultVerifier>();
-            testContext.ReferenceAssemblies = ReferenceAssemblies.Net.Net80;
-            testContext.TestState.OutputKind = OutputKind.ConsoleApplication;
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Publication).Assembly.Location));
-            testContext.CompilerDiagnostics = CompilerDiagnostics.None;
-        }
 
         [Fact]
         public async Task When_Initializing_Publication_WithOut_RequestType()
@@ -46,10 +35,10 @@ var publication = {|#0:new PublicationTest()|};
 using Paramore.Brighter;
 namespace TestNamespace
 {
-var publication = {|#0:new PublicationTest()
+var publication =new PublicationTest()
 {
 RequestType = typeof(EventSample)
-}|};
+};
         
     public class PublicationTest : Publication
     {
@@ -78,15 +67,31 @@ RequestType = {|#0:typeof(EventSample)|}
 };
         
     public class PublicationTest : Publication
-    {
-    }
-    public class EventSample
-{
-}
+    {}
+    public class EventSample{}
         }
 """;
             testContext.ExpectedDiagnostics.Add(new DiagnosticResult(PublicationRequestTypeAssignmentAnalyzer.WrongRequestTypeRule).WithLocation(0).WithArguments("EventSample"));
 
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_Initializing_Non_Publication_Type()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+            using System.Collections.Generic;
+            namespace TestNamespace
+            {
+                public class AnyClass
+                {
+                    public void Method()
+                    {
+                        var list = new List<string>(); // Should be ignored
+                    }
+                }
+            }
+""";
             await testContext.RunAsync();
         }
     }
