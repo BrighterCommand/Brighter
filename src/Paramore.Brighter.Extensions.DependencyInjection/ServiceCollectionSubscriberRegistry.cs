@@ -37,21 +37,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     {
         private readonly IServiceCollection _services;
         private readonly SubscriberRegistry _registry;
-        private readonly ServiceLifetime _lifetime;
 
         /// <summary>
         /// Constructs an instance of the subscriber registry
-        /// We set the lifetime for registered handlers here. We default to transient i.e. the handler will be destroyed after usage
-        /// In contexts using a Scope, for example ASP.NET with EF Core, this will need to be Scoped to allow participation in Request-Reply scoped
-        /// transactions etc.
+        /// Handlers are always registered as Transient in the DI container.
+        /// The actual lifetime is managed by ServiceProviderHandlerFactory.
         /// </summary>
         /// <param name="services">The IoC container to register with</param>
-        /// <param name="lifetime">The lifetime of a handler - defaults to transient</param>
-        public ServiceCollectionSubscriberRegistry(IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Transient)
+        public ServiceCollectionSubscriberRegistry(IServiceCollection services)
         {
             _services = services;
             _registry = new SubscriberRegistry();
-            _lifetime = lifetime;
         }
         
         /// <summary>
@@ -64,7 +60,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="handlerType">The type of the handler for this request type</param>
         public void Add(Type requestType, Type handlerType)
         {
-            _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+            _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, ServiceLifetime.Transient));
             _registry.Add(requestType, handlerType);
         }
 
@@ -79,9 +75,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             handlerTypes.Each(handlerType =>
             {
-                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, ServiceLifetime.Transient));
             });
-            _registry.Add(requestType, router, handlerTypes); 
+            _registry.Add(requestType, router, handlerTypes);
         }
 
         /// <summary>
@@ -105,7 +101,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             where TRequest : class, IRequest
             where TImplementation : class, IHandleRequests<TRequest>
         {
-            _services.TryAdd(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), _lifetime));
+            _services.TryAdd(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), ServiceLifetime.Transient));
             _registry.Register<TRequest, TImplementation>();
         }
         
@@ -119,7 +115,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             handlerTypes.Each(handlerType =>
             {
-                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, ServiceLifetime.Transient));
             });
            _registry.Register<TRequest>(router, handlerTypes);
         }
@@ -135,7 +131,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             where TRequest : class, IRequest
             where TImplementation : class, IHandleRequestsAsync<TRequest>
         {
-            _services.TryAdd(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), _lifetime));
+            _services.TryAdd(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), ServiceLifetime.Transient));
             _registry.RegisterAsync<TRequest, TImplementation>();
         }
 
@@ -149,9 +145,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             handlerTypes.Each(handlerType =>
             {
-                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+                _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, ServiceLifetime.Transient));
             });
-            _registry.RegisterAsync<TRequest>(router, handlerTypes); 
+            _registry.RegisterAsync<TRequest>(router, handlerTypes);
         }
     }
 }
