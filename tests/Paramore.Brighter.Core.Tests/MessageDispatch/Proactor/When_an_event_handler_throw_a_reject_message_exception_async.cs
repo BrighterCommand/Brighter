@@ -82,7 +82,8 @@ public class MessageDispatchRejectMessageExceptionTestsAsync
         Assert.Empty(_bus.Stream(_routingKey));
         Assert.NotEmpty(_bus.Stream(_deadLetterRoutingKey));
         var message = _bus.Dequeue(_deadLetterRoutingKey);
-        Assert.Equal(MyRejectedEventHandlerAsync.TestOfRejectionFlow, message.Header.Bag[Message.RejectionReasonHeaderName]);
+        var rejectionReason = $"Message rejected reason {RejectionReason.DeliveryError} description: {MyRejectedEventHandlerAsync.TestOfRejectionFlow}";
+        Assert.Equal(rejectionReason, message.Header.Bag[Message.RejectionReasonHeaderName]);
     }
     
     

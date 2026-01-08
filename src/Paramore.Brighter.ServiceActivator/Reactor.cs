@@ -237,13 +237,13 @@ namespace Paramore.Brighter.ServiceActivator
                     if (reject)
                     {
                         span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
-                        RejectMessage(message, rejectReason);
+                        RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectReason));
                         continue;
                     }
 
                     if (stop)
                     {
-                        RejectMessage(message, $"Not processed due to configuration exception: {rejectReason}");
+                        RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, $"Not processed due to configuration exception: {rejectReason}"));
                         span?.SetStatus(ActivityStatusCode.Error,
                             $"MessagePump: Stopping receiving of messages from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
                         Channel.Dispose();
@@ -258,7 +258,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     Log.StoppingReceivingMessages2(s_logger, configurationException, Channel.Name, Channel.RoutingKey,
                         Environment.CurrentManagedThreadId);
-                    RejectMessage(message, $"Not processed due to configuration exception: {configurationException.Message}");
+                    RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, $"Not processed due to configuration exception: {configurationException.Message}"));
                     span?.SetStatus(ActivityStatusCode.Error,
                         $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
                     Channel.Dispose();
@@ -277,7 +277,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
                     
-                    RejectMessage(message, rejectMessageAction.Message);
+                    RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectMessageAction.Message));
 
                     continue;
                 }
@@ -351,12 +351,12 @@ namespace Paramore.Brighter.ServiceActivator
             return context;
         }
 
-        private bool RejectMessage(Message message, string? reason = null)
+        private bool RejectMessage(Message message, MessageRejectionReason reason)
         {
             Log.RejectingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
             IncrementUnacceptableMessageCount();
 
-            if (reason is not null) message.Header.Bag[Message.RejectionReasonHeaderName] = reason;
+            message.Header.Bag[Message.RejectionReasonHeaderName] = $"Message rejected reason {reason.RejectionReason} description: {reason.Description}";
 
             return Channel.Reject(message);
         }
@@ -436,7 +436,7 @@ namespace Paramore.Brighter.ServiceActivator
                             ? string.Empty
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
-                    return RejectMessage(message, "Handle count of messages reached; rejecting at limit");
+                    return RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, "Handle count of messages reached; rejecting at limit"));
                 }
             }
 
