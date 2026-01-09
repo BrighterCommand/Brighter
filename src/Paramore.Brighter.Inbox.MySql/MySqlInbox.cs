@@ -70,4 +70,10 @@ public class MySqlInbox : RelationalDatabaseInbox
     {
         return new MySqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
     }
+
+    protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
+    {
+        return new MySqlParameter{ParameterName = parameterName, MySqlDbType = MySqlDbType.JSON, Value = value ?? DBNull.Value }; 
+    }
+
 }

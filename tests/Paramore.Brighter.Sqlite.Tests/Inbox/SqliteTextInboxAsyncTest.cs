@@ -10,7 +10,8 @@ public class SqliteTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
     protected override string DefaultConnectingString => Tests.Configuration.ConnectionString;
     protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
     protected override bool BinaryMessagePayload => false;
-    
+    protected override bool JsonMessagePayload => false;
+
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
         return new SqliteInbox(configuration);

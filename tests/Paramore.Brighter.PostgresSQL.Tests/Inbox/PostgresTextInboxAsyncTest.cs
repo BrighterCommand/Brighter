@@ -10,6 +10,7 @@ public class PostgresTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
     protected override string DefaultConnectingString => Const.ConnectionString;
     protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false;
+    protected override bool JsonMessagePayload => false;
     
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
@@ -21,7 +22,7 @@ public class PostgresTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
         await using var connection = new NpgsqlConnection(configuration.ConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = PostgreSqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload);
+        command.CommandText = PostgreSqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload, JsonMessagePayload);
         await command.ExecuteNonQueryAsync();
     }
 

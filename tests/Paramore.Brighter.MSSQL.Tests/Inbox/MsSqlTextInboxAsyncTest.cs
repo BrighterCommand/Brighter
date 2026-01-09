@@ -9,8 +9,9 @@ public class MsSqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 {
     protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;
     protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
-    protected override bool BinaryMessagePayload => false; 
-    
+    protected override bool BinaryMessagePayload => false;
+    protected override bool JsonMessagePayload => false;
+
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
         return new MsSqlInbox(configuration);

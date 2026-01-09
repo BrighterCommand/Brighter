@@ -56,6 +56,19 @@ namespace Paramore.Brighter.Inbox.MySql
                 PRIMARY KEY (`CommandId`)
             ) ENGINE = InnoDB;
             """;
+        
+        private const string JsonInboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            ( 
+                `CommandId` VARCHAR(255) NOT NULL,
+                `CommandType` VARCHAR(256) NOT NULL,
+                `CommandBody` JSON NOT NULL,
+                `Timestamp` TIMESTAMP(4) NOT NULL,
+                `ContextKey` VARCHAR(256)  NULL,
+                PRIMARY KEY (`CommandId`)
+            ) ENGINE = InnoDB;
+            """;
 
         const string InboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '{0}' AND table_name = '{1}') AS TableExists;";
 
@@ -64,8 +77,12 @@ namespace Paramore.Brighter.Inbox.MySql
         /// </summary>
         /// <param name="inboxTableName">The Inbox Table Name</param>
         /// <returns></returns>
-        public static string GetDDL(string inboxTableName, bool binaryMessage = false)
+        public static string GetDDL(string inboxTableName, bool binaryMessage = false, bool jsonMessage = false)
         {
+            if (jsonMessage)
+            {
+                return string.Format(JsonInboxDDL, inboxTableName);
+            }
             if (binaryMessage)
             {
                 return string.Format(BinaryInboxxDDL, inboxTableName);
