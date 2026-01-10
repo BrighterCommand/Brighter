@@ -247,9 +247,9 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Async Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
       - name: RMQ Sync Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   kafka-ci:
     runs-on: ubuntu-latest
