@@ -485,8 +485,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// This is just a commit of the offset to move past the record without processing it
         /// </remarks>
         /// <param name="message">The message.</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-        public bool Reject(Message message)
+        public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
             Acknowledge(message);
             return true;
@@ -500,10 +501,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Calls the underlying sync method, which is non-blocking
         /// </remarks>
         /// <param name="message">The message.</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         /// <param name="cancellationToken">Cancels the reject; not used as non-blocking</param>
-        public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
         {
-            Reject(message);
+            Reject(message, reason);
             return Task.FromResult(true);
         }
 

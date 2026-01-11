@@ -160,10 +160,11 @@ namespace Paramore.Brighter.ServiceActivator
                 if (message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
                 {
                     Log.FailedToParseMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
+                    var description = $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}";
+                    span?.SetStatus(ActivityStatusCode.Error, description);
                     Tracer?.EndSpan(span);
                     IncrementUnacceptableMessageCount();
-                    AcknowledgeMessage(message);
+                    RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, description));
 
                     continue;
                 }
@@ -358,7 +359,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             message.Header.Bag[Message.RejectionReasonHeaderName] = $"Message rejected reason {reason.RejectionReason} description: {reason.Description}";
 
-            return Channel.Reject(message);
+            return Channel.Reject(message, reason);
         }
         
         private void InvokeDispatchRequest(IRequest request, Message message, RequestContext context)
