@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             SpyCommandProcessor commandProcessor = new();
             ChannelAsync channel = new(
                 new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
             );
             
             var messageMapperRegistry = new MessageMapperRegistry(

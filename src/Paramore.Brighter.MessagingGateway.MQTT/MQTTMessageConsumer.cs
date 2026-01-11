@@ -176,15 +176,17 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Not implemented Reject Method.
         /// </summary>
         /// <param name="message"></param>
-        public bool Reject(Message message)
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+        public bool Reject(Message message, MessageRejectionReason? reason = null)
           => false;
 
         /// <summary>
         /// Not implemented Reject Method.
         /// </summary>
         /// <param name="message"></param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         /// <param name="cancellationToken"></param>
-        public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
+        public Task<bool> RejectAsync(Message message,  MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 
 

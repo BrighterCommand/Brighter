@@ -186,6 +186,32 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 throw;
             }
         }
+        
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+        public bool Reject(Message message, MessageRejectionReason? reason = null)
+        {
+            try
+            {
+                EnsureBroker(_queueName);
+                var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
+                var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+            
+                Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag, reasonString, description);
+                
+                //if we have a DLQ, this will force over to the DLQ
+                Channel!.BasicReject(message.DeliveryTag, false);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorNoAckMessage(s_logger, exception, message.Id);
+                throw;
+            }
+        }
 
         /// <summary>
         /// Requeues the specified message.
@@ -230,26 +256,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
         }
 
-        /// <summary>
-        /// Rejects the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public bool Reject(Message message)
-        {
-            try
-            {
-                EnsureBroker(_queueName);
-                Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag);
-                //if we have a DLQ, this will force over to the DLQ
-                Channel!.BasicReject(message.DeliveryTag, false);
-                return true;
-            }
-            catch (Exception exception)
-            {
-                Log.ErrorNoAckMessage(s_logger, exception, message.Id);
-                throw;
-            }
-        }
 
         /// <summary>
         /// Receives the specified queue name.
@@ -521,8 +527,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: Error re-queueing message {Id}")]
             public static partial void ErrorRequeueingMessage(ILogger logger, Exception exception, string id);
 
-            [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: NoAck message {Id} with delivery tag {DeliveryTag}")]
-            public static partial void NoAckMessage(ILogger logger, string id, ulong deliveryTag);
+            [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: NoAck message {Id} with delivery tag {DeliveryTag} because {Reason} due to {Description}")]
+            public static partial void NoAckMessage(ILogger logger, string id, ulong deliveryTag, string reason, string description);
 
             [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: Error try to NoAck message {Id}")]
             public static partial void ErrorNoAckMessage(ILogger logger, Exception exception, string id);
@@ -532,7 +538,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: Received message from queue {ChannelName} with routing key {RoutingKeys} via exchange {ExchangeName} on subscription {URL}, message: {Request}")]
             public static partial void ReceivedMessage(ILogger logger, string channelName, string routingKeys, string exchangeName, string url, string request);
-
 
             [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: Created rabbitmq channel {ConsumerNumber} for queue {ChannelName} with routing key/s {RoutingKeys} via exchange {ExchangeName} on subscription {URL}")]
             public static partial void CreatedChannel(ILogger logger, long consumerNumber, string channelName, string routingKeys, string exchangeName, string url);

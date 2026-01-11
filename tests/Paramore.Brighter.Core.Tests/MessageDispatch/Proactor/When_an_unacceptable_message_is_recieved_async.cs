@@ -31,63 +31,63 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor;
+
+public class AsyncMessagePumpUnacceptableMessageTests
 {
-    public class AsyncMessagePumpUnacceptableMessageTests
+    private const string Channel = "MyChannel";
+    private readonly IAmAMessagePump _messagePump;
+    private readonly ChannelAsync _channel;
+    private readonly InternalBus _bus;
+    private readonly RoutingKey _routingKey = new("MyTopic");
+    private readonly FakeTimeProvider _timeProvider = new FakeTimeProvider();
+
+    public AsyncMessagePumpUnacceptableMessageTests()
     {
-        private const string Channel = "MyChannel";
-        private readonly IAmAMessagePump _messagePump;
-        private readonly ChannelAsync _channel;
-        private readonly InternalBus _bus;
-        private readonly RoutingKey _routingKey = new("MyTopic");
-        private readonly FakeTimeProvider _timeProvider = new FakeTimeProvider();
-
-        public AsyncMessagePumpUnacceptableMessageTests()
+        SpyRequeueCommandProcessor commandProcessor = new();
+            
+        _bus = new InternalBus();
+            
+        _channel = new ChannelAsync(
+            new(Channel), _routingKey, 
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+        );
+            
+        var messageMapperRegistry = new MessageMapperRegistry(
+            null,
+            new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
+            
+        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
+            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
         {
-            SpyRequeueCommandProcessor commandProcessor = new();
-            
-            _bus = new InternalBus();
-            
-            _channel = new ChannelAsync(
-                new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
-            );
-            
-            var messageMapperRegistry = new MessageMapperRegistry(
-                null,
-                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
-            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-            
-            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
-            {
-                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
-            };
+            Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
+        };
 
-            var myMessage = JsonSerializer.Serialize(new MyEvent());
-            var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
+        var myMessage = JsonSerializer.Serialize(new MyEvent());
+        var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
 
-            _bus.Enqueue(unacceptableMessage);
+        _bus.Enqueue(unacceptableMessage);
             
-        }
+    }
 
-        [Fact]
-        public async Task When_An_Unacceptable_Message_Is_Recieved()
-        {
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            await Task.Delay(1000);
+    [Fact]
+    public async Task When_An_Unacceptable_Message_Is_Recieved()
+    {
+        var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+        await Task.Delay(1000);
             
-            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
+        _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            var quitMessage = new Message(
-                new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT), 
-                new MessageBody("")
-            );
-            _channel.Enqueue(quitMessage);
+        var quitMessage = new Message(
+            new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT), 
+            new MessageBody("")
+        );
+        _channel.Enqueue(quitMessage);
 
-            await Task.WhenAll(new[] { task });
+        await Task.WhenAll(new[] { task });
 
-            //should_acknowledge_the_message
-            Assert.Empty(_bus.Stream(_routingKey));
-        }
+        //should_acknowledge_the_message
+        Assert.Empty(_bus.Stream(_routingKey));
     }
 }

@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             InternalBus bus = new();
             
-            _channel = new ChannelAsync(new("myChannel"),_routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
+            _channel = new ChannelAsync(new("myChannel"),_routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,

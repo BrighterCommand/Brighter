@@ -37,6 +37,30 @@ public partial class PostgresMessageConsumer(
     private NpgsqlDbType DbType => BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json;
 
     /// <inheritdoc />
+    public void Acknowledge(Message message)
+    {
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
+        {
+            return;
+        }
+
+        try
+        {
+            using var connection = _connectionProvider.GetConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
+            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
+            command.ExecuteNonQuery();
+            Log.DeletedMessage(s_logger, message.Id, receiptHandle, QueueName);
+        }
+        catch (Exception exception)
+        {
+            Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
+            throw;
+        }
+    }
+    
+    /// <inheritdoc />
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
@@ -59,31 +83,7 @@ public partial class PostgresMessageConsumer(
             throw;
         }
     }
-
-    /// <inheritdoc />
-    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
-    {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
-        {
-            return false;
-        }
-
-        try
-        {
-            Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
-            await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
-            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
-            return true;
-        }
-        catch (Exception exception)
-        {
-            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
-            throw;
-        }
-    }
-
+  
     /// <inheritdoc />
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
@@ -163,6 +163,58 @@ public partial class PostgresMessageConsumer(
             throw;
         }
     }
+    
+    /// <inheritdoc />
+    public bool Reject(Message message, MessageRejectionReason? reason = null)
+    {
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
+        {
+            return false;
+        }
+
+        try
+        {
+            Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
+
+            using var connection = _connectionProvider.GetConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
+            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
+            command.ExecuteNonQuery();
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
+            throw;
+        }       
+    }
+    
+    /// <inheritdoc />
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
+    {
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
+        {
+            return false;
+        }
+
+        try
+        {
+            Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
+            await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
+            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
+            throw;
+        }
+    }
+
+    
 
     /// <inheritdoc />
     public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
@@ -197,55 +249,7 @@ public partial class PostgresMessageConsumer(
     }
 
 
-    /// <inheritdoc />
-    public void Acknowledge(Message message)
-    {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
-        {
-            return;
-        }
-
-        try
-        {
-            using var connection = _connectionProvider.GetConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
-            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
-            command.ExecuteNonQuery();
-            Log.DeletedMessage(s_logger, message.Id, receiptHandle, QueueName);
-        }
-        catch (Exception exception)
-        {
-            Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
-            throw;
-        }
-    }
-
-    /// <inheritdoc />
-    public bool Reject(Message message)
-    {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
-        {
-            return false;
-        }
-
-        try
-        {
-            Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
-
-            using var connection = _connectionProvider.GetConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
-            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
-            command.ExecuteNonQuery();
-            return true;
-        }
-        catch (Exception exception)
-        {
-            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
-            throw;
-        }       
-    }
+ 
 
     /// <inheritdoc />
     public void Purge()
@@ -419,6 +423,7 @@ public partial class PostgresMessageConsumer(
 
         [LoggerMessage(LogLevel.Error, "PostgresPullMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
         public static partial void ErrorRejectingMessage(ILogger logger, Exception exception, string id, object? receiptHandle, string channelName);
+        
         [LoggerMessage(LogLevel.Information, "PostgresPullMessageConsumer: Purging the queue {ChannelName}")]
         public static partial void PurgingQueue(ILogger logger, string channelName);
 
@@ -430,8 +435,10 @@ public partial class PostgresMessageConsumer(
 
         [LoggerMessage(LogLevel.Debug, "PostgresPullMessageConsumer: Preparing to retrieve next message from queue {TableName}")]
         public static partial void RetrievingNextMessage(ILogger logger, string tableName);
+        
         [LoggerMessage(LogLevel.Error, "PostgresPullMessageConsumer: There was an error listening to queue {ChannelName}")]
         public static partial void ErrorListeningToQueue(ILogger logger, Exception exception, string channelName);
+        
         [LoggerMessage(LogLevel.Information, "PostgresPullMessageConsumer: re-queueing the message {Id}")]
         public static partial void RequeueingMessage(ILogger logger, string id);
 
