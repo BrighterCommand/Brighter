@@ -31,66 +31,65 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor;
+
+public class MessagePumpUnacceptableMessageDeadLetterChannelTests
 {
-    public class MessagePumpUnacceptableMessageDeadLetterChannelTests
+    private const string Channel = "MyChannel";
+    private readonly IAmAMessagePump _messagePump;
+    private readonly Channel _channel;
+    private readonly InternalBus _bus;
+    private readonly RoutingKey _routingKey = new("MyTopic");
+    private readonly RoutingKey _deadLetterKey = new("MyDeadLetterTopic");
+    private readonly FakeTimeProvider _timeProvider = new();
+
+    public MessagePumpUnacceptableMessageDeadLetterChannelTests()
     {
-        private const string Channel = "MyChannel";
-        private readonly IAmAMessagePump _messagePump;
-        private readonly Channel _channel;
-        private readonly InternalBus _bus;
-        private readonly RoutingKey _routingKey = new("MyTopic");
-        private readonly RoutingKey _deadLetterKey = new("MyDeadLetterTopic");
-        private readonly FakeTimeProvider _timeProvider = new();
+        SpyRequeueCommandProcessor commandProcessor = new();
 
-        public MessagePumpUnacceptableMessageDeadLetterChannelTests()
+        _bus = new InternalBus();
+            
+        _channel = new Channel(
+            new (Channel), 
+            _routingKey, 
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, deadLetterTopic: _deadLetterKey, ackTimeout: TimeSpan.FromMilliseconds(1000))
+        );
+            
+        var messageMapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+            null);
+        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            
+        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
+            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
         {
-            SpyRequeueCommandProcessor commandProcessor = new();
+            Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
+        };
 
-            _bus = new InternalBus();
+        var myMessage = JsonSerializer.Serialize(new MyEvent());
+        var unacceptableMessage = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageBody(myMessage)
+        );
+
+        _channel.Enqueue(unacceptableMessage);
             
-            _channel = new Channel(
-                new (Channel), 
-                _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, deadLetterTopic: _deadLetterKey, ackTimeout: TimeSpan.FromMilliseconds(1000))
-            );
+    }
+
+    [Fact]
+    public async Task When_An_Unacceptable_Message_Is_Recieved()
+    {
+        var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+        await Task.Delay(1000);
             
-            var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
-            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
-            {
-                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
-            };
+        _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            var myMessage = JsonSerializer.Serialize(new MyEvent());
-            var unacceptableMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
-                new MessageBody(myMessage)
-            );
+        var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
+        _channel.Enqueue(quitMessage);
 
-            _channel.Enqueue(unacceptableMessage);
-            
-        }
+        await Task.WhenAll(new[] { task });
 
-        [Fact]
-        public async Task When_An_Unacceptable_Message_Is_Recieved()
-        {
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            await Task.Delay(1000);
-            
-            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-
-            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
-            _channel.Enqueue(quitMessage);
-
-            await Task.WhenAll(new[] { task });
-
-            Assert.Empty(_bus.Stream(_routingKey));
-            Assert.NotEmpty(_bus.Stream(_deadLetterKey));
-        }
+        Assert.Empty(_bus.Stream(_routingKey));
+        Assert.NotEmpty(_bus.Stream(_deadLetterKey));
     }
 }

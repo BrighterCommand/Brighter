@@ -30,71 +30,69 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor;
+
+public class MessagePumpUnacceptableMessageLimitBreachedAsyncTests
 {
-    public class MessagePumpUnacceptableMessageLimitBreachedAsyncTests
+    private readonly IAmAMessagePump _messagePump;
+    private readonly InternalBus _bus = new();
+    private readonly RoutingKey _routingKey = new("MyTopic");
+    private readonly FakeTimeProvider _timeProvider = new();
+
+    public MessagePumpUnacceptableMessageLimitBreachedAsyncTests()
     {
-        private readonly IAmAMessagePump _messagePump;
-        private readonly InternalBus _bus = new();
-        private readonly RoutingKey _routingKey = new("MyTopic");
-        private readonly FakeTimeProvider _timeProvider = new();
+        SpyRequeueCommandProcessor commandProcessor = new();
 
-        public MessagePumpUnacceptableMessageLimitBreachedAsyncTests()
+        var channel = new ChannelAsync(new("MyChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 3);
+            
+        var messageMapperRegistry = new MessageMapperRegistry(
+            null,
+            new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
+            
+        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
+            messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel,
+            timeProvider:_timeProvider)
         {
-            SpyRequeueCommandProcessor commandProcessor = new();
+            Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3,
+            UnacceptableMessageLimitWindow =  TimeSpan.FromMinutes(1)
+        };
+            
+        var unacceptableMessage1 = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageBody("")                                
+        );
+        var unacceptableMessage2 = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageBody("")
+        );
+        var unacceptableMessage3 = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageBody("")
+        );
+        var unacceptableMessage4 = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageBody("")
+        );
 
-            var channel = new ChannelAsync(new("MyChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 3);
+        channel.Enqueue(unacceptableMessage1);
+        channel.Enqueue(unacceptableMessage2);
+        channel.Enqueue(unacceptableMessage3);
+        channel.Enqueue(unacceptableMessage4);
             
-            var messageMapperRegistry = new MessageMapperRegistry(
-                null,
-                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
-            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-            
-            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel,
-                timeProvider:_timeProvider)
-            {
-                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3,
-                UnacceptableMessageLimitWindow =  TimeSpan.FromMinutes(1)
-            };
-            
-            var unacceptableMessage1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
-                new MessageBody("")                                
-            );
-            var unacceptableMessage2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
-                new MessageBody("")
-            );
-            var unacceptableMessage3 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
-                new MessageBody("")
-            );
-            var unacceptableMessage4 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
-                new MessageBody("")
-            );
+    }
 
-            channel.Enqueue(unacceptableMessage1);
-            channel.Enqueue(unacceptableMessage2);
-            channel.Enqueue(unacceptableMessage3);
-            channel.Enqueue(unacceptableMessage4);
+    [Fact]
+    public async Task When_An_Unacceptable_Message_Limit_Is_Reached()
+    {
+        var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             
-        }
+        _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-        [Fact]
-        public async Task When_An_Unacceptable_Message_Limit_Is_Reached()
-        {
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+        await Task.WhenAll(task);
+
+        Assert.Empty(_bus.Stream(_routingKey));
             
-            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-
-            await Task.WhenAll(task);
-
-            Assert.Empty(_bus.Stream(_routingKey));
-            
-            Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status); 
-        }
+        Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status); 
     }
 }
-

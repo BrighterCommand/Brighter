@@ -31,43 +31,48 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor;
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor;
 
-public class AsyncMessagePumpUnacceptableMessageTests
+public class MessagePumpUnacceptableMessageInvalidMessageChannelTests
 {
     private const string Channel = "MyChannel";
     private readonly IAmAMessagePump _messagePump;
-    private readonly ChannelAsync _channel;
+    private readonly Channel _channel;
     private readonly InternalBus _bus;
     private readonly RoutingKey _routingKey = new("MyTopic");
-    private readonly FakeTimeProvider _timeProvider = new FakeTimeProvider();
+    private readonly RoutingKey _invalidMessageKey = new("MyDeadLetterTopic");
+    private readonly FakeTimeProvider _timeProvider = new();
 
-    public AsyncMessagePumpUnacceptableMessageTests()
+    public MessagePumpUnacceptableMessageInvalidMessageChannelTests()
     {
         SpyRequeueCommandProcessor commandProcessor = new();
-            
+
         _bus = new InternalBus();
             
-        _channel = new ChannelAsync(
-            new(Channel), _routingKey, 
-            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+        _channel = new Channel(
+            new (Channel), 
+            _routingKey, 
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, invalidMessageTopic: _invalidMessageKey, ackTimeout: TimeSpan.FromMilliseconds(1000))
         );
             
         var messageMapperRegistry = new MessageMapperRegistry(
-            null,
-            new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
-        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
+            new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+            null);
+        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
+        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
             messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };
 
         var myMessage = JsonSerializer.Serialize(new MyEvent());
-        var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
+        var unacceptableMessage = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageBody(myMessage)
+        );
 
-        _bus.Enqueue(unacceptableMessage);
+        _channel.Enqueue(unacceptableMessage);
             
     }
 
@@ -79,15 +84,12 @@ public class AsyncMessagePumpUnacceptableMessageTests
             
         _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-        var quitMessage = new Message(
-            new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT), 
-            new MessageBody("")
-        );
+        var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
         _channel.Enqueue(quitMessage);
 
         await Task.WhenAll(new[] { task });
 
-        //should_acknowledge_the_message
         Assert.Empty(_bus.Stream(_routingKey));
+        Assert.NotEmpty(_bus.Stream(_invalidMessageKey));
     }
 }
