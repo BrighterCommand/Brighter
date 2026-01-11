@@ -32,9 +32,9 @@ namespace Paramore.Brighter.Analyzer.Analyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class SubscriptionConstructorAnalyzer : DiagnosticAnalyzer
     {
-        private const string SubscriptionCategory = "Paramore.Brighter.Subscription";
+        private const string SubscriptionCategory = "Design";
 
-        public static DiagnosticDescriptor MessagePumpMissingRule => new DiagnosticDescriptor(
+        public static DiagnosticDescriptor MessagePumpMissingRule = new DiagnosticDescriptor(
                id: DiagnosticsIds.MessagePumpMissing,
                title: "MessagePump Missing Missing",
                messageFormat: "MessagePump assignment is Missing from {0}",

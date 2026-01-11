@@ -33,9 +33,9 @@ namespace Paramore.Brighter.Analyzer.Analyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class WrapAttributeAnalyzer : DiagnosticAnalyzer
     {
-        private const string WrapAttributeCategory = "Paramore.Brighter.WrapWithAttribute";
+        private const string WrapAttributeCategory = "Design";
 
-        public static DiagnosticDescriptor WrapAttributeRule => new DiagnosticDescriptor(
+        public static DiagnosticDescriptor WrapAttributeRule = new DiagnosticDescriptor(
                id: DiagnosticsIds.WrapWithAttribute,
                title: "WrapAttribute",
                messageFormat: $"{{0}} should be applied '{BrighterAnalyzerGlobals.MapToMessage}' Method",
@@ -44,10 +44,10 @@ namespace Paramore.Brighter.Analyzer.Analyzers
                isEnabledByDefault: true
          //   helpLinkUri: GetRuleUrl(Rule)
          );
-        public static DiagnosticDescriptor UnWrapWithAttributeRule => new DiagnosticDescriptor(
+        public static DiagnosticDescriptor UnWrapWithAttributeRule = new DiagnosticDescriptor(
         id: DiagnosticsIds.UnWrapWithAttribute,
         title: "UnWrapWithAttribute",
-        messageFormat: $"{{0}} should be applied '{BrighterAnalyzerGlobals.MapToRequest}' Method ",
+        messageFormat: $"{{0}} should be applied '{BrighterAnalyzerGlobals.MapToRequest}' Method",
         category: WrapAttributeCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true

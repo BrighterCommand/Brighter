@@ -31,9 +31,9 @@ namespace Paramore.Brighter.Analyzer.Analyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class PublicationRequestTypeAssignmentAnalyzer : DiagnosticAnalyzer
     {
-        private const string RequestPublicationCategory = "Paramore.Brighter.Publication";
+        private const string RequestPublicationCategory = "Design";
 
-        public static DiagnosticDescriptor RequestTypeMissingRule => new DiagnosticDescriptor(
+        public static DiagnosticDescriptor RequestTypeMissingRule = new DiagnosticDescriptor(
                id: DiagnosticsIds.RequestTypeMissing,
                title: "Request Type Missing",
                messageFormat: "RequestType assignment is Missing from {0}",
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Analyzer.Analyzers
                isEnabledByDefault: true
          //   helpLinkUri: GetRuleUrl(Rule)
          );
-        public static DiagnosticDescriptor WrongRequestTypeRule => new DiagnosticDescriptor(
+        public static DiagnosticDescriptor WrongRequestTypeRule = new DiagnosticDescriptor(
                id: DiagnosticsIds.WrongRequestType,
                title: "Wrong Request Type",
                messageFormat: "RequestType '{0}' is not child of IRequest",
