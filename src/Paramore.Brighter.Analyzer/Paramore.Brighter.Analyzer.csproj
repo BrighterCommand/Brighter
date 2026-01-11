@@ -10,15 +10,11 @@
     <developmentDependency>true</developmentDependency>
     <!-- Avoid ID conflicts with the package project. -->
     <PackageId>*$(MSBuildProjectFile)*</PackageId>
-
   </PropertyGroup>
-
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-
   </ItemGroup>
-
 
 
   <ItemGroup>

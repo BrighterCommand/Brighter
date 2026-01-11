@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
                     }
 """;
 
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(SubscriptionConstructorAnalyzer.MessagePumpMissingRule).WithLocation(0).WithArguments("SubscriptionTest"));
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(SubscriptionConstructorAnalyzer.MessagePumpMissingRule).WithLocation(0).WithArguments("SubscriptionTestNested"));
             await testContext.RunAsync();
         }
 
