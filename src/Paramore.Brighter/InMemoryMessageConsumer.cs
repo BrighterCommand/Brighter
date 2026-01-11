@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -180,12 +181,11 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
     public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
-        var removed = _lockedMessages.TryRemove(message.Id, out _);
-        if (!removed) return removed;
+        _lockedMessages.TryRemove(message.Id, out _);
 
         if (reason is { RejectionReason: RejectionReason.DeliveryError })
         {
-            if ( _deadLetterTopic is null) return removed;
+            if ( _deadLetterTopic is null) return true;
 
             message.Header.Topic = _deadLetterTopic;
         }
@@ -196,12 +196,12 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             else if (_deadLetterTopic is not null)
                 message.Header.Topic = _deadLetterTopic;
             else
-                return removed;
+                return true;
         }
 
         _bus.Enqueue(message);
 
-        return removed;
+        return true;
     }
 
     /// <summary>

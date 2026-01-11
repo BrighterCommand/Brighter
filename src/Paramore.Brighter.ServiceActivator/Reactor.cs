@@ -238,6 +238,7 @@ namespace Paramore.Brighter.ServiceActivator
                     if (reject)
                     {
                         span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
+                        IncrementUnacceptableMessageCount();
                         RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectReason));
                         continue;
                     }
@@ -259,6 +260,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     Log.StoppingReceivingMessages2(s_logger, configurationException, Channel.Name, Channel.RoutingKey,
                         Environment.CurrentManagedThreadId);
+                    IncrementUnacceptableMessageCount();
                     RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, $"Not processed due to configuration exception: {configurationException.Message}"));
                     span?.SetStatus(ActivityStatusCode.Error,
                         $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
@@ -269,31 +271,26 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (DeferMessageAction)
                 {
                     Log.DeferringMessage2(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-
                     span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
-
                     if (RequeueMessage(message)) continue;
                 }
                 catch (RejectMessageAction rejectMessageAction)
                 {
                     span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
-                    
+                    IncrementUnacceptableMessageCount();
                     RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectMessageAction.Message));
-
                     continue;
                 }
                 catch (MessageMappingException messageMappingException)
                 {
                     Log.FailedToMapMessage(s_logger, messageMappingException, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-
                     IncrementUnacceptableMessageCount();
-                    
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 catch (Exception e)
                 {
                     Log.FailedToDispatchMessage2(s_logger, e, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-
+                    IncrementUnacceptableMessageCount();
                     span?.SetStatus(ActivityStatusCode.Error,$"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
                 }
                 finally
@@ -355,9 +352,8 @@ namespace Paramore.Brighter.ServiceActivator
         private bool RejectMessage(Message message, MessageRejectionReason reason)
         {
             Log.RejectingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-            IncrementUnacceptableMessageCount();
 
-            message.Header.Bag[Message.RejectionReasonHeaderName] = $"Message rejected reason {reason.RejectionReason} description: {reason.Description}";
+            message.Header.Bag[Message.RejectionReasonHeaderName] = $"Message rejected reason: {reason.RejectionReason} Description: {reason.Description}";
 
             return Channel.Reject(message, reason);
         }
@@ -437,6 +433,7 @@ namespace Paramore.Brighter.ServiceActivator
                             ? string.Empty
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
+                    IncrementUnacceptableMessageCount();
                     return RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, "Handle count of messages reached; rejecting at limit"));
                 }
             }
