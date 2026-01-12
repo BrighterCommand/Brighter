@@ -4,7 +4,7 @@ Date: 2026-01-11
 
 ## Status
 
-Proposed
+Approved
 
 ## Context
 
@@ -37,10 +37,16 @@ ADR 0034 decided that the `IAmAMessageConsumer` (sync or async) must manage the 
 
 The `KafkaMessageConsumer` and `KafkaMessageConsumerAsync` will create their own `KafkaMessageProducer` or `KafkaMessageProducerAsync` instances for DLQ/invalid message publishing.
 
+**Creation Trigger**: We only create the producer for the DLQ or the invalid message channel, if the routing key for 
+them is not null.
+- We need to add the paramters for `deadLetterTopic` and `invalidMessageTopic` to the constructor
+- We need to assign them to `_deadLetterTopic` and `_invalidMessageTopic` 
+
 **Creation Timing**: The DLQ producer will be created **lazily** on first rejection:
 - Not created in constructor (avoid unnecessary producer if never used)
 - Created when first `RejectMessageAction` or `InvalidMessageAction` is encountered
 - Cached for subsequent rejections
+- May be null if there is no `_deadLetterTopic` or `_invalidMessageTopic`
 
 **Lifetime Management**: The consumer owns the DLQ producer:
 - Consumer creates the producer when needed
@@ -49,85 +55,86 @@ The `KafkaMessageConsumer` and `KafkaMessageConsumerAsync` will create their own
 
 **Thread Safety**: Uses `Lazy<T>` for thread-safe lazy initialization to handle concurrent first-rejection scenarios.
 
+
+
 ```csharp
-public class KafkaMessageConsumer : IAmAMessageConsumerSync, IDisposable
-{
-    private readonly IUseBrighterDeadLetterSupport? _deadLetterSupport;
-    private readonly IUseBrighterInvalidMessageSupport? _invalidMessageSupport;
-    private readonly Lazy<IAmAMessageProducerSync> _deadLetterProducer;
-    private readonly Lazy<IAmAMessageProducerSync> _invalidMessageProducer;
-    private readonly KafkaMessagingGatewayConfiguration _configuration;
-
-    public KafkaMessageConsumer(
-        KafkaMessagingGatewayConfiguration configuration,
-        IUseBrighterDeadLetterSupport? deadLetterSupport = null,
-        IUseBrighterInvalidMessageSupport? invalidMessageSupport = null)
-    {
-        _configuration = configuration;
-        _deadLetterSupport = deadLetterSupport;
-        _invalidMessageSupport = invalidMessageSupport;
-
-        // Thread-safe lazy initialization
-        _deadLetterProducer = new Lazy<IAmAMessageProducerSync>(CreateDeadLetterProducer);
-        _invalidMessageProducer = new Lazy<IAmAMessageProducerSync>(CreateInvalidMessageProducer);
-    }
-
-    private IAmAMessageProducerSync CreateDeadLetterProducer()
-    {
-        if (_deadLetterSupport?.DeadLetterRoutingKey == null)
-            throw new InvalidOperationException("Dead letter routing key not configured");
-
-        var publication = new KafkaPublication
+        ... //existing KafkaMessageConsumerCode
+        
+        private readonly Lazy<IAmAMessageProducerSync> _deadLetterProducer;
+        private readonly Lazy<IAmAMessageProducerSync> _invalidMessageProducer;
+       
+       public KafkaMessageConsumer(
+            KafkaMessagingGatewayConfiguration configuration,
+            RoutingKey routingKey,
+            string? groupId,
+            AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
+            TimeSpan? sessionTimeout = null,
+            TimeSpan? maxPollInterval = null,
+            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+            long commitBatchSize = 10,
+            TimeSpan? sweepUncommittedOffsetsInterval = null,
+            TimeSpan? readCommittedOffsetsTimeout = null,
+            int numPartitions = 1,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
+            short replicationFactor = 1,
+            TimeSpan? topicFindTimeout = null,
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            Action<ConsumerConfig>? configHook = null,
+            RoutingKey? deadLetterTopic = null,
+            RoutingKey? invalidMessageTopic = null
+            )
         {
-            Topic = _deadLetterSupport.DeadLetterRoutingKey,
-            MakeChannels = _configuration.MakeChannels // Match data topic strategy
-        };
+           ... //existing constructor code
+               
+           _deadLetterTopic = deadLetterTopic;
+           _invalidMessageTopic = invalidMessageTopic; 
+           
+           // Thread-safe lazy initialization
+           _deadLetterProducer = new Lazy<IAmAMessageProducerSync>(CreateDeadLetterProducer);
+           _invalidMessageProducer = new Lazy<IAmAMessageProducerSync>(CreateInvalidMessageProducer);
+           
+         }
+        
+       private IAmAMessageProducerSync CreateDeadLetterProducer()
+       {
+          if (_deadLetterRoutingKey == null)
+              return (IAmAMessageProducerSync )null; 
 
-        return new KafkaMessageProducer(_configuration, publication);
-    }
+          var publication = new KafkaPublication
+          {
+              Topic = _deadLetterRoutingKey,
+              MakeChannels = _configuration.MakeChannels // Match data topic strategy
+          };
 
-    private IAmAMessageProducerSync CreateInvalidMessageProducer()
-    {
-        if (_invalidMessageSupport?.InvalidMessageRoutingKey == null)
-            throw new InvalidOperationException("Invalid message routing key not configured");
+          return new KafkaMessageProducer(_configuration, publication);
+       }
 
-        var publication = new KafkaPublication
-        {
-            Topic = _invalidMessageSupport.InvalidMessageRoutingKey,
-            MakeChannels = _configuration.MakeChannels
-        };
+       private IAmAMessageProducerSync CreateInvalidMessageProducer()
+       {
+          if (_invalidMessageRoutingKey == null)
+              return (IAmAMessageProducerSync) null;
 
-        return new KafkaMessageProducer(_configuration, publication);
-    }
+          var publication = new KafkaPublication
+          {
+              Topic = _invalidMessageSupport.InvalidMessageRoutingKey,
+              MakeChannels = _configuration.MakeChannels
+          };
 
-    // Access via .Value triggers lazy initialization (thread-safe)
-    private void RejectMessage(Message message, string? reason = null)
-    {
-        try
-        {
-            var enrichedMessage = EnrichMessageWithMetadata(message, reason);
-            _deadLetterProducer.Value.Send(enrichedMessage);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "Failed to produce message to dead letter queue. " +
-                "Original message offset: {Offset}, Topic: {Topic}",
-                message.Offset, _topic);
-            // Continue - commit offset anyway
-        }
-    }
+          return new KafkaMessageProducer(_configuration, publication);
+       }
+       
+       public void Dispose()
+       {
+          // Only dispose if producer was created
+          if (_deadLetterProducer.IsValueCreated)
+              _deadLetterProducer.Value.Dispose();
 
-    public void Dispose()
-    {
-        // Only dispose if producer was created
-        if (_deadLetterProducer.IsValueCreated)
-            _deadLetterProducer.Value.Dispose();
+          if (_invalidMessageProducer.IsValueCreated)
+              _invalidMessageProducer.Value.Dispose();
+      }
+       
+       ... //existing class code
 
-        if (_invalidMessageProducer.IsValueCreated)
-            _invalidMessageProducer.Value.Dispose();
-    }
-}
 ```
 
 ### Producer Configuration
@@ -155,12 +162,45 @@ The DLQ topic creation behavior must match the data topic's `MakeChannels` setti
 
 This ensures consistency: if a user has opted into automatic topic creation for their data topics, DLQ topics will also be created automatically.
 
+### Rejecting a Message with a DLQ or Invalid Message Channel
+
+The reject method has a `MessageRejectionReason` which indicates whether the rejection is for a:
+
+- `MessageRejectionReason.DeliveryError` in which case we should reject to the `_deadLetterProducer`
+- `MessageRejectionReason.Unacceptable` in which case we should reject to the `_invalidMessageProducer`
+
+We should then reject to the appropriate producer. Note that if there is no `_invalidMessageProducer` and the reason 
+is `MessageRejectionReason.Unacceptable` but there is a  `_deadLetterProducer` then we should use the  
+`_deadLetterProducer` for that message instead.
+
 ```csharp
-public class KafkaPublication
+
+ public bool Reject(Message message, MessageRejectionReason? reason = null)
 {
-    public RoutingKey Topic { get; set; }
-    public OnMissingChannel MakeChannels { get; set; } = OnMissingChannel.Create;
-    // ... other properties
+    if (_deadLetterProducer is null && _invalidMessageProducer is null)
+    {
+        Acknowledge(message);
+        return true;
+    }
+    
+    var enrichedMessage = EnrichMessageWithMetadata(messageToReject, rejectionReason);
+    
+    if ( _invalidMessageProducer is null && reason.RejectionReason ==  MessageRejectionReason.Unacceptable)
+    {
+        _invalidMessageProducer.Send(enrichedMessage);
+         Acknowledge(message); 
+         return true;
+    }
+    
+    if ( _deadLetterProducer is null && reason.RejectionReason !=  MessageRejectionReason.Unknown)
+    {
+        _deadLetterProducer.Send(message);
+         Acknowledge(enrichedMessage); 
+         return true; 
+    } 
+    
+    Acknowledge(message);
+    return true; 
 }
 ```
 
@@ -180,9 +220,7 @@ If producing to the DLQ fails, we have a critical decision: what do we do with t
 ```csharp
 try
 {
-    // Accessing .Value triggers thread-safe lazy initialization
-    var enrichedMessage = EnrichMessageWithMetadata(messageToReject, rejectionReason);
-    _deadLetterProducer.Value.Send(enrichedMessage);
+  ... 
 }
 catch (Exception ex)
 {
