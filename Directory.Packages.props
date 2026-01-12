@@ -2,14 +2,14 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AwsDynamoDbV4>4.0.10.6</AwsDynamoDbV4>
+    <AwsDynamoDbV4>4.0.10.7</AwsDynamoDbV4>
     <AWSSDKIdentityManagementV4>4.0.9.3</AWSSDKIdentityManagementV4>
     <AWSSDKSchedulerV4>4.0.2.9</AWSSDKSchedulerV4>
-    <AWSSDKV4>4.0.16.3</AWSSDKV4>
+    <AWSSDKV4>4.0.17</AWSSDKV4>
     <AWSSecurityTokenV4>4.0.5.5</AWSSecurityTokenV4>
-    <AWSSQSV4>4.0.2.10</AWSSQSV4>
-    <AWSSDKSimpleNotificationServiceV4>4.0.2.12</AWSSDKSimpleNotificationServiceV4>
-    <AWSSDKExtensionsNETCoreSetup>4.0.3.18</AWSSDKExtensionsNETCoreSetup>
+    <AWSSQSV4>4.0.2.11</AWSSQSV4>
+    <AWSSDKSimpleNotificationServiceV4>4.0.2.13</AWSSDKSimpleNotificationServiceV4>
+    <AWSSDKExtensionsNETCoreSetup>4.0.3.19</AWSSDKExtensionsNETCoreSetup>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
@@ -22,7 +22,7 @@
     <PackageVersion Include="AWSSDK.SQS" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.26.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.13.0.0" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.13.0" />
     <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.13.0" />
@@ -88,7 +88,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="NUnit3TestAdapter" Version="6.0.1" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="6.1.0" />
     <PackageVersion Include="OpenTelemetry" Version="1.14.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.14.0-beta.2" />
     <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.14.0" />
@@ -137,7 +137,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="FakeItEasy" Version="8.3.0" />
+    <PackageVersion Include="FakeItEasy" Version="9.0.0" />
     <PackageVersion Include="xunit.v3" Version="3.1.0" />
     <PackageVersion Include="xunit.v3.runner.msbuild" Version="3.1.0" />
   </ItemGroup>
@@ -162,7 +162,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.11" />
     <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="9.0.3" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
-    <PackageVersion Include="Npgsql" Version="10.0.0" />
+    <PackageVersion Include="Npgsql" Version="10.0.1" />
     <PackageVersion Include="TickerQ" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
