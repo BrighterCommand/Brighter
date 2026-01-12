@@ -239,18 +239,18 @@ public string Status { get; set; }
 - The license should be at the very top of each source file, before any using statements or code.
 - We use the MIT license.
 - You should add your name and the year, if it is a new file.
-- You should put the license comment in a `# region License` block
+- You should put the license comment in a `#region Licence` block (note: British spelling, no space)
 - An LLM should use the name and year of the contributor instructing the LLM
 - As an example
 
 ```csharp
-#region License
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © [Year] [Your Name] [Your Contact Email]
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -259,7 +259,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -267,7 +267,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
-# endregion
+#endregion
 ```
 
 ## Dependency Management
