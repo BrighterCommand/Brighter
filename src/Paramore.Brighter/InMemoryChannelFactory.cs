@@ -60,6 +60,9 @@ namespace Paramore.Brighter
             var deadLetterSupport = subscription as IUseBrighterDeadLetterSupport;
             var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey; 
             
+            var invalidMessageSupport = subscription as IUseBrighterInvalidMessageSupport;
+            var invalidMessageKey = invalidMessageSupport?.InvalidMessageRoutingKey;
+            
             return new Channel(
                 subscription.ChannelName,
                 subscription.RoutingKey,
@@ -68,6 +71,7 @@ namespace Paramore.Brighter
                     _internalBus, 
                     _timeProvider,
                     deadLetterKey,  
+                    invalidMessageKey,
                     ackTimeout: _ackTimeout),
                 subscription.BufferSize
             );
