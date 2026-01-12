@@ -21,6 +21,12 @@
 - **Service Activator**: Built-in message consumer for processing messages from queues
 - **Observability**: Built-in support for distributed tracing and monitoring
 
+## Prerequisites
+
+- **.NET 8.0 or later** - Brighter targets .NET 8, 9, and 10
+- **IDE** - Visual Studio 2022+, VS Code, or JetBrains Rider
+- **Docker** (optional) - For running message brokers and databases locally during development
+
 ## Quick Start
 
 ### Installation
@@ -77,6 +83,15 @@ commandProcessor.Send(new GreetingCommand("World"));
 ```
 
 > **Note:** For async operations, use `RequestHandlerAsync<T>` and override `HandleAsync()` instead, then call `SendAsync()`.
+
+### What's Next?
+
+Now that you've seen the basics, explore more capabilities:
+
+1. **[Out-of-Process Messaging](#out-of-process-messaging)** - Use external message brokers for microservices communication
+2. **[Middleware Pipeline](#middleware-pipeline)** - Add retry, circuit breaker, and logging via attributes
+3. **[Outbox Pattern](#outbox-pattern-for-reliable-messaging)** - Ensure reliable message delivery with transactional outbox
+4. **[Full Documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/)** - Comprehensive guides, tutorials, and advanced patterns
 
 ### Out-of-Process Messaging
 

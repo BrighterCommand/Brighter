@@ -4,6 +4,58 @@
 
 Use this file to follow our coding guidelines when submitting to Brighter.
 
+## Table of Contents
+
+- [How to Use This File](#how-to-use-this-file)
+- [First Time Contributing?](#first-time-contributing)
+- [Architecture Decision Records](#architecture-decision-records)
+- [Code Style](#code-style)
+- [Testing](#testing)
+  - [TDD Style](#tdd-style)
+  - [Generated Tests](#generated-tests)
+- [Documentation](#documentation)
+  - [Licensing](#licensing)
+- [Dependency Management](#dependency-management)
+- [Making Changes](#making-changes)
+  - [Build & Test](#build--test)
+  - [Commit Messages](#commit-messages)
+  - [Repository Branching Strategy](#repository-branching-strategy)
+  - [Submitting Changes](#submitting-changes)
+- [Project Structure](#project-structure)
+
+---
+
+## First Time Contributing?
+
+Welcome! Here's how to get started:
+
+### Quick Setup
+1. Fork and clone the repository
+2. Ensure you have .NET 8 SDK or later installed: `dotnet --version`
+3. Build the solution: `dotnet build Brighter.sln`
+4. Run core tests (no external dependencies): `dotnet test tests/Paramore.Brighter.Core.Tests`
+
+### Your First Contribution
+1. Look for issues labeled ["good first issue"](https://github.com/BrighterCommand/Brighter/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+2. Comment on the issue to let others know you're working on it
+3. Read the relevant sections below:
+   - [Code Style](#code-style) - Understand our conventions (C# 12-14 standards)
+   - [Testing](#testing) - Learn our TDD approach
+   - [Documentation](#documentation) - XML doc requirements
+4. Make your changes following our guidelines
+5. Submit a PR targeting the `master` branch
+
+### Key Guidelines at a Glance
+- ✅ Use TDD where possible (write tests first)
+- ✅ Add XML documentation to all public APIs
+- ✅ Constants use `ALL_CAPS` naming convention
+- ✅ Include license header: `#region Licence` (British spelling)
+- ✅ Use Conventional Commits for commit messages
+- ✅ Use modern C# (we target .NET 8-10, compile with .NET 10 / C# 14)
+- ✅ Core tests use in-memory implementations (no external dependencies needed)
+
+---
+
 ## Architecture Decision Records
 
 - If adding a new capability to our framework, write an Architecture Decision Record (ADR)
