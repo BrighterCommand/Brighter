@@ -68,12 +68,12 @@ Use dash-case (aka kebab-case) for the [Title] of the ADR.
 - The license should be at the very top of each source file, before any using statements or code.
 - We use the MIT license.
 - You should add your name and the year, if it is a new file.
-- You should put the license comment in a `# region License` block
+- You should put the license comment in a `#region Licence` block (note: British spelling, no space)
 - An LLM should use the name and year of the contributor instructing the LLM
 - As an example
 
 ```csharp
-#region License
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © [Year] [Your Name] [Your Contact Email]
@@ -96,5 +96,5 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
-# endregion
+#endregion
 ```
