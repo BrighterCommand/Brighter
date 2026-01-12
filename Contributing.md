@@ -98,7 +98,7 @@ Our code is organized as follows:
 
 - If adding a new capability to our framework, write an Architecture Decision Record (ADR)
   - The ADR should focus on the why of your decision, over implementation details, which can be better found in the code.
-  - Follow the format defined in [ADR 0001](/Users/ian.cooper/CSharpProjects/github/BrighterCommand/Brighter/docs/adr/0001-record-architecture-decisions.md)
+  - Follow the format defined in [ADR 0001](docs/adr/0001-record-architecture-decisions.md)
   - Use the ADR to agree what you want to do, before you do it.
   - Use the ADR to signal to others why Brighter is built the way it is, to others, including future maintainers.
 
@@ -209,6 +209,111 @@ Our code is organized as follows:
     - Some of our older code uses older conventions.
     - Follow the boy scout rule, and fix these, as part of your work.
 
+## Testing
+
+- Use TDD where possible.
+- Write developer tests using xUnit.
+- Name test methods in the format: When_[condition]_should_[expected_behavior]. Name test classes [behavior]Tests for the behavior being tested across all tests in the file, for example CommandProcessorPostBoxBulkClearAsyncTests.
+- Ensure all new features and bug fixes include appropriate test coverage.
+
+### TDD Style
+
+- We write developer tests
+  - Failure of a test case implicates the most recent edit.
+  - Do not use mocks to isolate the System Under Test (SUT).
+    - We prefer developer tests that implicate the most recent edit, not isolation of classes.
+    - You might want to watch [this video](http://vimeo.com/68375232) to understand our preferred testing approach
+    - Or review [TDD Revisited](https://github.com/iancooper/Presentations/blob/master/Kent%20Beck%20Style%20TDD%20-%20Seven%20Years%20After.pdf)
+- Where possible, we are test first
+  - Red: Write a failing test
+  - Green: Make the test pass, commit any sins necessary to move fast
+  - Refactor: Improve the design of the code.
+- Where possible, avoid writing tests after.
+  - This will not give you scope control - only writing the code required by tests.
+    - You should only write the code necessary for a test to pass; do not write speculative code.
+  - It will not push you to focus on design of your classes for behavior.
+    - Pay attention to the usability of your class and method; it should be self-describing.
+- Where possible, avoid writing tests after.
+  - This will not give you scope control - only writing the code required by tests.
+    - You should only write the code necessary for a test to pass; do not write speculative code.
+  - It will not push you to focus on design of your classes for behavior.
+    - Pay attention to the usability of your class and method; it should be self-describing.
+  - We accept test after when working with I/O implementations, where test-first is impractical.
+- Tests should confirm the behavior of the SUT.
+  - A test is a specification-first exploration of the behavior of the system.
+    - A test provides an executable specification, of a given behavior.
+  - Tests should be coupled to the behavior of the system and not to the implementation details.
+    - It should be possible to refactor implementation details, without breaking tests.
+  - Tests should use the Arrange/Act/Assert structure; make it explicit with comments i.e. //Arrange //Act //Assert
+    - The Arrange should set up any pre-conditions for the test.
+    - The Arrange code should be within the constructor of the test class, if shared by multiple tests
+    - The Arrange code should use the Evident Data pattern.
+      - In Evident Data we highlight the state that impacts the test outcome.
+      - We may use the Test Data Builder pattern to hide noise, so as to focus on Evident Data.
+- The trigger for a new test is a new behavior.
+  - The trigger for a new test is NOT a new method.
+  - The next test should always be the most obvious step you can make towards implementing the requirement
+- Only test exports from an assembly
+  - To be clear, this means an access modifier of public on methods on public classes.
+  - Do not test details, such as methods on internal classes, or private methods.
+- Do not expose more than is necessary from an assembly
+  - An assembly is a module, it's surface area should be as narrow as possible.
+  - Do not make export classes or methods from a module to test them; we only test exports from modules, not implementation details.
+  - By following the rules for only testing behaviors, you only need to write tests for the behaviors exposed from the module not its details.
+  - Private or Internal classes used in the implementation do not need tests - they are covered by the behavior that led to their creation.
+- Use fakes or mocks for I/O for testing core libraries such as Paramore.Brighter or Paramore.Brighter.ServiceActivator
+  - Consider writing in-memory replacements for I/O, that could be used in a production system, over a fake or mock.
+  - Look for existing classes that use the naming convention InMemory*
+  - Use the naming convention InMemory for your own in-memory implementations.
+  - See [ADR 0023](docs/adr/0023-reactor-and-nonblocking-io.md) for advice on how to replace I/O.
+- Do NOT use fakes or mocks for isolating a class.
+  - We use developer tests: isolation is to the most recent edit, not a class.
+  - Do not inject dependencies into a constructor or property for test isolation
+- You MAY use fakes or mocks (test doubles) for I/O or the strategy pattern. Prefer in-memory alternatives to fakes to mocks.
+  - You may use a test double to replace I/O as it is slow and has shared fixture making tests brittle.
+  - You should look at using an in-memory substitute if testing core functionality that can use a range of alternative I/O. For example you can use an in-memory substitute such as InMemoryMessageProducer or InMemoryOutbox.
+  - If you are testing the implementation of a messaging gateway (transport), outbox, inbox or other I/O adapter, you should create a suite of tests that use those directly to prove the implementation works. We separate these into test assemblies that require the dependency on a broker or database to run. This allows the core tests, that substitute I/O to run without additional dependencies, and indicates what dependencies you need to run a particular test suite.
+  or use of the strategy pattern to satisfy the open-closed principle.
+- Only add code needed to satisfy a behavioral requirement expressed in a test.
+  - Do not add speculative code, the need for which is not indicated by test.
+
+### Generated Tests
+
+- Brighter uses a test generation tool to ensure consistency across provider implementations (e.g., outbox/inbox implementations for different databases).
+- Generated tests provide a baseline test suite that all providers must pass, ensuring consistent behavior across implementations.
+- The test generator uses Liquid templates to create test code based on a `test-configuration.json` file in each test project.
+
+#### How to Generate Tests
+
+To generate tests for all test projects, run one of the following scripts from the root directory:
+
+**On Linux/macOS:**
+```bash
+./generate-test.sh
+```
+
+**On Windows:**
+```powershell
+.\generate-test.ps1
+```
+
+**For a specific test project:**
+```bash
+dotnet run --project tools/Paramore.Brighter.Test.Generator -- --file tests/[YourTestProject]/test-configuration.json
+```
+
+#### When to Regenerate Tests
+
+- When templates are updated in `tools/Paramore.Brighter.Test.Generator/Templates/`
+- When adding a new provider implementation that needs the standard test suite
+- When updating test patterns to ensure all providers follow the new pattern
+
+#### Customizing Generated Tests
+
+- Generated tests can be customized after generation for provider-specific edge cases
+- Each test project should have a `test-configuration.json` file specifying provider-specific details
+- See [ADR 0035](docs/adr/0035-geneated-test.md) for more details on the test generation architecture
+
 ## Documentation
 
 - Update or add Documentation comments for all exports from assemblies.
@@ -293,79 +398,6 @@ THE SOFTWARE. */
 
 # endregion
 ```
-
-## Testing
-
-- Use TDD where possible.
-- Write developer tests using xUnit.
-- Name test methods in the format: When_[condition]_should_[expected_behavior]. Name test classes [behavior]Tests for the behavior being tested across all tests in the file, for example CommandProcessorPostBoxBulkClearAsyncTests.
-- Ensure all new features and bug fixes include appropriate test coverage.
-
-### TDD Style
-
-- We write developer tests
-  - Failure of a test case implicates the most recent edit.
-  - Do not use mocks to isolate the System Under Test (SUT).
-    - We prefer developer tests that implicate the most recent edit, not isolation of classes.
-    - You might want to watch [this video](http://vimeo.com/68375232) to understand our preferred testing approach
-    - Or review [TDD Revisited](https://github.com/iancooper/Presentations/blob/master/Kent%20Beck%20Style%20TDD%20-%20Seven%20Years%20After.pdf)
-- Where possible, we are test first
-  - Red: Write a failing test
-  - Green: Make the test pass, commit any sins necessary to move fast
-  - Refactor: Improve the design of the code.
-- Where possible, avoid writing tests after.
-  - This will not give you scope control - only writing the code required by tests.
-    - You should only write the code necessary for a test to pass; do not write speculative code.
-  - It will not push you to focus on design of your classes for behavior.
-    - Pay attention to the usability of your class and method; it should be self-describing.
-- Where possible, avoid writing tests after.
-  - This will not give you scope control - only writing the code required by tests.
-    - You should only write the code necessary for a test to pass; do not write speculative code.
-  - It will not push you to focus on design of your classes for behavior.
-    - Pay attention to the usability of your class and method; it should be self-describing.
-  - We accept test after when working with I/O implementations, where test-first is impractical.
-- Tests should confirm the behavior of the SUT.
-  - A test is a specification-first exploration of the behavior of the system.
-    - A test provides an executable specification, of a given behavior.
-  - Tests should be coupled to the behavior of the system and not to the implementation details.
-    - It should be possible to refactor implementation details, without breaking tests.
-  - Tests should use the Arrange/Act/Assert structure; make it explicit with comments i.e. //Arrange //Act //Assert
-    - The Arrange should set up any pre-conditions for the test.
-    - The Arrange code should be within the constructor of the test class, if shared by multiple tests
-    - The Arrange code should use the Evident Data pattern.
-      - In Evident Data we highlight the state that impacts the test outcome.
-      - We may use the Test Data Builder pattern to hide noise, so as to focus on Evident Data.
-- The trigger for a new test is a new behavior.
-  - The trigger for a new test is NOT a new method.
-  - The next test should always be the most obvious step you can make towards implementing the requirement
-- Only test exports from an assembly
-  - To be clear, this means an access modifier of public on methods on public classes.
-  - Do not test details, such as methods on internal classes, or private methods.
-- Do not expose more than is necessary from an assembly
-  - An assembly is a module, it's surface area should be as narrow as possible.
-  - Do not make export classes or methods from a module to test them; we only test exports from modules, not implementation details.
-  - By following the rules for only testing behaviors, you only need to write tests for the behaviors exposed from the module not its details.
-  - Private or Internal classes used in the implementation do not need tests - they are covered by the behavior that led to their creation.
-- Use fakes or mocks for I/O for testing core libraries such as Paramore.Brighter or Paramore.Brighter.ServiceActivator
-  - Consider writing in-memory replacements for I/O, that could be used in a production system, over a fake or mock.
-  - Look for existing classes that use the naming convention InMemory*
-  - Use the naming convention InMemory for your own in-memory implementations.
-  - See [ADR 0023](docs/adr/0023-reactor-and-nonblocking-io.md) for advice on how to replace I/O.
-- Do NOT use fakes or mocks for isolating a class.
-  - We use developer tests: isolation is to the most recent edit, not a class.
-  - Do not inject dependencies into a constructor or property for test isolation
-- You MAY use fakes or mocks (test doubles) for I/O or the strategy pattern. Prefer in-memory alternatives to fakes to mocks.
-  - You may use a test double to replace I/O as it is slow and has shared fixture making tests brittle.
-  - You should look at using an in-memory substitute if testing core functionality that can use a range of alternative I/O. For example you can use an in-memory substitute such as InMemoryMessageProducer or InMemoryOutbox.
-  - If you are testing the implementation of a messaging gateway (transport), outbox, inbox or other I/O adapter, you should create a suite of tests that use those directly to prove the implementation works. We separate these into test assemblies that require the dependency on a broker or database to run. This allows the core tests, that substitute I/O to run without additional dependencies, and indicates what dependencies you need to run a particular test suite.
-  or use of the strategy pattern to satisfy the open-closed principle.
-- Only add code needed to satisfy a behavioral requirement expressed in a test.
-  - Do not add speculative code, the need for which is not indicated by test.
-
-### Build & Test
-
-- Use dotnet build and dotnet test to verify changes locally.
-- Ensure all tests pass before submitting a PR.  
 
 ## Making Changes
 

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Description>MySQL inbox provider for Paramore.Brighter Command Processor. Enables inbox pattern implementation for idempotent command and event handling using MySQL as the persistence layer.</Description>
     <Authors>Derek Comartin</Authors>
-    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(BrighterNetNineEarlierTargetFrameworks)</TargetFrameworks>
     <PackageTags>MySQL;Database;Inbox;Idempotent;Command;Event;Command Processor;Relational Database;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
