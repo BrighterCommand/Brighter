@@ -33,14 +33,184 @@ ADR 0034 decided that the `IAmAMessageConsumer` (sync or async) must manage the 
 
 ## Decision
 
+### Kafka Support for Dead Letter and Invalid Message Channels
+
+We will support both a dead letter channel and an invalid message channel for Kafka.
+
+**Implementation**: Extend `KafkaSubscription` to support both `IUseBrighterDeadLetterSupport` and
+`IUseBrighterInvalidMessageSupport`:
+
+```csharp
+ public class KafkaSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
+ {
+     ...
+ }
+```
+
+### Topic Naming
+
+We use the presence, or absence, of `IUseBrighterDeadLetterSupport` to indicate that a `Subscription` supports a
+Brighter defined dead letter queue and the presence, or absence, of `IUseBrighterInvalidMessageSupport` to indicate
+that a `Subscription` supports a Brighter defined invalid message channel.
+
+Both of these interfaces work by providing a `RoutingKey` that need to be passed from the `Subscription` to the
+`Channel`, usually via the `IAmAChannelFactory` (see `InMemoryChannelFactory` as an example).
+
+This means that naming is done by setting the property on the `KafkaSubscription` type. It is set by the user, if 
+they want to use a dead letter channel or an invalid message channel. We do not provide a default name because that 
+would create a DLQ and invalid message channel by default. The optionality is important as many users may not wish to use a dead letter channel with a stream.
+
+**Implementation**: We should extend the `KafkaSubscription` constructor to support the relevant routing keys as
+optional parameters (i.e., can be null)
+
+```csharp
+// Example configuration with custom names
+var subscription = new KafkaSubscription<OrderCommand>(
+    name: new SubscriptionName("orders-consumer"),
+    channelName: new ChannelName("orders"),
+    routingKey: new RoutingKey("orders"),
+    groupId: "order-service",
+    makeChannels: OnMissingChannel.Create),
+    deadLetterRoutingKey: new RoutingKey("failed-orders"),
+    invalidMessageRoutingKey: new RoutingKey("invalid-orders");
+```
+
+**Same Topic for Both**: If users want to use the same topic for DLQ and invalid messages, they can set both routing keys to the same value. The producer will handle this correctly (ADR 0035 creates separate `Lazy<T>` instances but they'll point to the same topic).
+
+#### Topic Naming By Convention
+
+We should provide help with topic naming through a class. 
+
+The class should take a string template in its constructor that can be used to provide the naming strategy for the 
+dead-letter channel and the invalid-message channel. The class then provides methods to produce these, i.e. 
+`MakeChannelName`. These methods take a `RoutingKey` as a parameter, 
+allowing the user to create these names from their data channel's `RoutingKey`.
+
+We should provide a default naming template that can be used so that it is not necessary to provide a template.
+
+```csharp
+public class DeadLetterNamingConvention
+{
+    public DeadLetterNamingConvention(string? template = null)
+    {
+        _template = template;
+        if (_template is null)
+            _template = "{0}.dlq"
+    }
+    
+    public RoutingKey MakeChannelName(RoutingKey dataTopic)
+    {
+        return new RoutingKey(string.Format(_template, dataTopic.Value))
+    }
+}
+
+public class InvalidMessageNamingConvention
+{
+    public InvalidMessageNamingConvention(string? template = null)
+    {
+        _template = template;
+        if (_template is null)
+            _template = "{0}.invalid"
+    }
+    
+    public RoutingKey MakeChannelName(RoutingKey dataTopic)
+    {
+        return new RoutingKey(string.Format(_template, dataTopic.Value))
+    }
+}
+
+```
+
+**Default Naming Pattern**:
+- **Dead Letter Queue**: `{original-topic}.dlq`
+- **Invalid Message Channel**: `{original-topic}.invalid`
+
+**Examples**:
+- Data topic: `orders` → DLQ: `orders.dlq`, Invalid: `orders.invalid`
+- Data topic: `customer.events` → DLQ: `customer.events.dlq`, Invalid: `customer.events.invalid`
+
 ### Producer Creation and Lifecycle
+
+### Producer Configuration
+
+The dead letter channel, or invalid message channel, producer will inherit most configuration from the consumer's 
+`KafkaMessagingGatewayConfiguration`:
+- **Bootstrap servers**: Same as consumer
+- **Security settings**: Same as consumer (SASL, SSL, etc.)
+- **Serialization**: Same serializer as data messages
+- **Make channels strategy**: Matches the data topic strategy (create/validate/assume)
+
+The dead letter channel, or invalid message channel, producer will use **different** settings for:
+- **Topic**: The DLQ or invalid message routing key (not the data topic)
+- **Partitioning**: Will use default partitioning (no partition key preservation)
+- **Acks**: Will use `acks=all` for reliability (even if data topic uses `acks=1`)
+
+The DLQ topic creation strategy **MUST match** the data topic's `MakeChannels` setting, as established in ADR 0035.
+
+| Data Topic Setting | DLQ Topic Behavior |
+|-------------------|-------------------|
+| `OnMissingChannel.Create` | Create DLQ topic automatically if missing |
+| `OnMissingChannel.Validate` | Verify DLQ topic exists; throw if missing |
+| `OnMissingChannel.Assume` | Assume DLQ topic exists; let Kafka fail if missing |
+
+**Rationale**: If a user has chosen automatic topic creation for their data topics, they expect the same for error handling topics. If they've chosen to pre-create topics (Validate/Assume), they'll do the same for DLQ topics.
+
+**Implementation**: The `KafkaPublication` for DLQ producers will use the same `MakeChannels` value as the 
+consumer's configuration:
+
+```csharp
+var publication = new KafkaPublication
+{
+    DeadLetterRoutingKey  = _deadLetterSupport.DeadLetterRoutingKey,
+    MakeChannels = _configuration.MakeChannels // Inherit from data topic
+};
+```
+
+### Topic Configuration Defaults
+
+When automatically creating DLQ topics (`OnMissingChannel.Create`), we will use the following defaults:
+
+**Partitions**: `1` (single partition)
+- Rationale: DLQ is typically low-volume; ordering within DLQ is less critical
+- Users can manually create with more partitions if needed
+
+**Replication Factor**: Match cluster default (or `min.insync.replicas` if configured)
+- Rationale: DLQ should be as durable as data topics
+- Kafka will use broker's `default.replication.factor` setting
+
+**Retention**: `7 days` (168 hours)
+- Rationale: Longer than typical data topics (often 1-3 days) to allow investigation
+- Users can override via manual topic creation or broker defaults
+
+**Compression**: Match data topic compression (inherit from producer config)
+- Rationale: Consistency with data topic behavior
+
+**Cleanup Policy**: `delete` (time-based retention)
+- Rationale: DLQ messages should eventually be removed; not a compacted log
+
+We should expose these settings via the `IUseBrighterDeadLetterSuport` and `IUseBrighterInvalidMessageSupport`
+interfaces to allow a user to override these defaults on their `Subscription`.
+
+We should set the value of these defaults in concrete implementations such i.e. `KafkaSubscription`
+
+#### Producer Creation
 
 The `KafkaMessageConsumer` and `KafkaMessageConsumerAsync` will create their own `KafkaMessageProducer` or `KafkaMessageProducerAsync` instances for DLQ/invalid message publishing.
 
-**Creation Trigger**: We only create the producer for the DLQ or the invalid message channel, if the routing key for 
+The `KafkaMessageProducer` will act on the `MakeChannels` setting of the `KafkaPublication` when its `Init` method
+is called. We typically call this via the `KafkaMessageProducerFactory` calling its `Create` method. We do not need
+the `KafkaProducerRegistryFactory` in this case, as we do not intend to look up the producer for a given message, as
+we already have the message to send.
+
+**Implementation**: We should use the `KafkaMessageProducer` to build the producers for the dead letter
+and invalid message channel, passing it a `KafkaPublication` derived from the `KafkaPublication` of the data topic.
+**Implementation** We must call the `KafkaMessageProducer`'s `Init` method to ensure that any topics are 
+created/validated in accordance with the `MakeChannels` parameter.
+
+**Creation Trigger**: We only create the producer for the DLQ or the invalid message channel, if the routing key for
 them is not null.
 - We need to add the paramters for `deadLetterTopic` and `invalidMessageTopic` to the constructor
-- We need to assign them to `_deadLetterTopic` and `_invalidMessageTopic` 
+- We need to assign them to `_deadLetterTopic` and `_invalidMessageTopic`
 
 **Creation Timing**: The DLQ producer will be created **lazily** on first rejection:
 - Not created in constructor (avoid unnecessary producer if never used)
@@ -54,8 +224,6 @@ them is not null.
 - Producer shares the consumer's lifetime
 
 **Thread Safety**: Uses `Lazy<T>` for thread-safe lazy initialization to handle concurrent first-rejection scenarios.
-
-
 
 ```csharp
         ... //existing KafkaMessageConsumerCode
@@ -106,7 +274,9 @@ them is not null.
               MakeChannels = _configuration.MakeChannels // Match data topic strategy
           };
 
-          return new KafkaMessageProducer(_configuration, publication);
+          var producer = new KafkaMessageProducer(_configuration, publication);
+          producer.Init();
+          return producer;
        }
 
        private IAmAMessageProducerSync CreateInvalidMessageProducer()
@@ -120,7 +290,9 @@ them is not null.
               MakeChannels = _configuration.MakeChannels
           };
 
-          return new KafkaMessageProducer(_configuration, publication);
+          var producer = new KafkaMessageProducer(_configuration, publication);
+          producer.Init();
+          return producer;
        }
        
        public void Dispose()
@@ -136,31 +308,6 @@ them is not null.
        ... //existing class code
 
 ```
-
-### Producer Configuration
-
-The DLQ producer will inherit most configuration from the consumer's `KafkaMessagingGatewayConfiguration`:
-- **Bootstrap servers**: Same as consumer
-- **Security settings**: Same as consumer (SASL, SSL, etc.)
-- **Serialization**: Same serializer as data messages
-- **Make channels strategy**: Matches the data topic strategy (create/validate/assume)
-
-The DLQ producer will use **different** settings for:
-- **Topic**: The DLQ or invalid message routing key (not the data topic)
-- **Partitioning**: Will use default partitioning (no partition key preservation)
-- **Acks**: Will use `acks=all` for reliability (even if data topic uses `acks=1`)
-
-### Topic Management and Auto-Creation
-
-The DLQ topic creation behavior must match the data topic's `MakeChannels` setting:
-
-| MakeChannels | Behavior |
-|--------------|----------|
-| `Create` | Create DLQ topic if it doesn't exist (with default configs) |
-| `Validate` | Verify DLQ topic exists; throw if missing |
-| `Assume` | Assume DLQ topic exists; let Kafka fail if missing |
-
-This ensures consistency: if a user has opted into automatic topic creation for their data topics, DLQ topics will also be created automatically.
 
 ### Rejecting a Message with a DLQ or Invalid Message Channel
 
