@@ -13,11 +13,8 @@ public abstract class MemoryLeakTestBase : IDisposable
 {
     protected MemoryLeakTestBase()
     {
-        // Initialize dotMemory output if available
-        if (DotMemoryUnitTestOutput.IsAvailable)
-        {
-            DotMemoryUnitTestOutput.SetOutputMethod(Console.WriteLine);
-        }
+        // dotMemory Unit will handle initialization automatically
+        Console.WriteLine("MemoryLeakTestBase initialized");
     }
 
     /// <summary>
@@ -26,12 +23,6 @@ public abstract class MemoryLeakTestBase : IDisposable
     /// <typeparam name="THandler">The handler type to check for leaks</typeparam>
     protected void AssertNoLeakedHandlers<THandler>()
     {
-        if (!DotMemoryUnitTestOutput.IsAvailable)
-        {
-            Console.WriteLine("dotMemory Unit not available - skipping handler leak check");
-            return;
-        }
-
         dotMemory.Check(memory =>
         {
             var survivors = memory.GetObjects(where => where.Type.Is<THandler>());
@@ -49,12 +40,6 @@ public abstract class MemoryLeakTestBase : IDisposable
     /// <typeparam name="TContext">The DbContext type to check for leaks</typeparam>
     protected void AssertDbContextsDisposed<TContext>()
     {
-        if (!DotMemoryUnitTestOutput.IsAvailable)
-        {
-            Console.WriteLine("dotMemory Unit not available - skipping DbContext leak check");
-            return;
-        }
-
         // Force thorough garbage collection
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -73,7 +58,7 @@ public abstract class MemoryLeakTestBase : IDisposable
 
     /// <summary>
     /// Asserts that memory growth stays within acceptable bounds over repeated operations.
-    /// Includes warmup phase and periodic GC to get accurate measurements.
+    /// Uses GC.GetTotalMemory for measurements as it's more reliable than dotMemory snapshots.
     /// </summary>
     /// <param name="operation">The operation to execute repeatedly</param>
     /// <param name="iterations">Number of times to execute the operation</param>
@@ -85,16 +70,12 @@ public abstract class MemoryLeakTestBase : IDisposable
         long maxGrowthBytes,
         string operationName)
     {
-        if (!DotMemoryUnitTestOutput.IsAvailable)
-        {
-            Console.WriteLine($"dotMemory Unit not available - skipping memory growth check for {operationName}");
-            return;
-        }
+        // Force GC and get baseline
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
 
-        // Take initial snapshot
-        var initialMemory = dotMemory.Check();
-        var initialBytes = initialMemory.TotalMemory;
-
+        var initialBytes = GC.GetTotalMemory(false);
         Console.WriteLine($"{operationName}: Initial memory = {initialBytes:N0} bytes");
 
         // Execute operations with periodic GC
@@ -114,11 +95,9 @@ public abstract class MemoryLeakTestBase : IDisposable
         GC.WaitForPendingFinalizers();
         GC.Collect();
 
-        // Take final snapshot
-        var finalMemory = dotMemory.Check();
-        var finalBytes = finalMemory.TotalMemory;
+        var finalBytes = GC.GetTotalMemory(false);
         var growth = finalBytes - initialBytes;
-        var growthPerIteration = growth / iterations;
+        var growthPerIteration = iterations > 0 ? growth / iterations : 0;
 
         Console.WriteLine($"{operationName}: Final memory = {finalBytes:N0} bytes");
         Console.WriteLine($"{operationName}: Total growth = {growth:N0} bytes");
