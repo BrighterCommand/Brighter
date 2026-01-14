@@ -7,7 +7,6 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
-using Xunit.Abstractions;
 using Acks = Confluent.Kafka.Acks;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;

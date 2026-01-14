@@ -11,21 +11,17 @@ using Microsoft.Extensions.Configuration;
 namespace Paramore.Brighter.MemoryLeak.Tests.Infrastructure;
 
 /// <summary>
-/// Test server wrapper for the GreetingsWeb API using WebApplicationFactory.
+/// Test server which runs the GreetingsWeb API sample.
+/// I uses WebApplicationFactory to start the API
 /// Provides in-process testing with TestServer for fast, deterministic tests.
 /// </summary>
 public class WebApiTestServer : WebApplicationFactory<Startup>, IDisposable
 {
-    private readonly string _environment;
-
-    public WebApiTestServer(string environment = "Development")
-    {
-        _environment = environment;
-    }
-
+    private const string ENVIRONMENT_NAME = "ASPNETCORE_ENVIRONMENT";
+    
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment(_environment);
+        builder.UseEnvironment(ENVIRONMENT_NAME);
 
         // Configure test-specific settings
         builder.ConfigureAppConfiguration((context, config) =>
@@ -33,18 +29,13 @@ public class WebApiTestServer : WebApplicationFactory<Startup>, IDisposable
             // Add in-memory configuration for tests
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["ASPNETCORE_ENVIRONMENT"] = ENVIRONMENT_NAME,
                 // Use RabbitMQ for messaging (should be running via Docker)
-                ["BRIGHTER_TRANSPORT"] = "rmq",
+                ["BRIGHTER_TRANSPORT"] = "RabbitMQ",
 
                 // Use SQLite in-memory database for fast tests
-                // Using shared cache mode to support concurrent connections
-                ["DATABASE_TYPE_ENV"] = "sqlite",
-                ["Greetings_Database"] = "Data Source=file:memdb1?mode=memory&cache=shared",
+                ["DATABASE_TYPE_ENV"] = "Sqlite",
 
-                // Brighter configuration - disable outbox for Phase 1 tests
-                // Phase 1 focuses on handler/DbContext lifecycle, not message delivery
-                ["Brighter:UseInbox"] = "false",  // Inbox not needed for API tests
-                ["Brighter:UseOutbox"] = "false",  // Disabled to avoid outbox sweeper issues in tests
             });
         });
     }

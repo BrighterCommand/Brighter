@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading;
 using Paramore.Test.Helpers.Base;
 using Paramore.Test.Helpers.Extensions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Paramore.Test.Helpers.TestOutput
 {

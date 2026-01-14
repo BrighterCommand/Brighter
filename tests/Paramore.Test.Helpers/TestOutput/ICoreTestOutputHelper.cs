@@ -1,6 +1,6 @@
 ﻿using System;
 using Paramore.Test.Helpers.Base;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Paramore.Test.Helpers.TestOutput
 {

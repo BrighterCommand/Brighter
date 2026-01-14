@@ -9,14 +9,9 @@ namespace Paramore.Brighter.MemoryLeak.Tests.Infrastructure;
 /// Generates HTTP load against the WebAPI test server with configurable concurrency.
 /// Tracks success/failure counts for verification.
 /// </summary>
-public class LoadGenerator
+public class LoadGenerator(WebApiTestServer server)
 {
-    private readonly WebApiTestServer _server;
-
-    public LoadGenerator(WebApiTestServer server)
-    {
-        _server = server ?? throw new ArgumentNullException(nameof(server));
-    }
+    private readonly WebApiTestServer _server = server ?? throw new ArgumentNullException(nameof(server));
 
     /// <summary>
     /// Runs a load test by sending multiple HTTP requests with controlled concurrency.

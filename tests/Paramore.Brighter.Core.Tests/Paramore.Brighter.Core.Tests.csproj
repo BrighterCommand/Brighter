@@ -2,6 +2,8 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
@@ -15,10 +17,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="FakeItEasy" />
-    <PackageReference Include="GitHubActionsTestLogger">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="GitHubActionsTestLogger"/>
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="OpenTelemetry" />
@@ -27,7 +26,7 @@
     <PackageReference Include="Serilog.Sinks.TestCorrelator" />
     <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Reflection.TypeExtensions" />
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

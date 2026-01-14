@@ -8,7 +8,7 @@ using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server;
 using Paramore.Test.Helpers.Base;
 using Paramore.Test.Helpers.Loggers;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
 {

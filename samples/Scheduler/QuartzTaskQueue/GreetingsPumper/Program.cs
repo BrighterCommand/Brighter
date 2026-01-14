@@ -11,6 +11,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Quartz;
 using Serilog;
 

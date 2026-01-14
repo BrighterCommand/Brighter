@@ -23,12 +23,12 @@ public class WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommitAsync
         _messageFactory = new DefaultMessageFactory();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _outboxProvider.CreateStoreAsync();
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await _outboxProvider.DeleteStoreAsync(_createdMessages);
     }
