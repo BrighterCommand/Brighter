@@ -31,10 +31,24 @@ namespace Paramore.Brighter;
 /// <remarks>
 /// The default template is "{0}.dlq" which appends ".dlq" to the data topic name.
 /// For example, if the data topic is "orders", the dead letter channel will be "orders.dlq".
+/// You can provide a custom template to override this behavior.
 /// </remarks>
 public class DeadLetterNamingConvention
 {
     private const string DEFAULT_TEMPLATE = "{0}.dlq";
+    private readonly string _template;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DeadLetterNamingConvention"/> class.
+    /// </summary>
+    /// <param name="template">
+    /// Optional string template for naming. Use {0} as placeholder for the data topic name.
+    /// If null, defaults to "{0}.dlq".
+    /// </param>
+    public DeadLetterNamingConvention(string? template = null)
+    {
+        _template = template ?? DEFAULT_TEMPLATE;
+    }
 
     /// <summary>
     /// Creates a routing key for the dead letter channel based on the data topic routing key.
@@ -43,6 +57,6 @@ public class DeadLetterNamingConvention
     /// <returns>A <see cref="RoutingKey"/> for the dead letter channel.</returns>
     public RoutingKey MakeChannelName(RoutingKey dataTopic)
     {
-        return new RoutingKey(string.Format(DEFAULT_TEMPLATE, dataTopic.Value));
+        return new RoutingKey(string.Format(_template, dataTopic.Value));
     }
 }
