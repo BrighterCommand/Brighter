@@ -27,8 +27,12 @@ using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public class KafkaSubscription : Subscription
+    public class KafkaSubscription : Subscription, IUseBrighterDeadLetterSupport
     {
+        /// <summary>
+        /// The routing key used for the Dead Letter Channel
+        /// </summary>
+        public RoutingKey? DeadLetterRoutingKey { get; set; }
         /// <summary>
         /// We commit processed work (marked as acked or rejected) when a batch size worth of work has been completed
         /// If the batch size is 1, then there is a low risk of offsets not being committed and therefore duplicates appearing
@@ -141,6 +145,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter channel. Optional.</param>
         /// ///
         public KafkaSubscription(
             SubscriptionName subscriptionName,
@@ -169,8 +174,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
-            Action<ConsumerConfig>? configHook = null) 
-            : base(subscriptionName, channelName, routingKey,  requestType, getRequestType, bufferSize, 
+            Action<ConsumerConfig>? configHook = null,
+            RoutingKey? deadLetterRoutingKey = null)
+            : base(subscriptionName, channelName, routingKey,  requestType, getRequestType, bufferSize,
                 noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
@@ -183,11 +189,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             NumPartitions = numOfPartitions;
             ReplicationFactor = replicationFactor;
             PartitionAssignmentStrategy = partitionAssignmentStrategy;
-            
+            DeadLetterRoutingKey = deadLetterRoutingKey;
+
             if (PartitionAssignmentStrategy == PartitionAssignmentStrategy.CooperativeSticky)
                 throw new ArgumentOutOfRangeException(nameof(partitionAssignmentStrategy),
                     "CooperativeSticky is not supported for with manual commits, see https://github.com/confluentinc/librdkafka/issues/4059");
-            
+
             ConfigHook = configHook;
         }
     }
@@ -223,6 +230,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter channel. Optional.</param>
         public KafkaSubscription(SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
@@ -248,7 +256,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
-            Action<ConsumerConfig>? configHook = null) 
+            Action<ConsumerConfig>? configHook = null,
+            RoutingKey? deadLetterRoutingKey = null) 
             : base(
                 subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
                 channelName ?? new ChannelName(typeof(T).FullName!), 
@@ -269,14 +278,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 sweepUncommittedOffsetsInterval, 
                 isolationLevel, 
                 messagePumpType,
-                numOfPartitions, 
-                replicationFactor, 
-                channelFactory, 
+                numOfPartitions,
+                replicationFactor,
+                channelFactory,
                 makeChannels,
-                emptyChannelDelay, 
-                channelFailureDelay, 
-                partitionAssignmentStrategy, 
-                configHook)
+                emptyChannelDelay,
+                channelFailureDelay,
+                partitionAssignmentStrategy,
+                configHook,
+                deadLetterRoutingKey)
         {
         }
     }
