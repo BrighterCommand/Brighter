@@ -166,33 +166,6 @@ var publication = new KafkaPublication
 };
 ```
 
-### Topic Configuration Defaults
-
-When automatically creating DLQ topics (`OnMissingChannel.Create`), we will use the following defaults:
-
-**Partitions**: `1` (single partition)
-- Rationale: DLQ is typically low-volume; ordering within DLQ is less critical
-- Users can manually create with more partitions if needed
-
-**Replication Factor**: Match cluster default (or `min.insync.replicas` if configured)
-- Rationale: DLQ should be as durable as data topics
-- Kafka will use broker's `default.replication.factor` setting
-
-**Retention**: `7 days` (168 hours)
-- Rationale: Longer than typical data topics (often 1-3 days) to allow investigation
-- Users can override via manual topic creation or broker defaults
-
-**Compression**: Match data topic compression (inherit from producer config)
-- Rationale: Consistency with data topic behavior
-
-**Cleanup Policy**: `delete` (time-based retention)
-- Rationale: DLQ messages should eventually be removed; not a compacted log
-
-We should expose these settings via the `IUseBrighterDeadLetterSuport` and `IUseBrighterInvalidMessageSupport`
-interfaces to allow a user to override these defaults on their `Subscription`.
-
-We should set the value of these defaults in concrete implementations such i.e. `KafkaSubscription`
-
 #### Producer Creation
 
 The `KafkaMessageConsumer` and `KafkaMessageConsumerAsync` will create their own `KafkaMessageProducer` or `KafkaMessageProducerAsync` instances for DLQ/invalid message publishing.
@@ -230,6 +203,8 @@ them is not null.
         
         private readonly Lazy<IAmAMessageProducerSync> _deadLetterProducer;
         private readonly Lazy<IAmAMessageProducerSync> _invalidMessageProducer;
+        private readonly RoutingKey? _deadLetterTopic = null;
+        private readonly RoutingKey? _invalidMessageTopic = null;
        
        public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -309,119 +284,6 @@ them is not null.
 
 ```
 
-### Rejecting a Message with a DLQ or Invalid Message Channel
-
-The reject method has a `MessageRejectionReason` which indicates whether the rejection is for a:
-
-- `MessageRejectionReason.DeliveryError` in which case we should reject to the `_deadLetterProducer`
-- `MessageRejectionReason.Unacceptable` in which case we should reject to the `_invalidMessageProducer`
-
-We should then reject to the appropriate producer. Note that if there is no `_invalidMessageProducer` and the reason 
-is `MessageRejectionReason.Unacceptable` but there is a  `_deadLetterProducer` then we should use the  
-`_deadLetterProducer` for that message instead.
-
-```csharp
-
- public bool Reject(Message message, MessageRejectionReason? reason = null)
-{
-    if (_deadLetterProducer is null && _invalidMessageProducer is null)
-    {
-        Acknowledge(message);
-        return true;
-    }
-    
-    var enrichedMessage = EnrichMessageWithMetadata(messageToReject, rejectionReason);
-    
-    if ( _invalidMessageProducer is null && reason.RejectionReason ==  MessageRejectionReason.Unacceptable)
-    {
-        _invalidMessageProducer.Send(enrichedMessage);
-         Acknowledge(message); 
-         return true;
-    }
-    
-    if ( _deadLetterProducer is null && reason.RejectionReason !=  MessageRejectionReason.Unknown)
-    {
-        _deadLetterProducer.Send(message);
-         Acknowledge(enrichedMessage); 
-         return true; 
-    } 
-    
-    Acknowledge(message);
-    return true; 
-}
-```
-
-### Error Handling for DLQ Production Failures
-
-If producing to the DLQ fails, we have a critical decision: what do we do with the original message?
-
-**Decision**: Log the error and **continue processing** (commit offset for streams, ack for queues).
-
-**Rationale**:
-1. The original message has already failed processing
-2. Blocking the consumer on DLQ failure creates a cascading failure
-3. Logging + alerting on DLQ production failures is sufficient
-4. The message is "lost" but the system continues
-
-**Implementation**:
-```csharp
-try
-{
-  ... 
-}
-catch (Exception ex)
-{
-    _logger.LogError(ex,
-        "Failed to produce message to dead letter queue. " +
-        "Original message offset: {Offset}, Topic: {Topic}",
-        messageToReject.Offset, _topic);
-    // Continue - commit offset anyway
-}
-```
-
-### Offset/Acknowledgment Management
-
-**For Kafka Streams** (offset-based):
-1. Produce message to DLQ
-2. If DLQ production succeeds OR fails: Commit offset
-3. This ensures we don't reprocess the failed message
-
-**For Kafka Queues** (when they arrive):
-1. Produce message to DLQ
-2. If DLQ production succeeds OR fails: Acknowledge message
-3. This ensures we don't reprocess the failed message
-
-The key insight: **rejection means "done with this message"** - whether DLQ production succeeds or fails, we move on.
-
-### Message Metadata for DLQ
-
-When producing to DLQ, we will enrich the message headers with failure metadata:
-
-```csharp
-var enrichedMessage = new Message(
-    new MessageHeader(
-        originalMessage.Header.MessageId,
-        originalMessage.Header.Topic,
-        originalMessage.Header.MessageType,
-        originalMessage.Header.TimeStamp,
-        originalMessage.Header.HandledCount,
-        originalMessage.Header.DelayedMilliseconds)
-    {
-        Bag = new Dictionary<string, object>
-        {
-            ["OriginalTopic"] = _topic,
-            ["OriginalPartition"] = message.Partition,
-            ["OriginalOffset"] = message.Offset,
-            ["RejectionTimestamp"] = DateTimeOffset.UtcNow,
-            ["RejectionReason"] = rejectionReason ?? "Unknown",
-            ["ConsumerGroup"] = _groupId,
-            ["HandlerName"] = GetCurrentHandlerName() // if available
-        }
-    },
-    originalMessage.Body
-);
-```
-
 ### Sync vs Async Producers
 
 Following ADR 0034:
@@ -473,8 +335,6 @@ Both implement the same logic, but with appropriate sync/async semantics.
 - **Lazy creation**: No overhead if DLQ never used (via `Lazy<T>`)
 - **Thread-safe**: `Lazy<T>` ensures thread-safe initialization without explicit locking
 - **Configuration consistency**: DLQ producer inherits consumer settings
-- **Robustness**: DLQ production failures don't block message processing
-- **Topic management**: Auto-creation matches data topic behavior
 - **Clean disposal**: `IsValueCreated` check ensures we only dispose created producers
 
 ### Negative
@@ -482,7 +342,6 @@ Both implement the same logic, but with appropriate sync/async semantics.
 - **No retry on DLQ failure**: If DLQ production fails, message metadata is lost
 - **Additional connections**: Each consumer creates its own DLQ producer (more connections to Kafka)
 - **Resource usage**: DLQ producers consume memory/threads even if rarely used
-- **Offset committed regardless**: Even if DLQ production fails, we move on (potential data loss)
 
 ### Risks and Mitigations
 
@@ -523,17 +382,7 @@ Send via `IAmACommandProcessor.Post()` instead of `IAmAMessageProducer`.
 - Cannot handle InvalidMessageAction (deserialization already failed)
 - More complex lookup via producer registry
 
-### Alternative 3: Retry DLQ Production on Failure
-
-If DLQ production fails, retry N times before giving up.
-
-**Rejected because**:
-- Blocks message processing during retries
-- If DLQ is down, blocking makes problem worse
-- Error path should fail fast, not block
-- Can be added later if needed without breaking changes
-
-### Alternative 4: Write Failed DLQ Messages to Local File
+### Alternative 3: Write Failed DLQ Messages to Local File
 
 If DLQ production fails, write message to local file for later replay.
 

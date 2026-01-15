@@ -11,10 +11,10 @@ This specification covers the implementation of dead letter queue functionality 
 
 ## Workflow Status
 
-- [ ] Requirements defined
-- [ ] Requirements approved
-- [ ] ADRs created
-- [ ] ADRs approved
+- [X] Requirements defined
+- [X] Requirements approved
+- [X] ADRs created
+- [X] ADRs approved
 - [ ] Tasks created
 - [ ] Tasks approved
 - [ ] Implementation complete

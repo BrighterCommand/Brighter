@@ -4,7 +4,7 @@ Date: 2026-01-11
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -39,36 +39,16 @@ From the requirements:
 
 ## Decision
 
-### Message Rejection Reason Enum
+### Rejecting a Message with a DLQ or Invalid Message Channel
 
-We will use a `MessageRejectionReason` enum to classify why a message is being rejected:
+We will use the existing `MessageRejectionReason` enum to classify why a message is being rejected.:
 
-```csharp
-public enum MessageRejectionReason
-{
-    /// <summary>
-    /// Reason unknown or not specified
-    /// </summary>
-    Unknown = 0,
+- `MessageRejectionReason.DeliveryError` in which case we should reject to the `_deadLetterProducer`
+- `MessageRejectionReason.Unacceptable` in which case we should reject to the `_invalidMessageProducer`
 
-    /// <summary>
-    /// Message failed processing due to transient or non-transient delivery error
-    /// Routes to: Dead Letter Queue
-    /// </summary>
-    DeliveryError = 1,
-
-    /// <summary>
-    /// Message could not be deserialized or is malformed
-    /// Routes to: Invalid Message Channel (fallback to DLQ if not configured)
-    /// </summary>
-    Unacceptable = 2
-}
-```
-
-**Usage**:
-- `RejectMessageAction` → `MessageRejectionReason.DeliveryError`
-- `InvalidMessageAction` → `MessageRejectionReason.Unacceptable`
-- Legacy/unknown → `MessageRejectionReason.Unknown` (treated as DeliveryError)
+We should then reject to the appropriate producer. Note that if there is no `_invalidMessageProducer` and the reason
+is `MessageRejectionReason.Unacceptable` but there is a  `_deadLetterProducer` then we should use the  
+`_deadLetterProducer` for that message instead.
 
 ### Routing Decision Logic
 
@@ -127,6 +107,21 @@ The `Reject()` method will route messages based on this decision tree:
          Acknowledge()
          return true
 ```
+
+### Error Handling for DLQ Production Failures
+
+If producing to the DLQ fails, we have a critical decision: what do we do with the original message?
+
+**Decision**: Log the error and **continue processing** (commit offset for streams, ack for queues).
+
+**Rationale**:
+1. The original message has already failed processing
+2. Blocking the consumer on DLQ failure creates a cascading failure
+3. Logging + alerting on DLQ production failures is sufficient
+4. The message is "lost" but the system continues
+
+**Note**: Factory methods in ADR 0035 can return null when routing key not configured, so .Value? null-conditional 
+is intentional
 
 ### Implementation
 
@@ -246,9 +241,12 @@ private Message EnrichMessageWithMetadata(Message message, MessageRejectionReaso
 - `ConsumerGroup`: Which consumer rejected it
 - `RedeliveryCount`: How many times message was attempted (from `HandledCount`)
 
+We will need to implement `GetCurrentPartition()` and `GetCurrentOffset` to complete the metadata.
+
 ### Acknowledgment Timing
 
 **Decision**: Acknowledge **after** successful channel production, but acknowledge **anyway** on production failure.
+The key insight: **rejection means "done with this message"** - whether DLQ production succeeds or fails, we move on.
 
 **Rationale**:
 1. Try to produce to error channel
