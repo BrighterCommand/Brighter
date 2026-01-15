@@ -944,7 +944,8 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Could not determine request type for bulk deposit");
             }
 
-            if (!s_boundBulkDepositCalls.TryGetValue(requestType!, out MethodInfo? bulkDeposit))
+            var cacheKey = $"{requestType}:{transactionType.FullName}";
+            if (!s_boundBulkDepositCalls.TryGetValue(cacheKey, out MethodInfo? bulkDeposit))
             {
                 var bulkDepositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -956,7 +957,7 @@ namespace Paramore.Brighter
 
                 bulkDeposit = bulkDepositMethod?.MakeGenericMethod(typeof(TRequest), transactionType)!;
 
-                s_boundBulkDepositCalls[requestType!] = bulkDeposit;
+                s_boundBulkDepositCalls[cacheKey] = bulkDeposit;
             }
 
             return CallMethodAndPreserveException(() =>
@@ -967,14 +968,14 @@ namespace Paramore.Brighter
         // Calls the deposit post method for a single request of a specific type. The transaction type isn't known
         // until runtime, so is passed as a parameter.
         // We need to bind DepositPost to the type of the request; an IEnumerable<IRequest> loses type information
-        // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
+        // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our
         // generic methods, like DepositPost, assume they have the derived type. This binds DepositPost to the right
         // type before we call it.
         private Id CallDepositPost<TRequest>(
-            TRequest actualRequest, 
+            TRequest actualRequest,
             IAmABoxTransactionProvider? transactionProvider,
-            RequestContext? requestContext, 
-            Dictionary<string, object>? dictionary, 
+            RequestContext? requestContext,
+            Dictionary<string, object>? dictionary,
             string? batchId,
             Type transactionType
         ) where TRequest : class, IRequest
@@ -986,7 +987,8 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Could not determine request type for deposit");
             }
 
-            if (!s_boundDepositCalls.TryGetValue(actualRequestTypeName!, out MethodInfo? deposit))
+            var cacheKey = $"{actualRequestTypeName}:{transactionType.FullName}";
+            if (!s_boundDepositCalls.TryGetValue(cacheKey, out MethodInfo? deposit))
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -998,7 +1000,7 @@ namespace Paramore.Brighter
 
                 deposit = depositMethod?.MakeGenericMethod(actualRequestType, transactionType)!;
 
-                s_boundDepositCalls[actualRequestTypeName!] = deposit;
+                s_boundDepositCalls[cacheKey] = deposit;
             }
 
             return CallMethodAndPreserveException(() =>
@@ -1191,7 +1193,8 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Could not determine request type for bulk deposit");
             }
 
-            if (!s_boundBulkDepositCallsAsync.TryGetValue(requestType!, out MethodInfo? bulkDeposit))
+            var cacheKey = $"{requestType}:{transactionType.FullName}";
+            if (!s_boundBulkDepositCallsAsync.TryGetValue(cacheKey, out MethodInfo? bulkDeposit))
             {
                 var bulkDepositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -1203,7 +1206,7 @@ namespace Paramore.Brighter
 
                 bulkDeposit = bulkDepositMethod?.MakeGenericMethod(typeof(TRequest), transactionType)!;
 
-                s_boundBulkDepositCallsAsync[requestType!] = bulkDeposit;
+                s_boundBulkDepositCallsAsync[cacheKey] = bulkDeposit;
             }
             return CallMethodAndPreserveException(() =>
                 (Task<Id[]>)bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args, continueOnCapturedContext, cancellationToken])!
@@ -1216,9 +1219,9 @@ namespace Paramore.Brighter
         // generic methods, like DepositPost, assume they have the derived type. This binds DepositPostAsync to the right
         // type before we call it.
         Task<Id> CallDepositPostAsync<TRequest>(
-            TRequest actualRequest, 
+            TRequest actualRequest,
             IAmABoxTransactionProvider? tp,
-            RequestContext? rc, 
+            RequestContext? rc,
             Dictionary<string, object>? bag,
             bool? continueOnCapturedContext,
             CancellationToken? cancellationToken,
@@ -1233,7 +1236,8 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Could not determine request type for deposit");
             }
 
-            if (!s_boundDepositCallsAsync.TryGetValue(actualRequestTypeName!, out MethodInfo? deposit))
+            var cacheKey = $"{actualRequestTypeName}:{transactionType.FullName}";
+            if (!s_boundDepositCallsAsync.TryGetValue(cacheKey, out MethodInfo? deposit))
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -1244,7 +1248,7 @@ namespace Paramore.Brighter
                     .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 7);
 
                 deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), transactionType)!;
-                s_boundDepositCallsAsync[actualRequestTypeName!] = deposit;
+                s_boundDepositCallsAsync[cacheKey] = deposit;
             }
 
             return CallMethodAndPreserveException(
@@ -1303,14 +1307,16 @@ namespace Paramore.Brighter
 
         private MethodInfo GetMediatorMethod(string methodName)
         {
-            if (!s_boundMediatorMethods.TryGetValue(methodName, out MethodInfo? method))
+            var mediatorType = _mediator!.GetType();
+            var cacheKey = $"{mediatorType.FullName}.{methodName}";
+
+            if (!s_boundMediatorMethods.TryGetValue(cacheKey, out MethodInfo? method))
             {
-                method = _mediator!
-                    .GetType()
+                method = mediatorType
                     .GetMethods()
                     .Single(x => x.Name == methodName);
 
-                s_boundMediatorMethods[methodName] = method;
+                s_boundMediatorMethods[cacheKey] = method;
             }
 
             return method!;
