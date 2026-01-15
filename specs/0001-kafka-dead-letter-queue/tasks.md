@@ -2,105 +2,214 @@
 
 This document outlines the tasks for implementing the Kafka Dead Letter Queue feature as specified in the requirements and ADRs (0034, 0035, 0036).
 
+## TDD Workflow
+
+Each task follows a strict Test-Driven Development workflow:
+
+1. **RED**: Write a failing test that specifies the behavior
+2. **APPROVAL**: Get approval for the test before proceeding
+3. **GREEN**: Implement minimum code to make the test pass
+4. **REFACTOR**: Improve design while keeping tests green
+
+Tests are written in `tests/Paramore.Brighter.Kafka.Tests/`. Integration tests that require Kafka should use docker-compose-kafka.yaml for test infrastructure.
+
 ## Task List
 
-### Core Infrastructure
+### Phase 1: Naming Convention Classes
 
-- [ ] **Add dead letter and invalid message routing key properties to KafkaSubscription**
-  - KafkaSubscription implements IUseBrighterDeadLetterSupport and IUseBrighterInvalidMessageSupport
-  - Add optional deadLetterRoutingKey parameter to constructors
-  - Add optional invalidMessageRoutingKey parameter to constructors
-  - Properties can be null (DLQ/invalid message channels are optional)
+- [ ] **TEST: DeadLetterNamingConvention uses default template**
+  - Write test: When_creating_dead_letter_name_with_default_template_should_append_dlq
+  - Verify "orders" → "orders.dlq"
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **Create naming convention helper classes**
-  - DeadLetterNamingConvention class with default template "{0}.dlq"
-  - InvalidMessageNamingConvention class with default template "{0}.invalid"
-  - Both support custom templates via constructor parameter
-  - MakeChannelName method creates routing key from data topic routing key
+- [ ] **IMPLEMENT: DeadLetterNamingConvention with default template**
+  - Create DeadLetterNamingConvention class in Paramore.Brighter
+  - Implement MakeChannelName method
+  - Make the test pass
 
-### Consumer Implementation
+- [ ] **TEST: DeadLetterNamingConvention uses custom template**
+  - Write test: When_creating_dead_letter_name_with_custom_template_should_use_template
+  - Verify custom template like "failed-{0}" works
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **Add DLQ producer infrastructure to KafkaMessageConsumer**
-  - Add deadLetterRoutingKey and invalidMessageRoutingKey parameters to constructor
-  - Add lazy producer fields using Lazy<IAmAMessageProducerSync>
-  - Implement CreateDeadLetterProducer factory method (returns null if no routing key)
-  - Implement CreateInvalidMessageProducer factory method (returns null if no routing key)
-  - Producers inherit configuration from consumer (bootstrap servers, security, MakeChannels strategy)
-  - Producers use acks=all for reliability
+- [ ] **IMPLEMENT: DeadLetterNamingConvention with custom template**
+  - Add template constructor parameter
+  - Make the test pass
 
-- [ ] **Add DLQ producer infrastructure to KafkaMessageConsumerAsync**
-  - Add deadLetterRoutingKey and invalidMessageRoutingKey parameters to constructor
-  - Add lazy producer fields using Lazy<IAmAMessageProducerAsync>
-  - Implement CreateDeadLetterProducer factory method (returns null if no routing key)
-  - Implement CreateInvalidMessageProducer factory method (returns null if no routing key)
-  - Async producers match sync implementation pattern
+- [ ] **TEST: InvalidMessageNamingConvention uses default template**
+  - Write test: When_creating_invalid_message_name_with_default_template_should_append_invalid
+  - Verify "orders" → "orders.invalid"
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **Implement message rejection routing in KafkaMessageConsumer.Reject()**
-  - Route MessageRejectionReason.Unacceptable to invalid message channel (fallback to DLQ if not configured)
-  - Route MessageRejectionReason.DeliveryError to dead letter channel
-  - Route MessageRejectionReason.Unknown to dead letter channel
-  - Enrich message with rejection metadata before producing
-  - Handle case where no channels configured (log warning, acknowledge anyway)
-  - Catch and log DLQ production failures but acknowledge anyway to avoid blocking
+- [ ] **IMPLEMENT: InvalidMessageNamingConvention with default template**
+  - Create InvalidMessageNamingConvention class
+  - Implement MakeChannelName method
+  - Make the test pass
 
-- [ ] **Implement message rejection routing in KafkaMessageConsumerAsync.RejectAsync()**
-  - Match sync implementation with async/await patterns
-  - Use async producer methods
+- [ ] **TEST: InvalidMessageNamingConvention uses custom template**
+  - Write test: When_creating_invalid_message_name_with_custom_template_should_use_template
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **Add message enrichment for rejected messages**
-  - Implement EnrichMessageWithMetadata method in KafkaMessageConsumer
-  - Add OriginalTopic, OriginalPartition, OriginalOffset to message bag
-  - Add RejectionTimestamp, RejectionReason to message bag
-  - Add ConsumerGroup, RedeliveryCount (from HandledCount) to message bag
-  - Implement GetCurrentPartition() and GetCurrentOffset() helper methods
+- [ ] **IMPLEMENT: InvalidMessageNamingConvention with custom template**
+  - Add template constructor parameter
+  - Make the test pass
 
-- [ ] **Update Dispose methods to clean up lazy producers**
-  - KafkaMessageConsumer.Dispose checks IsValueCreated before disposing
-  - Dispose both dead letter and invalid message producers if created
-  - KafkaMessageConsumerAsync.Dispose matches sync pattern
+### Phase 2: KafkaSubscription DLQ Support
 
-### Channel Factory Integration
+- [ ] **TEST: KafkaSubscription implements IUseBrighterDeadLetterSupport**
+  - Write test: When_creating_kafka_subscription_with_dead_letter_routing_key_should_expose_property
+  - Verify DeadLetterRoutingKey property is accessible
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **Update ChannelFactory to pass routing keys to consumer**
-  - Extract DeadLetterRoutingKey from subscription if implements IUseBrighterDeadLetterSupport
-  - Extract InvalidMessageRoutingKey from subscription if implements IUseBrighterInvalidMessageSupport
-  - Pass routing keys to KafkaMessageConsumer/Async constructors
+- [ ] **IMPLEMENT: KafkaSubscription implements IUseBrighterDeadLetterSupport**
+  - Add interface implementation
+  - Add DeadLetterRoutingKey property
+  - Add optional deadLetterRoutingKey constructor parameter
+  - Make the test pass
 
-### Testing
+- [ ] **TEST: KafkaSubscription implements IUseBrighterInvalidMessageSupport**
+  - Write test: When_creating_kafka_subscription_with_invalid_message_routing_key_should_expose_property
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **Write unit tests for naming convention classes**
-  - Test default template behavior
-  - Test custom template behavior
-  - Test with various routing key formats
+- [ ] **IMPLEMENT: KafkaSubscription implements IUseBrighterInvalidMessageSupport**
+  - Add interface implementation
+  - Add InvalidMessageRoutingKey property
+  - Add optional invalidMessageRoutingKey constructor parameter
+  - Make the test pass
 
-- [ ] **Write unit tests for message rejection routing logic**
-  - Test Unacceptable routes to invalid message channel
-  - Test Unacceptable falls back to DLQ when no invalid channel
-  - Test DeliveryError routes to DLQ
-  - Test Unknown routes to DLQ
-  - Test no channels configured logs warning and acknowledges
+### Phase 3: Message Rejection to DLQ (Integration Test)
 
-- [ ] **Write unit tests for message enrichment**
-  - Verify all metadata fields added correctly
-  - Verify original message content preserved
+- [ ] **TEST: Rejected message sent to dead letter queue**
+  - Write test: When_rejecting_message_with_delivery_error_should_send_to_dlq
+  - Use docker-compose-kafka.yaml for test infrastructure
+  - Create consumer with DLQ routing key configured
+  - Reject message with MessageRejectionReason.DeliveryError
+  - Verify message appears on DLQ topic with correct metadata
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **Write integration tests for DLQ with test broker**
-  - Test message sent to DLQ on RejectMessageAction
-  - Test message sent to invalid channel on deserialization failure
-  - Test DLQ message contains correct metadata
-  - Test fallback behavior (invalid → DLQ)
-  - Test MakeChannels.Create creates DLQ topic
-  - Test MakeChannels.Validate fails if DLQ topic missing
-  - Test DLQ production failure handling
+- [ ] **IMPLEMENT: KafkaMessageConsumer DLQ producer infrastructure**
+  - Add deadLetterRoutingKey and invalidMessageRoutingKey constructor parameters
+  - Add Lazy<IAmAMessageProducerSync> fields
+  - Implement CreateDeadLetterProducer factory method
+  - Implement CreateInvalidMessageProducer factory method
+  - Producers inherit consumer configuration
+  - Make the test pass
 
-- [ ] **Write integration tests for async consumer**
-  - Match sync consumer test coverage
+- [ ] **IMPLEMENT: KafkaMessageConsumer.Reject() with DLQ routing**
+  - Implement routing logic for MessageRejectionReason.DeliveryError → DLQ
+  - Implement message enrichment with metadata
+  - Handle DLQ production failures (log and acknowledge)
+  - Make the test pass
 
-- [ ] **Verify existing tests still pass**
-  - Run full Kafka test suite
-  - Ensure no regressions in existing functionality
+- [ ] **IMPLEMENT: Update KafkaMessageConsumer.Dispose()**
+  - Check IsValueCreated before disposing producers
+  - Dispose both DLQ and invalid message producers
+  - Make the test pass
 
-### Documentation
+### Phase 4: Invalid Message Routing
+
+- [ ] **TEST: Invalid message sent to invalid message channel**
+  - Write test: When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel
+  - Configure consumer with invalid message routing key
+  - Reject message with MessageRejectionReason.Unacceptable
+  - Verify message appears on invalid message topic
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: Reject() routes Unacceptable to invalid message channel**
+  - Implement routing logic for MessageRejectionReason.Unacceptable
+  - Make the test pass
+
+- [ ] **TEST: Invalid message falls back to DLQ when no invalid channel**
+  - Write test: When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq
+  - Configure consumer with DLQ but no invalid message routing key
+  - Reject with MessageRejectionReason.Unacceptable
+  - Verify message appears on DLQ topic
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: Fallback logic for Unacceptable → DLQ**
+  - Implement fallback when invalid channel not configured
+  - Make the test pass
+
+### Phase 5: Edge Cases and Error Handling
+
+- [ ] **TEST: Rejection with no channels configured acknowledges message**
+  - Write test: When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log
+  - Configure consumer without DLQ or invalid message routing keys
+  - Reject message
+  - Verify message acknowledged and warning logged
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: No channels configured behavior**
+  - Handle null producers case
+  - Log warning
+  - Acknowledge anyway
+  - Make the test pass
+
+- [ ] **TEST: Unknown rejection reason routes to DLQ**
+  - Write test: When_rejecting_message_with_unknown_reason_should_send_to_dlq
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: Unknown reason → DLQ routing**
+  - Make the test pass
+
+- [ ] **TEST: DLQ topic creation follows MakeChannels strategy**
+  - Write test: When_creating_dlq_producer_with_make_channels_create_should_create_topic
+  - Test MakeChannels.Create, Validate, and Assume modes
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: MakeChannels strategy inheritance**
+  - Ensure DLQ producer inherits MakeChannels from consumer config
+  - Make the test pass
+
+### Phase 6: Async Consumer Support
+
+- [ ] **TEST: Async consumer rejects to DLQ**
+  - Write test: When_rejecting_message_async_with_delivery_error_should_send_to_dlq
+  - Use KafkaMessageConsumerAsync
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: KafkaMessageConsumerAsync DLQ support**
+  - Add Lazy<IAmAMessageProducerAsync> fields
+  - Implement async producer factory methods
+  - Implement RejectAsync() with routing logic
+  - Update Dispose()
+  - Make the test pass
+
+### Phase 7: Channel Factory Integration
+
+- [ ] **TEST: ChannelFactory passes DLQ routing keys to consumer**
+  - Write test: When_creating_channel_with_dlq_subscription_should_pass_routing_keys
+  - Create KafkaSubscription with DLQ routing keys
+  - Verify ChannelFactory extracts and passes them to consumer
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: ChannelFactory extracts routing keys**
+  - Check if subscription implements IUseBrighterDeadLetterSupport
+  - Check if subscription implements IUseBrighterInvalidMessageSupport
+  - Extract routing keys and pass to consumer constructor
+  - Make the test pass
+
+### Phase 8: Message Enrichment Verification
+
+- [ ] **TEST: Rejected message includes all required metadata**
+  - Write test: When_rejecting_message_should_include_metadata
+  - Verify OriginalTopic, OriginalPartition, OriginalOffset
+  - Verify RejectionTimestamp, RejectionReason
+  - Verify ConsumerGroup, RedeliveryCount
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: Complete EnrichMessageWithMetadata if needed**
+  - Add any missing metadata fields
+  - Implement GetCurrentPartition() and GetCurrentOffset() if needed
+  - Make the test pass
+
+### Phase 9: Regression Testing
+
+- [ ] **Run existing Kafka test suite**
+  - Verify all existing tests still pass
+  - No breaking changes to existing behavior
+
+### Phase 10: Documentation
 
 - [ ] **Update XML documentation**
   - Document new constructor parameters
@@ -114,21 +223,31 @@ This document outlines the tasks for implementing the Kafka Dead Letter Queue fe
 
 ## Task Dependencies
 
+Each phase builds on the previous:
+
 ```
-Core Infrastructure (Subscription + Naming)
+Phase 1: Naming Convention Classes (unit tests)
     ↓
-Consumer Implementation (Add DLQ producers)
+Phase 2: KafkaSubscription DLQ Support (unit tests)
     ↓
-Consumer Implementation (Implement Reject)
+Phase 3: Message Rejection to DLQ (integration test drives implementation)
     ↓
-Consumer Implementation (Message enrichment + Dispose)
+Phase 4: Invalid Message Routing (integration tests)
     ↓
-Channel Factory Integration
+Phase 5: Edge Cases and Error Handling (integration tests)
     ↓
-Testing (Unit → Integration)
+Phase 6: Async Consumer Support (integration tests)
     ↓
-Documentation
+Phase 7: Channel Factory Integration (integration test)
+    ↓
+Phase 8: Message Enrichment Verification (integration test)
+    ↓
+Phase 9: Regression Testing
+    ↓
+Phase 10: Documentation
 ```
+
+Each TEST task must be approved before its corresponding IMPLEMENT task.
 
 ## Risk Mitigation
 

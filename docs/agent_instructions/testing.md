@@ -16,8 +16,14 @@
     - We prefer developer tests that implicate the most recent edit, not isolation of classes.
 - Where possible, we are test first
   - Red: Write a failing test
+  - **APPROVAL**: Get approval for the test before implementing
   - Green: Make the test pass, commit any sins necessary to move fast
   - Refactor: Improve the design of the code.
+- **Approval Workflow**:
+  - When working on a feature, write the test first and get approval before implementing
+  - This ensures the test correctly specifies the desired behavior
+  - The approval step is MANDATORY when working with an AI coding assistant
+  - After approval, implement the minimum code to make the test pass
 - Where possible, avoid writing tests after.
   - This will not give you scope control - only writing the code required by tests.
     - You should only write the code necessary for a test to pass; do not write speculative code.
@@ -59,11 +65,26 @@
   - See [ADR 0023](docs/adr/0023-reactor-and-nonblocking-io.md) for advice on how to replace I/O.
 - Do NOT use fakes or mocks for isolating a class.
   - We use developer tests: isolation is to the most recent edit, not a class.
-  - Do not inject dependencies into a constructor or property for test isolation 
-- You MAY use fakes or mocks (test doubles) for I/O or the strategy pattern. Prefer in-memory alternatives to fakes to mocks. 
+  - Do not inject dependencies into a constructor or property for test isolation
+- You MAY use fakes or mocks (test doubles) for I/O or the strategy pattern. Prefer in-memory alternatives to fakes to mocks.
   - You may use a test double to replace I/O as it is slow and has shared fixture making tests brittle.
   - You should look at using an in-memory substitute if testing core functionality that can use a range of alternative I/O. For example you can use an in-memory substitute such as InMemoryMessageProducer or InMemoryOutbox.
   - If you are testing the implementation of a messaging gateway (transport), outbox, inbox or other I/O adapter, you should create a suite of tests that use those directly to prove the implementation works. We separate these into test assemblies that require the dependency on a broker or database to run. This allows the core tests, that substitute I/O to run without additional dependencies, and indicates what dependencies you need to run a particular test suite.
   or use of the strategy pattern to satisfy the open-closed principle.
 - Only add code needed to satisfy a behavioral requirement expressed in a test.
   - Do not add speculative code, the need for which is not indicated by test.
+
+## Testing Middleware with Docker
+
+- When testing messaging gateways (Kafka, RabbitMQ, etc.) or databases, use Docker for test infrastructure
+- Docker Compose files for test infrastructure are located in the solution root (e.g., `docker-compose-kafka.yaml`)
+- Integration tests that require middleware should:
+  - Be in separate test assemblies (e.g., `Paramore.Brighter.Kafka.Tests`)
+  - Use docker-compose to spin up required infrastructure
+  - Test actual integration with the middleware, not mocked behavior
+  - Follow the same TDD workflow: write failing test, get approval, implement
+- Even when testing middleware, follow test-first practices:
+  - Write the integration test that exercises the behavior
+  - Get approval for the test
+  - Implement the code to make it pass
+  - This ensures you're building the right behavior from the start
