@@ -15,8 +15,8 @@ This specification covers the implementation of dead letter queue functionality 
 - [X] Requirements approved
 - [X] ADRs created
 - [X] ADRs approved
-- [ ] Tasks created
-- [ ] Tasks approved
+- [X] Tasks created
+- [X] Tasks approved
 - [ ] Implementation complete
 - [ ] Tests passing
 - [ ] PR submitted

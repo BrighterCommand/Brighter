@@ -13,26 +13,40 @@ Each task follows a strict Test-Driven Development workflow:
 
 Tests are written in `tests/Paramore.Brighter.Kafka.Tests/`. Integration tests that require Kafka should use docker-compose-kafka.yaml for test infrastructure.
 
+## Test Strategy
+
+See `test-analysis.md` for detailed analysis of existing tests and reusable test doubles.
+
+**Key decisions:**
+- **Phase 1-2**: Unit tests (no Kafka required)
+- **Phase 3+**: Direct consumer integration tests (test `consumer.Reject()` directly with Kafka)
+  - Create consumer with DLQ routing keys configured
+  - Send/receive messages via Kafka
+  - Call `consumer.Reject()` with rejection reason
+  - Verify messages appear on DLQ/invalid message topics via second consumer
+  - This follows existing Kafka test patterns and enables faster TDD cycles
+- Reuse test double patterns from Core tests (`MyRejectedEventHandler`) where applicable
+
 ## Task List
 
 ### Phase 1: Naming Convention Classes
 
-- [ ] **TEST: DeadLetterNamingConvention uses default template**
+- [x] **TEST: DeadLetterNamingConvention uses default template**
   - Write test: When_creating_dead_letter_name_with_default_template_should_append_dlq
   - Verify "orders" → "orders.dlq"
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: DeadLetterNamingConvention with default template**
+- [x] **IMPLEMENT: DeadLetterNamingConvention with default template**
   - Create DeadLetterNamingConvention class in Paramore.Brighter
   - Implement MakeChannelName method
   - Make the test pass
 
-- [ ] **TEST: DeadLetterNamingConvention uses custom template**
+- [x] **TEST: DeadLetterNamingConvention uses custom template**
   - Write test: When_creating_dead_letter_name_with_custom_template_should_use_template
   - Verify custom template like "failed-{0}" works
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: DeadLetterNamingConvention with custom template**
+- [x] **IMPLEMENT: DeadLetterNamingConvention with custom template**
   - Add template constructor parameter
   - Make the test pass
 
