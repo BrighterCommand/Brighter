@@ -50,12 +50,12 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Add template constructor parameter
   - Make the test pass
 
-- [ ] **TEST: InvalidMessageNamingConvention uses default template**
+- [x] **TEST: InvalidMessageNamingConvention uses default template**
   - Write test: When_creating_invalid_message_name_with_default_template_should_append_invalid
   - Verify "orders" → "orders.invalid"
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: InvalidMessageNamingConvention with default template**
+- [x] **IMPLEMENT: InvalidMessageNamingConvention with default template**
   - Create InvalidMessageNamingConvention class
   - Implement MakeChannelName method
   - Make the test pass
