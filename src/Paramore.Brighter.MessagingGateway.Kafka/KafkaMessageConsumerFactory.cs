@@ -54,10 +54,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (kafkaSubscription == null)
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
             
+            // Extract DLQ and invalid message routing keys if subscription supports them
+            RoutingKey? deadLetterRoutingKey = null;
+            RoutingKey? invalidMessageRoutingKey = null;
+
+            if (kafkaSubscription is IUseBrighterDeadLetterSupport dlqSupport)
+            {
+                deadLetterRoutingKey = dlqSupport.DeadLetterRoutingKey;
+            }
+
+            if (kafkaSubscription is IUseBrighterInvalidMessageSupport invalidSupport)
+            {
+                invalidMessageRoutingKey = invalidSupport.InvalidMessageRoutingKey;
+            }
+
             return new KafkaMessageConsumer(
-                configuration: _configuration, 
+                configuration: _configuration,
                 routingKey:kafkaSubscription.RoutingKey, //topic
-                groupId: kafkaSubscription.GroupId, 
+                groupId: kafkaSubscription.GroupId,
                 offsetDefault: kafkaSubscription.OffsetDefault,
                 sessionTimeout: kafkaSubscription.SessionTimeout,
                 maxPollInterval: kafkaSubscription.MaxPollInterval,
@@ -70,7 +84,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 replicationFactor: kafkaSubscription.ReplicationFactor,
                 topicFindTimeout: kafkaSubscription.TopicFindTimeout,
                 makeChannels: kafkaSubscription.MakeChannels,
-                configHook: kafkaSubscription.ConfigHook
+                configHook: kafkaSubscription.ConfigHook,
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey
                 );
         }
 

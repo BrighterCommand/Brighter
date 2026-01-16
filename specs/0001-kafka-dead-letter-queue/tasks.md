@@ -60,32 +60,32 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Implement MakeChannelName method
   - Make the test pass
 
-- [ ] **TEST: InvalidMessageNamingConvention uses custom template**
+- [x] **TEST: InvalidMessageNamingConvention uses custom template**
   - Write test: When_creating_invalid_message_name_with_custom_template_should_use_template
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: InvalidMessageNamingConvention with custom template**
+- [x] **IMPLEMENT: InvalidMessageNamingConvention with custom template**
   - Add template constructor parameter
   - Make the test pass
 
 ### Phase 2: KafkaSubscription DLQ Support
 
-- [ ] **TEST: KafkaSubscription implements IUseBrighterDeadLetterSupport**
+- [x] **TEST: KafkaSubscription implements IUseBrighterDeadLetterSupport**
   - Write test: When_creating_kafka_subscription_with_dead_letter_routing_key_should_expose_property
   - Verify DeadLetterRoutingKey property is accessible
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: KafkaSubscription implements IUseBrighterDeadLetterSupport**
+- [x] **IMPLEMENT: KafkaSubscription implements IUseBrighterDeadLetterSupport**
   - Add interface implementation
   - Add DeadLetterRoutingKey property
   - Add optional deadLetterRoutingKey constructor parameter
   - Make the test pass
 
-- [ ] **TEST: KafkaSubscription implements IUseBrighterInvalidMessageSupport**
+- [x] **TEST: KafkaSubscription implements IUseBrighterInvalidMessageSupport**
   - Write test: When_creating_kafka_subscription_with_invalid_message_routing_key_should_expose_property
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: KafkaSubscription implements IUseBrighterInvalidMessageSupport**
+- [x] **IMPLEMENT: KafkaSubscription implements IUseBrighterInvalidMessageSupport**
   - Add interface implementation
   - Add InvalidMessageRoutingKey property
   - Add optional invalidMessageRoutingKey constructor parameter
@@ -93,7 +93,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 
 ### Phase 3: Message Rejection to DLQ (Integration Test)
 
-- [ ] **TEST: Rejected message sent to dead letter queue**
+- [X] **TEST: Rejected message sent to dead letter queue**
   - Write test: When_rejecting_message_with_delivery_error_should_send_to_dlq
   - Use docker-compose-kafka.yaml for test infrastructure
   - Create consumer with DLQ routing key configured
@@ -101,7 +101,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Verify message appears on DLQ topic with correct metadata
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: KafkaMessageConsumer DLQ producer infrastructure**
+- [X] **IMPLEMENT: KafkaMessageConsumer DLQ producer infrastructure**
   - Add deadLetterRoutingKey and invalidMessageRoutingKey constructor parameters
   - Add Lazy<IAmAMessageProducerSync> fields
   - Implement CreateDeadLetterProducer factory method
@@ -109,13 +109,13 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Producers inherit consumer configuration
   - Make the test pass
 
-- [ ] **IMPLEMENT: KafkaMessageConsumer.Reject() with DLQ routing**
+- [X] **IMPLEMENT: KafkaMessageConsumer.Reject() with DLQ routing**
   - Implement routing logic for MessageRejectionReason.DeliveryError → DLQ
   - Implement message enrichment with metadata
   - Handle DLQ production failures (log and acknowledge)
   - Make the test pass
 
-- [ ] **IMPLEMENT: Update KafkaMessageConsumer.Dispose()**
+- [X] **IMPLEMENT: Update KafkaMessageConsumer.Dispose()**
   - Check IsValueCreated before disposing producers
   - Dispose both DLQ and invalid message producers
   - Make the test pass
