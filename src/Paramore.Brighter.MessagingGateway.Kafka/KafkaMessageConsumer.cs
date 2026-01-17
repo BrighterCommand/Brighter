@@ -607,6 +607,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     _invalidMessageProducerAsync != null,
                     _deadLetterProducerAsync != null);
 
+                // Set message type for unacceptable messages
+                if (reason.RejectionReason == RejectionReason.Unacceptable)
+                    message.Header.MessageType = MessageType.MT_UNACCEPTABLE;
+
                 IAmAMessageProducerAsync? producer = null;
                 if (foundProducer)
                 {
