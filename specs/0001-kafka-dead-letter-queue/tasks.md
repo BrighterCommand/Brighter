@@ -94,6 +94,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 ### Phase 3: Message Rejection to DLQ (Integration Test)
 
 - [X] **TEST: Rejected message sent to dead letter queue**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
   - Write test: When_rejecting_message_with_delivery_error_should_send_to_dlq
   - Use docker-compose-kafka.yaml for test infrastructure
   - Create consumer with DLQ routing key configured
@@ -120,9 +121,39 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Dispose both DLQ and invalid message producers
   - Make the test pass
 
-### Phase 4: Invalid Message Routing
+### Phase 4: Message Rejection to DLQ Async (Integration Test)
+
+- [X] **TEST: Rejected message sent to dead letter queue**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
+  - Write test: When_rejecting_message_with_delivery_error_should_send_to_dlq_async. Note this test is similar to 
+    "tests/Paramore.Brighter.Kafka.
+    Tests/MessagingGateway/Reactor/When_rejecting_message_with_delivery_error_should_send_to_dlq.cs" but uses async 
+    methods not sync ones i.e. `RejectAsync` and not `Async` and should use an async test method. 
+  - Use docker-compose-kafka.yaml for test infrastructure
+  - Create consumer with DLQ routing key configured
+  - Reject message with MessageRejectionReason.DeliveryError
+  - Verify message appears on DLQ topic with correct metadata
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [X] **IMPLEMENT: KafkaMessageConsumer.RejectAsync() with DLQ routing**
+  - Add Lazy<IAmAMessageProducerAsync> fields
+  - Implement async producer factory methods
+  - Implement routing logic for MessageRejectionReason.DeliveryError → DLQ
+  - Note that this is the same algorithm as KafkaMessageConsumer.RejectAsync() 
+  - Implement message enrichment with metadata
+  - Handle DLQ production failures (log and acknowledge)
+  - Make the test pass
+
+- [X] **REFACTOR: Update KafkaMessageConsumer**
+  - Use `.claude/commands/refactor/tidy-first.md` 
+  - Think: can we remove duplication between KafkaMessageConsumer.Reject() and KafkaMessageConsumer.RejectAsync()? 
+  - Implement: make any changes to KafkaMessageConsumer 
+  - Ensure the test still pass
+
+### Phase 5: Invalid Message Routing
 
 - [ ] **TEST: Invalid message sent to invalid message channel**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
   - Write test: When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel
   - Configure consumer with invalid message routing key
   - Reject message with MessageRejectionReason.Unacceptable
@@ -134,6 +165,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Make the test pass
 
 - [ ] **TEST: Invalid message falls back to DLQ when no invalid channel**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
   - Write test: When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq
   - Configure consumer with DLQ but no invalid message routing key
   - Reject with MessageRejectionReason.Unacceptable
@@ -144,9 +176,42 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Implement fallback when invalid channel not configured
   - Make the test pass
 
-### Phase 5: Edge Cases and Error Handling
+### Phase 5: Invalid Message Routing Async
+
+- [ ] **TEST: Invalid message sent to invalid message channel**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor" 
+  - Write test: When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel_async
+  - Configure consumer with invalid message routing key
+  - Reject message with MessageRejectionReason.Unacceptable
+  - Verify message appears on invalid message topic
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: Reject() routes Unacceptable to invalid message channel**
+  - Implement routing logic for MessageRejectionReason.Unacceptable
+  - Make the test pass
+
+- [ ] **TEST: Invalid message falls back to DLQ when no invalid channel**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
+  - Write test: When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq_async
+  - Configure consumer with DLQ but no invalid message routing key
+  - Reject with MessageRejectionReason.Unacceptable
+  - Verify message appears on DLQ topic
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: Fallback logic for Unacceptable → DLQ**
+  - Implement fallback when invalid channel not configured
+  - Make the test pass
+
+[X] **REFACTOR: Update KafkaMessageConsumer**
+- Use `.claude/commands/refactor/tidy-first.md`
+- Think: can we remove duplication between KafkaMessageConsumer.Reject() and KafkaMessageConsumer.RejectAsync()?
+- Implement: make any changes to KafkaMessageConsumer
+- Ensure the test still pass
+
+### Phase 6: Edge Cases and Error Handling
 
 - [ ] **TEST: Rejection with no channels configured acknowledges message**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
   - Write test: When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log
   - Configure consumer without DLQ or invalid message routing keys
   - Reject message
@@ -159,8 +224,31 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Acknowledge anyway
   - Make the test pass
 
+- [ ] **TEST: Async rejection with no channels configured acknowledges message**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
+  - Write test: When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async
+  - Configure consumer without DLQ or invalid message routing keys
+  - RejectAsync message
+  - Verify message acknowledged and warning logged
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: No channels configured behavior**
+  - Handle null producers case
+  - Log warning
+  - Acknowledge anyway
+  - Make the test pass
+
 - [ ] **TEST: Unknown rejection reason routes to DLQ**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
   - Write test: When_rejecting_message_with_unknown_reason_should_send_to_dlq
+  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+
+- [ ] **IMPLEMENT: Unknown reason → DLQ routing**
+  - Make the test pass
+
+- [ ] **TEST: Async unknown rejection reason routes to DLQ**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
+  - Write test: When_rejecting_message_with_unknown_reason_should_send_to_dlq_async
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
 - [ ] **IMPLEMENT: Unknown reason → DLQ routing**
@@ -173,20 +261,6 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 
 - [ ] **IMPLEMENT: MakeChannels strategy inheritance**
   - Ensure DLQ producer inherits MakeChannels from consumer config
-  - Make the test pass
-
-### Phase 6: Async Consumer Support
-
-- [ ] **TEST: Async consumer rejects to DLQ**
-  - Write test: When_rejecting_message_async_with_delivery_error_should_send_to_dlq
-  - Use KafkaMessageConsumerAsync
-  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
-
-- [ ] **IMPLEMENT: KafkaMessageConsumerAsync DLQ support**
-  - Add Lazy<IAmAMessageProducerAsync> fields
-  - Implement async producer factory methods
-  - Implement RejectAsync() with routing logic
-  - Update Dispose()
   - Make the test pass
 
 ### Phase 7: Channel Factory Integration
@@ -248,11 +322,11 @@ Phase 3: Message Rejection to DLQ (integration test drives implementation)
     ↓
 Phase 4: Invalid Message Routing (integration tests)
     ↓
-Phase 5: Edge Cases and Error Handling (integration tests)
+Phase 5: Invalid Message Routing Async (integration tests)   
+    ↓
+Phase 6: Edge Cases and Error Handling (integration tests)
     ↓
 Phase 6: Async Consumer Support (integration tests)
-    ↓
-Phase 7: Channel Factory Integration (integration test)
     ↓
 Phase 8: Message Enrichment Verification (integration test)
     ↓
