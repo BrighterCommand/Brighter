@@ -181,7 +181,25 @@ Tell the user:
    - Commit it (ideally as the first commit on a feature branch)
    - Get team review
    - Use `/spec:approve design [NNNN]` when approved (changes status to "Accepted")
-3. Suggest next steps:
+
+
+### Step 8: Review against the Design Principles
+
+Read the ADR:
+
+- Read "docs/adr/design-principles.md"
+- Review the ADR using the design guidelines from "Use Responsibility-Driven Design"
+- Check for a design focused on behavior: does the ADR think about *roles* and *responsibilities*.
+- Responsibilities are "knowing", "doing", and "deciding"
+- Allocate responbilities into roles, focusing on cohesion.
+- Roles are interfaces or abstract types
+- A class can implement one or more roles. If it implements multiple roles, they should be related.
+- Provide feedback and suggest improvements
+
+### Step 9. Suggest next steps:
+
+Ask the user for the next step:
+
    - Create a feature branch if not already on one
    - Commit the ADR: `git commit -m "docs: add ADR for [title]"`
    - Continue with additional ADRs if needed
