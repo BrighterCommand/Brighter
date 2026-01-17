@@ -161,6 +161,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
 - [ ] **IMPLEMENT: Reject() routes Unacceptable to invalid message channel**
+  - This may already be implemented in Phase 3, so check
   - Implement routing logic for MessageRejectionReason.Unacceptable
   - Make the test pass
 
@@ -187,6 +188,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
 - [ ] **IMPLEMENT: Reject() routes Unacceptable to invalid message channel**
+  - This may already be implemented in Phase 4, so check
   - Implement routing logic for MessageRejectionReason.Unacceptable
   - Make the test pass
 
