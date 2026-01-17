@@ -138,7 +138,20 @@ When creating the ADR:
   - Deployment considerations
   - Backward compatibility
 
-### Step 6: Next Steps
+### Step 6: Design Principles
+
+Review against the design principles
+
+- Read "docs/adr/design-principles.md"
+- Review the ADR using the design guidelines from "Use Responsibility-Driven Design"
+- Check for a design focused on behavior: does the ADR think about *roles* and *responsibilities*.
+- Responsibilities are "knowing", "doing", and "deciding"
+- Allocate responbilities into roles, focusing on cohesion.
+- Roles are interfaces or abstract types
+- A class can implement one or more roles. If it implements multiple roles, they should be related.
+- Provide feedback and suggest improvements
+
+### Step 7: Next Steps
 
 1. Remind user to:
    - Review and complete the ADR with technical details
