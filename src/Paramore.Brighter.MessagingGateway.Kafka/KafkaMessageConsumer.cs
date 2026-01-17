@@ -525,36 +525,29 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               try
               {
                   RefreshMetadata(message, reason);
+
+                  // Determine routing based on rejection reason
+                  var (routingKey, foundProducer, isFallingBackToDlq) = DetermineRejectionRoute(
+                      reason,
+                      _invalidMessageProducer != null,
+                      _deadLetterProducer != null);
+
+                  // Set message type for unacceptable messages
+                  if (reason.RejectionReason == RejectionReason.Unacceptable)
+                      message.Header.MessageType = MessageType.MT_UNACCEPTABLE;
+
                   IAmAMessageProducerSync? producer = null;
-
-                  // Route based on rejection reason
-                  switch (reason.RejectionReason)
+                  if (foundProducer)
                   {
-                      case RejectionReason.Unacceptable:
-                          message.Header.MessageType = MessageType.MT_UNACCEPTABLE;
-                          // Try invalid message channel first, fall back to DLQ
-                          if (_invalidMessageProducer != null)
-                          {
-                              producer = _invalidMessageProducer.Value;
-                              message.Header.Topic = _invalidMessageRoutingKey!;
-                          }
-                          else if (_deadLetterProducer != null)
-                          {
-                              producer = _deadLetterProducer.Value;
-                              message.Header.Topic = _deadLetterRoutingKey!;
-                              Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
-                          }
-                          break;
+                      message.Header.Topic = routingKey!;
+                      if (isFallingBackToDlq)
+                          Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
 
-                      case RejectionReason.DeliveryError:
-                      default:
-                          // Send to DLQ
-                          if (_deadLetterProducer != null)
-                          {
-                              producer = _deadLetterProducer.Value;
-                              message.Header.Topic = _deadLetterRoutingKey!;
-                          }
-                          break;
+                      // Get the appropriate producer based on routing
+                      if (routingKey == _invalidMessageRoutingKey)
+                          producer = _invalidMessageProducer!.Value;
+                      else if (routingKey == _deadLetterRoutingKey)
+                          producer = _deadLetterProducer!.Value;
                   }
 
                   if (producer != null)
@@ -607,35 +600,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 RefreshMetadata(message, reason);
+
+                // Determine routing based on rejection reason
+                var (routingKey, foundProducer, isFallingBackToDlq) = DetermineRejectionRoute(
+                    reason,
+                    _invalidMessageProducerAsync != null,
+                    _deadLetterProducerAsync != null);
+
                 IAmAMessageProducerAsync? producer = null;
-
-                // Route based on rejection reason
-                switch (reason.RejectionReason)
+                if (foundProducer)
                 {
-                    case RejectionReason.Unacceptable:
-                        // Try invalid message channel first, fall back to DLQ
-                        if (_invalidMessageProducerAsync != null)
-                        {
-                            producer = _invalidMessageProducerAsync.Value;
-                            message.Header.Topic = _invalidMessageRoutingKey!;
-                        }
-                        else if (_deadLetterProducerAsync != null)
-                        {
-                            producer = _deadLetterProducerAsync.Value;
-                            message.Header.Topic = _deadLetterRoutingKey!;
-                            Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
-                        }
-                        break;
+                    message.Header.Topic = routingKey!;
+                    if (isFallingBackToDlq)
+                        Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
 
-                    case RejectionReason.DeliveryError:
-                    default:
-                        // Send to DLQ
-                        if (_deadLetterProducerAsync != null)
-                        {
-                            producer = _deadLetterProducerAsync.Value;
-                            message.Header.Topic = _deadLetterRoutingKey!;
-                        }
-                        break;
+                    // Get the appropriate producer based on routing
+                    if (routingKey == _invalidMessageRoutingKey)
+                        producer = _invalidMessageProducerAsync!.Value;
+                    else if (routingKey == _deadLetterRoutingKey)
+                        producer = _deadLetterProducerAsync!.Value;
                 }
 
                 if (producer != null)
@@ -923,7 +906,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = message.Header.Topic.Value;
             message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = DateTimeOffset.UtcNow.ToString("o");
             message.Header.Bag[HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString();
-            
+
             //remove headers that will be reset by send as set from message properties
             message.Header.Bag.Remove(HeaderNames.PARTITION_OFFSET);
             message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_ID);
@@ -939,11 +922,42 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE);
 
             if (reason == null) return;
-            
+
             message.Header.Bag["RejectionReason"] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
             {
                 message.Header.Bag["RejectionMessage"] = reason.Description!;
+            }
+        }
+
+        /// <summary>
+        /// Determines the appropriate routing for a rejected message based on rejection reason and available channels
+        /// </summary>
+        /// <param name="reason">The rejection reason</param>
+        /// <param name="hasInvalidProducer">Whether an invalid message producer is available</param>
+        /// <param name="hasDeadLetterProducer">Whether a dead letter producer is available</param>
+        /// <returns>Tuple of (routingKey, foundProducer, isFallingBackToDlq)</returns>
+        private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(
+            MessageRejectionReason reason,
+            bool hasInvalidProducer,
+            bool hasDeadLetterProducer)
+        {
+            switch (reason.RejectionReason)
+            {
+                case RejectionReason.Unacceptable:
+                    // Try invalid message channel first, fall back to DLQ
+                    if (hasInvalidProducer)
+                        return (_invalidMessageRoutingKey, true, false);
+                    if (hasDeadLetterProducer)
+                        return (_deadLetterRoutingKey, true, true);
+                    return (null, false, false);
+
+                case RejectionReason.DeliveryError:
+                default:
+                    // Send to DLQ
+                    if (hasDeadLetterProducer)
+                        return (_deadLetterRoutingKey, true, false);
+                    return (null, false, false);
             }
         }
 
