@@ -38,7 +38,7 @@ using Paramore.Brighter.Observability;
 using Xunit;
 using Baggage = OpenTelemetry.Baggage;
 
-namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
+namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Acceptance;
 
 /// <summary>
 /// These tests verify that W3C Trace Context (TraceParent, TraceState, Baggage) and CloudEvents
@@ -129,7 +129,7 @@ public class RmqMutualTlsObservabilityAsyncTests : IDisposable
 
         var message = new Message(
             new MessageHeader(
-                messageId: Guid.NewGuid().ToString(),
+                messageId: Id.Random(),
                 topic: new RoutingKey("test.topic"),
                 messageType: MessageType.MT_EVENT
             ),
@@ -189,7 +189,7 @@ public class RmqMutualTlsObservabilityAsyncTests : IDisposable
 
         var message = new Message(
             new MessageHeader(
-                messageId: Guid.NewGuid().ToString(),
+                messageId: Id.Random(),
                 topic: new RoutingKey("test.topic"),
                 messageType: MessageType.MT_EVENT
             ),
@@ -259,7 +259,7 @@ public class RmqMutualTlsObservabilityAsyncTests : IDisposable
 
         var message = new Message(
             new MessageHeader(
-                messageId: Guid.NewGuid().ToString(),
+                messageId: Id.Random(),
                 topic: new RoutingKey("test.topic"),
                 messageType: MessageType.MT_EVENT
             ),
@@ -328,7 +328,7 @@ public class RmqMutualTlsObservabilityAsyncTests : IDisposable
         // Create message with trace context that will be serialized to CloudEvents format
         var message = new Message(
             new MessageHeader(
-                messageId: Guid.NewGuid().ToString(),
+                messageId: Id.Random(),
                 topic: new RoutingKey("test.topic"),
                 messageType: MessageType.MT_EVENT
             ),
@@ -399,7 +399,7 @@ public class RmqMutualTlsObservabilityAsyncTests : IDisposable
 
         var message = new Message(
             new MessageHeader(
-                messageId: Guid.NewGuid().ToString(),
+                messageId: Id.Random(),
                 topic: new RoutingKey("test.topic"),
                 messageType: MessageType.MT_EVENT
             ),

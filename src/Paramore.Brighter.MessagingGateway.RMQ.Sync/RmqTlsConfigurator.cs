@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Darren Schwarz <darrenschwarz@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -35,11 +35,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync;
 /// </summary>
 internal static class RmqTlsConfigurator
 {
-    /// <summary>
-    /// Configures TLS on the connection factory if a client certificate is provided.
-    /// </summary>
-    /// <param name="connectionFactory">The RabbitMQ connection factory to configure.</param>
-    /// <param name="connection">The gateway connection containing TLS configuration.</param>
     internal static void ConfigureIfEnabled(ConnectionFactory connectionFactory, RmqMessagingGatewayConnection connection)
     {
         var certificate = LoadCertificate(connection);
