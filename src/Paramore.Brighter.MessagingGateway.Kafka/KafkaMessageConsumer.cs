@@ -527,7 +527,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   RefreshMetadata(message, reason);
 
                   // Determine routing based on rejection reason
-                  var (routingKey, foundProducer, isFallingBackToDlq) = DetermineRejectionRoute(
+                  var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
                       reason, _invalidMessageProducer != null, _deadLetterProducer != null);
 
                   // Set message type for unacceptable messages
@@ -535,7 +535,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                       message.Header.MessageType = MessageType.MT_UNACCEPTABLE;
 
                   IAmAMessageProducerSync? producer = null;
-                  if (foundProducer)
+                  if (shouldRoute)
                   {
                       message.Header.Topic = routingKey!;
                       if (isFallingBackToDlq)
