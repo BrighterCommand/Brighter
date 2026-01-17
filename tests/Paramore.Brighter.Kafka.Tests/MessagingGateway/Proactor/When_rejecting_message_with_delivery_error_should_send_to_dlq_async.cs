@@ -73,7 +73,7 @@ public class KafkaMessageConsumerDLQAsyncTests : IAsyncDisposable
     public async Task When_rejecting_message_with_delivery_error_should_send_to_dlq_async()
     {
         //Arrange - let topics propagate in the broker
-        await Task.Delay(500);
+        await Task.Delay(2000);
 
         var groupId = Guid.NewGuid().ToString();
         var routingKey = new RoutingKey(_topic);

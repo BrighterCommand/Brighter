@@ -63,6 +63,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly RoutingKey? _invalidMessageRoutingKey;
         private readonly Lazy<IAmAMessageProducerSync>? _deadLetterProducer;
         private readonly Lazy<IAmAMessageProducerSync>? _invalidMessageProducer;
+        private readonly Lazy<IAmAMessageProducerAsync>? _deadLetterProducerAsync;
+        private readonly Lazy<IAmAMessageProducerAsync>? _invalidMessageProducerAsync;
 
 
         /// <summary>
@@ -128,10 +130,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
             if (_deadLetterRoutingKey != null)
+            {
                 _deadLetterProducer = new Lazy<IAmAMessageProducerSync>(CreateDeadLetterProducer);
+                _deadLetterProducerAsync = new Lazy<IAmAMessageProducerAsync>(CreateDeadLetterProducerAsync);
+            }
 
             if (_invalidMessageRoutingKey != null)
+            {
                 _invalidMessageProducer = new Lazy<IAmAMessageProducerSync>(CreateInvalidMessageProducer);
+                _invalidMessageProducerAsync = new Lazy<IAmAMessageProducerAsync>(CreateInvalidMessageProducerAsync);
+            }
             
             sessionTimeout ??= TimeSpan.FromSeconds(10);
             maxPollInterval ??= TimeSpan.FromSeconds(10);
@@ -569,19 +577,81 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
-        /// Rejects the specified message. 
+        /// Rejects the specified message.
         /// </summary>
         /// <remarks>
-        /// This is just a commit of the offset to move past the record without processing it
-        /// Calls the underlying sync method, which is non-blocking
+        /// Routes rejected messages to dead letter queue or invalid message channel based on rejection reason.
+        /// Enriches message with metadata and acknowledges after sending to error channel (or on failure).
         /// </remarks>
         /// <param name="message">The message.</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
-        /// <param name="cancellationToken">Cancels the reject; not used as non-blocking</param>
-        public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
+        /// <param name="cancellationToken">Cancels the reject operation</param>
+        public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
         {
-            Reject(message, reason);
-            return Task.FromResult(true);
+            // If no reason provided or no channels configured, just acknowledge
+            if (reason == null || (_deadLetterProducerAsync == null && _invalidMessageProducerAsync == null))
+            {
+                if (reason != null)
+                {
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                }
+                await AcknowledgeAsync(message, cancellationToken);
+                return true;
+            }
+
+            try
+            {
+                EnrichMessageWithMetadata(message, reason);
+                IAmAMessageProducerAsync? producer = null;
+
+                // Route based on rejection reason
+                switch (reason.RejectionReason)
+                {
+                    case RejectionReason.Unacceptable:
+                        // Try invalid message channel first, fall back to DLQ
+                        if (_invalidMessageProducerAsync != null)
+                        {
+                            producer = _invalidMessageProducerAsync.Value;
+                        }
+                        else if (_deadLetterProducerAsync != null)
+                        {
+                            producer = _deadLetterProducerAsync.Value;
+                            Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
+                        }
+                        break;
+
+                    case RejectionReason.DeliveryError:
+                    default:
+                        // Send to DLQ
+                        if (_deadLetterProducerAsync != null)
+                        {
+                            producer = _deadLetterProducerAsync.Value;
+                        }
+                        break;
+                }
+
+                if (producer != null)
+                {
+                    await producer.SendAsync(message);
+                    if (producer is KafkaMessageProducer kafkaProducer)
+                    {
+                        kafkaProducer.Flush();
+                    }
+                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                }
+                else
+                {
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but acknowledge anyway to prevent message from being reprocessed
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, reason.RejectionReason.ToString());
+            }
+
+            await AcknowledgeAsync(message, cancellationToken);
+            return true;
         }
 
         /// <summary>
@@ -804,6 +874,40 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             producer.Init();
             return producer;
         }
+
+        private IAmAMessageProducerAsync CreateDeadLetterProducerAsync()
+        {
+            var publication = new KafkaPublication
+            {
+                Topic = _deadLetterRoutingKey,
+                NumPartitions = NumPartitions,
+                ReplicationFactor = ReplicationFactor,
+                MessageTimeoutMs = 2000,
+                RequestTimeoutMs = 2000,
+                MakeChannels = MakeChannels
+            };
+
+            var producer = new KafkaMessageProducer(_configuration, publication);
+            producer.Init();
+            return producer;
+        }
+
+        private IAmAMessageProducerAsync CreateInvalidMessageProducerAsync()
+        {
+            var publication = new KafkaPublication
+            {
+                Topic = _invalidMessageRoutingKey,
+                NumPartitions = NumPartitions,
+                ReplicationFactor = ReplicationFactor,
+                MessageTimeoutMs = 2000,
+                RequestTimeoutMs = 2000,
+                MakeChannels = MakeChannels
+            };
+
+            var producer = new KafkaMessageProducer(_configuration, publication);
+            producer.Init();
+            return producer;
+        }
         
         private void EnrichMessageWithMetadata(Message message, MessageRejectionReason? reason)
         {
@@ -885,6 +989,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 if (_invalidMessageProducer?.IsValueCreated == true)
                     _invalidMessageProducer.Value?.Dispose();
+
+                if (_deadLetterProducerAsync?.IsValueCreated == true)
+                    (_deadLetterProducerAsync.Value as IDisposable)?.Dispose();
+
+                if (_invalidMessageProducerAsync?.IsValueCreated == true)
+                    (_invalidMessageProducerAsync.Value as IDisposable)?.Dispose();
             }
         }
 

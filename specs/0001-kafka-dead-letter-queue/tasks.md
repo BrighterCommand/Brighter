@@ -123,7 +123,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 
 ### Phase 4: Message Rejection to DLQ Async (Integration Test)
 
-- [X] **TEST: Rejected message sent to dead letter queue**
+- [] **TEST: Rejected message sent to dead letter queue**
   - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
   - Write test: When_rejecting_message_with_delivery_error_should_send_to_dlq_async. Note this test is similar to 
     "tests/Paramore.Brighter.Kafka.
@@ -135,7 +135,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Verify message appears on DLQ topic with correct metadata
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [X] **IMPLEMENT: KafkaMessageConsumer.RejectAsync() with DLQ routing**
+- [] **IMPLEMENT: KafkaMessageConsumer.RejectAsync() with DLQ routing**
   - Add Lazy<IAmAMessageProducerAsync> fields
   - Implement async producer factory methods
   - Implement routing logic for MessageRejectionReason.DeliveryError → DLQ
@@ -144,7 +144,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Handle DLQ production failures (log and acknowledge)
   - Make the test pass
 
-- [X] **REFACTOR: Update KafkaMessageConsumer**
+- [] **REFACTOR: Update KafkaMessageConsumer**
   - Use `.claude/commands/refactor/tidy-first.md` 
   - Think: can we remove duplication between KafkaMessageConsumer.Reject() and KafkaMessageConsumer.RejectAsync()? 
   - Implement: make any changes to KafkaMessageConsumer 
