@@ -528,9 +528,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                   // Determine routing based on rejection reason
                   var (routingKey, foundProducer, isFallingBackToDlq) = DetermineRejectionRoute(
-                      reason,
-                      _invalidMessageProducer != null,
-                      _deadLetterProducer != null);
+                      reason, _invalidMessageProducer != null, _deadLetterProducer != null);
 
                   // Set message type for unacceptable messages
                   if (reason.RejectionReason == RejectionReason.Unacceptable)
@@ -602,17 +600,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 RefreshMetadata(message, reason);
 
                 // Determine routing based on rejection reason
-                var (routingKey, foundProducer, isFallingBackToDlq) = DetermineRejectionRoute(
-                    reason,
-                    _invalidMessageProducerAsync != null,
-                    _deadLetterProducerAsync != null);
+                var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
+                    reason, _invalidMessageProducerAsync != null, _deadLetterProducerAsync != null);
 
-                // Set message type for unacceptable messages
+                // Reset message type for unacceptable messages
                 if (reason.RejectionReason == RejectionReason.Unacceptable)
                     message.Header.MessageType = MessageType.MT_UNACCEPTABLE;
 
                 IAmAMessageProducerAsync? producer = null;
-                if (foundProducer)
+                if (shouldRoute)
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
@@ -627,10 +623,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 if (producer != null)
                 {
-                    await producer.SendAsync(message);
+                    await producer.SendAsync(message, cancellationToken);
                     if (producer is KafkaMessageProducer kafkaProducer)
                     {
-                        kafkaProducer.Flush();
+                        kafkaProducer.Flush(cancellationToken);
                     }
                     Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
                 }
