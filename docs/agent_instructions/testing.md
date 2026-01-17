@@ -10,6 +10,8 @@
 
 ## TDD Style
 
+**Recommended Tool**: Use the `/test-first <behavior>` command (see [.claude/commands/tdd/test-first.md](../../.claude/commands/tdd/test-first.md)) to enforce the TDD approval workflow automatically. This ensures the mandatory approval step is never skipped.
+
 - We write developer tests
   - Failure of a test case implicates the most recent edit.
   - Do not use mocks to isolate the System Under Test (SUT).

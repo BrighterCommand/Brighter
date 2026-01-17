@@ -72,6 +72,7 @@
   - If the implementation is hard to explain, it's a bad idea.
   - Keep methods small and focused on a single responsibility
 - Follow Beck's "Tidy First" approach by separating structural changes from behavioral changes
+  - **Recommended Tool**: Use the `/tidy-first <description>` command (see [.claude/commands/refactor/tidy-first.md](../../.claude/commands/refactor/tidy-first.md)) to enforce this workflow automatically
   - Separate all changes into two distinct types:
     - STRUCTURAL CHANGES: Rearranging code without changing behavior (renaming, extracting methods, moving code)
     - BEHAVIORAL CHANGES: Adding or modifying actual functionality
