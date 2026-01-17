@@ -186,7 +186,7 @@ namespace Paramore.Brighter
         /// Gets the type of the message (command, event). Internal usage, Used when routing the message to a handler
         /// </summary>
         /// <value>The type of the message.</value>
-        public MessageType MessageType { get; init; }
+        public MessageType MessageType { get; set; }
 
         /// <summary>
         /// OPTIONAL

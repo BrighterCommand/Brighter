@@ -85,13 +85,17 @@ public class KafkaMessageConsumerDLQAsyncTests : IAsyncDisposable
             new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
             new MessageBody($"test content for DLQ async")
         );
-        _producer.Send(sentMessage);
+        await _producer.SendAsync(sentMessage);
         _producer.Flush();
+        
+        //allow message to propogate
+        await Task.Delay(5000);
 
         //Act - consume and reject the message
+        Message? receivedMessage;
         await using (var consumer = CreateConsumer(groupId, dlqRoutingKey))
         {
-            var receivedMessage = await ConsumeMessageAsync(consumer);
+            receivedMessage = await ConsumeMessageAsync(consumer);
             Assert.Equal(messageId, receivedMessage.Id);
 
             _output.WriteLine($"About to reject message {messageId} with DeliveryError");
@@ -114,11 +118,11 @@ public class KafkaMessageConsumerDLQAsyncTests : IAsyncDisposable
         await using (var dlqConsumer = CreateDLQConsumer(groupId))
         {
             _output.WriteLine("Attempting to consume from DLQ");
-            var dlqMessage = await ConsumeDLQMessageAsync(dlqConsumer);
+            var dlqMessage = await ConsumeMessageAsync(dlqConsumer);
 
             Assert.NotNull(dlqMessage);
             Assert.Equal(MessageType.MT_COMMAND, dlqMessage.Header.MessageType);
-            Assert.Equal("test content for DLQ async", dlqMessage.Body.Value);
+            Assert.Equal(receivedMessage.Body.Value, dlqMessage.Body.Value);
 
             //verify rejection metadata was added
             Assert.True(dlqMessage.Header.Bag.ContainsKey("OriginalTopic"));
@@ -174,14 +178,13 @@ public class KafkaMessageConsumerDLQAsyncTests : IAsyncDisposable
 
     private async Task<Message> ConsumeMessageAsync(IAmAMessageConsumerAsync consumer)
     {
-        Message[] messages = [new Message()];
         int maxTries = 0;
         do
         {
             try
             {
                 maxTries++;
-                messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                var messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
@@ -195,32 +198,6 @@ public class KafkaMessageConsumerDLQAsyncTests : IAsyncDisposable
         } while (maxTries <= 3);
 
         throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");
-    }
-
-    private async Task<Message?> ConsumeDLQMessageAsync(IAmAMessageConsumerAsync consumer)
-    {
-        Message[] messages = [new Message()];
-        int maxTries = 0;
-        do
-        {
-            try
-            {
-                maxTries++;
-                messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
-
-                if (messages[0].Header.MessageType != MessageType.MT_NONE)
-                {
-                    await consumer.AcknowledgeAsync(messages[0]);
-                    return messages[0];
-                }
-            }
-            catch (ChannelFailureException cfx)
-            {
-                _output.WriteLine($" Failed to read from DLQ topic:{_dlqTopic} because {cfx.Message} attempt: {maxTries}");
-            }
-        } while (maxTries <= 3);
-
-        return null;
     }
 
     public async ValueTask DisposeAsync()

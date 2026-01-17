@@ -479,12 +479,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<Message[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            timeOut ??= TimeSpan.Zero;
 
             var recieveTask = Task.Run(() => 
             {
                 try
                 {
-                    var messages = Receive(TimeSpan.Zero);
+                    var messages = Receive(timeOut);
                     tcs.SetResult(messages);
                 }
                 catch (Exception e)
@@ -523,21 +524,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
               try
               {
-                  EnrichMessageWithMetadata(message, reason);
+                  RefreshMetadata(message, reason);
                   IAmAMessageProducerSync? producer = null;
 
                   // Route based on rejection reason
                   switch (reason.RejectionReason)
                   {
                       case RejectionReason.Unacceptable:
+                          message.Header.MessageType = MessageType.MT_UNACCEPTABLE;
                           // Try invalid message channel first, fall back to DLQ
                           if (_invalidMessageProducer != null)
                           {
                               producer = _invalidMessageProducer.Value;
+                              message.Header.Topic = _invalidMessageRoutingKey!;
                           }
                           else if (_deadLetterProducer != null)
                           {
                               producer = _deadLetterProducer.Value;
+                              message.Header.Topic = _deadLetterRoutingKey!;
                               Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
                           }
                           break;
@@ -548,6 +552,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                           if (_deadLetterProducer != null)
                           {
                               producer = _deadLetterProducer.Value;
+                              message.Header.Topic = _deadLetterRoutingKey!;
                           }
                           break;
                   }
@@ -601,7 +606,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             try
             {
-                EnrichMessageWithMetadata(message, reason);
+                RefreshMetadata(message, reason);
                 IAmAMessageProducerAsync? producer = null;
 
                 // Route based on rejection reason
@@ -612,10 +617,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         if (_invalidMessageProducerAsync != null)
                         {
                             producer = _invalidMessageProducerAsync.Value;
+                            message.Header.Topic = _invalidMessageRoutingKey!;
                         }
                         else if (_deadLetterProducerAsync != null)
                         {
                             producer = _deadLetterProducerAsync.Value;
+                            message.Header.Topic = _deadLetterRoutingKey!;
                             Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
                         }
                         break;
@@ -626,6 +633,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         if (_deadLetterProducerAsync != null)
                         {
                             producer = _deadLetterProducerAsync.Value;
+                            message.Header.Topic = _deadLetterRoutingKey!;
                         }
                         break;
                 }
@@ -909,11 +917,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return producer;
         }
         
-        private void EnrichMessageWithMetadata(Message message, MessageRejectionReason? reason)
+        private void RefreshMetadata(Message message, MessageRejectionReason? reason)
         {
             // Add rejection metadata
-            message.Header.Bag["OriginalTopic"] = message.Header.Topic.Value;
-            message.Header.Bag["RejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+            message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = message.Header.Topic.Value;
+            message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = DateTimeOffset.UtcNow.ToString("o");
+            message.Header.Bag[HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString();
+            
+            //remove headers that will be reset by send as set from message properties
+            message.Header.Bag.Remove(HeaderNames.PARTITION_OFFSET);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_ID);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_SPEC_VERSION);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_TYPE);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_SOURCE);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_TIME);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_SUBJECT);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_TRACE_PARENT);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_TRACE_STATE);
+            message.Header.Bag.Remove(HeaderNames.W3C_BAGGAGE);
+            message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE);
 
             if (reason == null) return;
             

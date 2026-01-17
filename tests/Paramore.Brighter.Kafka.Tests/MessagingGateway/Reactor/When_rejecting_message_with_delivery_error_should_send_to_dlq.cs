@@ -89,9 +89,10 @@ public class KafkaMessageConsumerDLQTests : IDisposable
         _producer.Flush();
 
         //Act - consume and reject the message
+        Message? receivedMessage;
         using (var consumer = CreateConsumer(groupId, dlqRoutingKey))
         {
-            var receivedMessage = ConsumeMessage(consumer);
+            receivedMessage = ConsumeMessage(consumer);
             Assert.Equal(messageId, receivedMessage.Id);
 
             _output.WriteLine($"About to reject message {messageId} with DeliveryError");
@@ -114,11 +115,11 @@ public class KafkaMessageConsumerDLQTests : IDisposable
         using (var dlqConsumer = CreateDLQConsumer(groupId))
         {
             _output.WriteLine("Attempting to consume from DLQ");
-            var dlqMessage = ConsumeDLQMessage(dlqConsumer);
+            var dlqMessage = ConsumeMessage(dlqConsumer);
 
             Assert.NotNull(dlqMessage);
             Assert.Equal(MessageType.MT_COMMAND, dlqMessage.Header.MessageType);
-            Assert.Equal("test content for DLQ", dlqMessage.Body.Value);
+            Assert.Equal(receivedMessage.Body.Value, dlqMessage.Body.Value);
 
             //verify rejection metadata was added
             Assert.True(dlqMessage.Header.Bag.ContainsKey("OriginalTopic"));
@@ -174,14 +175,13 @@ public class KafkaMessageConsumerDLQTests : IDisposable
 
     private Message ConsumeMessage(IAmAMessageConsumerSync consumer)
     {
-        Message[] messages = [new Message()];
         int maxTries = 0;
         do
         {
             try
             {
                 maxTries++;
-                messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
+                var messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
@@ -195,32 +195,6 @@ public class KafkaMessageConsumerDLQTests : IDisposable
         } while (maxTries <= 3);
 
         throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");
-    }
-
-    private Message? ConsumeDLQMessage(IAmAMessageConsumerSync consumer)
-    {
-        Message[] messages = [new Message()];
-        int maxTries = 0;
-        do
-        {
-            try
-            {
-                maxTries++;
-                messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
-
-                if (messages[0].Header.MessageType != MessageType.MT_NONE)
-                {
-                    consumer.Acknowledge(messages[0]);
-                    return messages[0];
-                }
-            }
-            catch (ChannelFailureException cfx)
-            {
-                _output.WriteLine($" Failed to read from DLQ topic:{_dlqTopic} because {cfx.Message} attempt: {maxTries}");
-            }
-        } while (maxTries <= 3);
-
-        return null;
     }
 
     public void Dispose()
