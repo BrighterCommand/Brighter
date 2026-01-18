@@ -30,9 +30,6 @@ using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
-/// <summary>
-/// Configures TLS/SSL settings for RabbitMQ connections with mutual authentication support.
-/// </summary>
 internal static class RmqTlsConfigurator
 {
     internal static void ConfigureIfEnabled(ConnectionFactory connectionFactory, RmqMessagingGatewayConnection connection)
