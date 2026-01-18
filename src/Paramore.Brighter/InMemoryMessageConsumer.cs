@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -175,7 +174,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// Rejects the specified message.
     /// </summary>
     /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
-    /// message channel, the message should be forwardedn to it
+    /// message channel, the message should be forwarded to it
     /// <param name="message">The <see cref="Message"/> to reject</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
@@ -198,6 +197,12 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             else
                 return true;
         }
+        else if (reason is null)
+        {
+            if ( _deadLetterTopic is null) return true;
+
+            message.Header.Topic = _deadLetterTopic;
+        }    
 
         _bus.Enqueue(message);
 

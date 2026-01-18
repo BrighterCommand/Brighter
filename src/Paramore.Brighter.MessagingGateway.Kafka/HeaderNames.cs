@@ -81,6 +81,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// What is the offset into the partition of the message
         /// </summary>
         public const string PARTITION_OFFSET = "TopicPartitionOffset";
+        
+        ///<summary>
+        /// Why was the message rejected?
+        /// </summary>
+        public const string REJECTION_MESSAGE = "RejectionMessage";
+        
+        /// <summary>
+        /// Why was this message rejected
+        /// </summary>
+        public const string REJECTION_REASON = "RejectionReason";
 
         /// <summary>
         /// If we rejected the message, when did we?

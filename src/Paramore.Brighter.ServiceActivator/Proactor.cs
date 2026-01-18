@@ -236,6 +236,7 @@ namespace Paramore.Brighter.ServiceActivator
                     var stop = false;
                     var defer = false;
                     var reject = false;
+                    var invalidMessage = false;
                     string? rejectReason = null; 
   
                     foreach (var exception in aggregateException.InnerExceptions)
@@ -261,6 +262,13 @@ namespace Paramore.Brighter.ServiceActivator
                             continue;
                         }
 
+                        if (exception is InvalidMessageAction invalidMessageAction)
+                        {
+                            invalidMessage = true;
+                            rejectReason = invalidMessageAction.Message;
+                            continue;
+                        }
+
                         Log.FailedToDispatchMessage(s_logger, exception, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     }
 
@@ -277,6 +285,14 @@ namespace Paramore.Brighter.ServiceActivator
                         span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
                         IncrementUnacceptableMessageCount();
                         await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectReason));
+                        continue;
+                    }
+
+                    if (invalidMessage)
+                    {
+                        span?.SetStatus(ActivityStatusCode.Error, $"Invalid message {message.Id}");
+                        IncrementUnacceptableMessageCount();
+                        await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, rejectReason));
                         continue;
                     }
 
@@ -310,9 +326,16 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (RejectMessageAction rejectMessageAction)
                 {
                     span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
-                    IncrementUnacceptableMessageCount();    
+                    IncrementUnacceptableMessageCount();
                     await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectMessageAction.Message));
 
+                    continue;
+                }
+                catch (InvalidMessageAction invalidMessageAction)
+                {
+                    span?.SetStatus(ActivityStatusCode.Error, $"Invalid message {message.Id}");
+                    IncrementUnacceptableMessageCount();
+                    await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, invalidMessageAction.Message));
                     continue;
                 }
                 catch (MessageMappingException messageMappingException)
@@ -475,6 +498,14 @@ namespace Paramore.Brighter.ServiceActivator
             catch (ConfigurationException)
             {
                 throw;
+            }
+            catch (TargetInvocationException tie)
+            {
+                // Unwrap exceptions thrown from reflected method invocation
+                var innerException = tie.InnerException;
+                if (innerException is InvalidMessageAction or RejectMessageAction or DeferMessageAction)
+                    throw innerException;
+                throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", innerException ?? tie);
             }
             catch (Exception exception)
             {

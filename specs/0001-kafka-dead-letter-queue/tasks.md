@@ -381,17 +381,19 @@ Phase 3: Message Rejection to DLQ (integration test drives implementation)
     ↓
 Phase 4: Invalid Message Routing (integration tests)
     ↓
-Phase 5: Invalid Message Routing Async (integration tests)   
+Phase 5: Invalid Message Routing Async (integration tests)
     ↓
 Phase 6: Edge Cases and Error Handling (integration tests)
     ↓
-Phase 6: Async Consumer Support (integration tests)
+Phase 7: Channel Factory Integration (integration tests)
     ↓
 Phase 8: Message Enrichment Verification (integration test)
     ↓
 Phase 9: Regression Testing
     ↓
 Phase 10: Documentation
+    ↓
+Phase 11: PR Review Feedback (fixes and enhancements)
 ```
 
 Each TEST task must be approved before its corresponding IMPLEMENT task.
@@ -409,6 +411,108 @@ Each TEST task must be approved before its corresponding IMPLEMENT task.
 
 - **Risk**: Performance impact from lazy producer initialization
   - **Mitigation**: Use Lazy<T> for thread-safe initialization; measure performance in integration tests
+
+### Phase 11: PR Review Feedback
+
+#### Critical Issues (Must Fix)
+
+- [X] **FIX: Add missing MIT license header**
+  - File: `src/Paramore.Brighter/Extensions/MessageTypeExtensions.cs`
+  - Issue: Missing the MIT license header required per codebase standards
+  - Add standard MIT license header block at the top of the file
+  - Match format of other extension files in the codebase
+
+- [X] **TEST + IMPLEMENT: InvalidMessageAction for deserialization failures**
+  - **USE COMMAND**: `/test-first when message deserialization fails should throw invalid message action`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor` (or appropriate location)
+  - The ADR mentions this exception class for failed message deserialization
+  - Test should verify:
+    - When a message cannot be deserialized, InvalidMessageAction is thrown
+    - Exception contains original message and error details
+    - Message pump can catch this and route to invalid message channel
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Create InvalidMessageAction exception class inheriting from MessageHandlingException
+    - Should be parallel to RejectMessageAction but specifically for deserialization failures
+    - Include properties for original message body and deserialization error
+    - Update message mappers to throw this exception on deserialization failure
+
+- [X] **FIX: Complete incomplete documentation sentence**
+  - File: `src/Paramore.Brighter/IUseBrighterInvalidMessageSupport.cs:28-32`
+  - ✅ VERIFIED COMPLETE: Documentation now reads "...we will send invalid messages to the Dead Letter Channel instead."
+  - The sentence is complete and explains the fallback behavior
+
+#### Important Issues (Should Fix)
+
+- [X] **FIX: Inconsistent property mutability**
+  - Files:
+    - `src/Paramore.Brighter/IUseBrighterInvalidMessageSupport.cs`
+    - `src/Paramore.Brighter/IUseBrighterDeadLetterSupport.cs`
+  - ✅ VERIFIED CONSISTENT: Both interfaces now have `RoutingKey? { get; set; }`
+  - Both properties are mutable, which is consistent
+
+- [X] **FIX: Add thread safety documentation**
+  - File: `src/Paramore.Brighter/InMemoryMessageConsumer.cs`
+  - ✅ N/A - DESIGN CHANGED: No `DeadLetterRoutingKey` property exists on `InMemoryMessageConsumer`
+  - The class uses constructor injection with private readonly fields (`_deadLetterTopic`, `_invalidMessageTopic`)
+  - This design is inherently thread-safe as values are immutable after construction
+
+- [X] **FIX: Remove or complete empty remarks tag**
+  - File: `src/Paramore.Brighter/Actions/RejectMessageAction.cs:35-43`
+  - ✅ VERIFIED COMPLETE: The `<remarks>` tag now contains meaningful content
+  - Documents when to use RejectMessageAction vs DeferMessageAction and the intended workflow
+
+#### Minor Issues (Nice to Fix)
+
+- [X] **FIX: Typo in extension method documentation**
+  - File: `src/Paramore.Brighter/Extensions/MessageConsumerExtensions.cs`
+  - ✅ N/A - FILE DOES NOT EXIST: The `MessageConsumerExtensions.cs` file is not present in the codebase
+  - Either removed during refactoring or never created
+
+- [X] **FIX: Code style - missing space**
+  - File: `src/Paramore.Brighter/InMemoryMessageConsumer.cs`
+  - ✅ VERIFIED FIXED: The pattern `var removed =_` does not exist in the codebase
+  - All spacing is now correct
+
+#### Suggestions to Consider
+
+- [X] **CONSIDER: Add REJECTION_REASON constant to MessageHeader**
+  - File: `src/Paramore.Brighter/MessageHeader.cs`
+  - ✅ N/A - ALREADY EXISTS IN KAFKA: Constants are defined in `HeaderNames.cs`:
+    - `REJECTION_REASON`, `REJECTION_MESSAGE`, `REJECTION_TIMESTAMP`, `ORIGINAL_TOPIC`, `ORIGINAL_TYPE`
+  - Transport-specific constants are appropriate since only Kafka implements Brighter-managed DLQ
+  - Other transports (SQS, RabbitMQ) use native DLQ support and don't need these headers
+
+- [X] **REVIEW: Observability in Reject methods**
+  - Files: KafkaMessageConsumer.Reject() and RejectAsync()
+  - ✅ SUFFICIENT FOR V1: Structured logging is implemented:
+    - `NoChannelsConfiguredForRejection` (Warning) - when no DLQ/invalid channel configured
+    - `MessageSentToRejectionChannel` (Information) - on successful DLQ send
+    - `ErrorSendingToRejectionChannel` (Error) - on DLQ send failure
+  - All logs include MessageId and RejectionReason for structured logging
+  - OpenTelemetry traces/metrics can be added as follow-up enhancement
+
+- [X] **TEST: Edge case coverage**
+  - ✅ ALL EDGE CASES COVERED by existing tests:
+    - `When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log` (null routing key)
+    - `When_rejecting_message_should_include_metadata` (reason added to headers)
+    - `When_rejecting_message_with_unknown_reason_should_send_to_dlq` (unknown reason handling)
+    - `When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel`
+    - `When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq`
+  - Concurrent access N/A - InMemoryMessageConsumer uses constructor injection with immutable fields
+
+#### Documentation Needs
+
+- [X] **CLARIFY: Documentation plan**
+  - ✅ DOCUMENTATION COMPLETE: `docs/Kafka-DeadLetterQueue-Usage.md` covers:
+    - Basic DLQ configuration
+    - Naming conventions (DeadLetterNamingConvention, InvalidMessageNamingConvention)
+    - Invalid message channel configuration
+    - RejectMessageAction and DeferMessageAction usage with examples
+    - Message metadata table (OriginalTopic, RejectionReason, RejectionTimestamp, etc.)
+    - Advanced scenarios (env-specific, no DLQ, async, custom routing)
+  - Migration guide not needed - this is opt-in additive functionality
+  - Other transport examples not needed - only Kafka implements Brighter-managed DLQ
 
 ## Notes
 
