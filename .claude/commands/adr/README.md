@@ -56,7 +56,7 @@ When a current spec exists (in `specs/.current-spec`):
 
 ## Why Use ADRs?
 
-From [docs/agent_instructions/documentation.md](../../../docs/agent_instructions/documentation.md):
+From [.agent_instructions/documentation.md](../../../.agent_instructions/documentation.md):
 
 Architecture Decision Records capture important design decisions that provide context to future reviewers and explorers of the codebase. They answer:
 
@@ -188,7 +188,7 @@ Brighter/
 
 ## References
 
-- [Documentation Standards](../../../docs/agent_instructions/documentation.md)
+- [Documentation Standards](../../../.agent_instructions/documentation.md)
 - [ADR Template](../../../docs/adr/0001-record-architecture-decisions.md)
 - [Specification Workflow](../spec/README.md)
 - [Michael Nygard's ADR article](http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions)

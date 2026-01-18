@@ -16,7 +16,7 @@ $ARGUMENTS
 
 ### 🔴 RED Phase - Write Failing Test
 
-**Your task:** Write a test that specifies the desired behavior, following the guidelines in [docs/agent_instructions/testing.md](../../../docs/agent_instructions/testing.md).
+**Your task:** Write a test that specifies the desired behavior, following the guidelines in [.agent_instructions/testing.md](../../../.agent_instructions/testing.md).
 
 **Test Requirements:**
 1. **Naming Convention**: `When_[condition]_should_[expected_behavior]`
@@ -67,7 +67,7 @@ Options:
 
 **Your task:** Write the **minimum code** necessary to make the test pass.
 
-**Code Requirements** (from [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md)):
+**Code Requirements** (from [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md)):
 1. Follow .NET C# naming conventions
 2. Use Responsibility Driven Design principles
 3. Avoid primitive obsession - use expressive types
@@ -76,7 +76,7 @@ Options:
 6. Enable nullable reference types
 7. Add MIT license header to new files
 
-**Documentation Requirements** (from [docs/agent_instructions/documentation.md](../../../docs/agent_instructions/documentation.md)):
+**Documentation Requirements** (from [.agent_instructions/documentation.md](../../../.agent_instructions/documentation.md)):
 1. Add XML documentation comments (`///`) for all public members
 2. Use `<summary>`, `<param>`, `<returns>`, `<exception>` tags
 3. Add `<remarks>` for complex implementation details
@@ -101,7 +101,7 @@ Options:
 4. Ensure clear responsibility assignment
 5. Simplify conditional logic
 
-**IMPORTANT - Tidy First Approach** (from [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md)):
+**IMPORTANT - Tidy First Approach** (from [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md)):
 - Only make STRUCTURAL changes (renaming, extracting methods, moving code)
 - Do NOT change behavior during refactoring
 - Run all tests after each refactoring to verify behavior unchanged
@@ -196,7 +196,7 @@ Should I commit these changes?
 
 ## Notes
 
-- This workflow enforces the TDD approval requirement from docs/agent_instructions/testing.md
+- This workflow enforces the TDD approval requirement from .agent_instructions/testing.md
 - The approval gate ensures the test correctly specifies desired behavior before implementation
 - Following this workflow provides scope control and better design
 - You may run `/test-first` multiple times to build up functionality incrementally

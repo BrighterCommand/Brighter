@@ -40,7 +40,7 @@ Guides you through the Red-Green-Refactor TDD cycle with a **mandatory approval 
 
 **Why Use This?**
 
-From [docs/agent_instructions/testing.md](../../../docs/agent_instructions/testing.md):
+From [.agent_instructions/testing.md](../../../.agent_instructions/testing.md):
 > The approval step is MANDATORY when working with an AI coding assistant
 
 This command enforces that requirement automatically, ensuring:
@@ -51,9 +51,9 @@ This command enforces that requirement automatically, ensuring:
 - Incremental progress through small, focused tests
 
 **Related Guidelines:**
-- [Testing Guidelines](../../../docs/agent_instructions/testing.md)
-- [Code Style](../../../docs/agent_instructions/code_style.md)
-- [Documentation Standards](../../../docs/agent_instructions/documentation.md)
+- [Testing Guidelines](../../../.agent_instructions/testing.md)
+- [Code Style](../../../.agent_instructions/code_style.md)
+- [Documentation Standards](../../../.agent_instructions/documentation.md)
 
 ## Integration with Spec Workflow
 

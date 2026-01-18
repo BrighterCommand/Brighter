@@ -89,7 +89,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 
 ## Enforcement of Brighter Practices
 
-Each skill enforces specific practices from `docs/agent_instructions/`:
+Each skill enforces specific practices from `.agent_instructions/`:
 
 ### `/test-first` → testing.md
 

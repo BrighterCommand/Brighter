@@ -292,7 +292,7 @@ The implement command follows a rigorous Red-Green-Refactor cycle:
 
 **🔴 RED Phase - Write Failing Test:**
 1. Identifies the next behavior to implement
-2. Writes a failing test following [docs/agent_instructions/testing.md](../../../docs/agent_instructions/testing.md):
+2. Writes a failing test following [.agent_instructions/testing.md](../../../.agent_instructions/testing.md):
    - Test naming: `When_[condition]_should_[expected_behavior]`
    - File per test: `When_[condition]_should_[expected_behavior].cs`
    - Arrange/Act/Assert structure with explicit comments
@@ -310,7 +310,7 @@ The implement command follows a rigorous Red-Green-Refactor cycle:
 
 **🟢 GREEN Phase - Make Test Pass:**
 1. Writes minimum code to make test pass
-2. Follows [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md):
+2. Follows [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md):
    - .NET C# naming conventions
    - Responsibility Driven Design
    - Avoid primitive obsession

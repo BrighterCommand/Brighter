@@ -191,7 +191,7 @@ The easiest way to see skills in action is to try test-first development:
 
 ### For Solo Development
 
-**Before**: Manually follow docs/agent_instructions/ procedures
+**Before**: Manually follow .agent_instructions/ procedures
 **Now**: Type skill command, Claude guides you
 
 **Before**: Easy to skip approval or mix commits
@@ -284,7 +284,7 @@ You can request adjustments at any approval point.
 
 ### Documentation
 
-- **Quick Reference**: [docs/agent_instructions/skills_overview.md](agent_instructions/skills_overview.md)
+- **Quick Reference**: [.agent_instructions/skills_overview.md](../.agent_instructions/skills_overview.md)
 - **Detailed Guide**: [.claude/commands/README.md](../.claude/commands/README.md)
 - **Individual Skills**:
   - [/test-first docs](../.claude/commands/tdd/README.md)

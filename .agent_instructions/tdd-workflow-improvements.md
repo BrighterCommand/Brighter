@@ -173,7 +173,7 @@ Claude Code skills automate common workflows and enforce mandatory engineering p
 
 ---
 
-## 3. `docs/agent_instructions/testing.md` - Strengthen the mandate
+## 3. `.agent_instructions/testing.md` - Strengthen the mandate
 
 ### BEFORE (line 13)
 ```markdown
@@ -289,7 +289,7 @@ The user will review tests in their IDE, not CLI output.
 |------|--------|--------|
 | `.claude/commands/spec/tasks.md` | Add TDD task format template | Claude generates tasks with `/test-first` commands |
 | `CLAUDE.md` | Add mandatory TDD section at top | Makes requirement unmissable |
-| `docs/agent_instructions/testing.md` | Strengthen "MANDATORY" language | Removes ambiguity |
+| `.agent_instructions/testing.md` | Strengthen "MANDATORY" language | Removes ambiguity |
 | `specs/*/tasks.md` | Reformat tasks with commands | Shows exact command to use |
 
 ## Expected Behavior After Changes

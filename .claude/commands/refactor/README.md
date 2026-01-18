@@ -17,7 +17,7 @@ Implements Kent Beck's "Tidy First" methodology by separating structural changes
 
 ## The Core Principle
 
-From [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md):
+From [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md):
 
 > **Never mix structural and behavioral changes in the same commit**
 
@@ -278,8 +278,8 @@ dotnet test
 
 ## Related Documentation
 
-- [Code Style Guide](../../../docs/agent_instructions/code_style.md) - Tidy First principles (lines 74-83)
-- [Testing Guidelines](../../../docs/agent_instructions/testing.md) - TDD workflow for behavioral changes
+- [Code Style Guide](../../../.agent_instructions/code_style.md) - Tidy First principles (lines 74-83)
+- [Testing Guidelines](../../../.agent_instructions/testing.md) - TDD workflow for behavioral changes
 - [Kent Beck's Tidy First Book](https://www.oreilly.com/library/view/tidy-first/9781098151232/) - Source methodology
 
 ## Related Commands

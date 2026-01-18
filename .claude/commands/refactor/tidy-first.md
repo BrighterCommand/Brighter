@@ -14,7 +14,7 @@ $ARGUMENTS
 
 ## Core Principle
 
-From [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md):
+From [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md):
 
 > **Never mix structural and behavioral changes in the same commit**
 
@@ -97,7 +97,7 @@ If user adjusts, update your todo list and ask for confirmation again.
 
 **Steps:**
 1. Make the structural changes you identified
-2. Follow code style guidelines from [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md)
+2. Follow code style guidelines from [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md)
 3. Update XML documentation if public API structure changed
 4. Do NOT add new functionality
 5. Do NOT change logic or algorithms
@@ -338,7 +338,7 @@ This separation makes code review easier and git history clearer.
 
 ## Benefits of This Approach
 
-From [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md):
+From [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md):
 
 - **Easier Code Review**: Reviewers can approve structural changes quickly, focus on behavioral logic
 - **Clearer Git History**: Each commit has single purpose (structure OR behavior)

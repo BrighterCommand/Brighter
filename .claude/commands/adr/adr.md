@@ -14,7 +14,7 @@ $ARGUMENTS
 
 ## Your Task
 
-Create a new Architecture Decision Record in the `docs/adr/` directory following the project's conventions from [docs/agent_instructions/documentation.md](../../../docs/agent_instructions/documentation.md).
+Create a new Architecture Decision Record in the `docs/adr/` directory following the project's conventions from [.agent_instructions/documentation.md](../../../.agent_instructions/documentation.md).
 
 ### Step 1: Determine Next ADR Number
 
@@ -207,7 +207,7 @@ Ask the user for the next step:
 
 ## Important Guidelines
 
-From [docs/agent_instructions/documentation.md](../../../docs/agent_instructions/documentation.md):
+From [.agent_instructions/documentation.md](../../../.agent_instructions/documentation.md):
 
 **ADR Best Practices**:
 - One architectural decision per ADR - stay focused

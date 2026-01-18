@@ -15,8 +15,8 @@ Current spec directory: specs/
 ## Critical Guidelines
 
 **ALWAYS follow these instructions when writing code:**
-- **Testing**: [docs/agent_instructions/testing.md](../../../docs/agent_instructions/testing.md)
-- **Code Style**: [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md)
+- **Testing**: [.agent_instructions/testing.md](../../../.agent_instructions/testing.md)
+- **Code Style**: [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md)
 
 ## Your Task
 
@@ -51,7 +51,7 @@ For each task, follow this strict workflow:
 
 #### 🔴 RED: Write a Failing Test
 
-1. **Read Testing Guidelines**: Review [docs/agent_instructions/testing.md](../../../docs/agent_instructions/testing.md)
+1. **Read Testing Guidelines**: Review [.agent_instructions/testing.md](../../../.agent_instructions/testing.md)
 
 2. **Understand the Behavior**: Identify the specific behavior this task requires
    - What is the expected behavior?
@@ -96,7 +96,7 @@ For each task, follow this strict workflow:
 
 #### 🟢 GREEN: Make the Test Pass
 
-1. **Read Code Style Guidelines**: Review [docs/agent_instructions/code_style.md](../../../docs/agent_instructions/code_style.md)
+1. **Read Code Style Guidelines**: Review [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md)
 
 2. **Write Minimum Code** to make the test pass:
    - Only write code necessary for the test to pass
@@ -196,8 +196,8 @@ Ask user: "This behavior is complete. Should I continue to the next test, or wou
 
 ### Code Quality Requirements
 
-- Follow ALL guidelines in docs/agent_instructions/testing.md
-- Follow ALL guidelines in docs/agent_instructions/code_style.md
+- Follow ALL guidelines in .agent_instructions/testing.md
+- Follow ALL guidelines in .agent_instructions/code_style.md
 - Keep changes small and incremental
 - Each Red-Green-Refactor cycle should take minutes, not hours
 - Commit frequently (after each successful cycle)

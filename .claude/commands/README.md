@@ -190,13 +190,13 @@ Are you just refactoring with no behavior changes?
 
 ## Integration with Brighter Practices
 
-These skills enforce practices documented in `docs/agent_instructions/`:
+These skills enforce practices documented in `.agent_instructions/`:
 
 | Skill | Enforces | Reference |
 |-------|----------|-----------|
-| `/test-first` | TDD approval workflow | [testing.md](../docs/agent_instructions/testing.md) lines 11-26 |
-| `/adr` | ADR creation standards | [documentation.md](../docs/agent_instructions/documentation.md) lines 49-62 |
-| `/tidy-first` | Structural/behavioral separation | [code_style.md](../docs/agent_instructions/code_style.md) lines 74-83 |
+| `/test-first` | TDD approval workflow | [testing.md](../.agent_instructions/testing.md) lines 11-26 |
+| `/adr` | ADR creation standards | [documentation.md](../.agent_instructions/documentation.md) lines 49-62 |
+| `/tidy-first` | Structural/behavioral separation | [code_style.md](../.agent_instructions/code_style.md) lines 74-83 |
 
 All three make **mandatory workflows enforceable** rather than just documented.
 
@@ -386,7 +386,7 @@ Complete! Two commits created for easier review.
 ## Getting Help
 
 - **Skill documentation**: Each skill has a README.md in its directory
-- **Brighter guidelines**: See `docs/agent_instructions/` for full practices
+- **Brighter guidelines**: See `.agent_instructions/` for full practices
 - **Issues**: Report skill issues at https://github.com/anthropics/claude-code/issues
 - **Contributing guidelines**: See [CONTRIBUTING.md](../CONTRIBUTING.md)
 
