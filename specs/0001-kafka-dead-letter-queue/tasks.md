@@ -302,17 +302,23 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 
 ### Phase 7: Channel Factory Integration
 
-- [ ] **TEST: ChannelFactory passes DLQ routing keys to consumer**
-  - Write test: When_creating_channel_with_dlq_subscription_should_pass_routing_keys
-  - Create KafkaSubscription with DLQ routing keys
-  - Verify ChannelFactory extracts and passes them to consumer
-  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
-
-- [ ] **IMPLEMENT: ChannelFactory extracts routing keys**
-  - Check if subscription implements IUseBrighterDeadLetterSupport
-  - Check if subscription implements IUseBrighterInvalidMessageSupport
-  - Extract routing keys and pass to consumer constructor
-  - Make the test pass
+- [X] **TEST + IMPLEMENT: ChannelFactory passes DLQ routing keys to consumer**
+  - **USE COMMAND**: `/test-first when creating channel with dlq subscription should pass routing keys`
+  - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway`
+  - Test file: `When_creating_channel_with_dlq_subscription_should_pass_routing_keys.cs`
+  - Test should verify:
+    - Create KafkaSubscription with deadLetterRoutingKey and invalidMessageRoutingKey
+    - Use KafkaMessageConsumerFactory to create consumer from subscription
+    - Verify consumer has access to both routing keys (test by triggering rejection and verifying DLQ/invalid message channels work)
+    - Alternative: Use reflection to verify routing keys were passed to constructor
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - In `KafkaMessageConsumerFactory.Create()` or similar factory method
+    - Check if subscription implements IUseBrighterDeadLetterSupport
+    - Check if subscription implements IUseBrighterInvalidMessageSupport
+    - Extract DeadLetterRoutingKey and InvalidMessageRoutingKey from subscription
+    - Pass routing keys to KafkaMessageConsumer constructor (deadLetterRoutingKey, invalidMessageRoutingKey parameters)
+    - Make the test pass
 
 ### Phase 8: Message Enrichment Verification
 
