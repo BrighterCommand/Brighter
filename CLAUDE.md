@@ -52,7 +52,8 @@ For comprehensive guidance on working with this codebase, Claude should read the
 
 - [Build and Development Commands](.agent_instructions/build_and_development.md) - Build scripts, test commands, and Docker setup
 - [Project Structure](.agent_instructions/project_structure.md) - Organization of the codebase and testing framework
-- [Code Style](.agent_instructions/code_style.md) - C# conventions, design principles, and architectural patterns
+- [Code Style](.agent_instructions/code_style.md) - C# conventions and architectural patterns
+- [Design Principles](.agent_instructions/design_principles.md) - Responsibility-Driven Design and architectural guidance
 - [Testing](.agent_instructions/testing.md) - TDD practices, test structure, and testing guidelines
 - [Documentation](.agent_instructions/documentation.md) - XML documentation standards and licensing requirements
 - [Dependency Management](.agent_instructions/dependency_management.md) - Package management with Directory.Packages.props

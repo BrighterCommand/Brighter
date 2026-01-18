@@ -194,9 +194,9 @@ These skills enforce practices documented in `.agent_instructions/`:
 
 | Skill | Enforces | Reference |
 |-------|----------|-----------|
-| `/test-first` | TDD approval workflow | [testing.md](../.agent_instructions/testing.md) lines 11-26 |
-| `/adr` | ADR creation standards | [documentation.md](../.agent_instructions/documentation.md) lines 49-62 |
-| `/tidy-first` | Structural/behavioral separation | [code_style.md](../.agent_instructions/code_style.md) lines 74-83 |
+| `/test-first` | TDD approval workflow | [testing.md](../../.agent_instructions/testing.md) lines 11-26 |
+| `/adr` | ADR creation standards | [documentation.md](../../.agent_instructions/documentation.md) lines 49-62 |
+| `/tidy-first` | Structural/behavioral separation | [code_style.md](../../.agent_instructions/code_style.md) lines 74-83 |
 
 All three make **mandatory workflows enforceable** rather than just documented.
 

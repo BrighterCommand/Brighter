@@ -187,7 +187,7 @@ Tell the user:
 
 Read the ADR:
 
-- Read "docs/adr/design-principles.md"
+- Read ".agent_instructions/design_principles.md"
 - Review the ADR using the design guidelines from "Use Responsibility-Driven Design"
 - Check for a design focused on behavior: does the ADR think about *roles* and *responsibilities*.
 - Responsibilities are "knowing", "doing", and "deciding"
