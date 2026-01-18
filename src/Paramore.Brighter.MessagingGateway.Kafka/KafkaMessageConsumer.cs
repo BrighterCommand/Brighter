@@ -897,7 +897,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             // Add rejection metadata
             message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = message.Header.Topic.Value;
             message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = DateTimeOffset.UtcNow.ToString("o");
-            message.Header.Bag[HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString();
+            message.Header.Bag[HeaderNames.ORIGINAL_TYPE] = message.Header.MessageType.ToString();
 
             //remove headers that will be reset by send as set from message properties
             message.Header.Bag.Remove(HeaderNames.PARTITION_OFFSET);
@@ -915,10 +915,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             if (reason == null) return;
 
-            message.Header.Bag["RejectionReason"] = reason.RejectionReason.ToString();
+            message.Header.Bag[HeaderNames.REJECTION_REASON] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
             {
-                message.Header.Bag["RejectionMessage"] = reason.Description!;
+                message.Header.Bag[HeaderNames.REJECTION_MESSAGE] = reason.Description!;
             }
         }
 
