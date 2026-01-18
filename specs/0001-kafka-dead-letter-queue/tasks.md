@@ -352,15 +352,21 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 
 ### Phase 10: Documentation
 
-- [ ] **Update XML documentation**
-  - Document new constructor parameters
-  - Document IUseBrighterDeadLetterSupport and IUseBrighterInvalidMessageSupport interfaces
-  - Document naming convention classes
+- [X] **Update XML documentation**
+  - ✅ Constructor parameters already documented (deadLetterRoutingKey, invalidMessageRoutingKey)
+  - ✅ IUseBrighterDeadLetterSupport interface already documented
+  - ✅ IUseBrighterInvalidMessageSupport interface already documented
+  - ✅ DeadLetterNamingConvention class already documented
+  - ✅ InvalidMessageNamingConvention class already documented
 
-- [ ] **Create usage examples**
-  - Show how to configure DLQ for Kafka subscription
-  - Show how to use naming conventions
-  - Show how to throw RejectMessageAction in handler
+- [X] **Create usage examples**
+  - ✅ Created comprehensive usage guide: docs/Kafka-DeadLetterQueue-Usage.md
+  - ✅ Basic DLQ configuration examples
+  - ✅ Naming convention usage (default and custom templates)
+  - ✅ Invalid message channel configuration
+  - ✅ Rejecting messages from handlers (RejectMessageAction, DeferMessageAction)
+  - ✅ Message metadata access and usage
+  - ✅ Advanced scenarios (environment-specific, no DLQ, async, custom routing)
 
 ## Task Dependencies
 
