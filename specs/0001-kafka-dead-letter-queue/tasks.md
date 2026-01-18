@@ -322,17 +322,26 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 
 ### Phase 8: Message Enrichment Verification
 
-- [ ] **TEST: Rejected message includes all required metadata**
-  - Write test: When_rejecting_message_should_include_metadata
-  - Verify OriginalTopic, OriginalPartition, OriginalOffset
-  - Verify RejectionTimestamp, RejectionReason
-  - Verify ConsumerGroup, RedeliveryCount
-  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
-
-- [ ] **IMPLEMENT: Complete EnrichMessageWithMetadata if needed**
-  - Add any missing metadata fields
-  - Implement GetCurrentPartition() and GetCurrentOffset() if needed
-  - Make the test pass
+- [ ] **TEST + IMPLEMENT: Rejected message includes all required metadata**
+  - **USE COMMAND**: `/test-first when rejecting message should include metadata`
+  - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor`
+  - Test file: `When_rejecting_message_should_include_metadata.cs`
+  - Test should verify:
+    - Send message to data topic and reject it with DLQ configured
+    - Consume rejected message from DLQ topic
+    - Verify metadata in message headers:
+      - OriginalTopic: Contains source topic name
+      - RejectionTimestamp: Contains rejection time in ISO format
+      - RejectionReason: Contains rejection reason string
+      - MESSAGE_TYPE: Contains original message type
+    - Note: OriginalPartition, OriginalOffset, ConsumerGroup, RedeliveryCount may not be available in current implementation
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - In `KafkaMessageConsumer.RefreshMetadata()` line ~895
+    - Verify all metadata fields are being added to message.Header.Bag
+    - Add any missing fields if needed
+    - Implement GetCurrentPartition() and GetCurrentOffset() if needed for partition/offset metadata
+    - Make the test pass
 
 ### Phase 9: Regression Testing
 
