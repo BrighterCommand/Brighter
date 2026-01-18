@@ -322,7 +322,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 
 ### Phase 8: Message Enrichment Verification
 
-- [ ] **TEST + IMPLEMENT: Rejected message includes all required metadata**
+- [X] **TEST + IMPLEMENT: Rejected message includes all required metadata**
   - **USE COMMAND**: `/test-first when rejecting message should include metadata`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor`
   - Test file: `When_rejecting_message_should_include_metadata.cs`
