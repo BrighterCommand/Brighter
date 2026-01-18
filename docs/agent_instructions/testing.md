@@ -10,7 +10,15 @@
 
 ## TDD Style
 
-**Recommended Tool**: Use the `/test-first <behavior>` command (see [.claude/commands/tdd/test-first.md](../../.claude/commands/tdd/test-first.md)) to enforce the TDD approval workflow automatically. This ensures the mandatory approval step is never skipped.
+**MANDATORY Tool**: ALWAYS use the `/test-first <behavior>` command (see [.claude/commands/tdd/test-first.md](../../.claude/commands/tdd/test-first.md)) when writing new tests.
+
+- **DO NOT write test files manually** (using Write tool) and proceed to implementation
+- **DO NOT run tests without approval**
+- **STOP after writing the test and ASK FOR APPROVAL**
+- The user will review the test in their IDE, not in CLI output
+- This is NOT optional - the approval gate is MANDATORY when working with Claude Code
+
+This ensures the mandatory approval step is never skipped and tests are reviewed before implementation.
 
 - We write developer tests
   - Failure of a test case implicates the most recent edit.
@@ -21,11 +29,13 @@
   - **APPROVAL**: Get approval for the test before implementing
   - Green: Make the test pass, commit any sins necessary to move fast
   - Refactor: Improve the design of the code.
-- **Approval Workflow**:
-  - When working on a feature, write the test first and get approval before implementing
-  - This ensures the test correctly specifies the desired behavior
-  - The approval step is MANDATORY when working with an AI coding assistant
+- **Approval Workflow** (⛔ MANDATORY - NOT OPTIONAL):
+  - When working on a feature, ALWAYS use `/test-first <behavior>` - do not write tests manually
+  - The skill will write the test and ASK FOR APPROVAL before proceeding
+  - The user will review the test in their IDE
+  - DO NOT run tests or start implementation without explicit user approval
   - After approval, implement the minimum code to make the test pass
+  - The approval step is MANDATORY when working with Claude Code - you cannot bypass it
 - Where possible, avoid writing tests after.
   - This will not give you scope control - only writing the code required by tests.
     - You should only write the code necessary for a test to pass; do not write speculative code.

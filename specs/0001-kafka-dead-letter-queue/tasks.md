@@ -212,58 +212,93 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
 
 ### Phase 6: Edge Cases and Error Handling
 
-- [ ] **TEST: Rejection with no channels configured acknowledges message**
-  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
-  - Write test: When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log
-  - Configure consumer without DLQ or invalid message routing keys
-  - Reject message
-  - Verify message acknowledged and warning logged
-  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+#### No Channels Configured Behavior
 
-- [ ] **IMPLEMENT: No channels configured behavior**
-  - Handle null producers case
-  - Log warning
-  - Acknowledge anyway
-  - Make the test pass
+- [X] **TEST + IMPLEMENT: Rejection with no channels configured (Sync)**
+  - **USE COMMAND**: `/test-first when rejecting message with no channels configured should acknowledge and log`
+  - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor`
+  - Test file: `When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log.cs`
+  - Test should verify:
+    - Consumer created without deadLetterRoutingKey or invalidMessageRoutingKey parameters
+    - Send two messages to data topic
+    - Consume and reject first message with DeliveryError reason
+    - Verify Reject() returns true even with no channels
+    - Verify second message can be consumed (proving first was acknowledged)
+    - Warning should be logged with message ID and rejection reason
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - In `KafkaMessageConsumer.Reject()` line ~515
+    - Check: `if (reason == null || (_deadLetterProducer == null && _invalidMessageProducer == null))`
+    - Log warning: `NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason)`
+    - Call `Acknowledge(message)` to prevent reprocessing
+    - Return `true`
 
-- [ ] **TEST: Async rejection with no channels configured acknowledges message**
-  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
-  - Write test: When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async
-  - Configure consumer without DLQ or invalid message routing keys
-  - RejectAsync message
-  - Verify message acknowledged and warning logged
-  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+- [X] **TEST + IMPLEMENT: Rejection with no channels configured (Async)**
+  - **USE COMMAND**: `/test-first when rejecting message async with no channels configured should acknowledge and log`
+  - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor`
+  - Test file: `When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async.cs`
+  - Test should verify:
+    - Same behavior as sync test but using async methods
+    - Use `RejectAsync()`, `ReceiveAsync()`, and async consumer creation
+    - Consumer created with MessagePumpType.Proactor
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - In `KafkaMessageConsumer.RejectAsync()` line ~584
+    - Same logic as Reject() but using async producer checks
+    - Check: `if (reason == null || (_deadLetterProducerAsync == null && _invalidMessageProducerAsync == null))`
+    - Await `AcknowledgeAsync(message, cancellationToken)`
+    - Return `true`
 
-- [ ] **IMPLEMENT: No channels configured behavior**
-  - Handle null producers case
-  - Log warning
-  - Acknowledge anyway
-  - Make the test pass
+#### Unknown Rejection Reason Handling
 
-- [ ] **TEST: Unknown rejection reason routes to DLQ**
-  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
-  - Write test: When_rejecting_message_with_unknown_reason_should_send_to_dlq
-  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+- [X] **TEST + IMPLEMENT: Unknown rejection reason routes to DLQ (Sync)**
+  - **USE COMMAND**: `/test-first when rejecting message with unknown reason should send to dlq`
+  - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor`
+  - Test file: `When_rejecting_message_with_unknown_reason_should_send_to_dlq.cs`
+  - Test should verify:
+    - Consumer created WITH deadLetterRoutingKey configured
+    - Send message to data topic
+    - Reject with `RejectionReason.None` (unknown reason)
+    - Verify message appears on DLQ topic (consume from DLQ)
+    - Verify rejection metadata includes: OriginalTopic, RejectionReason="None"
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - In `KafkaMessageConsumer.DetermineRejectionRoute()` line ~932
+    - The `default:` case should handle unknown reasons
+    - Route to DLQ if available: `if (hasDeadLetterProducer) return (_deadLetterRoutingKey, true, false)`
+    - This catches `RejectionReason.None` and any future unknown values
 
-- [ ] **IMPLEMENT: Unknown reason → DLQ routing**
-  - Make the test pass
+- [X] **TEST + IMPLEMENT: Unknown rejection reason routes to DLQ (Async)**
+  - **USE COMMAND**: `/test-first when rejecting message async with unknown reason should send to dlq`
+  - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor`
+  - Test file: `When_rejecting_message_with_unknown_reason_should_send_to_dlq_async.cs`
+  - Test should verify:
+    - Same behavior as sync test but using async methods
+    - Use `RejectAsync()` and await DLQ consumer operations
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Uses same `DetermineRejectionRoute()` method (shared by sync/async)
+    - Already implemented by sync version - test should pass with existing code
 
-- [ ] **TEST: Async unknown rejection reason routes to DLQ**
-  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
-  - Write test: When_rejecting_message_with_unknown_reason_should_send_to_dlq_async
-  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
+#### MakeChannels Strategy Inheritance
 
-- [ ] **IMPLEMENT: Unknown reason → DLQ routing**
-  - Make the test pass
-
-- [ ] **TEST: DLQ topic creation follows MakeChannels strategy**
-  - Write test: When_creating_dlq_producer_with_make_channels_create_should_create_topic
-  - Test MakeChannels.Create, Validate, and Assume modes
-  - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
-
-- [ ] **IMPLEMENT: MakeChannels strategy inheritance**
-  - Ensure DLQ producer inherits MakeChannels from consumer config
-  - Make the test pass
+- [X] **TEST + IMPLEMENT: DLQ topic creation follows MakeChannels strategy**
+  - **USE COMMAND**: `/test-first when creating dlq producer with make channels create should create topic`
+  - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor`
+  - Test file: `When_creating_dlq_producer_with_make_channels_create_should_create_topic.cs`
+  - Test should verify:
+    - Create consumer with `OnMissingChannel.Create` and deadLetterRoutingKey
+    - DLQ topic does NOT exist initially
+    - Reject a message (triggers lazy DLQ producer creation)
+    - Verify DLQ topic was automatically created
+    - Verify message appears on DLQ (consume from DLQ consumer)
+    - This proves MakeChannels.Create was inherited and applied
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - In `KafkaMessageConsumer.CreateDeadLetterProducer()` line ~827
+    - Publication must inherit: `MakeChannels = MakeChannels`
+    - When `producer.Init()` is called, it creates topic if MakeChannels=Create
+    - Already implemented - test should verify existing behavior
 
 ### Phase 7: Channel Factory Integration
 

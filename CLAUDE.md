@@ -5,6 +5,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## How to Use This File
 This file contains instructions for Claude Code to help it understand the context and requirements of the project. It is not intended to be modified by contributors. Human contributors should follow the guidelines in the [CONTRIBUTING.md](CONTRIBUTING.md) file. These guidelines derive from that document.
 
+## ⛔ TDD Workflow (MANDATORY - NOT OPTIONAL)
+
+When working on implementation tasks in `specs/*/tasks.md`:
+
+- **ALWAYS use `/test-first <behavior>`** for TEST tasks
+- **NEVER write tests manually and proceed to implementation**
+- **STOP and ASK FOR APPROVAL** after writing each test
+- The user will review the test in their IDE before you implement
+- Each TEST task in tasks.md specifies the exact `/test-first` command to use
+- The skill enforces the approval gate automatically - you cannot bypass it
+
+**Why this is mandatory:**
+1. Tests correctly specify desired behavior before implementation
+2. Scope control - only code required by tests is written
+3. No speculative code
+4. User reviews test in IDE, not in CLI output
+
+**If a task says `/test-first when ...`** - YOU MUST USE THAT COMMAND. Do not write the test file manually.
+
 ## Claude Code Skills (Recommended)
 
 Claude Code skills automate common workflows and enforce mandatory engineering practices. **Use these skills proactively** rather than manually following documented procedures:
