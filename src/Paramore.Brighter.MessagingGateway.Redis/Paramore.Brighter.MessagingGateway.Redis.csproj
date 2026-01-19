@@ -12,7 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ServiceStack.Redis.Core" />
-    <PackageReference Include="System.Net.Http" />
     <PackageReference Include="System.Text.RegularExpressions" />
     <PackageReference Include="System.Reflection.TypeExtensions" />
   </ItemGroup>

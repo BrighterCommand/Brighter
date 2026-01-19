@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "ask": [],
+    "deny": [
+      "Read(./.env*)",
+      "Read(./secrets/**)",
+      "Read(./config/**)",
+      "Read(./**/credentials*)",
+      "Read(./**/*.key)",
+      "Read(./**/*.pem)",
+      "WebFetch",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(ssh:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "slopwatch analyze -d . --hook",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
+  }
+}

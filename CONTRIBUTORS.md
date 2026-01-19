@@ -92,6 +92,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Domenico Musto](https://github.com/domspektrix?)**
   * Fix issue with multiple performers having name clashes
   * New ASB Transport
+
+**[Aboubakr Nasef](https://github.com/AboubakrNasef)**
+  * Added TickerQ as a scheduler
   
 **[Jonny Olliff-Lee](https://github.com/DevJonny)**
   * Documentation Fixes
@@ -155,6 +158,10 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
   * Clean up the ILog constructor
   * Clean up the CancellationToken
+
+**[Jakub Syty](https://github.com/jakoss)
+  * Various Fixes
+  * MongoDb EF Integration 
 
 **[Richard Tappenden](https://github.com/tapmantwo)**
   * Various fixes
