@@ -8,6 +8,7 @@
     <ProjectReference Include="..\..\..\..\..\src\Paramore.Brighter.Transformers.AWS\Paramore.Brighter.Transformers.AWS.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" VersionOverride="4.0.17.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
