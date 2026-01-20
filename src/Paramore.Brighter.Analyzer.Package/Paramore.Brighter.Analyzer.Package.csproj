@@ -10,12 +10,11 @@
   <PropertyGroup>
     <PackageId>Paramore.Brighter.Analyzer</PackageId>
     <PackageVersion>1.0.0.0</PackageVersion>
-    <Authors>AboubakrWork</Authors>
+    <Authors>AboubakrNasef</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>Paramore.Brighter.Analyzer</Description>
-    <PackageReleaseNotes>Summary of changes made in this release of the package.</PackageReleaseNotes>
-    <Copyright>Copyright</Copyright>
-    <PackageTags>Paramore.Brighter.Analyzer, analyzers</PackageTags>
+    <PackageReleaseNotes>Analyzer For usage of Brighter Command</PackageReleaseNotes>
+    <PackageTags>Paramore.Brighter,Paramore.Brighter.Analyzer, analyzers</PackageTags>
     <DevelopmentDependency>true</DevelopmentDependency>
     <NoPackageAnalysis>true</NoPackageAnalysis>
 
