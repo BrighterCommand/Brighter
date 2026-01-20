@@ -22,8 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-
-using System;
 using Microsoft.CodeAnalysis.Operations;
 using Paramore.Brighter.Analyzer.Vistiors.Symbol;
 
