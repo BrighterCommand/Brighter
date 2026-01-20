@@ -6,6 +6,9 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/samples/" />
+  <Folder Name="/samples/Analyzer/">
+    <Project Path="samples/Analyzer/AnalyzerSamples/AnalyzerSamples.csproj" />
+  </Folder>
   <Folder Name="/samples/CommandProcessor/">
     <Project Path="samples/CommandProcessor/HelloWorld/HelloWorld.csproj" />
     <Project Path="samples/CommandProcessor/HelloWorldAsync/HelloWorldAsync.csproj" />
@@ -153,6 +156,7 @@
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests/README.md" />
+    <Project Path="tests/Paramore.Brighter.Analyzer.Tests/Paramore.Brighter.Analyzer.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj" />
@@ -187,6 +191,8 @@
   <Folder Name="/tools/">
     <Project Path="tools/Paramore.Brighter.Test.Generator/Paramore.Brighter.Test.Generator.csproj" />
   </Folder>
+  <Project Path="src/Paramore.Brighter.Analyzer.Package/Paramore.Brighter.Analyzer.Package.csproj" />
+  <Project Path="src/Paramore.Brighter.Analyzer/Paramore.Brighter.Analyzer.csproj" />
   <Project Path="src/Paramore.Brighter.Archive.Azure/Paramore.Brighter.Archive.Azure.csproj" />
   <Project Path="src/Paramore.Brighter.Dapper/Paramore.Brighter.Dapper.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb.V4/Paramore.Brighter.DynamoDb.V4.csproj" />
