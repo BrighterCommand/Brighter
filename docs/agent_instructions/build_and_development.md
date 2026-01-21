@@ -4,13 +4,13 @@
 
 ```bash
 # Build entire solution
-dotnet build Brighter.sln
+dotnet build Brighter.slnx
 
 # Build specific project
 dotnet build src/Paramore.Brighter/Paramore.Brighter.csproj
 
 # Build in Release mode
-dotnet build Brighter.sln -c Release
+dotnet build Brighter.slnx -c Release
 ```
 
 ## Running Tests
