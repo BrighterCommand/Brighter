@@ -41,7 +41,6 @@ namespace Paramore.Brighter.Analyzer.Analyzers
                category: SubscriptionCategory,
                defaultSeverity: DiagnosticSeverity.Warning,
                isEnabledByDefault: true
-         //   helpLinkUri: GetRuleUrl(Rule)
          );
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [MessagePumpMissingRule];
 

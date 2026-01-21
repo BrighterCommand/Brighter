@@ -42,7 +42,6 @@ namespace Paramore.Brighter.Analyzer.Analyzers
                category: WrapAttributeCategory,
                defaultSeverity: DiagnosticSeverity.Warning,
                isEnabledByDefault: true
-         //   helpLinkUri: GetRuleUrl(Rule)
          );
         public static DiagnosticDescriptor UnWrapWithAttributeRule = new DiagnosticDescriptor(
         id: DiagnosticsIds.UnWrapWithAttribute,
@@ -51,7 +50,6 @@ namespace Paramore.Brighter.Analyzer.Analyzers
         category: WrapAttributeCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
-  //   helpLinkUri: GetRuleUrl(Rule)
   );
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [WrapAttributeRule, UnWrapWithAttributeRule];
 

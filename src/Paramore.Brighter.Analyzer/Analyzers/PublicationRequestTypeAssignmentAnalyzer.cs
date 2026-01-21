@@ -40,7 +40,6 @@ namespace Paramore.Brighter.Analyzer.Analyzers
                category: RequestPublicationCategory,
                defaultSeverity: DiagnosticSeverity.Warning,
                isEnabledByDefault: true
-         //   helpLinkUri: GetRuleUrl(Rule)
          );
         public static DiagnosticDescriptor WrongRequestTypeRule = new DiagnosticDescriptor(
                id: DiagnosticsIds.WrongRequestType,
