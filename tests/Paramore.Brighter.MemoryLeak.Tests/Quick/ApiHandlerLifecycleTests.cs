@@ -25,9 +25,7 @@ public class ApiHandlerLifecycleTests : MemoryLeakTestBase
 
         // Act - Process 1000 commands that trigger handler instantiation
         Console.WriteLine("Sending 1000 requests to exercise command handlers...");
-        var result = await loadGen.RunLoadAsync(
-            totalRequests: 1000,
-            concurrentRequests: 10);
+        var result = await loadGen.RunLoadAsync(totalRequests: 1000, concurrentRequests: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         Console.WriteLine($"Load test result: {result}");
 
@@ -57,7 +55,7 @@ public class ApiHandlerLifecycleTests : MemoryLeakTestBase
 
         // Warmup to stabilize memory baseline
         Console.WriteLine("Warming up with 100 requests...");
-        await loadGen.RunLoadAsync(totalRequests: 100, concurrentRequests: 10);
+        await loadGen.RunLoadAsync(totalRequests: 100, concurrentRequests: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         ForceGarbageCollection();
 
@@ -67,9 +65,7 @@ public class ApiHandlerLifecycleTests : MemoryLeakTestBase
 
         // Act - Process 500 more commands
         Console.WriteLine("Processing 500 requests to measure memory growth...");
-        var result = await loadGen.RunLoadAsync(
-            totalRequests: 500,
-            concurrentRequests: 10);
+        var result = await loadGen.RunLoadAsync(totalRequests: 500, concurrentRequests: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         Console.WriteLine($"Load test result: {result}");
 

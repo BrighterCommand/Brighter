@@ -26,9 +26,7 @@ public class DbContextLifecycleTests : MemoryLeakTestBase
         // Act - Process 500 requests that exercise DbContext
         // Each request creates a person (INSERT) and adds a greeting (INSERT + query)
         Console.WriteLine("Sending 500 requests to exercise DbContext...");
-        var result = await loadGen.RunLoadAsync(
-            totalRequests: 500,
-            concurrentRequests: 10);
+        var result = await loadGen.RunLoadAsync(totalRequests: 500, concurrentRequests: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         Console.WriteLine($"Load test result: {result}");
 

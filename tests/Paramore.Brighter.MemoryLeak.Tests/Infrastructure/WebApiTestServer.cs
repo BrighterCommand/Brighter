@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MemoryLeak.Tests.Infrastructure;
 
 /// <summary>
 /// Test server which runs the GreetingsWeb API sample.
-/// I uses WebApplicationFactory to start the API
+/// It uses WebApplicationFactory to start the API
 /// Provides in-process testing with TestServer for fast, deterministic tests.
 /// </summary>
 public class WebApiTestServer : WebApplicationFactory<Startup>, IDisposable
