@@ -57,6 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private DateTime _lastFlushAt = DateTime.UtcNow;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new(1, 1);
+        private readonly ITimer _sweeperTimer;
         private bool _hasFatalError;
         private bool _isClosed;
         private readonly RoutingKey? _deadLetterRoutingKey;
@@ -86,8 +87,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="commitBatchSize">What size does a batch grow before we write commits that we have stored. Defaults to 10. If a consumer crashes,
         /// uncommitted offsets will not have been written and will be processed by the consumer group again. Conversely a low batch size increases writes
         /// and lowers performance.</param>
-        /// <param name="sweepUncommittedOffsetsInterval">The sweeper ensures that partially complete batches, particularly on low throughput queues
-        /// will be written. It runs after the interval and commits anything currently in the store and not committed. Defaults to 30s</param>
+        /// <param name="sweepUncommittedOffsetsInterval">The <see cref="TimeSpan"/> interval for the sweeper to commit uncommitted offsets.
+        /// The sweeper ensures that partially complete batches, particularly on low throughput queues will be written. It runs after the interval and 
+        /// commits anything currently in the store and not committed. Defaults to 30s if not specified.</param>
         /// <param name="readCommittedOffsetsTimeout">Timeout when reading the committed offsets, used when closing a consumer to log where it reached.
         /// Defaults to 5000</param>
         /// <param name="numPartitions">If we are creating missing infrastructure, How many partitions should the topic have. Defaults to 1</param>
@@ -96,6 +98,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="topicFindTimeout">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created.</param>
+        /// <param name="timeProvider">The <see cref="TimeProvider"/> used to create the timer for sweeping uncommitted offsets. Defaults to <see cref="TimeProvider.System"/> if not specified. Can be overridden for testing purposes.</param>
         /// <param name="deadLetterRoutingKey">If we support a dead letter topic what is the <see cref="RoutingKey"/></param>
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
@@ -117,7 +120,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             Action<ConsumerConfig>? configHook = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null
+            RoutingKey? invalidMessageRoutingKey = null,
+            TimeProvider? timeProvider = null
             )
         {
             if (groupId is null)
@@ -192,6 +196,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _maxBatchSize = commitBatchSize;
             _sweepUncommittedInterval = sweepUncommittedOffsetsInterval.Value;
             _readCommittedOffsetsTimeout = readCommittedOffsetsTimeout.Value;
+
+            timeProvider ??= TimeProvider.System;
+            _sweeperTimer = timeProvider.CreateTimer(_ =>
+            {
+                if (_isClosed)
+                {
+                    return;
+                }
+                
+                SweepOffsets();
+            }, null, _sweepUncommittedInterval, _sweepUncommittedInterval);
 
             _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
                 .SetPartitionsAssignedHandler((_, list) =>
@@ -286,8 +301,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 if (_offsetStorage.Count % _maxBatchSize == 0)
                     FlushOffsets();
-                else
-                    SweepOffsets();
 
                 Log.CurrentKafkaBatchCount(s_logger, _offsetStorage.Count.ToString(), _maxBatchSize.ToString());
             }
@@ -807,7 +820,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 }
 
-                if (s_logger.IsEnabled(LogLevel.Information))
+                if (s_logger.IsEnabled(LogLevel.Information) && listOffsets.Count != 0)
                 {
                     var offsets = listOffsets.Select(tpo =>
                         $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
@@ -1009,6 +1022,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (disposing)
             {
+                _sweeperTimer.Dispose();
                 Close();
                 _consumer?.Dispose();
                 _flushToken?.Dispose();

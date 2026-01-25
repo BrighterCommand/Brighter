@@ -29,26 +29,33 @@ public static class DynamoDbOutboxTable
                 return s_tableName;
             }
 
-            var request = new DynamoDbTableFactory()
-                .GenerateCreateTableRequest<MessageItem>(
-                    new DynamoDbCreateProvisionedThroughput(new ProvisionedThroughput
-                    {
-                        ReadCapacityUnits = 10, WriteCapacityUnits = 10
-                    },
+            var request = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
+                new DynamoDbCreateProvisionedThroughput(
+                    new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 },
                     new Dictionary<string, ProvisionedThroughput?>
                     {
-                        ["Outstanding"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                        ["OutstandingAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                        ["Delivered"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                        ["DeliveredAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10}
-                    }));
+                        ["Outstanding"] = new() { ReadCapacityUnits = 10, WriteCapacityUnits = 10 },
+                        ["OutstandingAllTopics"] = new()
+                        {
+                            ReadCapacityUnits = 10,
+                            WriteCapacityUnits = 10,
+                        },
+                        ["Delivered"] = new() { ReadCapacityUnits = 10, WriteCapacityUnits = 10 },
+                        ["DeliveredAllTopics"] = new()
+                        {
+                            ReadCapacityUnits = 10,
+                            WriteCapacityUnits = 10,
+                        },
+                    }
+                )
+            );
 
             tableName = request.TableName;
             var builder = new DynamoDbTableBuilder(dynamoDbClient);
             await builder.Build(request);
 
             await builder.EnsureTablesReady([request.TableName], TableStatus.ACTIVE);
-            
+
             s_tableName = request.TableName;
             return s_tableName;
         }

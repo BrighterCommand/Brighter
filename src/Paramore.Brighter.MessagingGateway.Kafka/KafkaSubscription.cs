@@ -108,7 +108,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromMilliseconds(10000);
 
         /// <summary>
-        /// 
+        /// How often do we commit offsets that have yet to be saved (sweep uncommitted offsets)
+        /// Default is 30000ms (30 seconds)
         /// </summary>
         public TimeSpan SweepUncommittedOffsetsInterval { get; set; } = TimeSpan.FromMilliseconds(30000);
         
@@ -116,6 +117,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// How long to wait when asking for topic metadata
         /// </summary>
         public TimeSpan TopicFindTimeout { get; set; } = TimeSpan.FromMilliseconds(5000);
+        
+        /// <summary>
+        /// The time provider used to create timers for sweeping uncommitted offsets
+        /// Defaults to TimeProvider.System
+        /// </summary>
+        public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
         
         /// <inheritdoc />
         public override Type ChannelFactoryType => typeof(ChannelFactory);

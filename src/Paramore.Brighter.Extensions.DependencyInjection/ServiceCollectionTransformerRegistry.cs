@@ -37,26 +37,23 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public class ServiceCollectionTransformerRegistry : ITransformerRegistry
     {
         private readonly IServiceCollection _services;
-        private readonly ServiceLifetime _serviceLifetime;
 
         /// <summary>
         /// Constructs a new instance
         /// </summary>
         /// <param name="services">The Service Collection to register the transforms with</param>
-        /// <param name="serviceLifetime">The lifetime to use for registration. Defaults to Singleton</param>
-        public ServiceCollectionTransformerRegistry(IServiceCollection services, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public ServiceCollectionTransformerRegistry(IServiceCollection services)
         {
             _services = services;
-            _serviceLifetime = serviceLifetime;
         }
 
         /// <summary>
-        /// Register a transform with the IServiceCollection using the ServiceLifetime
+        /// Register a transform with the IServiceCollection using Transient lifetime
         /// </summary>
         /// <param name="transform">The type of the transform to register</param>
         public void Add(Type transform)
         {
-            _services.TryAdd(new ServiceDescriptor(transform, transform, _serviceLifetime));
+            _services.TryAdd(new ServiceDescriptor(transform, transform, ServiceLifetime.Transient));
         }
     }
 }

@@ -13,5 +13,19 @@
       "Bash(wget:*)",
       "Bash(ssh:*)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "slopwatch analyze -d . --hook",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
   }
 }

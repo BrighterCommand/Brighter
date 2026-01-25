@@ -86,7 +86,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 makeChannels: kafkaSubscription.MakeChannels,
                 configHook: kafkaSubscription.ConfigHook,
                 deadLetterRoutingKey: deadLetterRoutingKey,
-                invalidMessageRoutingKey: invalidMessageRoutingKey
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
+                timeProvider: kafkaSubscription.TimeProvider
                 );
         }
 
