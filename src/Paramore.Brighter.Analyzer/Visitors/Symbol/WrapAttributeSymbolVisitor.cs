@@ -32,16 +32,16 @@ namespace Paramore.Brighter.Analyzer.Visitors.Symbol
 {
     public class WrapAttributeSymbolVisitor : SymbolVisitor
     {
-        List<(string Name, Location Location)> _wrongWrappedMapToRequest = new();
+        private List<(string Name, Location Location)> _wrongWrappedMapToRequest = new();
         public IReadOnlyList<(string Name, Location Location)> WrongWrappedMapToRequest => _wrongWrappedMapToRequest;
-        List<(string Name, Location Location)> _wrongWrappedMapToMessage = new();
+        private List<(string Name, Location Location)> _wrongWrappedMapToMessage = new();
         public IReadOnlyList<(string Name, Location Location)> WrongWrappedMapToMessage => _wrongWrappedMapToMessage;
         public override void VisitMethod(IMethodSymbol symbol)
         {
-            var IsMessageMapperType = symbol.ContainingType.AllInterfaces
+            var isMessageMapperType = symbol.ContainingType.AllInterfaces
                 .Any(c => c.Name.StartsWith(BrighterAnalyzerGlobals.MessageMapperInterface)
                          && c.ContainingAssembly.Name.Equals(BrighterAnalyzerGlobals.BrighterAssembly));
-            if (!IsMessageMapperType)
+            if (!isMessageMapperType)
                 return;
 
             if (symbol.Name.StartsWith(BrighterAnalyzerGlobals.MapToRequest))
