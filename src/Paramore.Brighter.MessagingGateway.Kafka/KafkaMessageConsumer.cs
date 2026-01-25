@@ -62,10 +62,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _isClosed;
         private readonly RoutingKey? _deadLetterRoutingKey;
         private readonly RoutingKey? _invalidMessageRoutingKey;
-        private readonly Lazy<IAmAMessageProducerSync>? _deadLetterProducer;
-        private readonly Lazy<IAmAMessageProducerSync>? _invalidMessageProducer;
-        private readonly Lazy<IAmAMessageProducerAsync>? _deadLetterProducerAsync;
-        private readonly Lazy<IAmAMessageProducerAsync>? _invalidMessageProducerAsync;
+        private readonly Lazy<IAmAMessageProducerSync?>? _deadLetterProducer;
+        private readonly Lazy<IAmAMessageProducerSync?>? _invalidMessageProducer;
+        private readonly Lazy<IAmAMessageProducerAsync?>? _deadLetterProducerAsync;
+        private readonly Lazy<IAmAMessageProducerAsync?>? _invalidMessageProducerAsync;
 
 
         /// <summary>
@@ -135,14 +135,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
             if (_deadLetterRoutingKey != null)
             {
-                _deadLetterProducer = new Lazy<IAmAMessageProducerSync>(CreateDeadLetterProducer);
-                _deadLetterProducerAsync = new Lazy<IAmAMessageProducerAsync>(CreateDeadLetterProducerAsync);
+                _deadLetterProducer = new Lazy<IAmAMessageProducerSync?>(CreateDeadLetterProducer);
+                _deadLetterProducerAsync = new Lazy<IAmAMessageProducerAsync?>(CreateDeadLetterProducerAsync);
             }
 
             if (_invalidMessageRoutingKey != null)
             {
-                _invalidMessageProducer = new Lazy<IAmAMessageProducerSync>(CreateInvalidMessageProducer);
-                _invalidMessageProducerAsync = new Lazy<IAmAMessageProducerAsync>(CreateInvalidMessageProducerAsync);
+                _invalidMessageProducer = new Lazy<IAmAMessageProducerSync?>(CreateInvalidMessageProducer);
+                _invalidMessageProducerAsync = new Lazy<IAmAMessageProducerAsync?>(CreateInvalidMessageProducerAsync);
             }
             
             sessionTimeout ??= TimeSpan.FromSeconds(10);
@@ -525,7 +525,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
              // If no reason provided or no channels configured, just acknowledge
-              if (reason == null || (_deadLetterProducer == null && _invalidMessageProducer == null))
+              if (_deadLetterProducer == null && _invalidMessageProducer == null)
               {
                   if (reason != null)
                   {
@@ -535,13 +535,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   return true;
               }
 
+              var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;                
+
               try
               {
                   RefreshMetadata(message, reason);
 
                   // Determine routing based on rejection reason
                   var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
-                      reason, _invalidMessageProducer != null, _deadLetterProducer != null);
+                      rejectionReason, _invalidMessageProducer != null, _deadLetterProducer != null);
 
                   IAmAMessageProducerSync? producer = null;
                   if (shouldRoute)
@@ -552,29 +554,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                       // Get the appropriate producer based on routing
                       if (routingKey == _invalidMessageRoutingKey)
-                          producer = _invalidMessageProducer!.Value;
+                          producer = _invalidMessageProducer?.Value;
                       else if (routingKey == _deadLetterRoutingKey)
-                          producer = _deadLetterProducer!.Value;
+                          producer = _deadLetterProducer?.Value;
                   }
 
                   if (producer != null)
                   {
                       producer.Send(message);
-                      if (producer is KafkaMessageProducer kafkaProducer)
-                      {
-                          kafkaProducer.Flush();
-                      }
-                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, rejectionReason.ToString());
                   }
                   else
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, rejectionReason.ToString());
                   }
               }
               catch (Exception ex)
               {
                   // Log the error but acknowledge anyway to prevent message from being reprocessed
-                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, reason.RejectionReason.ToString());
+                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
               }
 
               Acknowledge(message);
@@ -594,7 +592,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
         {
             // If no reason provided or no channels configured, just acknowledge
-            if (reason == null || (_deadLetterProducerAsync == null && _invalidMessageProducerAsync == null))
+            if (_deadLetterProducerAsync == null && _invalidMessageProducerAsync == null)
             {
                 if (reason != null)
                 {
@@ -603,6 +601,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
             }
+            
+            var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;      
 
             try
             {
@@ -610,7 +610,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 // Determine routing based on rejection reason
                 var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
-                    reason, _invalidMessageProducerAsync != null, _deadLetterProducerAsync != null);
+                    rejectionReason, _invalidMessageProducerAsync != null, _deadLetterProducerAsync != null);
 
                 IAmAMessageProducerAsync? producer = null;
                 if (shouldRoute)
@@ -621,29 +621,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                     // Get the appropriate producer based on routing
                     if (routingKey == _invalidMessageRoutingKey)
-                        producer = _invalidMessageProducerAsync!.Value;
+                        producer = _invalidMessageProducerAsync?.Value;
                     else if (routingKey == _deadLetterRoutingKey)
-                        producer = _deadLetterProducerAsync!.Value;
+                        producer = _deadLetterProducerAsync?.Value;
                 }
 
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    if (producer is KafkaMessageProducer kafkaProducer)
-                    {
-                        kafkaProducer.Flush(cancellationToken);
-                    }
-                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
                 // Log the error but acknowledge anyway to prevent message from being reprocessed
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, reason.RejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
             }
 
             await AcknowledgeAsync(message, cancellationToken);
@@ -837,7 +833,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
         
-        private IAmAMessageProducerSync CreateDeadLetterProducer()
+        private IAmAMessageProducerSync? CreateDeadLetterProducer()
         {
             var publication = new KafkaPublication
             {
@@ -849,12 +845,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 MakeChannels = MakeChannels
             };
 
-            var producer = new KafkaMessageProducer(_configuration, publication);
-            producer.Init();
-            return producer;
+            try
+            {
+                var producer = new KafkaMessageProducer(_configuration, publication);
+                producer.Init();
+                return producer;
+            }
+            catch (Exception e)
+            {
+                Log.ErrorCreatingDLQ(s_logger, e); 
+                return null;
+            }
         }
 
-        private IAmAMessageProducerSync CreateInvalidMessageProducer()
+        private IAmAMessageProducerSync? CreateInvalidMessageProducer()
         {
             var publication = new KafkaPublication
             {
@@ -866,12 +870,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 MakeChannels = MakeChannels
             };
 
-            var producer = new KafkaMessageProducer(_configuration, publication);
-            producer.Init();
-            return producer;
+            try
+            {
+                var producer = new KafkaMessageProducer(_configuration, publication);
+                producer.Init();
+                return producer;
+            }
+            catch (Exception e)
+            {
+                Log.ErrorCreatingInvalidMessage(s_logger, e); 
+                return null;
+            }
         }
 
-        private IAmAMessageProducerAsync CreateDeadLetterProducerAsync()
+        private IAmAMessageProducerAsync? CreateDeadLetterProducerAsync()
         {
             var publication = new KafkaPublication
             {
@@ -883,12 +895,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 MakeChannels = MakeChannels
             };
 
-            var producer = new KafkaMessageProducer(_configuration, publication);
-            producer.Init();
-            return producer;
+            try
+            {
+                var producer = new KafkaMessageProducer(_configuration, publication);
+                producer.Init();
+                return producer;
+            }
+            catch (Exception e)
+            {
+                Log.ErrorCreatingDLQ(s_logger, e); 
+                return null;
+            }
         }
 
-        private IAmAMessageProducerAsync CreateInvalidMessageProducerAsync()
+        private IAmAMessageProducerAsync? CreateInvalidMessageProducerAsync()
         {
             var publication = new KafkaPublication
             {
@@ -900,9 +920,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 MakeChannels = MakeChannels
             };
 
-            var producer = new KafkaMessageProducer(_configuration, publication);
-            producer.Init();
-            return producer;
+            try
+            {
+                var producer = new KafkaMessageProducer(_configuration, publication);
+                producer.Init();
+                return producer;
+            }
+            catch (Exception e)
+            {
+                Log.ErrorCreatingInvalidMessage(s_logger, e); 
+                return null;
+            }
         }
         
         private void RefreshMetadata(Message message, MessageRejectionReason? reason)
@@ -938,16 +966,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Determines the appropriate routing for a rejected message based on rejection reason and available channels
         /// </summary>
-        /// <param name="reason">The rejection reason</param>
+        /// <param name="rejectionReason">The rejection reason</param>
         /// <param name="hasInvalidProducer">Whether an invalid message producer is available</param>
         /// <param name="hasDeadLetterProducer">Whether a dead letter producer is available</param>
         /// <returns>Tuple of (routingKey, foundProducer, isFallingBackToDlq)</returns>
         private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(
-            MessageRejectionReason reason,
+            RejectionReason rejectionReason,
             bool hasInvalidProducer,
             bool hasDeadLetterProducer)
         {
-            switch (reason.RejectionReason)
+            
+            switch (rejectionReason)
             {
                 case RejectionReason.Unacceptable:
                     // Try invalid message channel first, fall back to DLQ
@@ -958,6 +987,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     return (null, false, false);
 
                 case RejectionReason.DeliveryError:
+                case RejectionReason.None:    
                 default:
                     // Send to DLQ
                     if (hasDeadLetterProducer)
@@ -1020,15 +1050,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                _sweeperTimer.Dispose();
-                Close();
-                _consumer?.Dispose();
-                _flushToken?.Dispose();
+            if (!disposing) return;
+            _sweeperTimer.Dispose();
 
-                if (_deadLetterProducer?.IsValueCreated == true)
-                    _deadLetterProducer.Value?.Dispose();
+            Close();
+            _consumer?.Dispose();
+            _flushToken?.Dispose();
+
+            if (_deadLetterProducer?.IsValueCreated == true)
+            {
+                _deadLetterProducer.Value?.Dispose();
 
                 if (_invalidMessageProducer?.IsValueCreated == true)
                     _invalidMessageProducer.Value?.Dispose();
@@ -1041,12 +1072,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
+        /// <summary>
+        /// Disposes of the consumer
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Disposes of the consumer, async
+        /// </summary>
+        /// <returns>A value task that manages the disposal</returns>
         public ValueTask DisposeAsync()
         {
             Dispose(true);
@@ -1154,6 +1192,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             [LoggerMessage(LogLevel.Error, "Error sending message {MessageId} to rejection channel with reason {RejectionReason}")]
             public static partial void ErrorSendingToRejectionChannel(ILogger logger, Exception exception, string messageId, string rejectionReason);
+
+            [LoggerMessage(LogLevel.Error, "Error Creating DLQ")]
+            public static partial void ErrorCreatingDLQ(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Error, "Error Creating Invalid Message Channel")]
+            public static partial void ErrorCreatingInvalidMessage(ILogger logger, Exception exception);
         }
     }
 }
