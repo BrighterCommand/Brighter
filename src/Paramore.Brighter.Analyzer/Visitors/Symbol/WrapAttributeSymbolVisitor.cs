@@ -46,26 +46,27 @@ namespace Paramore.Brighter.Analyzer.Visitors.Symbol
 
             if (symbol.Name.StartsWith(BrighterAnalyzerGlobals.MapToRequest))
             {
-                var childOfVisitor = new ChildOfVisitor(BrighterAnalyzerGlobals.WrapWithAttribute, BrighterAnalyzerGlobals.BrighterAssembly);
-                var attributes = symbol.GetAttributes().Where(atr => atr.AttributeClass.Accept(childOfVisitor));
-                foreach (var attr in attributes)
-                {
-                    var loc = attr.ApplicationSyntaxReference.GetSyntax().GetLocation();
-                    _wrongWrappedMapToRequest.Add((attr.AttributeClass.Name, loc));
-                }
+                ReportInvalidAttributes(symbol, BrighterAnalyzerGlobals.WrapWithAttribute, _wrongWrappedMapToRequest);
             }
             else if (symbol.Name.StartsWith(BrighterAnalyzerGlobals.MapToMessage))
             {
-                var childOfVisitor = new ChildOfVisitor(BrighterAnalyzerGlobals.UnwrapWithAttribute, BrighterAnalyzerGlobals.BrighterAssembly);
-                var attributes = symbol.GetAttributes().Where(atr => atr.AttributeClass.Accept(childOfVisitor));
-                foreach (var attr in attributes)
-                {
-                    var loc = attr.ApplicationSyntaxReference.GetSyntax().GetLocation();
-                    _wrongWrappedMapToMessage.Add((attr.AttributeClass.Name, loc));
-                }
+                ReportInvalidAttributes(symbol, BrighterAnalyzerGlobals.UnwrapWithAttribute, _wrongWrappedMapToMessage);
             }
 
             base.VisitMethod(symbol);
+        }
+        private void ReportInvalidAttributes(IMethodSymbol symbol, string invalidAttributeBase, List<(string, Location)> collection)
+        {
+            var visitor = new ChildOfVisitor(invalidAttributeBase, BrighterAnalyzerGlobals.BrighterAssembly);
+
+            foreach (var attr in symbol.GetAttributes())
+            {
+                if (attr.AttributeClass?.Accept(visitor) == true)
+                {
+                    var location = attr.ApplicationSyntaxReference?.GetSyntax()?.GetLocation() ?? symbol.Locations[0];
+                    collection.Add((attr.AttributeClass.Name, location));
+                }
+            }
         }
     }
 }
