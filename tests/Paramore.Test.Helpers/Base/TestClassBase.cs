@@ -30,10 +30,7 @@ namespace Paramore.Test.Helpers.Base
         /// </param>
         protected TestClassBase(ITestOutputHelper testOutputHelper)
         {
-            if (testOutputHelper is null)
-            {
-                throw new ArgumentNullException(nameof(testOutputHelper));
-            }
+            ArgumentNullException.ThrowIfNull(testOutputHelper);
 
             TestOutputHelper = new CoreTestOutputHelper(this, testOutputHelper);
             _serviceProviderLazy = new Lazy<IServiceProvider>(() => BuildServiceProvider(new ServiceCollection(), TestOutputHelper));

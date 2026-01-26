@@ -147,10 +147,7 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
     private static string ToSafeName(string name, int maxNameLength, Func<string, string> convertToValidName,
         Func<byte[], string> hash)
     {
-        if (name == null)
-        {
-            throw new ArgumentNullException(nameof(name));
-        }
+        ArgumentNullException.ThrowIfNull(name);
 
         var validBaseLockName = convertToValidName(name);
         if (validBaseLockName == name && validBaseLockName.Length <= maxNameLength)
