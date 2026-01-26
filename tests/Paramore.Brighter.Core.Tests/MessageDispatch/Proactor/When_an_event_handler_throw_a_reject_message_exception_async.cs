@@ -77,6 +77,9 @@ public class MessageDispatchRejectMessageExceptionTestsAsync
     [Fact]
     public async Task When_an_event_handler_throw_a_reject_message_exception()
     {
+        // Allow time for async message processing to complete before stopping
+        await Task.Delay(1000);
+
         await _dispatcher.End();
         
         Assert.Empty(_bus.Stream(_routingKey));
