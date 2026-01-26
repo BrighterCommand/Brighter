@@ -75,17 +75,17 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
         public async Task When_Sending_A_Command_That_Retries_Then_Repeatedly_Fails_Breaks_The_Circuit()
         {
             // First two should be caught, and increment the count
-            _firstException = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(new MyCommand()));
+            _firstException = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(new MyCommand()));
             // Should have retried three times
             Assert.Equal(3, _retryCount);
             _retryCount = 0;
-            _secondException = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(new MyCommand()));
+            _secondException = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(new MyCommand()));
             // Should have retried three times
             Assert.Equal(3, _retryCount);
             _retryCount = 0;
 
             // This one should tell us that the circuit is broken
-            _thirdException = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(new MyCommand()));
+            _thirdException = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(new MyCommand()));
             // Should not retry
             Assert.Equal(0, _retryCount);
 

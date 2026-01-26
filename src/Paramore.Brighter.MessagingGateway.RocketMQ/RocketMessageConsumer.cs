@@ -332,18 +332,18 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
 
     /// <inheritdoc />
     public void Acknowledge(Message message) 
-        => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
+        => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));
 
     /// <inheritdoc />
     public bool Reject(Message message) => Requeue(message);
 
     /// <inheritdoc />
     public void Purge() 
-        => BrighterAsyncContext.Run(async () => await PurgeAsync());
+        => BrighterAsyncContext.Run(() => PurgeAsync());
 
     /// <inheritdoc />
     public Message[] Receive(TimeSpan? timeOut = null)
-        => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+        => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
 
     
     /// <inheritdoc />

@@ -169,10 +169,10 @@ public class GcsLuggageOptions : StorageOptions
     /// <returns>A task that resolves to a configured <see cref="StorageClient"/> instance</returns>
     /// <exception cref="RpcException">Propagates Google Cloud API errors</exception>
     /// <exception cref="InvalidOperationException">Thrown if client creation fails</exception>
-    public async Task<StorageClient> CreateStorageClientAsync()
+    public Task<StorageClient> CreateStorageClientAsync()
     {
         var builder = new StorageClientBuilder{Credential = Credential};
         ClientBuilderConfigurator?.Invoke(builder);
-        return await builder.BuildAsync();
+        return builder.BuildAsync();
     }
 }

@@ -104,7 +104,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         public string Schedule(Message message, DateTimeOffset at)
         {
             var ticker = CreateTimeTicker(message, at, false);
-            var result = BrighterAsyncContext.Run(async () => await timeTickerManager.AddAsync(ticker));
+            var result = BrighterAsyncContext.Run(() => timeTickerManager.AddAsync(ticker));
             return result.Result.Id.ToString();
         }
 
@@ -121,13 +121,13 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
         public bool ReScheduler(string schedulerId, DateTimeOffset at)
         {
-            return BrighterAsyncContext.Run(async () => await ReSchedulerAsync(schedulerId, at));
+            return BrighterAsyncContext.Run(() => ReSchedulerAsync(schedulerId, at));
         }
 
         /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.TimeSpan)" />
         public bool ReScheduler(string schedulerId, TimeSpan delay)
         {
-            return BrighterAsyncContext.Run(async () => await ReSchedulerAsync(schedulerId, delay));
+            return BrighterAsyncContext.Run(() => ReSchedulerAsync(schedulerId, delay));
         }
 
         /// <inheritdoc cref="IAmAMessageSchedulerAsync.CancelAsync"/>
@@ -140,7 +140,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel"/>
         public void Cancel(string id)
         {
-            BrighterAsyncContext.Run(async () => await CancelAsync(id));
+            BrighterAsyncContext.Run(() => CancelAsync(id));
         }
 
         /// <inheritdoc />
@@ -149,7 +149,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         {
             var ticker = CreateTimeTicker(request, type, at, false);
 
-            var result = BrighterAsyncContext.Run(async () => await timeTickerManager.AddAsync(ticker));
+            var result = BrighterAsyncContext.Run(() => timeTickerManager.AddAsync(ticker));
             return result.Result.Id.ToString();
         }
 
@@ -177,7 +177,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         }
 
         /// <inheritdoc />
-        public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay, CancellationToken cancellationToken = default)
+        public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay, CancellationToken cancellationToken = default)
             where TRequest : class, IRequest
         {
             if (delay < TimeSpan.Zero)
@@ -185,7 +185,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
                 throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
             }
 
-            return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+            return ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
         }
 
         private TimeTickerEntity CreateTimeTicker<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, bool isAsync) where TRequest : class, IRequest

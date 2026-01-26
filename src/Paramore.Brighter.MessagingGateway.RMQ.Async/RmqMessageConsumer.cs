@@ -180,7 +180,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
+    public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
 
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
@@ -224,7 +224,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="timeOut">The timeout in milliseconds. We retry on timeout 5 ms intervals, with a min of 5ms
     /// until the timeout value is reached. </param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut)); 
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut)); 
 
     /// <summary>
     /// Receives the specified queue name.
@@ -298,7 +298,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="message"></param>
     /// <param name="timeout">Time to delay delivery of the message.</param>
     /// <returns>True if message deleted, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? timeout = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, timeout));
+    public bool Requeue(Message message, TimeSpan? timeout = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, timeout));
 
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
@@ -346,7 +346,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+    public bool Reject(Message message) => BrighterAsyncContext.Run(() => RejectAsync(message));
 
     public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -562,7 +562,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// </summary>
     public override void Dispose()
     {
-        BrighterAsyncContext.Run(async () => await CancelConsumerAsync(CancellationToken.None));
+        BrighterAsyncContext.Run(() => CancelConsumerAsync(CancellationToken.None));
         Dispose(true);
         GC.SuppressFinalize(this);
     }

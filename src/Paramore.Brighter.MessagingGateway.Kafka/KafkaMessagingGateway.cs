@@ -70,7 +70,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
 
                 if (!exists && MakeChannels == OnMissingChannel.Create)
-                    BrighterAsyncContext.Run(async () => await MakeTopic());
+                    BrighterAsyncContext.Run(() => MakeTopic());
             }
         }
 

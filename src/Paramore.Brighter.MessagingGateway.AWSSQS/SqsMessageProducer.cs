@@ -95,7 +95,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// </summary>
     /// <param name="queue">The queue name.</param>
     public bool ConfirmQueueExists(string? queue = null)
-        => BrighterAsyncContext.Run(async () => await ConfirmQueueExistsAsync());
+        => BrighterAsyncContext.Run(() => ConfirmQueueExistsAsync());
 
     /// <summary>
     /// Confirm the queue exists.
@@ -178,7 +178,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     public void Send(Message message) => SendWithDelay(message, null);
 
     public void SendWithDelay(Message message, TimeSpan? delay)
-        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay, false));
+        => BrighterAsyncContext.Run(() => SendWithDelayAsync(message, delay, false));
 
 
     private static partial class Log

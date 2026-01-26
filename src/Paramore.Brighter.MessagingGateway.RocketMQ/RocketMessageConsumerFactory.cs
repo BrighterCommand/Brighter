@@ -13,11 +13,11 @@ public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection conne
 {
     /// <inheritdoc />
     public IAmAMessageConsumerSync Create(Subscription subscription)
-        => BrighterAsyncContext.Run(async () => await CreateConsumerAsync(subscription));
+        => BrighterAsyncContext.Run(() => CreateConsumerAsync(subscription));
 
     /// <inheritdoc />
     public IAmAMessageConsumerAsync CreateAsync(Subscription subscription) 
-        => BrighterAsyncContext.Run(async () => await CreateConsumerAsync(subscription));
+        => BrighterAsyncContext.Run(() => CreateConsumerAsync(subscription));
 
     internal async Task<RocketMessageConsumer> CreateConsumerAsync(Subscription subscription)
     {
