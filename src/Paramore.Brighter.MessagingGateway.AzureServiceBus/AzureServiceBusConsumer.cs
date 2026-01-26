@@ -143,7 +143,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
+    public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
         
     /// <summary>
     /// Purges the specified queue name.
@@ -159,7 +159,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// </summary>
     /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
         
     /// <summary>
     /// Receives the specified queue name.
@@ -233,7 +233,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// </summary>
     /// <param name="message">The message.</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+    public bool Reject(Message message) => BrighterAsyncContext.Run(() => RejectAsync(message));
 
     /// <summary>
     /// Rejects the specified message.
@@ -274,7 +274,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
+    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
 
     /// <summary>
     /// Requeues the specified message.

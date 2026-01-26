@@ -71,7 +71,7 @@ public class AwsSchedulerFactory(AWSMessagingGatewayConnection connection, strin
         var factory = new AWSClientFactory(connection);
         if (string.IsNullOrEmpty(_roleArn))
         {
-            _roleArn = BrighterAsyncContext.Run(async () => await GetOrCreateRoleArnAsync(factory, Role));
+            _roleArn = BrighterAsyncContext.Run(() => GetOrCreateRoleArnAsync(factory, Role));
         }
 
         return new AwsScheduler(new AWSClientFactory(connection),

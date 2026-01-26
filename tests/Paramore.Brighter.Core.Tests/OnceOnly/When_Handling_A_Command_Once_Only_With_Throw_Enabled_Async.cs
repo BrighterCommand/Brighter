@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             await _commandProcessor.SendAsync(_command);
             
-            Exception ex = await Assert.ThrowsAsync<OnceOnlyException>(async () => await _commandProcessor.SendAsync(_command));
+            Exception ex = await Assert.ThrowsAsync<OnceOnlyException>(() => _commandProcessor.SendAsync(_command));
             
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
         }

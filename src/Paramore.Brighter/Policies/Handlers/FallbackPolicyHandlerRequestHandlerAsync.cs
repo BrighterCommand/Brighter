@@ -69,11 +69,11 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <param name="command">The command.</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request</param>
         /// <returns>TRequest.</returns>
-        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
+        public override Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
             if (_exceptionHandlerFunc is null)
                 throw new ArgumentException("ExceptionHandler must be set before handling.");
-            return await _exceptionHandlerFunc(command, cancellationToken);
+            return _exceptionHandlerFunc(command, cancellationToken);
         }
 
         private async Task<TRequest> CatchAll(TRequest command, CancellationToken cancellationToken = default)

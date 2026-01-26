@@ -107,9 +107,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="cancellationToken">Cancel the rejection</param>
-    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
-        return await Task.Run(() => Reject(message), cancellationToken);
+        return Task.Run(() => Reject(message), cancellationToken);
     }
 
     /// <summary>
@@ -165,9 +165,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="timeOut">The <see cref="TimeSpan"/> timeout</param>
     /// <param name="cancellationToken">Cancel in the receive operation</param>
     /// <returns>An array of Messages from middleware</returns>
-    public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
+    public Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
-        return await Task.Run(() => Receive(timeOut), cancellationToken);
+        return Task.Run(() => Receive(timeOut), cancellationToken);
     }
 
     /// <summary>

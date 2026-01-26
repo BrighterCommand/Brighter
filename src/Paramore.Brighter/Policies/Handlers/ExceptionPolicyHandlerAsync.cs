@@ -75,20 +75,20 @@ namespace Paramore.Brighter.Policies.Handlers
         {
             if (_policies.Count == 1)
             {
-                return await _policies[0].ExecuteAsync(async () => await base.HandleAsync(command, cancellationToken))
+                return await _policies[0].ExecuteAsync(() => base.HandleAsync(command, cancellationToken))
                     .ConfigureAwait(ContinueOnCapturedContext);
             }
             else
             {
                 var policyWrap = _policies[0].WrapAsync(_policies[1]);
-                if (_policies.Count <= 2) return await policyWrap.ExecuteAsync(async () => await base.HandleAsync(command, cancellationToken));
+                if (_policies.Count <= 2) return await policyWrap.ExecuteAsync(() => base.HandleAsync(command, cancellationToken));
                 
                 //we have more than two policies, so we need to wrap them
                 for (int i = 2; i < _policies.Count; i++)
                 {
                     policyWrap = policyWrap.WrapAsync(_policies[i]);
                 }
-                return await policyWrap.ExecuteAsync(async () => await base.HandleAsync(command,cancellationToken));
+                return await policyWrap.ExecuteAsync(() => base.HandleAsync(command,cancellationToken));
             }
         }
     }

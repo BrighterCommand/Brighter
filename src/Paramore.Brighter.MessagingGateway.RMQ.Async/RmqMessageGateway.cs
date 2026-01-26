@@ -123,7 +123,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     private async Task ConnectWithCircuitBreakerAsync(ChannelName queueName, OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {
-        await _circuitBreakerPolicy.ExecuteAsync(async () => await ConnectWithRetryAsync(queueName, makeExchange, cancellationToken));
+        await _circuitBreakerPolicy.ExecuteAsync(() => ConnectWithRetryAsync(queueName, makeExchange, cancellationToken));
     }
 
     private async Task ConnectWithRetryAsync(ChannelName queueName, OnMissingChannel makeExchange, CancellationToken cancellationToken = default)

@@ -41,8 +41,8 @@ public class AzureServiceBusChannelFactoryTests
 
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
             bufferSize:1, noOfPerformers:1, messagePumpType: MessagePumpType.Proactor, timeOut: TimeSpan.FromMilliseconds(399));
-            
-        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(async () => await factory.CreateAsyncChannelAsync(subscription));
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(() => factory.CreateAsyncChannelAsync(subscription));
 
         Assert.Equal("The minimum allowed timeout is 400 milliseconds", exception.Message);
     }

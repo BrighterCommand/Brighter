@@ -163,9 +163,9 @@ namespace Paramore.Brighter
         /// <param name="timeOut">How long should we delay before requeueing</param>
         /// <param name="cancellationToken">Cancels the requeue operation</param>
         /// <returns>True if the message was re-queued false otherwise </returns>
-        public virtual async Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
+        public virtual Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
         {
-            return await _messageConsumer.RequeueAsync(message, timeOut, cancellationToken);
+            return _messageConsumer.RequeueAsync(message, timeOut, cancellationToken);
         }
 
         /// <summary>
