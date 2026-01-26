@@ -144,15 +144,15 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Handle DLQ production failures (log and acknowledge)
   - Make the test pass
 
-- [] **REFACTOR: Update KafkaMessageConsumer**
-  - Use `.claude/commands/refactor/tidy-first.md` 
-  - Think: can we remove duplication between KafkaMessageConsumer.Reject() and KafkaMessageConsumer.RejectAsync()? 
-  - Implement: make any changes to KafkaMessageConsumer 
+- [X] **REFACTOR: Update KafkaMessageConsumer**
+  - Use `.claude/commands/refactor/tidy-first.md`
+  - Think: can we remove duplication between KafkaMessageConsumer.Reject() and KafkaMessageConsumer.RejectAsync()?
+  - Implement: make any changes to KafkaMessageConsumer
   - Ensure the test still pass
 
 ### Phase 5: Invalid Message Routing
 
-- [ ] **TEST: Invalid message sent to invalid message channel**
+- [X] **TEST: Invalid message sent to invalid message channel**
   - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
   - Write test: When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel
   - Configure consumer with invalid message routing key
@@ -160,12 +160,12 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Verify message appears on invalid message topic
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: Reject() routes Unacceptable to invalid message channel**
+- [X] **IMPLEMENT: Reject() routes Unacceptable to invalid message channel**
   - This may already be implemented in Phase 3, so check
   - Implement routing logic for MessageRejectionReason.Unacceptable
   - Make the test pass
 
-- [ ] **TEST: Invalid message falls back to DLQ when no invalid channel**
+- [X] **TEST: Invalid message falls back to DLQ when no invalid channel**
   - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
   - Write test: When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq
   - Configure consumer with DLQ but no invalid message routing key
@@ -173,26 +173,26 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Verify message appears on DLQ topic
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: Fallback logic for Unacceptable → DLQ**
+- [X] **IMPLEMENT: Fallback logic for Unacceptable → DLQ**
   - Implement fallback when invalid channel not configured
   - Make the test pass
 
 ### Phase 5: Invalid Message Routing Async
 
-- [ ] **TEST: Invalid message sent to invalid message channel**
-  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor" 
+- [X] **TEST: Invalid message sent to invalid message channel**
+  - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
   - Write test: When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel_async
   - Configure consumer with invalid message routing key
   - Reject message with MessageRejectionReason.Unacceptable
   - Verify message appears on invalid message topic
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: Reject() routes Unacceptable to invalid message channel**
+- [X] **IMPLEMENT: Reject() routes Unacceptable to invalid message channel**
   - This may already be implemented in Phase 4, so check
   - Implement routing logic for MessageRejectionReason.Unacceptable
   - Make the test pass
 
-- [ ] **TEST: Invalid message falls back to DLQ when no invalid channel**
+- [X] **TEST: Invalid message falls back to DLQ when no invalid channel**
   - In "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
   - Write test: When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq_async
   - Configure consumer with DLQ but no invalid message routing key
@@ -200,7 +200,7 @@ See `test-analysis.md` for detailed analysis of existing tests and reusable test
   - Verify message appears on DLQ topic
   - **APPROVAL REQUIRED BEFORE IMPLEMENTATION**
 
-- [ ] **IMPLEMENT: Fallback logic for Unacceptable → DLQ**
+- [X] **IMPLEMENT: Fallback logic for Unacceptable → DLQ**
   - Implement fallback when invalid channel not configured
   - Make the test pass
 

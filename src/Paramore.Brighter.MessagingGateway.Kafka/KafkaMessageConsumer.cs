@@ -883,6 +883,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
+        // KafkaMessageProducer implements both IAmAMessageProducerSync and IAmAMessageProducerAsync
         private IAmAMessageProducerAsync? CreateDeadLetterProducerAsync()
         {
             var publication = new KafkaPublication
@@ -1057,19 +1058,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _consumer?.Dispose();
             _flushToken?.Dispose();
 
+            // Dispose all producers independently - each may be created without the others
             if (_deadLetterProducer?.IsValueCreated == true)
-            {
                 _deadLetterProducer.Value?.Dispose();
 
-                if (_invalidMessageProducer?.IsValueCreated == true)
-                    _invalidMessageProducer.Value?.Dispose();
+            if (_invalidMessageProducer?.IsValueCreated == true)
+                _invalidMessageProducer.Value?.Dispose();
 
-                if (_deadLetterProducerAsync?.IsValueCreated == true)
-                    (_deadLetterProducerAsync.Value as IDisposable)?.Dispose();
+            if (_deadLetterProducerAsync?.IsValueCreated == true)
+                (_deadLetterProducerAsync.Value as IDisposable)?.Dispose();
 
-                if (_invalidMessageProducerAsync?.IsValueCreated == true)
-                    (_invalidMessageProducerAsync.Value as IDisposable)?.Dispose();
-            }
+            if (_invalidMessageProducerAsync?.IsValueCreated == true)
+                (_invalidMessageProducerAsync.Value as IDisposable)?.Dispose();
         }
 
         /// <summary>
