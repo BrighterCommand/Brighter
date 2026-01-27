@@ -127,19 +127,19 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
     }
 
     [Fact(Skip = "This test is skipped because running tests of the DLQ is unreliable in the CI environment")]
-    public void When_throwing_defer_action_respect_redrive_async()
+    public async Task When_throwing_defer_action_respect_redrive_async()
     {
-        _sender.Send(_message);
+        await _sender.SendAsync(_message);
 
         var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-        Task.Delay(5000).GetAwaiter().GetResult();
+        await Task.Delay(5000);
 
         var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
         _channel.Enqueue(quitMessage);
 
-        Task.WaitAll(task);
+        await task;
 
-        Task.Delay(5000).GetAwaiter().GetResult();
+        await Task.Delay(5000);
 
         var dlqCount = GetDLQCountAsync(_dlqChannelName);
         Assert.Equal(1, dlqCount);
