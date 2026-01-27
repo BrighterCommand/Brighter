@@ -23,10 +23,10 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _busReceiverBuilder = (ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(dispatcher)
-                .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(bus, new []
-                {
+                .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(bus,
+                [
                     new Publication{Topic = new RoutingKey("MyTopic"), RequestType = typeof(ConfigurationCommand)}
-                }, InstrumentationOptions.All))
+                ], InstrumentationOptions.All))
                 .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System)) as ControlBusReceiverBuilder)!;
         }
 

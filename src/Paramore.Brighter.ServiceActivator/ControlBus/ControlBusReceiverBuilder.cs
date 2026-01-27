@@ -129,12 +129,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             var retryPolicy = Policy
                 .Handle<Exception>()
-                .WaitAndRetry(new[]
-                {
+                .WaitAndRetry(
+                [
                     TimeSpan.FromMilliseconds(50),
                     TimeSpan.FromMilliseconds(100),
                     TimeSpan.FromMilliseconds(150)
-                });
+                ]);
 
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()

@@ -30,8 +30,7 @@ public class KafkaMessageProducerSendTests : IDisposable
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration { Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" } },
-            new[]
-            {
+            [
                 new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
@@ -43,7 +42,7 @@ public class KafkaMessageProducerSendTests : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            }).Create();
+            ]).Create();
 
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration { Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" } })

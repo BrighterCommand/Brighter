@@ -70,8 +70,7 @@ public static class ConfigureTransport
                     AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                     Exchange = new Exchange("paramore.brighter.exchange")
                 },
-                new[]
-                {
+                [
                     new RmqPublication
                     {
                         Topic = new RoutingKey(typeof(T).Name),
@@ -79,7 +78,7 @@ public static class ConfigureTransport
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels = OnMissingChannel.Create
                     }
-                }
+                ]
             )
             .Create();
 
@@ -93,8 +92,7 @@ public static class ConfigureTransport
                 {
                     Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
                 },
-                new[]
-                {
+                [
                     new KafkaPublication
                     {
                         Topic = new RoutingKey(typeof(T).Name),
@@ -104,7 +102,7 @@ public static class ConfigureTransport
                         MaxInFlightRequestsPerConnection = 1,
                         MakeChannels = OnMissingChannel.Create
                     }
-                })
+                ])
             .Create();
 
         return producerRegistry;
