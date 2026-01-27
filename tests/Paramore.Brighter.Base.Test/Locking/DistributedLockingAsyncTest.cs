@@ -7,12 +7,12 @@ namespace Paramore.Brighter.Base.Test.Locking;
 
 public abstract class DistributedLockingAsyncTest : IAsyncLifetime
 {
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await BeforeEachTestAsync();
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await AfterEachTestAsync();
     }

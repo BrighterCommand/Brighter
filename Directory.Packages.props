@@ -12,14 +12,14 @@
     <AWSSDKExtensionsNETCoreSetup>4.0.3.20</AWSSDKExtensionsNETCoreSetup>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400, 4)" />
-    <PackageVersion Include="AWSSDK.S3" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="AWSSDK.Scheduler" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="AWSSDK.SQS" Version="[3.7.500.5, 4)" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.509.19" />
+    <PackageVersion Include="AWSSDK.IdentityManagement" Version="3.7.507.15" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.400" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.509.6" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.504.19" />
+    <PackageVersion Include="AWSSDK.Scheduler" Version="3.7.502.27" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.502.30" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.502.26" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
@@ -34,7 +34,7 @@
     <PackageVersion Include="Dapper.Contrib" Version="2.0.78" />
     <PackageVersion Include="DapperExtensions" Version="1.7.0" />
     <PackageVersion Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
-    <PackageVersion Include="FluentMigrator" Version="8.0.0" />
+    <PackageVersion Include="FakeItEasy" Version="9.0.0" />    <PackageVersion Include="FluentMigrator" Version="8.0.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="8.0.0" />
     <PackageVersion Include="FluentMigrator.Runner.Core" Version="8.0.0" />
     <PackageVersion Include="FluentMigrator.Runner.MySql" Version="8.0.0" />
@@ -54,6 +54,7 @@
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
     <PackageVersion Include="JustSaying" Version="8.0.0" />
     <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="8.0.0" />
+    <PackageVersion Include="JetBrains.dotMemoryUnit" Version="3.2.20220510" />
     <PackageVersion Include="MassTransit" Version="9.0.0" />
     <PackageVersion Include="MassTransit.AmazonSQS" Version="9.0.0" />
     <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
@@ -78,6 +79,7 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.2.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageVersion Include="Microsoft.Testing.Platform" Version="2.0.2" />
     <PackageVersion Include="MongoDB.Driver" Version="3.6.0" />
     <PackageVersion Include="MQTTnet" Version="4.3.7.1207" />
     <PackageVersion Include="MySqlConnector" Version="2.5.0" />
@@ -133,16 +135,15 @@
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
     <PackageVersion Include="System.Threading.Channels" Version="10.0.2" />
     <PackageVersion Include="TUnit" Version="0.67.10" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="FakeItEasy" Version="9.0.0" />
-    <PackageVersion Include="xunit.v3" Version="3.1.0" />
     <PackageVersion Include="xunit.v3.runner.msbuild" Version="3.1.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.22" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.22" />
@@ -155,6 +156,7 @@
     <PackageVersion Include="TickerQ" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.11" />
@@ -167,6 +169,7 @@
     <PackageVersion Include="TickerQ" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1" />

@@ -4,6 +4,8 @@
         <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+        <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>
@@ -11,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="xunit" />
+      <PackageReference Include="xunit.v3.mtp-v2" />
     </ItemGroup>
   
 </Project>

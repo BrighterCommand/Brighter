@@ -1,0 +1,3 @@
+﻿using Xunit;
+
+[assembly: CaptureConsole]

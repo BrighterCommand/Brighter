@@ -4,7 +4,8 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Test.Helpers.Extensions;
 using Paramore.Test.Helpers.TestOutput;
-using Xunit.Abstractions;
+using Xunit;
+using Xunit.Sdk;
 
 namespace Paramore.Test.Helpers.Base
 {
@@ -46,7 +47,7 @@ namespace Paramore.Test.Helpers.Base
         public ITest? XunitTest => (ITest?)GetTestField(TestOutputHelper.WrappedTestOutputHelper)?.GetValue(TestOutputHelper.WrappedTestOutputHelper);
 
         /// <inheritdoc />
-        public string TestQualifiedName => XunitTest?.DisplayName ?? typeof(T).GetLoggerCategoryName();
+        public string TestQualifiedName => XunitTest?.TestDisplayName ?? typeof(T).GetLoggerCategoryName();
 
         /// <inheritdoc />
         public string TestDisplayName => TestQualifiedName.RemoveNamespace();

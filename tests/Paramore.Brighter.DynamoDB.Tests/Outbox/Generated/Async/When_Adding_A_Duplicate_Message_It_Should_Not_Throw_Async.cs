@@ -22,12 +22,12 @@ public class WhenAddingADuplicateMessageItShouldNotThrowAsync : IAsyncLifetime
         _messageFactory = new DefaultMessageFactory();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _outboxProvider.CreateStoreAsync();
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await _outboxProvider.DeleteStoreAsync(_createdMessages);
     }
@@ -43,7 +43,7 @@ public class WhenAddingADuplicateMessageItShouldNotThrowAsync : IAsyncLifetime
         
         // Act
         var outbox = _outboxProvider.CreateOutboxAsync();
-        await outbox.AddAsync(message, context);
+        await outbox.AddAsync(message, context, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         // Just adding a simple assertion to remove any warning

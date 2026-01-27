@@ -1,6 +1,6 @@
 ﻿using System;
 using Paramore.Test.Helpers.TestOutput;
-using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Paramore.Test.Helpers.Base
 {
@@ -30,7 +30,7 @@ namespace Paramore.Test.Helpers.Base
         /// Gets the current xUnit test instance associated with the test execution.
         /// </summary>
         /// <value>
-        /// An instance of <see cref="Xunit.Abstractions.ITest"/> representing the current test,
+        /// An instance of <see cref="ITest"/> representing the current test,
         /// or <c>null</c> if no test is associated.
         /// </value>
         /// <remarks>

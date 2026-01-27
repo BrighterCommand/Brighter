@@ -1,19 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="coverlet.collector">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="GitHubActionsTestLogger">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
+      <PackageReference Include="GitHubActionsTestLogger"/>
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
       <PackageReference Include="Microsoft.Extensions.Logging" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -21,7 +20,7 @@
       <PackageReference Include="Newtonsoft.Json"/>
       <PackageReference Include="Polly" />
       <PackageReference Include="System.Text.Json" />
-      <PackageReference Include="xunit" />
+      <PackageReference Include="xunit.v3.mtp-v2" />
       <PackageReference Include="xunit.runner.visualstudio">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

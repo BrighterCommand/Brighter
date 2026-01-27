@@ -1,0 +1,69 @@
+# Docker Compose for Brighter Memory Leak Tests
+#
+# This file provides a self-contained setup for running memory leak tests.
+# It starts only the dependencies needed for the tests.
+#
+# Usage:
+#   docker compose up -d          # Start services
+#   docker compose ps             # Check status
+#   dotnet test                   # Run tests
+#   docker compose down           # Stop services
+#   docker compose down -v        # Stop and remove volumes
+#
+# Alternative: Use the repository root docker-compose files:
+#   docker compose -f ../../docker-compose-rmq.yaml up -d
+
+version: '3.8'
+
+services:
+  # RabbitMQ message broker
+  # Used by WebAPI samples for message publishing and consumption
+  rabbitmq:
+    image: brightercommand/rabbitmq:3.13-management-delay
+    container_name: brighter-memory-test-rmq
+    hostname: rabbitmq-test
+    ports:
+      - "5672:5672"      # AMQP protocol
+      - "15672:15672"    # Management UI (http://localhost:15672)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmqctl node_health_check
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - brighter-test-network
+    volumes:
+      - rabbitmq-test-data:/var/lib/rabbitmq
+    # Restart policy for reliability
+    restart: unless-stopped
+
+  # Note: SQLite is used in-memory by tests, no external database needed
+  # Add PostgreSQL/MySQL here if testing database-specific scenarios:
+  #
+  # postgres:
+  #   image: postgres:16
+  #   container_name: brighter-memory-test-postgres
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: brightertests
+  #   networks:
+  #     - brighter-test-network
+  #   volumes:
+  #     - postgres-test-data:/var/lib/postgresql/data
+
+networks:
+  brighter-test-network:
+    driver: bridge
+    name: brighter-memory-test
+
+volumes:
+  rabbitmq-test-data:
+    name: brighter-memory-test-rabbitmq
+  # postgres-test-data:
+  #   name: brighter-memory-test-postgres

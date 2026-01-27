@@ -2,8 +2,9 @@
 
     <PropertyGroup>
         <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
-
+        <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>
@@ -11,14 +12,11 @@
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="GitHubActionsTestLogger">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
+      <PackageReference Include="GitHubActionsTestLogger"/>
       <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" />
-      <PackageReference Include="xunit" />
+      <PackageReference Include="xunit.v3.mtp-v2" />
       <PackageReference Include="xunit.runner.visualstudio">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
