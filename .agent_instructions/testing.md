@@ -68,6 +68,17 @@ This ensures the mandatory approval step is never skipped and tests are reviewed
   - By following the rules for only testing behaviors, you only need to write tests for the behaviors exposed from the module not its details.
   - Private or Internal classes used in the implementation do not need tests - they are covered by the behavior that led to their creation.
 
+## No InternalsVisibleTo
+
+- **NEVER use `InternalsVisibleTo` to expose internal classes for testing.**
+- Internal classes should NOT be driven by unit tests directly.
+- Internal classes should emerge as implementation details through refactoring:
+  1. First, implement behavior in the public class (keep it simple)
+  2. As complexity grows, extract internal helper classes through refactoring
+  3. Tests always go through the public interface - internal classes are covered by those tests
+- If you need to inject a dependency for testing (e.g., randomness, I/O), make the interface **public** so it can be injected through the public API.
+- The goal is that tests are coupled to behavior, not implementation. Refactoring internals should never break tests.
+
 ## Test Doubles
 
 - Use fakes or mocks for I/O for testing core libraries such as Paramore.Brighter or Paramore.Brighter.ServiceActivator
