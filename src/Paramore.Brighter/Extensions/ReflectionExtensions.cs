@@ -51,17 +51,10 @@ namespace Paramore.Brighter.Extensions
         }
 
         internal static bool HasNoInboxAttributesInPipeline(this MethodInfo targetMethod)
-        {
-             var customAttributes = targetMethod.GetCustomAttributes(true);
-             return customAttributes
-                .Any(a => a is NoGlobalInboxAttribute);
-        }
+            => targetMethod.IsDefined(typeof(NoGlobalInboxAttribute), true);
 
         internal static bool HasExistingUseInboxAttributesInPipeline(this MethodInfo targetMethod)
-        {
-              var customAttributes = targetMethod.GetCustomAttributes(true);
-              return customAttributes
-                .Any(a => a is UseInboxAttribute or UseInboxAsyncAttribute);
-        }
+            => targetMethod.IsDefined(typeof(UseInboxAttribute), true)
+               || targetMethod.IsDefined(typeof(UseInboxAsyncAttribute), true);
     }
 }
