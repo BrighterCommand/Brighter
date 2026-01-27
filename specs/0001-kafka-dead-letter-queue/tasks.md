@@ -520,3 +520,4 @@ Each TEST task must be approved before its corresponding IMPLEMENT task.
 - DLQ/invalid message channels are opt-in features
 - Message rejection always acknowledges/commits offset to prevent reprocessing
 - Producer lifecycle is managed by consumer (created lazily, disposed with consumer)
+- Next steps include Middleware to throw RejectMessageAction

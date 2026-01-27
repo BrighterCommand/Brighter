@@ -176,3 +176,4 @@ public class KafkaMessageConsumerNoChannelsAsyncTests : IAsyncDisposable
         await Task.CompletedTask;
     }
 }
+
