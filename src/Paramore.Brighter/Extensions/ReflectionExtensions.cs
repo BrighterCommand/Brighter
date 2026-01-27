@@ -22,9 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Paramore.Brighter.Inbox.Attributes;
 
@@ -33,22 +31,13 @@ namespace Paramore.Brighter.Extensions
     internal static class ReflectionExtensions
     {
         internal static IEnumerable<RequestHandlerAttribute> GetOtherHandlersInPipeline(this MethodInfo targetMethod)
-        {
-            var customAttributes = targetMethod.GetCustomAttributes(true);
-            return customAttributes.OfType<RequestHandlerAttribute>();
-        }
+            => targetMethod.GetCustomAttributes<RequestHandlerAttribute>(true);
 
         internal static IEnumerable<WrapWithAttribute> GetOtherWrapsInPipeline(this MethodInfo targetMethod)
-        {
-            var customAttributes = targetMethod.GetCustomAttributes(true);
-            return customAttributes.OfType<WrapWithAttribute>();
-        }
+            => targetMethod.GetCustomAttributes<WrapWithAttribute>(true);
 
         internal static IEnumerable<UnwrapWithAttribute> GetOtherUnwrapsInPipeline(this MethodInfo targetMethod)
-        {
-            var customAttributes = targetMethod.GetCustomAttributes(true);
-            return customAttributes.OfType<UnwrapWithAttribute>();
-        }
+            => targetMethod.GetCustomAttributes<UnwrapWithAttribute>(true);
 
         internal static bool HasNoInboxAttributesInPipeline(this MethodInfo targetMethod)
             => targetMethod.IsDefined(typeof(NoGlobalInboxAttribute), true);

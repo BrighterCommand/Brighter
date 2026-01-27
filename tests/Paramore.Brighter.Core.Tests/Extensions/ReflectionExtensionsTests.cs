@@ -69,6 +69,34 @@ public class ReflectionExtensionsTests
         public override Type GetHandlerType() => typeof(object);
     }
 
+    // Deeply inherited attributes (two levels of inheritance)
+    private class BaseRequestHandlerAttribute(int step) :
+        RequestHandlerAttribute(step)
+    {
+        public override Type GetHandlerType() => typeof(object);
+    }
+
+    private sealed class DerivedRequestHandlerAttribute(int step) :
+        BaseRequestHandlerAttribute(step);
+
+    private class BaseWrapWithAttribute(int step) :
+        WrapWithAttribute(step)
+    {
+        public override Type GetHandlerType() => typeof(object);
+    }
+
+    private sealed class DerivedWrapWithAttribute(int step) :
+        BaseWrapWithAttribute(step);
+
+    private class BaseUnwrapWithAttribute(int step) :
+        UnwrapWithAttribute(step)
+    {
+        public override Type GetHandlerType() => typeof(object);
+    }
+
+    private sealed class DerivedUnwrapWithAttribute(int step) :
+        BaseUnwrapWithAttribute(step);
+
     private sealed class NoAttributesHandler
     {
         public void Handle() { }
@@ -140,6 +168,25 @@ public class ReflectionExtensionsTests
         public void Handle() { }
     }
 
+    // Handlers with deeply inherited attributes
+    private sealed class DeeplyInheritedRequestHandlerAttributeHandler
+    {
+        [DerivedRequestHandler(1)]
+        public void Handle() { }
+    }
+
+    private sealed class DeeplyInheritedWrapWithAttributeMapper
+    {
+        [DerivedWrapWith(1)]
+        public void MapToMessage() { }
+    }
+
+    private sealed class DeeplyInheritedUnwrapWithAttributeMapper
+    {
+        [DerivedUnwrapWith(1)]
+        public void MapToRequest() { }
+    }
+
     [Fact]
     public void When_method_has_no_attributes_should_return_empty()
     {
@@ -186,6 +233,18 @@ public class ReflectionExtensionsTests
 
         Assert.Single(result);
         Assert.IsType<TestRequestHandlerAttribute>(result[0]);
+    }
+
+    [Fact]
+    public void When_method_has_deeply_inherited_request_handler_attribute_should_return_it()
+    {
+        var method = typeof(DeeplyInheritedRequestHandlerAttributeHandler)
+            .GetMethod(nameof(DeeplyInheritedRequestHandlerAttributeHandler.Handle))!;
+
+        var result = method.GetOtherHandlersInPipeline().ToList();
+
+        Assert.Single(result);
+        Assert.IsType<DerivedRequestHandlerAttribute>(result[0]);
     }
 
     [Fact]
@@ -237,6 +296,18 @@ public class ReflectionExtensionsTests
     }
 
     [Fact]
+    public void When_method_has_deeply_inherited_wrap_attribute_should_return_it()
+    {
+        var method = typeof(DeeplyInheritedWrapWithAttributeMapper)
+            .GetMethod(nameof(DeeplyInheritedWrapWithAttributeMapper.MapToMessage))!;
+
+        var result = method.GetOtherWrapsInPipeline().ToList();
+
+        Assert.Single(result);
+        Assert.IsType<DerivedWrapWithAttribute>(result[0]);
+    }
+
+    [Fact]
     public void When_method_has_no_unwrap_attributes_should_return_empty()
     {
         var method = typeof(NoAttributesHandler)
@@ -282,6 +353,18 @@ public class ReflectionExtensionsTests
 
         Assert.Single(result);
         Assert.IsType<TestUnwrapWithAttribute>(result[0]);
+    }
+
+    [Fact]
+    public void When_method_has_deeply_inherited_unwrap_attribute_should_return_it()
+    {
+        var method = typeof(DeeplyInheritedUnwrapWithAttributeMapper)
+            .GetMethod(nameof(DeeplyInheritedUnwrapWithAttributeMapper.MapToRequest))!;
+
+        var result = method.GetOtherUnwrapsInPipeline().ToList();
+
+        Assert.Single(result);
+        Assert.IsType<DerivedUnwrapWithAttribute>(result[0]);
     }
 
     [Fact]
