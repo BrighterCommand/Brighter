@@ -35,48 +35,33 @@ namespace Paramore.Brighter.Extensions
         internal static IEnumerable<RequestHandlerAttribute> GetOtherHandlersInPipeline(this MethodInfo targetMethod)
         {
             var customAttributes = targetMethod.GetCustomAttributes(true);
-            return customAttributes
-                .Select(attr => (Attribute) attr)
-                .Where(a => a.GetType().BaseType == typeof (RequestHandlerAttribute))
-                .Cast<RequestHandlerAttribute>()
-                .ToList();
+            return customAttributes.OfType<RequestHandlerAttribute>();
         }
 
         internal static IEnumerable<WrapWithAttribute> GetOtherWrapsInPipeline(this MethodInfo targetMethod)
         {
             var customAttributes = targetMethod.GetCustomAttributes(true);
-            return customAttributes
-                .Select(attr => (Attribute) attr)
-                .Where(a => a.GetType().BaseType == typeof (WrapWithAttribute))
-                .Cast<WrapWithAttribute>()
-                .ToList();
+            return customAttributes.OfType<WrapWithAttribute>();
         }
-        
+
         internal static IEnumerable<UnwrapWithAttribute> GetOtherUnwrapsInPipeline(this MethodInfo targetMethod)
         {
             var customAttributes = targetMethod.GetCustomAttributes(true);
-            return customAttributes
-                .Select(attr => (Attribute) attr)
-                .Where(a => a.GetType().BaseType == typeof (UnwrapWithAttribute))
-                .Cast<UnwrapWithAttribute>()
-                .ToList();
-        } 
-        
+            return customAttributes.OfType<UnwrapWithAttribute>();
+        }
+
         internal static bool HasNoInboxAttributesInPipeline(this MethodInfo targetMethod)
         {
              var customAttributes = targetMethod.GetCustomAttributes(true);
              return customAttributes
-                .Select(attr => (Attribute) attr)
-                .Any(a => a.GetType() == typeof (NoGlobalInboxAttribute));
+                .Any(a => a is NoGlobalInboxAttribute);
         }
 
         internal static bool HasExistingUseInboxAttributesInPipeline(this MethodInfo targetMethod)
         {
               var customAttributes = targetMethod.GetCustomAttributes(true);
               return customAttributes
-                .Select(attr => (Attribute) attr)
-                .Any(a => a.GetType() == typeof (UseInboxAttribute)
-                          || a.GetType() == typeof (UseInboxAsyncAttribute));
+                .Any(a => a is UseInboxAttribute or UseInboxAsyncAttribute);
         }
     }
 }
