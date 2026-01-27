@@ -6,5 +6,7 @@
     <IsPackable>false</IsPackable>
     <BrighterTestTargetFrameworks>net9.0;net10.0</BrighterTestTargetFrameworks>
     <BrighterTestNineOnlyTargetFrameworks>net9.0</BrighterTestNineOnlyTargetFrameworks>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 </Project>
