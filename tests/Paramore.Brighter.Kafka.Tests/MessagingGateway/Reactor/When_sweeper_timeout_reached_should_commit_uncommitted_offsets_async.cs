@@ -95,11 +95,11 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
     }
 
     [Fact]
-    public void When_sweeper_timeout_reached_should_commit_uncommitted_offsets()
+    public async Task When_sweeper_timeout_reached_should_commit_uncommitted_offsets()
     {
         //Arrange
         //allow time for topic to propagate
-        Task.Delay(1000).GetAwaiter().GetResult();
+        await Task.Delay(1000);
         
         var routingKey = new RoutingKey(_topic);
         var producerAsync = _producerRegistry.LookupSyncBy(routingKey);
@@ -120,7 +120,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
         ((KafkaMessageProducer)producerAsync).Flush();
 
         //allow messages to propagate on the broker
-        Task.Delay(3000).GetAwaiter().GetResult();
+        await Task.Delay(3000);
 
         var consumedMessages = new List<Message>();
         for (int j = 0; j < 5; j++)
@@ -136,7 +136,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(31));
 
         //Allow the timer callback to execute
-        Task.Delay(2000).GetAwaiter().GetResult();
+        await Task.Delay(2000);
 
         //Assert - Sweeper should have committed the offsets
         Assert.Equal(0, _consumer.StoredOffsets());
