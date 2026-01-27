@@ -33,47 +33,41 @@ using static Paramore.Brighter.Extensions.ReflectionExtensions;
 
 public class ReflectionExtensionsTests
 {
-    #region Test Attributes
-
-    private sealed class TestRequestHandlerAttribute : RequestHandlerAttribute
+    private sealed class TestRequestHandlerAttribute(int step) :
+        RequestHandlerAttribute(step)
     {
-        public TestRequestHandlerAttribute(int step) : base(step) { }
         public override Type GetHandlerType() => typeof(object);
     }
 
-    private sealed class AnotherRequestHandlerAttribute : RequestHandlerAttribute
+    private sealed class AnotherRequestHandlerAttribute(int step) :
+        RequestHandlerAttribute(step)
     {
-        public AnotherRequestHandlerAttribute(int step) : base(step) { }
         public override Type GetHandlerType() => typeof(object);
     }
 
-    private sealed class TestWrapWithAttribute : WrapWithAttribute
+    private sealed class TestWrapWithAttribute(int step) :
+        WrapWithAttribute(step)
     {
-        public TestWrapWithAttribute(int step) : base(step) { }
         public override Type GetHandlerType() => typeof(object);
     }
 
-    private sealed class AnotherWrapWithAttribute : WrapWithAttribute
+    private sealed class AnotherWrapWithAttribute(int step) :
+        WrapWithAttribute(step)
     {
-        public AnotherWrapWithAttribute(int step) : base(step) { }
         public override Type GetHandlerType() => typeof(object);
     }
 
-    private sealed class TestUnwrapWithAttribute : UnwrapWithAttribute
+    private sealed class TestUnwrapWithAttribute(int step) :
+        UnwrapWithAttribute(step)
     {
-        public TestUnwrapWithAttribute(int step) : base(step) { }
         public override Type GetHandlerType() => typeof(object);
     }
 
-    private sealed class AnotherUnwrapWithAttribute : UnwrapWithAttribute
+    private sealed class AnotherUnwrapWithAttribute(int step) :
+        UnwrapWithAttribute(step)
     {
-        public AnotherUnwrapWithAttribute(int step) : base(step) { }
         public override Type GetHandlerType() => typeof(object);
     }
-
-    #endregion
-
-    #region Test Classes
 
     private sealed class NoAttributesHandler
     {
@@ -146,14 +140,11 @@ public class ReflectionExtensionsTests
         public void Handle() { }
     }
 
-    #endregion
-
-    #region GetOtherHandlersInPipeline Tests
-
     [Fact]
     public void When_method_has_no_attributes_should_return_empty()
     {
-        var method = typeof(NoAttributesHandler).GetMethod(nameof(NoAttributesHandler.Handle))!;
+        var method = typeof(NoAttributesHandler)
+            .GetMethod(nameof(NoAttributesHandler.Handle))!;
 
         var result = method.GetOtherHandlersInPipeline();
 
@@ -163,7 +154,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_single_request_handler_attribute_should_return_it()
     {
-        var method = typeof(SingleRequestHandlerAttributeHandler).GetMethod(nameof(SingleRequestHandlerAttributeHandler.Handle))!;
+        var method = typeof(SingleRequestHandlerAttributeHandler)
+            .GetMethod(nameof(SingleRequestHandlerAttributeHandler.Handle))!;
 
         var result = method.GetOtherHandlersInPipeline().ToList();
 
@@ -174,7 +166,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_multiple_request_handler_attributes_should_return_all()
     {
-        var method = typeof(MultipleRequestHandlerAttributesHandler).GetMethod(nameof(MultipleRequestHandlerAttributesHandler.Handle))!;
+        var method = typeof(MultipleRequestHandlerAttributesHandler)
+            .GetMethod(nameof(MultipleRequestHandlerAttributesHandler.Handle))!;
 
         var result = method.GetOtherHandlersInPipeline().ToList();
 
@@ -186,7 +179,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_non_request_handler_attributes_should_not_return_them()
     {
-        var method = typeof(MixedAttributesHandler).GetMethod(nameof(MixedAttributesHandler.Handle))!;
+        var method = typeof(MixedAttributesHandler)
+            .GetMethod(nameof(MixedAttributesHandler.Handle))!;
 
         var result = method.GetOtherHandlersInPipeline().ToList();
 
@@ -194,14 +188,11 @@ public class ReflectionExtensionsTests
         Assert.IsType<TestRequestHandlerAttribute>(result[0]);
     }
 
-    #endregion
-
-    #region GetOtherWrapsInPipeline Tests
-
     [Fact]
     public void When_method_has_no_wrap_attributes_should_return_empty()
     {
-        var method = typeof(NoAttributesHandler).GetMethod(nameof(NoAttributesHandler.Handle))!;
+        var method = typeof(NoAttributesHandler)
+            .GetMethod(nameof(NoAttributesHandler.Handle))!;
 
         var result = method.GetOtherWrapsInPipeline();
 
@@ -211,7 +202,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_single_wrap_attribute_should_return_it()
     {
-        var method = typeof(SingleWrapWithAttributeMapper).GetMethod(nameof(SingleWrapWithAttributeMapper.MapToMessage))!;
+        var method = typeof(SingleWrapWithAttributeMapper)
+            .GetMethod(nameof(SingleWrapWithAttributeMapper.MapToMessage))!;
 
         var result = method.GetOtherWrapsInPipeline().ToList();
 
@@ -222,7 +214,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_multiple_wrap_attributes_should_return_all()
     {
-        var method = typeof(MultipleWrapWithAttributesMapper).GetMethod(nameof(MultipleWrapWithAttributesMapper.MapToMessage))!;
+        var method = typeof(MultipleWrapWithAttributesMapper)
+            .GetMethod(nameof(MultipleWrapWithAttributesMapper.MapToMessage))!;
 
         var result = method.GetOtherWrapsInPipeline().ToList();
 
@@ -234,7 +227,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_non_wrap_attributes_should_not_return_them()
     {
-        var method = typeof(MixedAttributesHandler).GetMethod(nameof(MixedAttributesHandler.Handle))!;
+        var method = typeof(MixedAttributesHandler)
+            .GetMethod(nameof(MixedAttributesHandler.Handle))!;
 
         var result = method.GetOtherWrapsInPipeline().ToList();
 
@@ -242,14 +236,11 @@ public class ReflectionExtensionsTests
         Assert.IsType<TestWrapWithAttribute>(result[0]);
     }
 
-    #endregion
-
-    #region GetOtherUnwrapsInPipeline Tests
-
     [Fact]
     public void When_method_has_no_unwrap_attributes_should_return_empty()
     {
-        var method = typeof(NoAttributesHandler).GetMethod(nameof(NoAttributesHandler.Handle))!;
+        var method = typeof(NoAttributesHandler)
+            .GetMethod(nameof(NoAttributesHandler.Handle))!;
 
         var result = method.GetOtherUnwrapsInPipeline();
 
@@ -259,7 +250,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_single_unwrap_attribute_should_return_it()
     {
-        var method = typeof(SingleUnwrapWithAttributeMapper).GetMethod(nameof(SingleUnwrapWithAttributeMapper.MapToRequest))!;
+        var method = typeof(SingleUnwrapWithAttributeMapper)
+            .GetMethod(nameof(SingleUnwrapWithAttributeMapper.MapToRequest))!;
 
         var result = method.GetOtherUnwrapsInPipeline().ToList();
 
@@ -270,7 +262,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_multiple_unwrap_attributes_should_return_all()
     {
-        var method = typeof(MultipleUnwrapWithAttributesMapper).GetMethod(nameof(MultipleUnwrapWithAttributesMapper.MapToRequest))!;
+        var method = typeof(MultipleUnwrapWithAttributesMapper)
+            .GetMethod(nameof(MultipleUnwrapWithAttributesMapper.MapToRequest))!;
 
         var result = method.GetOtherUnwrapsInPipeline().ToList();
 
@@ -282,7 +275,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_non_unwrap_attributes_should_not_return_them()
     {
-        var method = typeof(MixedAttributesHandler).GetMethod(nameof(MixedAttributesHandler.Handle))!;
+        var method = typeof(MixedAttributesHandler)
+            .GetMethod(nameof(MixedAttributesHandler.Handle))!;
 
         var result = method.GetOtherUnwrapsInPipeline().ToList();
 
@@ -290,14 +284,11 @@ public class ReflectionExtensionsTests
         Assert.IsType<TestUnwrapWithAttribute>(result[0]);
     }
 
-    #endregion
-
-    #region HasNoInboxAttributesInPipeline Tests
-
     [Fact]
     public void When_method_has_no_inbox_attribute_should_return_true()
     {
-        var method = typeof(NoGlobalInboxHandler).GetMethod(nameof(NoGlobalInboxHandler.Handle))!;
+        var method = typeof(NoGlobalInboxHandler)
+            .GetMethod(nameof(NoGlobalInboxHandler.Handle))!;
 
         var result = method.HasNoInboxAttributesInPipeline();
 
@@ -307,7 +298,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_no_attributes_should_return_false()
     {
-        var method = typeof(NoAttributesHandler).GetMethod(nameof(NoAttributesHandler.Handle))!;
+        var method = typeof(NoAttributesHandler)
+            .GetMethod(nameof(NoAttributesHandler.Handle))!;
 
         var result = method.HasNoInboxAttributesInPipeline();
 
@@ -317,7 +309,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_other_attributes_but_not_no_inbox_should_return_false()
     {
-        var method = typeof(SingleRequestHandlerAttributeHandler).GetMethod(nameof(SingleRequestHandlerAttributeHandler.Handle))!;
+        var method = typeof(SingleRequestHandlerAttributeHandler)
+            .GetMethod(nameof(SingleRequestHandlerAttributeHandler.Handle))!;
 
         var result = method.HasNoInboxAttributesInPipeline();
 
@@ -327,21 +320,19 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_mixed_attributes_including_no_inbox_should_return_true()
     {
-        var method = typeof(MixedAttributesHandler).GetMethod(nameof(MixedAttributesHandler.Handle))!;
+        var method = typeof(MixedAttributesHandler)
+            .GetMethod(nameof(MixedAttributesHandler.Handle))!;
 
         var result = method.HasNoInboxAttributesInPipeline();
 
         Assert.True(result);
     }
 
-    #endregion
-
-    #region HasExistingUseInboxAttributesInPipeline Tests
-
     [Fact]
     public void When_method_has_use_inbox_attribute_should_return_true()
     {
-        var method = typeof(UseInboxHandler).GetMethod(nameof(UseInboxHandler.Handle))!;
+        var method = typeof(UseInboxHandler)
+            .GetMethod(nameof(UseInboxHandler.Handle))!;
 
         var result = method.HasExistingUseInboxAttributesInPipeline();
 
@@ -351,7 +342,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_use_inbox_async_attribute_should_return_true()
     {
-        var method = typeof(UseInboxAsyncHandler).GetMethod(nameof(UseInboxAsyncHandler.Handle))!;
+        var method = typeof(UseInboxAsyncHandler)
+            .GetMethod(nameof(UseInboxAsyncHandler.Handle))!;
 
         var result = method.HasExistingUseInboxAttributesInPipeline();
 
@@ -361,7 +353,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_no_inbox_attributes_should_return_false()
     {
-        var method = typeof(NoAttributesHandler).GetMethod(nameof(NoAttributesHandler.Handle))!;
+        var method = typeof(NoAttributesHandler)
+            .GetMethod(nameof(NoAttributesHandler.Handle))!;
 
         var result = method.HasExistingUseInboxAttributesInPipeline();
 
@@ -371,7 +364,8 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_other_attributes_but_no_use_inbox_should_return_false()
     {
-        var method = typeof(SingleRequestHandlerAttributeHandler).GetMethod(nameof(SingleRequestHandlerAttributeHandler.Handle))!;
+        var method = typeof(SingleRequestHandlerAttributeHandler)
+            .GetMethod(nameof(SingleRequestHandlerAttributeHandler.Handle))!;
 
         var result = method.HasExistingUseInboxAttributesInPipeline();
 
@@ -381,12 +375,11 @@ public class ReflectionExtensionsTests
     [Fact]
     public void When_method_has_no_global_inbox_but_not_use_inbox_should_return_false()
     {
-        var method = typeof(NoGlobalInboxHandler).GetMethod(nameof(NoGlobalInboxHandler.Handle))!;
+        var method = typeof(NoGlobalInboxHandler)
+            .GetMethod(nameof(NoGlobalInboxHandler.Handle))!;
 
         var result = method.HasExistingUseInboxAttributesInPipeline();
 
         Assert.False(result);
     }
-
-    #endregion
 }
