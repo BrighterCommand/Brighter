@@ -30,17 +30,19 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                 Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
-            {
-                Topic = new RoutingKey(_topic),
-                NumPartitions = 1,
-                ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests,
-                //your production values ought to be lower
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).CreateAsync().Result;
+            [
+                new KafkaPublication
+                {
+                    Topic = new RoutingKey(_topic),
+                    NumPartitions = 1,
+                    ReplicationFactor = 1,
+                    //These timeouts support running on a container using the same host as the tests,
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Create
+                }
+            ]).CreateAsync().Result;
 
         _consumer = (KafkaMessageConsumer) new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
