@@ -46,7 +46,7 @@ namespace CompetingSender
 
                     var producerRegistry = new MsSqlProducerRegistryFactory(
                             messagingConfiguration,
-                            new Publication[]{new Publication()})
+                            [new Publication()])
                         .Create();
                     
                     services.AddBrighter()

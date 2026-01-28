@@ -50,7 +50,7 @@ namespace Greetings.Ports.CommandHandlers
                 await _unitOfWork.CommitAsync(cancellationToken);
                 
                 //In Case there is no outbox Sweeper
-                await _commandProcessor.ClearOutboxAsync(new[] {eventId}, cancellationToken: cancellationToken);
+                await _commandProcessor.ClearOutboxAsync([eventId], cancellationToken: cancellationToken);
                 
                 Console.WriteLine($"Message {command.GreetingMessage} Saved.");
             }

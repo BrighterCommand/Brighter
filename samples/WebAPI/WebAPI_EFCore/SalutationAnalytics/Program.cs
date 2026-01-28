@@ -192,8 +192,7 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
             Exchange = new Exchange("paramore.brighter.exchange"),
         },
-        new[]
-        {
+        [
             new RmqPublication
             {
                 Topic = new RoutingKey("SalutationReceived"),
@@ -201,7 +200,7 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }
-        }
+        ]
     ).Create();
 
     return producerRegistry;

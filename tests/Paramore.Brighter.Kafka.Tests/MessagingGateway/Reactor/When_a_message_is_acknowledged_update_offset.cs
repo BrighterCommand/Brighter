@@ -28,8 +28,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
             {
                 Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" }
             },
-            new[]
-            {
+            [
                 new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
@@ -41,7 +40,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            }).Create();
+            ]).Create();
     }
 
     //[Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
