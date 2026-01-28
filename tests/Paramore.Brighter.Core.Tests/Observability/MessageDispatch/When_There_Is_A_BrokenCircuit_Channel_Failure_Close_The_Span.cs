@@ -67,7 +67,7 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
             FailingChannel channel = new(
                 new (ChannelName), 
                 _routingKey,
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)),
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)),
                 brokenCircuit: true);
             
             var messageMapperRegistry = new MessageMapperRegistry(

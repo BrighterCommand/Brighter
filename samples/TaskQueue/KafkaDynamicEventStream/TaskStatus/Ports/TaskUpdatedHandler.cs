@@ -40,14 +40,14 @@ public class TaskUpdatedHandler : RequestHandler<TaskUpdated>
     /// <summary>
     /// Handles the <see cref="TaskUpdated"/> event.
     /// </summary>
-    /// <param name="event">The <see cref="TaskUpdated"/> event to handle.</param>
+    /// <param name="taskUpdated">The <see cref="TaskUpdated"/> event to handle.</param>
     /// <returns>The handled <see cref="TaskUpdated"/> event.</returns>
-    public override TaskUpdated Handle(TaskUpdated @event)
+    public override TaskUpdated Handle(TaskUpdated taskUpdated)
     {
         //Instead of domain logic, just write out to console
-        Console.WriteLine(JsonSerializer.Serialize(@event));
+        Console.WriteLine(JsonSerializer.Serialize(taskUpdated));
         
-        return base.Handle(@event);
+        return base.Handle(taskUpdated);
     }
 }
 

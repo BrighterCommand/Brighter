@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
         [Fact]
         public async Task When_Sending_A_Command_That_Should_Retry_Failure_Async()
         {
-            await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
+            await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //_should_send_the_command_to_the_command_handler
             var zeroHandlerAsync = _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>();

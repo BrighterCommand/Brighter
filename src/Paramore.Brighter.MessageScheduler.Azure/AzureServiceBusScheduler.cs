@@ -175,7 +175,7 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        var seq = BrighterAsyncContext.Run(async () => await sender.ScheduleMessageAsync(
+        var seq = BrighterAsyncContext.Run(() => sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
             {
                 Header =
@@ -210,7 +210,7 @@ public class AzureServiceBusScheduler(
         }
 
         var id = Id.Random();
-        var seq = BrighterAsyncContext.Run(async () => await sender.ScheduleMessageAsync(
+        var seq = BrighterAsyncContext.Run(() => sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
             {
                 Header =
@@ -251,5 +251,5 @@ public class AzureServiceBusScheduler(
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel"/>
     public void Cancel(string id)
-        => BrighterAsyncContext.Run(async () => await CancelAsync(id));
+        => BrighterAsyncContext.Run(() => CancelAsync(id));
 }

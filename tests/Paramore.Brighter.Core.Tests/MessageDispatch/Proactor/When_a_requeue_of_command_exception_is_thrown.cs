@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public MessagePumpCommandRequeueTestsAsync()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
-            ChannelAsync channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 2);
+            ChannelAsync channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 2);
            
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,

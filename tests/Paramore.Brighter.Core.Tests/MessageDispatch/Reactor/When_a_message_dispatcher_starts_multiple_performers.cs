@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             var routingKey = new RoutingKey(Topic);
             _bus = new InternalBus();
-            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000));
+            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000));
             
             IAmAChannelSync channel = new Channel(new (ChannelName), new(Topic), consumer, 6);
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();

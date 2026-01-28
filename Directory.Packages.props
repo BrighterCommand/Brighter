@@ -2,14 +2,14 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AwsDynamoDbV4>4.0.10.8</AwsDynamoDbV4>
-    <AWSSDKIdentityManagementV4>4.0.9.5</AWSSDKIdentityManagementV4>
-    <AWSSDKSchedulerV4>4.0.2.11</AWSSDKSchedulerV4>
-    <AWSSDKV4>4.0.17.2</AWSSDKV4>
-    <AWSSecurityTokenV4>4.0.5.7</AWSSecurityTokenV4>
-    <AWSSQSV4>4.0.2.12</AWSSQSV4>
-    <AWSSDKSimpleNotificationServiceV4>4.0.2.14</AWSSDKSimpleNotificationServiceV4>
-    <AWSSDKExtensionsNETCoreSetup>4.0.3.20</AWSSDKExtensionsNETCoreSetup>
+    <AwsDynamoDbV4>4.0.11</AwsDynamoDbV4>
+    <AWSSDKIdentityManagementV4>4.0.9.6</AWSSDKIdentityManagementV4>
+    <AWSSDKSchedulerV4>4.0.2.12</AWSSDKSchedulerV4>
+    <AWSSDKV4>4.0.17.3</AWSSDKV4>
+    <AWSSecurityTokenV4>4.0.5.8</AWSSecurityTokenV4>
+    <AWSSQSV4>4.0.2.13</AWSSQSV4>
+    <AWSSDKSimpleNotificationServiceV4>4.0.2.15</AWSSDKSimpleNotificationServiceV4>
+    <AWSSDKExtensionsNETCoreSetup>4.0.3.21</AWSSDKExtensionsNETCoreSetup>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
@@ -34,20 +34,20 @@
     <PackageVersion Include="Dapper.Contrib" Version="2.0.78" />
     <PackageVersion Include="DapperExtensions" Version="1.7.0" />
     <PackageVersion Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
-    <PackageVersion Include="FluentMigrator" Version="8.0.0" />
-    <PackageVersion Include="FluentMigrator.Runner" Version="8.0.0" />
-    <PackageVersion Include="FluentMigrator.Runner.Core" Version="8.0.0" />
-    <PackageVersion Include="FluentMigrator.Runner.MySql" Version="8.0.0" />
-    <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="8.0.0" />
-    <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="8.0.0" />
-    <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="8.0.0" />
+    <PackageVersion Include="FluentMigrator" Version="8.0.1" />
+    <PackageVersion Include="FluentMigrator.Runner" Version="8.0.1" />
+    <PackageVersion Include="FluentMigrator.Runner.Core" Version="8.0.1" />
+    <PackageVersion Include="FluentMigrator.Runner.MySql" Version="8.0.1" />
+    <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="8.0.1" />
+    <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="8.0.1" />
+    <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="8.0.1" />
     <PackageVersion Include="Fluid.Core" Version="2.31.0" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.1" />
     <PackageVersion Include="Google.Cloud.Firestore.V1" Version="4.1.0" />
     <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.31.0" />
     <PackageVersion Include="Google.Cloud.ResourceManager.V3" Version="2.6.0" />
     <PackageVersion Include="Google.Cloud.Spanner.Data" Version="5.12.0" />
-    <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.13.0" />
+    <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.14.0" />
     <PackageVersion Include="Google.Cloud.Tasks.V2" Version="3.5.0" />
     <PackageVersion Include="Grpc.Core.Api" Version="2.76.0" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.22" />
@@ -90,17 +90,17 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
     <PackageVersion Include="NUnit3TestAdapter" Version="6.1.0" />
-    <PackageVersion Include="OpenTelemetry" Version="1.14.0" />
+    <PackageVersion Include="OpenTelemetry" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.14.0-beta.2" />
-    <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.14.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.14.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.14.0" />
+    <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.15.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.15.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.1" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.14.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.Zipkin" Version="1.14.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.14.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.0" />
     <PackageVersion Include="Paramore.Darker" Version="4.1.1" />
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="4.1.1" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="4.1.1" />
@@ -138,7 +138,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="FakeItEasy" Version="9.0.0" />
+    <PackageVersion Include="FakeItEasy" Version="9.0.1" />
     <PackageVersion Include="xunit.v3" Version="3.1.0" />
     <PackageVersion Include="xunit.v3.runner.msbuild" Version="3.1.0" />
   </ItemGroup>
@@ -167,13 +167,13 @@
     <PackageVersion Include="TickerQ" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
-    <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="9.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.2" />
+    <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="9.0.4" />
     <PackageVersion Include="Npgsql" Version="10.0.1" />
     <PackageVersion Include="TickerQ" Version="10.0.2" />
   </ItemGroup>

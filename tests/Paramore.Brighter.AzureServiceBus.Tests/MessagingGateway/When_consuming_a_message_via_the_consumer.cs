@@ -104,10 +104,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 clientProvider,
-                new[]
-                    {
-                        new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
-                    }
+                [
+                    new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
+                ]
                 )
                 .Create();
         }

@@ -85,7 +85,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
+    public void Acknowledge(Message message) => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));
 
     /// <summary>
     /// Acknowledges the specified message.
@@ -120,16 +120,18 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// Sync over async
     /// </summary>
     /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+    public bool Reject(Message message, MessageRejectionReason? reason) => BrighterAsyncContext.Run(() => RejectAsync(message, reason));
 
     /// <summary>
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">Cancel the reject operation</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason, CancellationToken cancellationToken = default(CancellationToken))
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
             return false;
@@ -138,7 +140,10 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
 
         try
         {
-            Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName);
+            var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
+            var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+
+            Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName, reasonString, description);
 
             using var client = _clientFactory.CreateSqsClient();
             await EnsureChannelUrl(client, cancellationToken);
@@ -167,7 +172,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// Purges the specified queue name.
     /// Sync over Async
     /// </summary>
-    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
+    public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
         
     /// <summary>
     /// Purges the specified queue name.
@@ -196,7 +201,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// Sync over async 
     /// </summary>
     /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
 
     /// <summary>
     /// Receives the specified queue name.
@@ -265,7 +270,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         return messages;
     }
 
-    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
+    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
 
     /// <summary>
     /// Re-queues the specified message.
@@ -340,8 +345,8 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
         public static partial void ErrorDeletingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
 
-        [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
-        public static partial void RejectingMessage(ILogger logger, string id, string? receiptHandle, string channelName);
+        [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName} due to {Reason} because of {Description}")]
+        public static partial void RejectingMessage(ILogger logger, string id, string? receiptHandle, string channelName, string? reason, string description);
 
         [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
         public static partial void ErrorRejectingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
