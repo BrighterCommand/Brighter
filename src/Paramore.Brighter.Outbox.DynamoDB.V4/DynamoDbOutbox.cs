@@ -379,14 +379,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <param name="pageSize">The number of results to return. Only returns this number of results</param>
         /// <param name="cancellationToken">How to cancel</param>
         /// <returns></returns>
-        public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
             TimeSpan dispatchedSince, 
             RequestContext requestContext,
             int pageSize = 100,
             CancellationToken cancellationToken = default
             )
         {
-            return await DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize: pageSize, pageNumber: 1, outboxTimeout: -1, args: null, cancellationToken: cancellationToken);
+            return DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize: pageSize, pageNumber: 1, outboxTimeout: -1, args: null, cancellationToken: cancellationToken);
         }
 
         /// <inheritdoc/>

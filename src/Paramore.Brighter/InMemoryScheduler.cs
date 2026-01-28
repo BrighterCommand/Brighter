@@ -162,7 +162,7 @@ public class InMemoryScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,
+    public Task<string> ScheduleAsync(Message message, DateTimeOffset at,
         CancellationToken cancellationToken = default)
     {
         if (at < timeProvider.GetUtcNow())
@@ -170,7 +170,7 @@ public class InMemoryScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        return await ScheduleAsync(message, at - timeProvider.GetUtcNow(), cancellationToken);
+        return ScheduleAsync(message, at - timeProvider.GetUtcNow(), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -199,7 +199,7 @@ public class InMemoryScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default)
         where TRequest : class, IRequest
     {
@@ -208,7 +208,7 @@ public class InMemoryScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        return await ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), cancellationToken);
+        return ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -270,7 +270,7 @@ public class InMemoryScheduler(
         if (fireMessage != null)
         {
             var (processor, message) = (fireMessage.Value.Item1, fireMessage.Value.Item2);
-            BrighterAsyncContext.Run(async () => await processor.SendAsync(message));
+            BrighterAsyncContext.Run(() => processor.SendAsync(message));
 
             if (s_timers.TryRemove(message.Id, out var timer))
             {
@@ -284,7 +284,7 @@ public class InMemoryScheduler(
         if (fireRequest != null)
         {
             var (processor, request) = (fireRequest.Value.Item1, fireRequest.Value.Item2);
-            BrighterAsyncContext.Run(async () => await processor.SendAsync(request));
+            BrighterAsyncContext.Run(() => processor.SendAsync(request));
 
             if (s_timers.TryRemove(request.Id, out var timer))
             {

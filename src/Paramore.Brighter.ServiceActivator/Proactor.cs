@@ -96,7 +96,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             //NOTE: Don't make this a method body, as opposed to an expression, unless you want it to
             //break deep in AsyncTaskMethodBuilder for some hard to explain reasons
-            BrighterAsyncContext.Run(async () => await EventLoop());
+            BrighterAsyncContext.Run(() => EventLoop());
         }
 
         private async Task Acknowledge(Message message)
@@ -438,16 +438,16 @@ namespace Paramore.Brighter.ServiceActivator
             return context;
         }
 
-        private async Task<bool> RejectMessage(Message message, MessageRejectionReason reason )
+        private Task<bool> RejectMessage(Message message, MessageRejectionReason reason )
         {
             Log.RejectingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
             
             message.Header.Bag[Message.RejectionReasonHeaderName] = $"Message rejected reason: {reason.RejectionReason} Description: {reason.Description}";
             
-            return await Channel.RejectAsync(message, reason);
+            return Channel.RejectAsync(message, reason);
         }
 
-        private async Task<bool> RequeueMessage(Message message)
+        private Task<bool> RequeueMessage(Message message)
         {
             message.Header.UpdateHandledCount();
 
@@ -462,7 +462,7 @@ namespace Paramore.Brighter.ServiceActivator
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
                     IncrementUnacceptableMessageCount(); 
-                    return await RejectMessage(message, new MessageRejectionReason(
+                    return RejectMessage(message, new MessageRejectionReason(
                         RejectionReason.DeliveryError, 
                         $"Handle Count Exceeded for message {originalMessageId}")
                     );
@@ -471,7 +471,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             Log.ReQueueingMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name, Channel.RoutingKey);
 
-            return await Channel.RequeueAsync(message, RequeueDelay);
+            return Channel.RequeueAsync(message, RequeueDelay);
         }
         
         private async Task<IRequest> TranslateMessage(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)

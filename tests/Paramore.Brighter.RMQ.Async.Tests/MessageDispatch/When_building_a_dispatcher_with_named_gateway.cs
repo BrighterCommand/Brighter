@@ -29,7 +29,7 @@ public class DispatchBuilderWithNamedGateway : IDisposable
             {
                 CommandProcessor.RETRYPOLICY, Policy
                     .Handle<Exception>()
-                    .WaitAndRetry(new[] {TimeSpan.FromMilliseconds(50)})
+                    .WaitAndRetry([TimeSpan.FromMilliseconds(50)])
             },
             {
                 CommandProcessor.CIRCUITBREAKER, Policy
@@ -65,8 +65,8 @@ public class DispatchBuilderWithNamedGateway : IDisposable
             )
             .MessageMappers(messageMapperRegistry, null, new EmptyMessageTransformerFactory(), null)
             .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
-            .Subscriptions(new []
-            {
+            .Subscriptions(
+            [
                 new RmqSubscription<MyEvent>(
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
@@ -79,7 +79,7 @@ public class DispatchBuilderWithNamedGateway : IDisposable
                     new RoutingKey("simon"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
-            })
+            ])
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
 

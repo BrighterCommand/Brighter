@@ -22,7 +22,7 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
 {
     /// <inheritdoc />
     public void Acknowledge(Message message) 
-        => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
+        => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));
     
     /// <inheritdoc />
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
@@ -37,7 +37,7 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
     
     /// <inheritdoc />
     public void Purge() 
-        => BrighterAsyncContext.Run(async () => await PurgeAsync());
+        => BrighterAsyncContext.Run(() => PurgeAsync());
 
     /// <inheritdoc />
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
@@ -56,7 +56,7 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
     
     /// <inheritdoc />
     public Message[] Receive(TimeSpan? timeOut = null)
-        => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+        => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
 
     /// <inheritdoc />
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))

@@ -49,11 +49,11 @@ public static class OutboxFactory
                 }
             ));
         var outboxTableName = createTableRequest.TableName;
-        (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new[] {outboxTableName}).Result;
+        (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables([outboxTableName]).Result;
         if (!hasTables.exist)
         {
             _ = dbTableBuilder.Build(createTableRequest).Result;
-            dbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
+            dbTableBuilder.EnsureTablesReady([createTableRequest.TableName], TableStatus.ACTIVE).Wait();
         }
     }
     

@@ -148,7 +148,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// <returns>An array containing one message if available, or an array with a default message if a timeout occurs.</returns>
     public Message[] Receive(TimeSpan? timeOut = null)
     {
-        return BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+        return BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
     }
     
     /// <summary>

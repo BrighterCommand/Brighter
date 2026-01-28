@@ -30,7 +30,7 @@ public class DispatchBuilderWithNamedGateway : IDisposable
             {
                 CommandProcessor.RETRYPOLICY, Policy
                     .Handle<Exception>()
-                    .WaitAndRetry(new[] {TimeSpan.FromMilliseconds(50)})
+                    .WaitAndRetry([TimeSpan.FromMilliseconds(50)])
             },
             {
                 CommandProcessor.CIRCUITBREAKER, Policy

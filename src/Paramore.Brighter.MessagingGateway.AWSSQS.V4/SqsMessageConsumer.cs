@@ -85,7 +85,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
+    public void Acknowledge(Message message) => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));
 
     /// <summary>
     /// Acknowledges the specified message.
@@ -122,7 +122,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// <param name="message">The message.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public bool Reject(Message message, MessageRejectionReason? reason) => BrighterAsyncContext.Run(async () => await RejectAsync(message, reason));
+    public bool Reject(Message message, MessageRejectionReason? reason) => BrighterAsyncContext.Run(() => RejectAsync(message, reason));
 
     /// <summary>
     /// Rejects the specified message.
@@ -172,7 +172,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// Purges the specified queue name.
     /// Sync over Async
     /// </summary>
-    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
+    public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
         
     /// <summary>
     /// Purges the specified queue name.
@@ -201,7 +201,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// Sync over async 
     /// </summary>
     /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
 
     /// <summary>
     /// Receives the specified queue name.
@@ -270,7 +270,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         return messages;
     }
 
-    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
+    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
 
     /// <summary>
     /// Re-queues the specified message.

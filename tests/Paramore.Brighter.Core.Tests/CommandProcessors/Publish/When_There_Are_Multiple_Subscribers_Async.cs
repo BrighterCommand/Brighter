@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         [Fact]
         public async Task When_There_Are_Multiple_Subscribers_Async()
         {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PublishAsync(_myEvent));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
             //Should not throw an exception
             Assert.Null(_exception);

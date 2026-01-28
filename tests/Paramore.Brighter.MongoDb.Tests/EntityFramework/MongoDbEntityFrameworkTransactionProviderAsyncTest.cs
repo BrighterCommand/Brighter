@@ -161,7 +161,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            async () => await provider.CommitAsync(cts.Token));
+            () => provider.CommitAsync(cts.Token));
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
-            async () => await provider.RollbackAsync(cts.Token));
+            () => provider.RollbackAsync(cts.Token));
     }
 
     [Fact]
