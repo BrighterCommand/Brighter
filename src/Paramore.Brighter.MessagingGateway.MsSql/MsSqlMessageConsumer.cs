@@ -101,7 +101,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         ///  Not implemented for the MSSQL message consumer
         /// </remarks>
         /// <param name="message">The message.</param>
-        public bool Reject(Message message)
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+        public bool Reject(Message message, MessageRejectionReason? reason = null)
          {
              Log.RejectingMessageNotImplemented(s_logger, message.Header.Topic, message.Id);
              return false;
@@ -114,9 +115,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         ///  Not implemented for the MSSQL message consumer
         /// </remarks>
         /// <param name="message">The message.</param>
-        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the reject</param>
-        public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
-            => Task.FromResult(Reject(message));
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+        /// /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the reject</param>
+        public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
+            => Task.FromResult(Reject(message, reason));
 
         /// <summary>
         /// Requeues the specified message.

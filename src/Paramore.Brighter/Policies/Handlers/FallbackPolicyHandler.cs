@@ -69,13 +69,13 @@ namespace Paramore.Brighter.Policies.Handlers
         /// The original exception is stored in the <see cref="IHandleRequests{TRequest}.Context"/> under the key <see cref="FallbackPolicyHandler{TRequest}.CAUSE_OF_FALLBACK_EXCEPTION"/> for probing
         /// by handlers in the pipeline called on fallback
         /// </summary>
-        /// <param name="command">The command.</param>
+        /// <param name="request">The command.</param>
         /// <returns>TRequest.</returns>
-        public override TRequest Handle(TRequest command)
+        public override TRequest Handle(TRequest request)
         {
             if (_exceptionHandlerFunc is null)
                 throw new ArgumentException("ExceptionHandler must be set before handling.");
-            return _exceptionHandlerFunc(command);
+            return _exceptionHandlerFunc(request);
         }
 
         private TRequest CatchAll(TRequest command)

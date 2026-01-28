@@ -114,7 +114,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             DisposePool();
             GC.SuppressFinalize(this);
         }
-        
 
         /// <inheritdoc cref="IAsyncDisposable"/> 
         public async ValueTask DisposeAsync()
@@ -122,6 +121,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             await DisposePoolAsync().ConfigureAwait(false);
             GC.SuppressFinalize(this); 
         }
+        
         /// <summary>
         /// Clear the queue
         /// </summary>
@@ -257,7 +257,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// This a 'do nothing operation' as we have already popped
         /// </summary>
         /// <param name="message">The message to reject</param>
-        public bool Reject(Message message)
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+        public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
             _inflight.Remove(message.Id);
             return true;
@@ -267,8 +268,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// This a 'do nothing operation' as we have already popped
         /// </summary>
         /// <param name="message">The message to reject</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         /// <param name="cancellationToken">The cancellation token</param>
-        public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
             => Task.FromResult(Reject(message));
 
         /// <summary>

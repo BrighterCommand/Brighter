@@ -40,6 +40,8 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
 {
     private readonly ConcurrentDictionary<string, LockedMessage> _lockedMessages = new();
     private readonly RoutingKey _topic;
+    private readonly RoutingKey? _deadLetterTopic;
+    private readonly RoutingKey? _invalidMessageTopic;
     private readonly InternalBus _bus;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _ackTimeout;
@@ -53,13 +55,26 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
     /// and requeues them if they have been locked for longer than the timeout.
     /// </summary>
+    /// <remarks>
+    /// If an <see cref="invalidMessageTopic"/> is not provided but a <see cref="deadLetterTopic"/> is, tnen we will treat
+    /// the <see cref="deadLetterTopic"/> as the topic for invalid messages
+    /// </remarks>
     /// <param name="topic">The <see cref="Paramore.Brighter.RoutingKey"/> that we want to consume from</param>
     /// <param name="bus">The <see cref="Paramore.Brighter.InternalBus"/> that we want to read the messages from</param>
     /// <param name="timeProvider">Allows us to use a timer that can be controlled from tests</param>
+    /// <param name="deadLetterTopic">If a dead letter channel is required, then provide a topic to use</param>
+    /// <param name="invalidMessageTopic">If an invalid message channel is required, then provide a topic to use</param>
     /// <param name="ackTimeout">The period before we requeue an unacknowledged message; defaults to -1ms or infinite</param>
-    public InMemoryMessageConsumer(RoutingKey topic, InternalBus bus, TimeProvider timeProvider, TimeSpan? ackTimeout = null)
+    public InMemoryMessageConsumer(RoutingKey topic,
+        InternalBus bus,
+        TimeProvider timeProvider,
+        RoutingKey? deadLetterTopic = null,
+        RoutingKey? invalidMessageTopic = null,
+        TimeSpan? ackTimeout = null)
     {
         _topic = topic;
+        _deadLetterTopic = deadLetterTopic;
+        _invalidMessageTopic = invalidMessageTopic;
         _bus = bus;
         _timeProvider = timeProvider;
         ackTimeout ??= TimeSpan.FromMilliseconds(-1);
@@ -77,7 +92,10 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <summary>
     /// Acknowledges the specified message.
     /// </summary>
-    /// <param name="message">The message.</param>
+    /// <remarks>
+    /// When a message is acknowledged, another consumer should not process it
+    /// </remarks>
+    /// <param name="message">The<see cref="Message"/> to acknowledged</param>
     public void Acknowledge(Message message)
     {
         _lockedMessages.TryRemove(message.Id, out _);
@@ -93,25 +111,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     {
         await Task.Run(() => Acknowledge(message), cancellationToken);
     }
-
-    /// <summary>
-    /// Rejects the specified message.
-    /// </summary>
-    /// <param name="message">The message.</param>
-    public bool Reject(Message message)
-        => _lockedMessages.TryRemove(message.Id, out _);
-
-    /// <summary>
-    /// Rejects the specified message.
-    /// We use Task.Run here to emulate async
-    /// </summary>
-    /// <param name="message">The message.</param>
-    /// <param name="cancellationToken">Cancel the rejection</param>
-    public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
-    {
-        return Task.Run(() => Reject(message), cancellationToken);
-    }
-
+  
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
@@ -169,6 +169,59 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     {
         return Task.Run(() => Receive(timeOut), cancellationToken);
     }
+    
+      /// <summary>
+    /// Rejects the specified message.
+    /// </summary>
+    /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
+    /// message channel, the message should be forwarded to it
+    /// <param name="message">The <see cref="Message"/> to reject</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+    public bool Reject(Message message, MessageRejectionReason? reason = null)
+    {
+        _lockedMessages.TryRemove(message.Id, out _);
+
+        if (reason is { RejectionReason: RejectionReason.DeliveryError })
+        {
+            if ( _deadLetterTopic is null) return true;
+
+            message.Header.Topic = _deadLetterTopic;
+        }
+        else if (reason is { RejectionReason: RejectionReason.Unacceptable })
+        {
+            if (_invalidMessageTopic is not null) 
+                message.Header.Topic = _invalidMessageTopic;
+            else if (_deadLetterTopic is not null)
+                message.Header.Topic = _deadLetterTopic;
+            else
+                return true;
+        }
+        else if (reason is null)
+        {
+            if ( _deadLetterTopic is null) return true;
+
+            message.Header.Topic = _deadLetterTopic;
+        }    
+
+        _bus.Enqueue(message);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Rejects the specified message.
+    /// </summary>
+    /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
+    /// message channel, the message should be forwardedn to it
+    /// <param name="message">The <see cref="Message"/> to reject</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+    /// <param name="cancellationToken">Cancels the rejection</param>
+    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() => Reject(message, reason), cancellationToken);
+    }
 
     /// <summary>
     /// Requeues the specified message.
@@ -193,13 +246,14 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
 
         return true;
     }
-    
+
     /// <summary>
     /// Requeues the specified message.
     /// We use Task.Run here to emulate async 
     /// </summary>
     /// <param name="message">The message to requeue</param>
     /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
+    /// <param name="cancellationToken">Allows the asynchronous operation to be cancelled</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
     public Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {   
@@ -270,4 +324,5 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     }
 
     private sealed record LockedMessage(Message Message, DateTimeOffset LockedAt);
+
 }

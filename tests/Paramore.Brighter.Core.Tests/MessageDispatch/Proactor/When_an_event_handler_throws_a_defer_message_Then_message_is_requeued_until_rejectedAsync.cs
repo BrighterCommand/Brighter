@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             SpyRequeueCommandProcessor commandProcessor = new();
 
             _bus = new InternalBus();
-            _channel = new ChannelAsync(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
+            _channel = new ChannelAsync(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
 
         [Fact]
-        public async Task When_an_event_handler_throws_a_defer_message_Then_message_is_requeued_until_rejectedAsync()
+        public async Task When_an_event_handler_throws_a_defer_message_the_message_is_requeued_until_rejectedAsync()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);

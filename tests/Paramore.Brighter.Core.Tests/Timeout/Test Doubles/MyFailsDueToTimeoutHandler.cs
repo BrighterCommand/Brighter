@@ -35,14 +35,14 @@ namespace Paramore.Brighter.Core.Tests.Timeout.Test_Doubles
     internal sealed class MyFailsDueToTimeoutHandler : RequestHandler<MyCommand>
     {
         [TimeoutPolicy(500, 1, HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand myCommand)
         {
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
             if (ct.IsCancellationRequested)
             {
-                command.WasCancelled = true;
+                myCommand.WasCancelled = true;
                 //already died
-                return base.Handle(command);
+                return base.Handle(myCommand);
             }
             try
             {
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.Timeout.Test_Doubles
                     x =>
                     {
                         // done something I should not do, because I should of been cancel
-                        command.WasCancelled = false;
+                        myCommand.WasCancelled = false;
                     },
                     ct);
 
@@ -60,14 +60,14 @@ namespace Paramore.Brighter.Core.Tests.Timeout.Test_Doubles
             {
                 foreach (var tce in e.InnerExceptions.OfType<TaskCanceledException>())
                 {
-                    command.WasCancelled = true;
-                    command.TaskCompleted = false;
-                    return base.Handle(command);
+                    myCommand.WasCancelled = true;
+                    myCommand.TaskCompleted = false;
+                    return base.Handle(myCommand);
                 }
             }
 
-            command.TaskCompleted = true;
-            return base.Handle(command);
+            myCommand.TaskCompleted = true;
+            return base.Handle(myCommand);
         }
     }
 }
