@@ -176,7 +176,7 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5             
+          --health-retries 10             
 
     steps:
       - uses: actions/checkout@v6
@@ -202,6 +202,11 @@ jobs:
         image: efrecon/mosquitto:latest
         ports:
         - 1883:1883
+        options: >-
+          --health-cmd "timeout 5 mosquitto_sub -t '$SYS/#' -C 1 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout code
@@ -233,7 +238,7 @@ jobs:
           --health-cmd "rabbitmqctl node_health_check"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v6
@@ -269,6 +274,11 @@ jobs:
          ZOOKEEPER_CLIENT_PORT: 2181
          ZOOKEEPER_TICK_TIME: 2000
          ALLOW_ANONYMOUS_LOGIN: yes
+        options: >-
+          --health-cmd "echo 'ruok' | nc localhost 2181 | grep imok"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
       kafka:
         image: confluentinc/cp-enterprise-kafka:latest
         ports:
@@ -282,6 +292,11 @@ jobs:
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
           KAFKA_DELETE_TOPIC_ENABLE: "false"
+        options: >-
+          --health-cmd "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 15
       schema-registry:
         image: confluentinc/cp-schema-registry:latest
         ports:
@@ -290,17 +305,34 @@ jobs:
           SCHEMA_REGISTRY_HOST_NAME: schema-registry
           SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:29092'
           SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+        options: >-
+          --health-cmd "curl -f http://localhost:8081/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
     - name: Install KafkaCat
       run: |
-        sudo apt-get install kafkacat
-    - name: Sleep to let Kafka spin up
-      uses: jakejarvis/wait-action@master
-      with:
-        time: '30s'
-    - name: docker check
-      run: docker ps -a
+        sudo apt-get install -y kafkacat
+    - name: Wait for Kafka to be ready
+      run: |
+        echo "Waiting for Kafka to be ready..."
+        max_attempts=30
+        attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+          if kafkacat -b localhost:9092 -L > /dev/null 2>&1; then
+            echo "Kafka is ready!"
+            break
+          fi
+          attempt=$((attempt + 1))
+          echo "Attempt $attempt/$max_attempts: Kafka not ready yet, waiting 2 seconds..."
+          sleep 2
+        done
+        if [ $attempt -eq $max_attempts ]; then
+          echo "Kafka failed to become ready after $max_attempts attempts"
+          exit 1
+        fi
     - name: Checkout code
       uses: actions/checkout@v6
     - name: Setup dotnet
@@ -332,7 +364,7 @@ jobs:
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet 
@@ -360,6 +392,11 @@ jobs:
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: Password123!
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Password123! -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet 
@@ -387,7 +424,7 @@ jobs:
         env:
           MYSQL_DATABASE: BrighterTests
           MYSQL_ROOT_PASSWORD: root
-        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
+        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=10
 
     steps:
       - uses: actions/checkout@v6
@@ -420,6 +457,11 @@ jobs:
         image: dwmkerr/dynamodb
         ports: 
           - 8000:8000
+        options: >-
+          --health-cmd "curl -f http://localhost:8000/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v6
@@ -601,7 +643,7 @@ jobs:
           --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
           --health-interval 20s
           --health-timeout 10s
-          --health-retries 10
+          --health-retries 15
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet
