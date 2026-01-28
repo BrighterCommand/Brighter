@@ -56,12 +56,12 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <summary>
         /// Handles the specified command.
         /// </summary>
-        /// <param name="command">The command.</param>
+        /// <param name="request">The command.</param>
         /// <returns>TRequest.</returns>
-        public override TRequest Handle(TRequest command)
+        public override TRequest Handle(TRequest request)
         {
-            Log.LogCommand(s_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
-            return base.Handle(command);
+            Log.LogCommand(s_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            return base.Handle(request);
         }
 
         /// <summary>

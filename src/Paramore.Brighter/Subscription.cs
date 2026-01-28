@@ -142,8 +142,26 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the number of messages before we will terminate the channel due to high error rates.
         /// </summary>
-        /// <value>The <see cref="int"/> maximum number of unacceptable messages before stopping the channel.</value>
+        /// <value>
+        /// The <see cref="int"/> maximum number of unacceptable messages before stopping the channel, or zero
+        /// or below to disable termination of messages due to high error rates. Default value is zerio
+        /// </value>
+        /// <remarks>
+        /// This is made available to prevent a problem resulting in messages being moved from the channel en masse
+        /// (either to a dead letter channel, or just dropped depending on whether <see cref="IUseBrighterDeadLetterSupport"/>
+        /// is implemented.
+        /// </remarks>
         public int UnacceptableMessageLimit { get; }
+        
+        /// <summary>
+        /// Gets the window in which we monitor the unacceptable message count. The count resets at the end of the window.
+        /// </summary>
+        /// <remarks>
+        /// Having an unacceptable message count that lasts for the app lifetime will lead to message rejection over
+        /// te lifetime of the application eventually causing it to halt. We really care about bursts of activity during
+        /// a window, where a transient issue might mea we should crash over attempting to process further messages.
+        /// </remarks>
+        public TimeSpan? UnacceptableMessageLimitWindow { get; }
 
         /// <summary>
         /// Gets the factory type for this subscription. Internal use only.
@@ -173,9 +191,9 @@ namespace Paramore.Brighter
         /// <param name="makeChannels">The <see cref="OnMissingChannel"/> policy - should we make channels if they don't exist, defaults to creating.</param>
         /// <param name="emptyChannelDelay">The <see cref="TimeSpan"/> to pause when a channel is empty in milliseconds.</param>
         /// <param name="channelFailureDelay">The <see cref="TimeSpan"/> to pause when there is a channel failure in milliseconds.</param>
+        /// <param name="unacceptableMessageLimitWindow">over what time period should we enforce the <see cref="UnacceptableMessageLimit"/> if any</param>
         /// <exception cref="ConfigurationException">Thrown when <paramref name="messagePumpType"/> is <see cref="MessagePumpType.Unknown"/>.</exception>
-        public Subscription(
-            SubscriptionName subscriptionName,
+        public Subscription(SubscriptionName subscriptionName,
             ChannelName channelName,
             RoutingKey routingKey,
             Type? requestType = null,
@@ -190,7 +208,8 @@ namespace Paramore.Brighter
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
-            TimeSpan? channelFailureDelay = null)
+            TimeSpan? channelFailureDelay = null, 
+            TimeSpan? unacceptableMessageLimitWindow = null)
         {
             if (messagePumpType == MessagePumpType.Unknown)
                 throw new ConfigurationException("You must set a message pump type: use Reactor for sync pipelines; use Proactor for async pipelines");
@@ -211,6 +230,7 @@ namespace Paramore.Brighter
             requeueDelay ??= TimeSpan.Zero;
             RequeueDelay = requeueDelay.Value;
             UnacceptableMessageLimit = unacceptableMessageLimit;
+            UnacceptableMessageLimitWindow = unacceptableMessageLimitWindow;
             MessagePumpType = messagePumpType;
             ChannelFactory = channelFactory;
             MakeChannels = makeChannels;
@@ -257,6 +277,7 @@ namespace Paramore.Brighter
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="unacceptableMessageLimitWindow">over what time period should we enforce the <see cref="UnacceptableMessageLimit"/> if any</param>
         public Subscription(
             SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
@@ -272,7 +293,8 @@ namespace Paramore.Brighter
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
-            TimeSpan? channelFailureDelay = null)
+            TimeSpan? channelFailureDelay = null,
+            TimeSpan? unacceptableMessageLimitWindow = null)
             : base(
                 subscriptionName  ?? new SubscriptionName(typeof(T).FullName!),
                 channelName ?? new ChannelName(typeof(T).FullName!),
@@ -287,7 +309,10 @@ namespace Paramore.Brighter
                 unacceptableMessageLimit,
                 messagePumpType,
                 channelFactory,
-                makeChannels, emptyChannelDelay, channelFailureDelay)
+                makeChannels, 
+                emptyChannelDelay, 
+                channelFailureDelay,
+                unacceptableMessageLimitWindow)
         {
         }
     }

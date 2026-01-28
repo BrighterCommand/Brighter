@@ -186,7 +186,7 @@ namespace Paramore.Brighter
         /// Gets the type of the message (command, event). Internal usage, Used when routing the message to a handler
         /// </summary>
         /// <value>The type of the message.</value>
-        public MessageType MessageType { get; init; }
+        public MessageType MessageType { get; set; }
 
         /// <summary>
         /// OPTIONAL
@@ -245,7 +245,7 @@ namespace Paramore.Brighter
         /// <value>The topic.</value>
         [JsonConverter(typeof(RoutingKeyConvertor))]
         [Newtonsoft.Json.JsonConverter(typeof(RoutingKeyConvertor))]
-        public RoutingKey Topic { get; init; } = RoutingKey.Empty;
+        public RoutingKey Topic { get; set; } = RoutingKey.Empty;
 
         /// <summary>
         /// REQUIRED

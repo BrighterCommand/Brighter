@@ -5,6 +5,7 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -35,8 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new Subscription<MyResponse>()
             };
 
-            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
-                .AddBrighterDefault();
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
 
             var timeProvider = new FakeTimeProvider();
             var routingKey = new RoutingKey("MyRequest");

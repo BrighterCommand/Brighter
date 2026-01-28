@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Transactions;
 using Paramore.Brighter.CircuitBreaker;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;

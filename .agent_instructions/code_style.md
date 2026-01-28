@@ -1,0 +1,38 @@
+# Code Style
+
+- Follow .NET C# conventions
+  - Use Microsoft's C# naming conventions for identifiers
+    - Use PascalCase for public and protected members, including properties, methods, and classes.
+    - Use camelCase for private and internal members, including fields and parameters.
+    - Use PascalCase for namespaces.
+    - Use PascalCase for enum values.
+    - Use camelCase for local variables.
+  - For a const, use an All Caps naming convention, with underscores between words i.e. `public const int MAX_RETRY_COUNT = 5;` This replaces rules in the Microsoft C# naming convention.
+  - Follow Microsoft's C# coding conventions
+    - Use braces for all control statements, unless they are single-line.
+    - Use spaces around binary operators and after commas.
+    - Use a single blank line to separate methods and properties.
+    - Use a single blank line to separate logical sections of code within a method.
+    - Use a single blank line to separate using directives.
+  - DO NOT use Microsoft's Framework Design Guidelines. They are not idiomatic and outdated.
+- Prefer expression-bodied members for simple properties and methods.
+- Use readonly for fields that do not change after construction.
+- Enable nullable on projects:
+  - `<Nullable>enable</Nullable>` should be set in the project file, and that new code should use nullable reference types.
+  - Make types nullable to indicate optionality.
+- You may use marker interfaces. We find marker interfaces useful for a base type for async and sync interfaces.
+- Use assemblies to provide modularity. Separate into assemblies based on responsibilities.
+- We support both sync and async I/O
+  - Suffix async methods with async.
+  - For I/O, you should provide both sync and async implementations.
+  - Prefer explicit threads to using the thread pool.
+- Divide into responsibilities based on optionality. Required behaviors should exist in Paramore.Brighter and Paramore.Brighter.ServiceActivator.
+  - Other assemblies should add optional behaviors, allowing users to only take dependencies on the resulting NuGet packages if they require that functionality.
+  - There is a balance here. We want you to load as few dependencies as possible, without bringing in too many behaviors you do not need.
+  - As we support multiple message brokers (a.k.a. transports), these should always use their own assembly.
+  - As we support multiple outbox providers, these should always use their own assembly.
+  - As we support multiple inbox providers, these should always use their own assembly.
+  - As we support multiple schedulers, these should use their own assembly.
+  - As we support multiple locking providers, these should use their own assembly.  
+- Default to a class per source file approach, unless one class clearly exists as the details of another.
+

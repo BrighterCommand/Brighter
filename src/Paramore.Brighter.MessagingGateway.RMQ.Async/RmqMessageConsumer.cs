@@ -291,6 +291,43 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
         return [_noopMessage]; // Default return in case of exception
     }
+    
+    /// <summary>
+    /// Rejects the specified message.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+    public bool Reject(Message message, MessageRejectionReason? reason = null) => BrighterAsyncContext.Run(async () => await RejectAsync(message, reason));
+
+    /// <summary>
+    /// Rejects the specified message.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+    /// <param name="cancellationToken">Allows the asynchronous operation to be canceled</param>
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await EnsureBrokerAsync(_queueName, cancellationToken: cancellationToken);
+            
+            if (Channel is null) throw new InvalidOperationException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+            
+            var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
+            var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+            
+            Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag, reasonString, description);
+            
+            //if we have a DLQ, this will force over to the DLQ
+            await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Log.ErrorNoAckMessage(s_logger, exception, message.Id);
+            throw;
+        }
+    }
 
     /// <summary>
     /// Requeues the specified message.
@@ -341,33 +378,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             return false;
         }
     }
-
-    /// <summary>
-    /// Rejects the specified message.
-    /// </summary>
-    /// <param name="message">The message.</param>
-    public bool Reject(Message message) => BrighterAsyncContext.Run(() => RejectAsync(message));
-
-    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await EnsureBrokerAsync(_queueName, cancellationToken: cancellationToken);
-            
-            if (Channel is null) throw new InvalidOperationException($"RmqMessageConsumer: channel {_queueName.Value} is null");
-            
-            Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag);
-            //if we have a DLQ, this will force over to the DLQ
-            await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
-            return true;
-        }
-        catch (Exception exception)
-        {
-            Log.ErrorNoAckMessage(s_logger, exception, message.Id);
-            throw;
-        }
-    }
-
+ 
     protected virtual async Task EnsureChannelAsync(CancellationToken cancellationToken = default)
     {
         if (Channel == null || Channel.IsClosed)
@@ -608,8 +619,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: Error re-queueing message {Id}")]
         public static partial void ErrorRequeueingMessage(ILogger logger, Exception exception, string id);
 
-        [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: NoAck message {Id} with delivery tag {DeliveryTag}")]
-        public static partial void NoAckMessage(ILogger logger, string id, ulong deliveryTag);
+        [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: NoAck message {Id} with delivery tag {DeliveryTag} because {Reason} due to {Description}")]
+        public static partial void NoAckMessage(ILogger logger, string id, ulong deliveryTag, string reason, string description);
 
         [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: Error try to NoAck message {Id}")]
         public static partial void ErrorNoAckMessage(ILogger logger, Exception exception, string id);

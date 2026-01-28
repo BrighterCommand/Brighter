@@ -22,16 +22,26 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
             _bus = new InternalBus();
             
-            var channel = new Channel(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 3);
+            var channel = new Channel(
+                new(Channel),
+                _routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 
+                3
+                );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
             _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel, 
+                timeProvider:_timeProvider)
             {
-                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = channel, 
+                TimeOut = TimeSpan.FromMilliseconds(5000), 
+                RequeueCount = 3, 
+                UnacceptableMessageLimit = 3, 
+                UnacceptableMessageLimitWindow = TimeSpan.FromMinutes(1)
             };
 
             var unacceptableMessage1 = new Message(
@@ -69,8 +79,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
             Assert.Empty(_bus.Stream(_routingKey));
 
-            //TODO: without inspection, how we would know you shut down? Observability?
-
+            Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status);
         }
     }
 }

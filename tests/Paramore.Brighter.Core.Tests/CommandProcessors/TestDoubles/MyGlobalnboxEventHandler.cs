@@ -35,10 +35,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             _receivedMessages = receivedMessages;
         }
 
-        public override MyEvent Handle(MyEvent command)
+        public override MyEvent Handle(MyEvent myEvent)
         {
-            _receivedMessages.Add(nameof(MyEventHandler), command.Id);
-            return base.Handle(command);
+            _receivedMessages.Add(nameof(MyEventHandler), myEvent.Id);
+            return base.Handle(myEvent);
         }
     }
 }
