@@ -133,6 +133,7 @@ All message producers should support configuring a message scheduler for delay h
 
 ### AC3: Consistent Configuration
 - [ ] All producers can be configured with scheduler via `MessageSchedulerFactory`
+- [ ] Verify all producers have the Scheduler property
 - [ ] Scheduler property is consistently named and typed across all producers
 
 ### AC4: Tests Pass
