@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using Npgsql;
+using NpgsqlTypes;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
@@ -56,5 +57,10 @@ public class PostgreSqlInbox : RelationalDatabaseInbox
     protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
     {
         return new NpgsqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
+    }
+
+    protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
+    {
+        return new NpgsqlParameter { ParameterName = parameterName, NpgsqlDbType = DatabaseConfiguration.BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json,Value = value ?? DBNull.Value };
     }
 }
