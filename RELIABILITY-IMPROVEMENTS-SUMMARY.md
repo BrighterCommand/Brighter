@@ -4,15 +4,7 @@
 
 ### 1. Service Health Checks (.github/workflows/ci.yml)
 
-#### Added Health Checks for Services Previously Missing Them:
-- **Zookeeper**: Uses `nc localhost 2181 | grep imok` to verify service is responding
-- **Kafka**: Uses `kafka-broker-api-versions` to verify broker is ready for connections
-- **Schema Registry**: Uses HTTP endpoint check
-- **MQTT (Mosquitto)**: Uses `mosquitto_sub` to verify broker accepts connections
-- **SQL Server**: Uses `sqlcmd` to verify database engine is ready
-- **DynamoDB**: Uses HTTP endpoint check
-
-#### Increased Health Check Retries:
+#### Increased Health Check Retries for Existing Checks:
 | Service | Before | After | Max Wait Time |
 |---------|--------|-------|---------------|
 | Redis | 5 | 10 | ~100s |
@@ -20,12 +12,8 @@
 | PostgreSQL | 5 | 10 | ~100s |
 | MySQL/MariaDB | 3 | 10 | ~100s |
 | MongoDB | 10 | 15 | ~300s |
-| Kafka | N/A | 15 | ~150s |
-| Zookeeper | N/A | 10 | ~100s |
-| Schema Registry | N/A | 10 | ~100s |
-| MQTT | N/A | 10 | ~100s |
-| SQL Server | N/A | 10 | ~100s |
-| DynamoDB | N/A | 10 | ~100s |
+
+**Note**: Initial attempts to add health checks for MQTT, Zookeeper, Kafka, Schema Registry, SQL Server, and DynamoDB were reverted due to unavailable commands in container images (`mosquitto_sub`, `nc`, `kafka-broker-api-versions`, `curl`, `sqlcmd`). These services now start without health checks, relying on increased job timeouts and Kafka readiness verification instead.
 
 ### 2. Kafka-Specific Improvements
 

@@ -15,26 +15,20 @@ CI tests were exhibiting unreliable behavior, often failing due to timing issues
 
 ## Implemented Improvements
 
-### 1. Service Health Checks in CI Workflow
+### 1. Service Health Check Improvements in CI Workflow
 
-All services in `.github/workflows/ci.yml` now have proper health checks:
-
-#### Kafka Ecosystem
-- **Zookeeper**: Health check using `nc localhost 2181 | grep imok` with 10 retries
-- **Kafka**: Health check using `kafka-broker-api-versions` with 15 retries (up to 150 seconds)
-- **Schema Registry**: Health check using HTTP endpoint with 10 retries
+All existing health checks in `.github/workflows/ci.yml` now have increased retry counts to accommodate slower CI environments:
 
 #### Databases
-- **Redis**: 10 retries (was 5)
-- **PostgreSQL**: 10 retries (was 5)
-- **MySQL/MariaDB**: 10 retries (was 3)
-- **SQL Server**: Added health check with `sqlcmd` and 10 retries
-- **MongoDB**: 15 retries (was 10)
-- **DynamoDB**: Added health check with HTTP endpoint and 10 retries
+- **Redis**: 10 retries (was 5) - up to ~100 seconds
+- **PostgreSQL**: 10 retries (was 5) - up to ~100 seconds
+- **MySQL/MariaDB**: 10 retries (was 3) - up to ~100 seconds
+- **MongoDB**: 15 retries (was 10) - up to ~300 seconds
 
 #### Message Queues
-- **RabbitMQ**: 10 retries (was 5)
-- **MQTT (Mosquitto)**: Added health check with `mosquitto_sub` and 10 retries
+- **RabbitMQ**: 10 retries (was 5) - up to ~100 seconds
+
+**Note on Health Checks**: Initial attempts to add health checks for MQTT, Zookeeper, Kafka, Schema Registry, SQL Server, and DynamoDB were reverted because the required commands (`mosquitto_sub`, `nc`, `kafka-broker-api-versions`, `curl`, `sqlcmd`) were not available in the respective container images. These services now start without health checks, relying on the increased job timeouts and the Kafka readiness verification script instead.
 
 ### 2. Kafka Readiness Verification
 
@@ -139,6 +133,7 @@ These tests may now be more reliable due to infrastructure improvements, but sho
 2. **Consider Removing Test Parallelization Restrictions**: Investigate if RabbitMQ can handle parallel tests with proper isolation
 3. **Add CI-Specific Configuration**: Create test configuration profiles optimized for CI environments
 4. **Improve Logging**: Add more detailed logging in tests to diagnose failures when they occur
+5. **Research Proper Health Checks**: Investigate what commands are actually available in each container image for future health check implementation
 
 ## Testing These Changes
 
@@ -158,14 +153,31 @@ Track these metrics over time:
 - **Job Duration**: Average and P95 duration for each job type
 - **Time to Ready**: How long services take to become healthy (from CI logs)
 
+## Lessons Learned
+
+### What Worked
+- Increasing retry counts for existing health checks
+- Active Kafka readiness verification using kafkacat
+- Increased job timeouts
+- Comprehensive documentation
+
+### What Didn't Work
+- Adding health checks with commands not available in containers
+- Attempting to use `mosquitto_sub`, `nc`, `kafka-broker-api-versions`, `curl`, `sqlcmd` in health checks
+- These commands either don't exist in the images or aren't in PATH
+
+### Future Health Check Considerations
+When adding health checks in the future:
+1. Verify the command exists in the container image first
+2. Test locally with the same image before committing
+3. Consider using TCP port checks or simple HTTP requests where available
+4. Some images may need custom health check scripts added via volume mounts
+
 ## Related Issues
 
-- [Original Issue: Unreliable Acceptance Tests](#)
-- Related PRs:
-  - Initial infrastructure improvements
-  - Test timeout increases
-  - Service health check additions
+- [Chore] Unreliable Acceptance Tests - Original issue
+- PR with fixes and improvements
 
 ## Summary
 
-The improvements focus on ensuring services are genuinely ready before tests run, rather than hoping fixed delays are sufficient. This addresses the root cause of most CI reliability issues. While individual tests still have timing-related code patterns, the infrastructure changes should significantly improve overall reliability.
+The improvements focus on ensuring services have adequate time to start and that Kafka readiness is actively verified rather than relying on fixed delays. While we couldn't add all desired health checks due to container limitations, the increased retry counts for existing checks and longer job timeouts should significantly improve overall reliability.
