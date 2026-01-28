@@ -1,0 +1,171 @@
+# CI Test Reliability Improvements
+
+## Overview
+
+This document describes the reliability improvements made to Brighter's CI acceptance tests, which test MessagingGateways, Inboxes, and Outboxes against various middleware and database services.
+
+## Problem Summary
+
+CI tests were exhibiting unreliable behavior, often failing due to timing issues that were difficult to reproduce locally. The primary issues were:
+
+1. **Missing or inadequate service health checks** - Tests would start before services (Kafka, MySQL, etc.) were fully ready
+2. **Fixed delays instead of readiness polling** - Tests used hardcoded `Task.Delay()` calls instead of actively checking service readiness
+3. **Insufficient timeouts** - 5-minute job timeouts were too short for CI environments
+4. **Limited retry logic** - Tests would retry only 3 times with fixed 1-second delays
+
+## Implemented Improvements
+
+### 1. Service Health Checks in CI Workflow
+
+All services in `.github/workflows/ci.yml` now have proper health checks:
+
+#### Kafka Ecosystem
+- **Zookeeper**: Health check using `nc localhost 2181 | grep imok` with 10 retries
+- **Kafka**: Health check using `kafka-broker-api-versions` with 15 retries (up to 150 seconds)
+- **Schema Registry**: Health check using HTTP endpoint with 10 retries
+
+#### Databases
+- **Redis**: 10 retries (was 5)
+- **PostgreSQL**: 10 retries (was 5)
+- **MySQL/MariaDB**: 10 retries (was 3)
+- **SQL Server**: Added health check with `sqlcmd` and 10 retries
+- **MongoDB**: 15 retries (was 10)
+- **DynamoDB**: Added health check with HTTP endpoint and 10 retries
+
+#### Message Queues
+- **RabbitMQ**: 10 retries (was 5)
+- **MQTT (Mosquitto)**: Added health check with `mosquitto_sub` and 10 retries
+
+### 2. Kafka Readiness Verification
+
+Replaced the blind 30-second wait with an active readiness check:
+
+```bash
+max_attempts=30
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+  if kafkacat -b localhost:9092 -L > /dev/null 2>&1; then
+    echo "Kafka is ready!"
+    break
+  fi
+  attempt=$((attempt + 1))
+  echo "Attempt $attempt/$max_attempts: Kafka not ready yet, waiting 2 seconds..."
+  sleep 2
+done
+```
+
+This provides:
+- Up to 60 seconds to wait for Kafka (vs. fixed 30s)
+- Active verification that Kafka is actually responding
+- Clear logging of connection attempts
+- Failure detection if Kafka doesn't become ready
+
+### 3. Increased Job Timeouts
+
+All acceptance test jobs now have 8-minute timeouts (increased from 5 minutes), except:
+- Kafka: Already had 20 minutes (unchanged)
+- Build job: 30 minutes (unchanged)
+
+This accommodates:
+- Slower CI runner resource allocation
+- Variable network latency
+- Service initialization time
+- Test execution overhead
+
+## Test Patterns Observed
+
+### Common Issues in Test Code
+
+While the CI infrastructure improvements address the primary issues, some test patterns remain that could benefit from future improvements:
+
+1. **Hardcoded delays**: Many tests use `await Task.Delay(500)` or similar to "let topics propagate"
+2. **Limited retries**: Most tests retry 3 times with fixed 1-second intervals
+3. **No exponential backoff**: Retry logic doesn't account for services needing progressively more time
+4. **Test serialization**: RabbitMQ tests have `[assembly: CollectionBehavior(DisableTestParallelization = true)]`
+
+### Tests Marked as Fragile
+
+Tests with `[Trait("Fragile", "CI")]` are excluded from CI runs using the filter `--filter "Fragile!=CI"`. These include:
+
+- **Kafka**: 13 tests involving topic creation, offset management, and message ordering
+- **RabbitMQ**: 6 tests involving DLQ, delayed messages, and retry limits
+- **GCP**: 3 tests involving requeue and DLQ behavior
+- **Azure Service Bus**: 3 tests involving message consumption and large messages
+- **Core**: Several timeout policy and async tests
+
+These tests may now be more reliable due to infrastructure improvements, but should be gradually re-enabled and monitored.
+
+## Recommendations for Future Work
+
+### Short Term (Low Hanging Fruit)
+
+1. **Monitor CI Success Rates**: Track which jobs still fail frequently after these changes
+2. **Gradually Remove "Fragile" Trait**: Start with 1-2 tests per component and monitor success over multiple runs
+3. **Document Test Timing Requirements**: Add comments explaining why delays exist and what they're waiting for
+
+### Medium Term (Test Code Improvements)
+
+1. **Implement Helper Methods**: Create shared retry-with-backoff helpers that tests can use:
+   ```csharp
+   public static async Task<T> RetryWithBackoffAsync<T>(
+       Func<Task<T>> operation,
+       int maxAttempts = 5,
+       int initialDelayMs = 100,
+       int maxDelayMs = 5000)
+   ```
+
+2. **Add Service Readiness Checks**: Tests should verify service connectivity before operations:
+   ```csharp
+   await WaitForServiceAsync(async () => {
+       try {
+           await producer.PingAsync();
+           return true;
+       } catch {
+           return false;
+       }
+   });
+   ```
+
+3. **Increase Test Timeouts in Code**: Use environment variables to increase timeouts in CI:
+   ```csharp
+   var timeout = Environment.GetEnvironmentVariable("CI") == "true" 
+       ? TimeSpan.FromSeconds(30) 
+       : TimeSpan.FromSeconds(10);
+   ```
+
+### Long Term (Architectural Changes)
+
+1. **Test Fixtures with Proper Initialization**: Ensure services are ready in `IAsyncLifetime` or `IClassFixture` setup
+2. **Consider Removing Test Parallelization Restrictions**: Investigate if RabbitMQ can handle parallel tests with proper isolation
+3. **Add CI-Specific Configuration**: Create test configuration profiles optimized for CI environments
+4. **Improve Logging**: Add more detailed logging in tests to diagnose failures when they occur
+
+## Testing These Changes
+
+To validate the improvements:
+
+1. Run CI builds multiple times to establish a baseline success rate
+2. Monitor particularly problematic jobs (Kafka, RabbitMQ, MongoDB)
+3. Check if previously-failing tests now pass consistently
+4. Measure average job duration to ensure timeouts are appropriate
+
+## Success Metrics
+
+Track these metrics over time:
+
+- **Pass Rate**: Percentage of CI runs that pass without needing re-runs
+- **False Positive Rate**: Tests that fail due to timing but pass on retry
+- **Job Duration**: Average and P95 duration for each job type
+- **Time to Ready**: How long services take to become healthy (from CI logs)
+
+## Related Issues
+
+- [Original Issue: Unreliable Acceptance Tests](#)
+- Related PRs:
+  - Initial infrastructure improvements
+  - Test timeout increases
+  - Service health check additions
+
+## Summary
+
+The improvements focus on ensuring services are genuinely ready before tests run, rather than hoping fixed delays are sufficient. This addresses the root cause of most CI reliability issues. While individual tests still have timing-related code patterns, the infrastructure changes should significantly improve overall reliability.
