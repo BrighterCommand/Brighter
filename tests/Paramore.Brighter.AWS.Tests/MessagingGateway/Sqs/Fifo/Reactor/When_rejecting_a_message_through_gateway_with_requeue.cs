@@ -59,16 +59,16 @@ public class SqsMessageConsumerRequeueTests : IDisposable
     }
 
     [Fact]
-    public void When_rejecting_a_message_through_gateway_with_requeue()
+    public async Task When_rejecting_a_message_through_gateway_with_requeue()
     {
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
         var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
         _channel.Reject(message);
 
         // Let the timeout change
-        Task.Delay(TimeSpan.FromMilliseconds(3000)).GetAwaiter().GetResult();
+        await Task.Delay(TimeSpan.FromMilliseconds(3000));
 
         // should requeue_the_message
         message = _channel.Receive(TimeSpan.FromMilliseconds(5000));

@@ -71,13 +71,13 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
     }
 
     [Fact]
-    public void When_posting_a_message_via_the_producer()
+    public async Task When_posting_a_message_via_the_producer()
     {
         // arrange
         _message.Header.Subject = "test subject";
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
-        Task.Delay(1000).GetAwaiter().GetResult();
+        await Task.Delay(1000);
 
         var message =  _channel.Receive(TimeSpan.FromMilliseconds(5000));
 

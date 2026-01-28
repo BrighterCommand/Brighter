@@ -99,7 +99,7 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
     }
 
     [Fact]
-    public void When_posting_a_message_via_the_messaging_gateway_with_quorum_queue()
+    public async Task When_posting_a_message_via_the_messaging_gateway_with_quorum_queue()
     {
         //we need to do this to create the queue 
          _messageConsumer.Receive(TimeSpan.FromMilliseconds(100)); 
@@ -108,7 +108,7 @@ public class RmqMessageProducerSendMessageQuorumTests : IDisposable
         _messageProducer.Send(_message);
 
         // Give quorum queue a moment to become consistent across replicas
-        Task.Delay(TimeSpan.FromMilliseconds(500)).Wait();
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
 
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
 

@@ -76,7 +76,7 @@ public class RmqMessageConsumerQuorumValidationTests
     }
 
     [Fact]
-    public void When_creating_quorum_consumer_with_correct_settings_should_succeed()
+    public async Task When_creating_quorum_consumer_with_correct_settings_should_succeed()
     {
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -93,10 +93,8 @@ public class RmqMessageConsumerQuorumValidationTests
             highAvailability: false, // Must be false for quorum
             queueType: QueueType.Quorum);
 
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey), isDurable: true, queueType: QueueType.Quorum)
-            .CreateAsync()
-            .GetAwaiter()
-            .GetResult();
+        await new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey), isDurable: true, queueType: QueueType.Quorum)
+            .CreateAsync();
 
         Assert.NotNull(consumer);
     }
