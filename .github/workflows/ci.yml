@@ -202,11 +202,6 @@ jobs:
         image: efrecon/mosquitto:latest
         ports:
         - 1883:1883
-        options: >-
-          --health-cmd "timeout 5 mosquitto_sub -t '$SYS/#' -C 1 || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
 
     steps:
       - name: Checkout code
@@ -274,11 +269,6 @@ jobs:
          ZOOKEEPER_CLIENT_PORT: 2181
          ZOOKEEPER_TICK_TIME: 2000
          ALLOW_ANONYMOUS_LOGIN: yes
-        options: >-
-          --health-cmd "echo 'ruok' | nc localhost 2181 | grep imok"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
       kafka:
         image: confluentinc/cp-enterprise-kafka:latest
         ports:
@@ -292,11 +282,6 @@ jobs:
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
           KAFKA_DELETE_TOPIC_ENABLE: "false"
-        options: >-
-          --health-cmd "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"
-          --health-interval 10s
-          --health-timeout 10s
-          --health-retries 15
       schema-registry:
         image: confluentinc/cp-schema-registry:latest
         ports:
@@ -305,11 +290,6 @@ jobs:
           SCHEMA_REGISTRY_HOST_NAME: schema-registry
           SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:29092'
           SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-        options: >-
-          --health-cmd "curl -f http://localhost:8081/ || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
 
     steps:
     - name: Install KafkaCat
@@ -392,11 +372,6 @@ jobs:
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: Password123!
-        options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Password123! -Q 'SELECT 1' || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet 
@@ -457,11 +432,6 @@ jobs:
         image: dwmkerr/dynamodb
         ports: 
           - 8000:8000
-        options: >-
-          --health-cmd "curl -f http://localhost:8000/ || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
 
     steps:
       - uses: actions/checkout@v6
