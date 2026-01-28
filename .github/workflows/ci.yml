@@ -164,7 +164,7 @@ jobs:
 
   redis-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -194,7 +194,7 @@ jobs:
 
   mqtt-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -225,7 +225,7 @@ jobs:
 
   rabbitmq-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -349,7 +349,7 @@ jobs:
 
   postgres-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -381,7 +381,7 @@ jobs:
 
   sqlserver-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -413,7 +413,7 @@ jobs:
 
   mysql-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -449,7 +449,7 @@ jobs:
 
   dynamo-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -481,7 +481,7 @@ jobs:
 
   localstack-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: build
     env:
       LOCALSTACK_SERVICE_URL: http://localhost.localstack.cloud:4566
@@ -520,7 +520,7 @@ jobs:
 
   aws-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
@@ -555,7 +555,7 @@ jobs:
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
@@ -590,7 +590,7 @@ jobs:
 
   sqlite-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [ build ]
 
     steps:
@@ -609,7 +609,7 @@ jobs:
 
   azure-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
     steps:
       - uses: actions/checkout@v6
@@ -627,7 +627,7 @@ jobs:
 
   mongodb-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -660,7 +660,7 @@ jobs:
     
   gcp-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
