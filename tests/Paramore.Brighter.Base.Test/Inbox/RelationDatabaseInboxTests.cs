@@ -12,6 +12,7 @@ public abstract class RelationalDatabaseInboxTests : InboxTests
     protected abstract string DefaultConnectingString { get; }
     protected abstract string TableNamePrefix { get; }
     protected abstract bool BinaryMessagePayload { get; }
+    protected abstract bool JsonMessagePayload { get; }
     protected virtual string? SchemaName { get; } = null;
     protected abstract RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration);
     protected abstract void CreateInboxTable(RelationalDatabaseConfiguration configuration);
@@ -28,7 +29,8 @@ public abstract class RelationalDatabaseInboxTests : InboxTests
         Configuration = new RelationalDatabaseConfiguration(connectionString, 
             inboxTableName: $"{TableNamePrefix}{Uuid.New():N}",
             schemaName: SchemaName,
-            binaryMessagePayload: BinaryMessagePayload);
+            binaryMessagePayload: BinaryMessagePayload,
+            jsonMessagePayload: JsonMessagePayload);
         
         _inbox = CreateInbox(Configuration);
         base.BeforeEachTest();
