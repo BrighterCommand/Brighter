@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Extensions;
@@ -20,10 +20,12 @@ public class MessageDispatchRejectMessageExceptionTests
 
     public MessageDispatchRejectMessageExceptionTests()
     {
+        MyRejectedEventHandler.Reset();
+
         var subscriberRegistry = new SubscriberRegistry();
         subscriberRegistry.Register<MyRejectedEvent, MyRejectedEventHandler>();
-        
-        var handlerFactory = new SimpleHandlerFactory( 
+
+        var handlerFactory = new SimpleHandlerFactory(
             (type) => new MyRejectedEventHandler(),
             (type) => throw new ConfigurationException()
         );
@@ -31,11 +33,11 @@ public class MessageDispatchRejectMessageExceptionTests
         var mapperFactory = new SimpleMessageMapperFactory((r) => new MyRejectedEventHandlerMessageMapper());
         var messageMapperRegistry = new MessageMapperRegistry(mapperFactory, null, null, null);
         messageMapperRegistry.Register<MyRejectedEvent, MyRejectedEventHandlerMessageMapper>();
-            
+
 
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
         resiliencePipelineRegistry.AddBrighterDefault();
-        
+
         var commandProcessor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,
@@ -44,39 +46,41 @@ public class MessageDispatchRejectMessageExceptionTests
             resiliencePipelineRegistry,
             new InMemorySchedulerFactory()
         );
-        
+
         var subscription = new InMemorySubscription<MyRejectedEvent>(
-            new SubscriptionName("test"), 
-            noOfPerformers: 1, 
-            timeOut: TimeSpan.FromMilliseconds(1000), 
+            new SubscriptionName("test"),
+            noOfPerformers: 1,
+            timeOut: TimeSpan.FromMilliseconds(1000),
             channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
-            channelName: new ChannelName("myChannel"), 
+            channelName: new ChannelName("myChannel"),
             messagePumpType: MessagePumpType.Reactor,
             routingKey: _routingKey
         );
 
         subscription.DeadLetterRoutingKey = _deadLetterRoutingKey;
-        
+
         _dispatcher = new Dispatcher(
-            commandProcessor, 
+            commandProcessor,
             new List<Subscription> { subscription },
             messageMapperRegistry,
             requestContextFactory: new InMemoryRequestContextFactory()
         );
-        
+
         var @event = new MyRejectedEvent(Id.Random());
         var message = new MyRejectedEventHandlerMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKey});
         _bus.Enqueue(message);
-        
-        _dispatcher.Receive(); 
+
+        _dispatcher.Receive();
     }
 
     [Fact]
-    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
-    public void When_an_event_handler_throw_a_reject_message_exception()
+    public async Task When_an_event_handler_throw_a_reject_message_exception()
     {
-        _dispatcher.End().Wait();
-        
+        // Wait for the handler to be invoked before stopping
+        Assert.True(MyRejectedEventHandler.WaitForHandle(), "Handler was not invoked within timeout");
+
+        await _dispatcher.End();
+
         Assert.Empty(_bus.Stream(_routingKey));
         Assert.NotEmpty(_bus.Stream(_deadLetterRoutingKey));
         var message = _bus.Dequeue(_deadLetterRoutingKey);
