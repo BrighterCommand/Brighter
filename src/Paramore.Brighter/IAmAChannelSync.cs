@@ -36,7 +36,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
-        /// <param name="message">The message.</param>
+        /// <remarks>
+        /// When a message is acknowledged, another consumer should not process it
+        /// </remarks>
+        /// <param name="message">The<see cref="Message"/> to reject</param>
         void Acknowledge(Message message);
 
         /// <summary>
@@ -54,8 +57,11 @@ namespace Paramore.Brighter
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
-        /// <param name="message">The message.</param>
-        bool Reject(Message message);
+        /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
+        /// message channel, the message should be forwardedn to it
+        /// <param name="message">The <see cref="Message"/> to reject</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explaines why we rejected the message </param>
+        bool Reject(Message message, MessageRejectionReason? reason = null);
 
         /// <summary>
         /// Requeues the specified message.

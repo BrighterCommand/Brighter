@@ -48,9 +48,11 @@ public string Status { get; set; }
 
 ## Architecture Decision Records
 
+**Recommended Tool**: Use the `/adr <title>` command (see [.claude/commands/adr/adr.md](../../.claude/commands/adr/adr.md)) to create properly formatted ADRs. This automates numbering, template application, and spec linking.
+
 We are using Architecture Decision Records (ADR) to record important design decisions that we make. When you make a significant decicion about design, that would be useful as context to future reviewers, or explorers of the codebase, please record your design decision as an ADR.
 
-Place ADRs in the [ADR directory](../adr) 
+Place ADRs in the [ADR directory](../adr)
 
 The template for the ADR is in our [first ADR](../adr/0001-record-architecture-decisions.md).
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;

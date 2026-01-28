@@ -232,16 +232,18 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public bool Reject(Message message) => BrighterAsyncContext.Run(() => RejectAsync(message));
+    public bool Reject(Message message, MessageRejectionReason? reason = null) => BrighterAsyncContext.Run(() => RejectAsync(message, reason));
 
     /// <summary>
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">Cancel the rejection</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
     {
         try
         {
@@ -250,7 +252,11 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
 
             if (string.IsNullOrEmpty(lockToken))
                 throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-            Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+           
+            var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
+            var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+            
+            Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken} Due to {Reason} because of {Description}", message.Id, lockToken, reasonString, description);
 
             if(ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
