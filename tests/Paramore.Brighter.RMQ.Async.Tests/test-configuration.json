@@ -1,0 +1,9 @@
+{
+  "Namespace": "Paramore.Brighter.RMQ.Async.Tests",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider",
+    "DelayBetweenReceiveMessageInMilliseconds": 5000
+  }
+}

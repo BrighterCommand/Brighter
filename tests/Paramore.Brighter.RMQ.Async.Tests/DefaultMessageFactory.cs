@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -33,7 +33,7 @@ using System.Collections.Generic;
 
 using Paramore.Brighter.Observability;
 
-namespace {{ Namespace }};
+namespace Paramore.Brighter.RMQ.Async.Tests;
 
 /// <summary>
 /// Default implementation of <see cref="IAmAMessageFactory"/> that creates messages with randomly generated test data.
@@ -45,11 +45,6 @@ public class DefaultMessageFactory : IAmAMessageFactory
     /// </summary>
     public List<Message> CreatedMessages { get; } = new();
 
-    /// <summary>
-    /// Creates a new message with the specified configuration.
-    /// </summary>
-    /// <param name="configuration">The message configuration specifying header values and body content. If null, uses default values.</param>
-    /// <returns>A new <see cref="Message"/> instance with the specified configuration.</returns>
     public Message Create(MessageConfiguration? configuration = null)
     {
         var messageHeader = new MessageHeader(

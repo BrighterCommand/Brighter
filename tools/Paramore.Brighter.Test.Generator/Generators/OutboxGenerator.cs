@@ -37,23 +37,24 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     {
         if (configuration.Outbox != null)
         {
-            await GenerateAsync(configuration, 
-                "Outbox",
-                "Outbox",
-                configuration.Outbox);
-            
+            await GenerateAsync(configuration, "Outbox", "Outbox", configuration.Outbox);
+
             var prefix = configuration.Outbox.Prefix;
-            await GenerateAsync(configuration, 
+            await GenerateAsync(
+                configuration,
                 Path.Combine("Outbox", prefix, "Generated", "Sync"),
                 Path.Combine("Outbox", "Sync"),
                 configuration.Outbox,
-                filename => SkipTest(configuration.Outbox, filename));
+                filename => SkipTest(configuration.Outbox, filename)
+            );
 
-            await GenerateAsync(configuration, 
+            await GenerateAsync(
+                configuration,
                 Path.Combine("Outbox", prefix, "Generated", "Async"),
                 Path.Combine("Outbox", "Async"),
                 configuration.Outbox,
-                filename => SkipTest(configuration.Outbox, filename));
+                filename => SkipTest(configuration.Outbox, filename)
+            );
         }
         else if (configuration.Outboxes != null)
         {
@@ -65,50 +66,60 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                 {
                     prefix = key;
                 }
-                
+
                 outboxConfiguration.Prefix = $".{prefix}";
 
-                await GenerateAsync(configuration,
+                await GenerateAsync(
+                    configuration,
                     Path.Combine("Outbox", prefix),
-                    "Outbox", 
+                    "Outbox",
                     outboxConfiguration,
-                    filename => SkipTest(outboxConfiguration, filename));
-                
-                await GenerateAsync(configuration, 
+                    filename => SkipTest(outboxConfiguration, filename)
+                );
+
+                await GenerateAsync(
+                    configuration,
                     Path.Combine("Outbox", prefix, "Generated", "Sync"),
                     Path.Combine("Outbox", "Sync"),
                     outboxConfiguration,
-                    filename => SkipTest(outboxConfiguration, filename));
-                
-                await GenerateAsync(configuration, 
+                    filename => SkipTest(outboxConfiguration, filename)
+                );
+
+                await GenerateAsync(
+                    configuration,
                     Path.Combine("Outbox", prefix, "Generated", "Async"),
                     Path.Combine("Outbox", "Async"),
                     outboxConfiguration,
-                    filename => SkipTest(outboxConfiguration, filename));
+                    filename => SkipTest(outboxConfiguration, filename)
+                );
             }
         }
         else
         {
             logger.LogInformation("No outbox configured");
         }
-        
     }
-    
+
     private static bool SkipTest(OutboxConfiguration outboxConfiguration, string fileName)
     {
-        if (!outboxConfiguration.SupportsTransactions && fileName.Contains("Transaction", StringComparison.InvariantCultureIgnoreCase))
+        if (
+            !outboxConfiguration.SupportsTransactions
+            && fileName.Contains("Transaction", StringComparison.InvariantCultureIgnoreCase)
+        )
         {
             return true;
         }
 
         return false;
     }
-    
-    protected override Task GenerateAsync(TestConfiguration configuration, 
-        string prefix, 
+
+    protected override Task GenerateAsync(
+        TestConfiguration configuration,
+        string prefix,
         string templateFolderName,
-        object model, 
-        Func<string, bool>? ignore = null)
+        object model,
+        Func<string, bool>? ignore = null
+    )
     {
         if (model is OutboxConfiguration outboxConfiguration)
         {
