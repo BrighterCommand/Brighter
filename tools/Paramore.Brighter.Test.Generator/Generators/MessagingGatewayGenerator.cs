@@ -63,9 +63,9 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
                 filename => SkipTest(configuration.MessagingGateway, filename)
             );
         }
-        else if (configuration.MessagingGatewaies != null)
+        else if (configuration.MessagingGateways != null)
         {
-            foreach (var (key, messagingGatewayConfiguration) in configuration.MessagingGatewaies)
+            foreach (var (key, messagingGatewayConfiguration) in configuration.MessagingGateways)
             {
                 logger.LogInformation("Generating outbox test for {OutboxName}", key);
                 var prefix = messagingGatewayConfiguration.Prefix;

@@ -45,8 +45,14 @@ public class DefaultMessageFactory : IAmAMessageFactory
     /// </summary>
     public List<Message> CreatedMessages { get; } = new();
 
+    /// <summary>
+    /// Creates a new message with the specified configuration.
+    /// </summary>
+    /// <param name="configuration">The message configuration specifying header values and body content. If null, uses default values.</param>
+    /// <returns>A new <see cref="Message"/> instance with the specified configuration.</returns>
     public Message Create(MessageConfiguration? configuration = null)
     {
+        configuration ??= new MessageConfiguration();
         var messageHeader = new MessageHeader(
             messageId: configuration.MessageId,
             topic: configuration.Topic,

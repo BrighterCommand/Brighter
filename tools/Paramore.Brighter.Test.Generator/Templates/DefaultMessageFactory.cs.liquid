@@ -52,6 +52,7 @@ public class DefaultMessageFactory : IAmAMessageFactory
     /// <returns>A new <see cref="Message"/> instance with the specified configuration.</returns>
     public Message Create(MessageConfiguration? configuration = null)
     {
+        configuration ??= new MessageConfiguration();
         var messageHeader = new MessageHeader(
             messageId: configuration.MessageId,
             topic: configuration.Topic,

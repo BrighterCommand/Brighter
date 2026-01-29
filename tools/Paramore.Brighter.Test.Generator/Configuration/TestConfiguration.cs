@@ -66,7 +66,7 @@ public class TestConfiguration
 
     /// <summary>
     /// Gets or sets the messaging gateway configuration for generating messaging gateway tests.
-    /// Use this for a single gateway implementation, or use <see cref="MessagingGatewaies"/> for multiple implementations.
+    /// Use this for a single gateway implementation, or use <see cref="MessagingGateways"/> for multiple implementations.
     /// </summary>
     public MessagingGatewayConfiguration? MessagingGateway { get; set; }
 
@@ -75,5 +75,5 @@ public class TestConfiguration
     /// The key is used as the prefix for generated test class names if the configuration doesn't specify one.
     /// Use this when testing multiple gateway implementations (e.g., RabbitMQ, AWS SNS/SQS, Azure Service Bus).
     /// </summary>
-    public Dictionary<string, MessagingGatewayConfiguration>? MessagingGatewaies { get; set; }
+    public Dictionary<string, MessagingGatewayConfiguration>? MessagingGateways { get; set; }
 }

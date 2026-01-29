@@ -47,11 +47,22 @@ public interface IAmAMessageFactory
     /// </summary>
     List<Message> CreatedMessages { get; }
 
+    /// <summary>
+    /// Creates a new message with the specified configuration.
+    /// </summary>
+    /// <param name="configuration">The message configuration specifying header values and body content. If null, uses default values.</param>
+    /// <returns>A new <see cref="Message"/> instance.</returns>
     Message Create(MessageConfiguration? configuration = null);
 }
 
+/// <summary>
+/// Provides configuration for creating test messages with customizable header values and body content.
+/// </summary>
 public class MessageConfiguration
 {
+    /// <summary>
+    /// Gets or sets the bag of additional header values.
+    /// </summary>
     public Dictionary<string, object> Bag { get; set; } = new()
     {
         ["header1"] = Uuid.NewAsString(),
@@ -61,46 +72,109 @@ public class MessageConfiguration
         ["header5"] = Uuid.NewAsString()
     };
 
-  public Baggage Baggage { get; set; } = new();
-  
-  public ContentType ContentType { get; set; } = new ContentType(MediaTypeNames.Text.Plain);
+    /// <summary>
+    /// Gets or sets the baggage for distributed tracing context propagation.
+    /// </summary>
+    public Baggage Baggage { get; set; } = new();
 
-  public Id CorrelationId { get; set; } = Id.Random();
+    /// <summary>
+    /// Gets or sets the content type of the message body.
+    /// </summary>
+    public ContentType ContentType { get; set; } = new ContentType(MediaTypeNames.Text.Plain);
 
-  public Uri? DataSchema { get; set; } = new Uri($"https://{Uuid.New():N}.test");
+    /// <summary>
+    /// Gets or sets the correlation identifier for tracking related messages.
+    /// </summary>
+    public Id CorrelationId { get; set; } = Id.Random();
+
+    /// <summary>
+    /// Gets or sets the URI identifying the schema of the data in the message body.
+    /// </summary>
+    public Uri? DataSchema { get; set; } = new Uri($"https://{Uuid.New():N}.test");
         
-  public string? DataRef { get; set; } = Uuid.NewAsString();
+    /// <summary>
+    /// Gets or sets a reference to external data.
+    /// </summary>
+    public string? DataRef { get; set; } = Uuid.NewAsString();
+
+    /// <summary>
+    /// Gets or sets the delay before the message should be processed.
+    /// </summary>
+    public TimeSpan? Delayed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the job identifier for workflow tracking.
+    /// </summary>
+    public Id? JobId { get; set; } = Id.Random();
+
+    /// <summary>
+    /// Gets or sets the unique message identifier.
+    /// </summary>
+    public Id? MessageId { get; set; } = Id.Random();
+
+    /// <summary>
+    /// Gets or sets the message type (Event, Command, etc.).
+    /// </summary>
+    public MessageType MessageType { get; set; } = MessageType.MT_EVENT;
+
+    /// <summary>
+    /// Gets or sets the partition key for message routing.
+    /// </summary>
+    public PartitionKey PartitionKey { get; set; } = new PartitionKey(Uuid.NewAsString());
         
-  public TimeSpan? Delayed { get; set; }
-        
-  public Id? JobId { get; set; } = Id.Random();
+    /// <summary>
+    /// Gets or sets the reply-to routing key for response messages.
+    /// </summary>
+    public RoutingKey? ReplyTo { get; set; } = new RoutingKey(Uuid.NewAsString());
 
-  public Id? MessageId { get; set; } = Id.Random();
+    /// <summary>
+    /// Gets or sets the subject or title of the message.
+    /// </summary>
+    public string? Subject { get; set; } = Uuid.NewAsString();
 
-  public MessageType MessageType { get; set; } = MessageType.MT_EVENT;
+    /// <summary>
+    /// Gets or sets the CloudEvents specification version.
+    /// </summary>
+    public string? SpecVersion { get; set; } = "1.0";
 
-  public PartitionKey PartitionKey { get; set; } = new PartitionKey(Uuid.NewAsString());
-        
-  public RoutingKey? ReplyTo { get; set; } = new RoutingKey(Uuid.NewAsString());
+    /// <summary>
+    /// Gets or sets the URI identifying the source of the message.
+    /// </summary>
+    public Uri? Source { get; set; } = new Uri(Uuid.NewAsString(), UriKind.Relative);
 
-  public string? Subject { get; set; } = Uuid.NewAsString();
+    /// <summary>
+    /// Gets or sets the topic routing key for message publishing.
+    /// </summary>
+    public RoutingKey Topic { get; set; } = new RoutingKey(Uuid.NewAsString());
 
-  public string? SpecVersion { get; set; } = "1.0";
-        
-  public Uri? Source { get; set; } = new Uri(Uuid.NewAsString(), UriKind.Relative);
+    /// <summary>
+    /// Gets or sets the timestamp when the message was created.
+    /// </summary>
+    public DateTimeOffset TimeStamp { get; set; } = DateTimeOffset.UtcNow;
 
-  public RoutingKey Topic { get; set; } = new RoutingKey(Uuid.NewAsString());
+    /// <summary>
+    /// Gets or sets the W3C trace parent for distributed tracing.
+    /// </summary>
+    public TraceParent? TraceParent { get; set; } = new TraceParent(Uuid.NewAsString());
 
-  public DateTimeOffset TimeStamp { get; set; } = DateTimeOffset.UtcNow;
-        
-  public TraceParent? TraceParent { get; set; } = new TraceParent(Uuid.NewAsString());
+    /// <summary>
+    /// Gets or sets the W3C trace state for vendor-specific tracing information.
+    /// </summary>
+    public TraceState? TraceState { get; set; } = new TraceState(Uuid.NewAsString());
 
-  public TraceState? TraceState { get; set; } = new TraceState(Uuid.NewAsString());
+    /// <summary>
+    /// Gets or sets the CloudEvents type describing the message content.
+    /// </summary>
+    public CloudEventsType Type { get; set; } = new CloudEventsType(Uuid.NewAsString());
 
-  public CloudEventsType Type { get; set; } = new CloudEventsType(Uuid.NewAsString());
-        
-  public Id? WorkflowId { get; set; } = Id.Random();
+    /// <summary>
+    /// Gets or sets the workflow identifier for process tracking.
+    /// </summary>
+    public Id? WorkflowId { get; set; } = Id.Random();
 
-  public byte[] Body { get; set; } = Encoding.UTF8.GetBytes(Uuid.NewAsString());
+    /// <summary>
+    /// Gets or sets the message body content as a byte array.
+    /// </summary>
+    public byte[] Body { get; set; } = Encoding.UTF8.GetBytes(Uuid.NewAsString());
 }
 
