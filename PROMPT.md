@@ -10,6 +10,7 @@
 - [x] Requirements approved (`specs/0002-backstop-error-handler/requirements.md`)
 - [x] Design approved (`docs/adr/0037-reject-message-on-error-handler.md`)
 - [x] Tasks created (`specs/0002-backstop-error-handler/tasks.md`)
+- [ ] Tasks approved
 - [ ] Implementation
 
 ## Feature Summary
@@ -37,7 +38,7 @@
 
 ## Next Step
 
-Run `/spec:implement` to begin TDD implementation.
+Review and approve `specs/0002-backstop-error-handler/tasks.md`, then run `/spec:approve tasks` to mark approved.
 
 ## Reference Files
 
