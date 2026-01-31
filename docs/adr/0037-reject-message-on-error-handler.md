@@ -167,10 +167,14 @@ Documentation should emphasize:
 ### File Locations
 
 Following existing conventions:
-- `src/Paramore.Brighter/RejectMessageOnErrorAttribute.cs`
-- `src/Paramore.Brighter/RejectMessageOnErrorAsyncAttribute.cs`
-- `src/Paramore.Brighter/Handlers/RejectMessageOnErrorHandler.cs`
-- `src/Paramore.Brighter/Handlers/RejectMessageOnErrorHandlerAsync.cs`
+- `src/Paramore.Brighter/Reject/Attributes/RejectMessageOnErrorAttribute.cs`
+- `src/Paramore.Brighter/Reject/Attributes/RejectMessageOnErrorAsyncAttribute.cs`
+- `src/Paramore.Brighter/Reject/Handlers/RejectMessageOnErrorHandler.cs`
+- `src/Paramore.Brighter/Reject/Handlers/RejectMessageOnErrorHandlerAsync.cs`
+
+Tests should be in 
+
+- `tests/Paramore.Brighter.Core.Tests/Reject`
 
 ## Consequences
 
@@ -190,11 +194,11 @@ Following existing conventions:
 
 ### Risks and Mitigations
 
-| Risk | Mitigation                                                  |
-|------|-------------------------------------------------------------|
-| Users place handler at wrong step | Documentation with clear examples; recommend step 0         |
-| Confusion with FallbackPolicy | Document when to use each; this is simpler but less flexible |
-| Users expect it to work outside pump | Document that it's designed for Reactor/Proactor            |
+| Risk | Mitigation                                                                                                |
+|------|-----------------------------------------------------------------------------------------------------------|
+| Users place handler at wrong step | Documentation with clear examples; recommend step 0                                                       |
+| Confusion with FallbackPolicy | Document when to use each; this is simpler but less flexible, and only makes sense in messagepump context |
+| Users expect it to work outside pump | Document that it's designed for Reactor/Proactor                                                          |
 
 ## Alternatives Considered
 

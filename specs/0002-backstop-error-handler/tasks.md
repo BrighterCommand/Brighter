@@ -11,7 +11,7 @@ Each task follows a strict Test-Driven Development workflow:
 3. **GREEN**: Implement minimum code to make the test pass
 4. **REFACTOR**: Improve design while keeping tests green
 
-Tests are written in `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy/`.
+Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
 
 ## Task List
 
@@ -19,7 +19,7 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy/`.
 
 - [ ] **TEST + IMPLEMENT: RejectMessageOnErrorAttribute returns correct handler type**
   - **USE COMMAND**: `/test-first when getting handler type from RejectMessageOnErrorAttribute should return RejectMessageOnErrorHandler`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_getting_handler_type_from_reject_message_on_error_attribute.cs`
   - Test should verify:
     - Attribute can be instantiated with a step parameter
@@ -27,14 +27,14 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy/`.
     - Attribute timing is `HandlerTiming.Before`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Create `src/Paramore.Brighter/RejectMessageOnErrorAttribute.cs`
+    - Create `src/Paramore.Brighter/Reject/Attributes/RejectMessageOnErrorAttribute.cs`
     - Inherit from `RequestHandlerAttribute`
     - Constructor accepts `int step` and passes to base with `HandlerTiming.Before`
     - `GetHandlerType()` returns `typeof(RejectMessageOnErrorHandler<>)`
 
 - [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandler catches exception and throws RejectMessageAction**
   - **USE COMMAND**: `/test-first when handler throws exception should catch and throw RejectMessageAction`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_handler_throws_exception_should_reject_message.cs`
   - Test should verify:
     - Create a handler that throws `InvalidOperationException`
@@ -45,14 +45,14 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy/`.
     - Verify `RejectMessageAction.Message` contains the original exception message
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Create `src/Paramore.Brighter/Handlers/RejectMessageOnErrorHandler.cs`
+    - Create `src/Paramore.Brighter/Reject/Handlers/RejectMessageOnErrorHandler.cs`
     - Inherit from `RequestHandler<TRequest>`
     - Override `Handle()` with try/catch wrapping `base.Handle()`
     - Catch `Exception`, log it, throw `new RejectMessageAction(ex.Message, ex)`
 
 - [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandler passes through when no exception**
   - **USE COMMAND**: `/test-first when handler succeeds should pass through without rejection`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_handler_succeeds_should_not_reject_message.cs`
   - Test should verify:
     - Create a handler that completes successfully
@@ -69,7 +69,7 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy/`.
 
 - [ ] **TEST + IMPLEMENT: RejectMessageOnErrorAsyncAttribute returns correct handler type**
   - **USE COMMAND**: `/test-first when getting handler type from RejectMessageOnErrorAsyncAttribute should return RejectMessageOnErrorHandlerAsync`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_getting_handler_type_from_reject_message_on_error_async_attribute.cs`
   - Test should verify:
     - Attribute can be instantiated with a step parameter
@@ -77,14 +77,14 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy/`.
     - Attribute timing is `HandlerTiming.Before`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Create `src/Paramore.Brighter/RejectMessageOnErrorAsyncAttribute.cs`
+    - Create `src/Paramore.Brighter/Reject/Attributes/RejectMessageOnErrorAsyncAttribute.cs`
     - Inherit from `RequestHandlerAttribute`
     - Constructor accepts `int step` and passes to base with `HandlerTiming.Before`
     - `GetHandlerType()` returns `typeof(RejectMessageOnErrorHandlerAsync<>)`
 
 - [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandlerAsync catches exception and throws RejectMessageAction**
   - **USE COMMAND**: `/test-first when async handler throws exception should catch and throw RejectMessageAction`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_async_handler_throws_exception_should_reject_message.cs`
   - Test should verify:
     - Create an async handler that throws `InvalidOperationException`
@@ -95,14 +95,14 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy/`.
     - Verify `RejectMessageAction.Message` contains the original exception message
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Create `src/Paramore.Brighter/Handlers/RejectMessageOnErrorHandlerAsync.cs`
+    - Create `src/Paramore.Brighter/Reject/Handlers/RejectMessageOnErrorHandlerAsync.cs`
     - Inherit from `RequestHandlerAsync<TRequest>`
     - Override `HandleAsync()` with try/catch wrapping `await base.HandleAsync()`
     - Catch `Exception`, log it, throw `new RejectMessageAction(ex.Message, ex)`
 
 - [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandlerAsync passes through when no exception**
   - **USE COMMAND**: `/test-first when async handler succeeds should pass through without rejection`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_async_handler_succeeds_should_not_reject_message.cs`
   - Test should verify:
     - Create an async handler that completes successfully
@@ -119,7 +119,7 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy/`.
 
 - [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandler at step 0 catches exceptions from inner handlers**
   - **USE COMMAND**: `/test-first when at step 0 should catch exceptions from higher step handlers`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/ExceptionPolicy`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_reject_handler_at_step_zero_catches_inner_exceptions.cs`
   - Test should verify:
     - Handler with `[RejectMessageOnError(step: 0)]` and another policy at higher step
