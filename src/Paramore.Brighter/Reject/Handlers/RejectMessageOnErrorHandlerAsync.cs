@@ -22,10 +22,15 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Paramore.Brighter.Actions;
+
 namespace Paramore.Brighter.Reject.Handlers;
 
 /// <summary>
-/// Async handler that catches unhandled exceptions and converts them to <see cref="Actions.RejectMessageAction"/>.
+/// Async handler that catches unhandled exceptions and converts them to <see cref="RejectMessageAction"/>.
 /// When used with a message pump (Reactor or Proactor), this causes the message to be rejected and routed to a Dead Letter Queue.
 /// </summary>
 /// <typeparam name="TRequest">The type of request being handled.</typeparam>
@@ -37,4 +42,25 @@ namespace Paramore.Brighter.Reject.Handlers;
 public class RejectMessageOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>
     where TRequest : class, IRequest
 {
+    /// <summary>
+    /// Handles the request asynchronously by passing it to the next handler in the pipeline.
+    /// If any exception occurs in the pipeline, it is caught and converted to a <see cref="RejectMessageAction"/>.
+    /// </summary>
+    /// <param name="command">The request to handle.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>The request after processing.</returns>
+    /// <exception cref="RejectMessageAction">
+    /// Thrown when any exception occurs in the pipeline. The original exception is preserved as <see cref="Exception.InnerException"/>.
+    /// </exception>
+    public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await base.HandleAsync(command, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw new RejectMessageAction(ex.Message, ex);
+        }
+    }
 }
