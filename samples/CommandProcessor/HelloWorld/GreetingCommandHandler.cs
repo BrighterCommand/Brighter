@@ -33,7 +33,8 @@ namespace HelloWorld
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         public override GreetingCommand Handle(GreetingCommand greetingCommand)
         {
-            Console.WriteLine("Hello {0}", greetingCommand.Name);
+            Console.WriteLine($"Hello {greetingCommand.Name}");
+
             return base.Handle(greetingCommand);
         }
     }
