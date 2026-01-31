@@ -22,12 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Paramore.Brighter;
 
 namespace HelloWorld
 {
-    public class GreetingCommand(string name) : Command(Id.Random())
+    internal sealed class GreetingCommand(string name) : Command(Id.Random())
     {
         public string Name { get; } = name;
     }

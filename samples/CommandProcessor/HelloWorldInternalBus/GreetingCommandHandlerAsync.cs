@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,33 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Text.Json;
 using HelloWorldInternalBus;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions;
-using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Logging.Attributes;
 
 namespace HelloWorld
 {
-    public class GreetingCommandMessageMapper : IAmAMessageMapper<GreetingCommand>
+    internal sealed class GreetingCommandHandlerAsync : RequestHandlerAsync<GreetingCommand>
     {
-        public IRequestContext Context { get; set; } = null!;
-
-        public Message MapToMessage(GreetingCommand request, Publication publication)
+        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
+        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
-            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
-            var message = new Message(header, body);
-            return message;
-        }
-
-        public GreetingCommand MapToRequest(Message message)
-        {
-            var greetingCommand = JsonSerializer.Deserialize<GreetingCommand>(message.Body.Value, JsonSerialisationOptions.Options);
-            
-#pragma warning disable CS8603 // Possible null reference return.
-            return greetingCommand;
-#pragma warning restore CS8603 // Possible null reference return.
+            Console.WriteLine($"Hello {command.Name}");
+            return await base.HandleAsync(command, cancellationToken);
         }
     }
 }

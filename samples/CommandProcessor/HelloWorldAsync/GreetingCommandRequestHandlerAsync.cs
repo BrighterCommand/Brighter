@@ -35,7 +35,7 @@ namespace HelloWorldAsync
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
         public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("Hello {0}", command.Name);
+            Console.WriteLine($"Hello {command.Name}");
 
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
