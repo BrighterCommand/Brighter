@@ -22,10 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using Paramore.Brighter.Actions;
+
 namespace Paramore.Brighter.Reject.Handlers;
 
 /// <summary>
-/// Handler that catches unhandled exceptions and converts them to <see cref="Actions.RejectMessageAction"/>.
+/// Handler that catches unhandled exceptions and converts them to <see cref="RejectMessageAction"/>.
 /// When used with a message pump (Reactor or Proactor), this causes the message to be rejected and routed to a Dead Letter Queue.
 /// </summary>
 /// <typeparam name="TRequest">The type of request being handled.</typeparam>
@@ -36,4 +39,24 @@ namespace Paramore.Brighter.Reject.Handlers;
 public class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TRequest>
     where TRequest : class, IRequest
 {
+    /// <summary>
+    /// Handles the request by passing it to the next handler in the pipeline.
+    /// If any exception occurs in the pipeline, it is caught and converted to a <see cref="RejectMessageAction"/>.
+    /// </summary>
+    /// <param name="request">The request to handle.</param>
+    /// <returns>The request after processing.</returns>
+    /// <exception cref="RejectMessageAction">
+    /// Thrown when any exception occurs in the pipeline. The original exception is preserved as <see cref="Exception.InnerException"/>.
+    /// </exception>
+    public override TRequest Handle(TRequest request)
+    {
+        try
+        {
+            return base.Handle(request);
+        }
+        catch (Exception ex)
+        {
+            throw new RejectMessageAction(ex.Message, ex);
+        }
+    }
 }
