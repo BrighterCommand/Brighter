@@ -34,6 +34,8 @@ The initial implementation will include the following analyzers:
    - Validates that `Subscription` objects are instantiated with correct arguments and configuration.
 
 3. **WrapAttributeAnalyzer**:
+   - Ensures that attributes used for wrapping (e.g., encryption, compression) are applied to the correct mapping method (`MapToMessage` or `MapToRequest`).
+   - Prevents incorrect pipeline configuration by verifying that attributes intended for requests are not applied to message mapping and vice versa.
 
 ## Technical Implementation Strategy
 
