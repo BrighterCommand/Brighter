@@ -194,7 +194,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             message.Header.Bag.Each(header =>
             {
-                if (_headersToReset.Contains(header.Key))
+                if (!_headersToReset.Contains(header.Key))
                 {
                     headers[header.Key] = header.Value;
                 }
