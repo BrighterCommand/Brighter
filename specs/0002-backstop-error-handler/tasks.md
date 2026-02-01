@@ -15,9 +15,9 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
 
 ## Task List
 
-### Phase 1: Synchronous Handler
+### Phase 1: Synchronous Handler ✅
 
-- [ ] **TEST + IMPLEMENT: RejectMessageOnErrorAttribute returns correct handler type**
+- [x] **TEST + IMPLEMENT: RejectMessageOnErrorAttribute returns correct handler type**
   - **USE COMMAND**: `/test-first when getting handler type from RejectMessageOnErrorAttribute should return RejectMessageOnErrorHandler`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_getting_handler_type_from_reject_message_on_error_attribute.cs`
@@ -32,7 +32,7 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
     - Constructor accepts `int step` and passes to base with `HandlerTiming.Before`
     - `GetHandlerType()` returns `typeof(RejectMessageOnErrorHandler<>)`
 
-- [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandler catches exception and throws RejectMessageAction**
+- [x] **TEST + IMPLEMENT: RejectMessageOnErrorHandler catches exception and throws RejectMessageAction**
   - **USE COMMAND**: `/test-first when handler throws exception should catch and throw RejectMessageAction`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_handler_throws_exception_should_reject_message.cs`
@@ -50,7 +50,7 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
     - Override `Handle()` with try/catch wrapping `base.Handle()`
     - Catch `Exception`, log it, throw `new RejectMessageAction(ex.Message, ex)`
 
-- [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandler passes through when no exception**
+- [x] **TEST + IMPLEMENT: RejectMessageOnErrorHandler passes through when no exception**
   - **USE COMMAND**: `/test-first when handler succeeds should pass through without rejection`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_handler_succeeds_should_not_reject_message.cs`
