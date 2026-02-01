@@ -9,7 +9,6 @@
 
   <PropertyGroup>
     <PackageId>Paramore.Brighter.Analyzer</PackageId>
-    <PackageVersion>1.0.0.0</PackageVersion>
     <Authors>AboubakrNasef</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>Paramore.Brighter.Analyzer</Description>
