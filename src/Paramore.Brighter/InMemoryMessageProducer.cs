@@ -158,16 +158,24 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay
-        /// The delay is simulated by the <see cref="TimeProvider"/>
+        /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
+        /// When a scheduler is configured and delay is greater than zero, the scheduler is used.
+        /// Otherwise, the delay is simulated by the <see cref="TimeProvider"/>.
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            delay ??= TimeSpan.FromMilliseconds(0);
+            delay ??= TimeSpan.Zero;
 
-            //we don't want to block, so we use a timer to invoke the requeue after a delay
+            // Use scheduler when configured and delay is greater than zero
+            if (Scheduler is IAmAMessageSchedulerSync scheduler && delay > TimeSpan.Zero)
+            {
+                scheduler.Schedule(message, delay.Value);
+                return;
+            }
+
+            // Fallback: use a timer to invoke the send after a delay
             _requeueTimer = _timeProvider.CreateTimer(
                 msg => Send((Message)msg!),
                 message,
