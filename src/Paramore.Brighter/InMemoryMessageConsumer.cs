@@ -265,25 +265,40 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
 
     /// <summary>
     /// Requeues the specified message.
-    /// We use Task.Run here to emulate async 
+    /// When a scheduler is configured and timeout is greater than zero, delegates to producer's SendWithDelayAsync
+    /// which uses the async scheduler for delayed delivery.
     /// </summary>
     /// <param name="message">The message to requeue</param>
     /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
     /// <param name="cancellationToken">Allows the asynchronous operation to be cancelled</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
-    public Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
-    {   
-        var tcs = new TaskCompletionSource<bool>();
-        
-        if (cancellationToken.IsCancellationRequested)
+    public async Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        timeOut ??= TimeSpan.Zero;
+
+        if (timeOut <= TimeSpan.Zero)
+            return RequeueNoDelay(message);
+
+        // Use producer delegation when scheduler is configured
+        if (_scheduler != null)
         {
-            tcs.SetCanceled();
-            return tcs.Task;
+            _lockedMessages.TryRemove(message.Id, out _);
+            EnsureProducer(message.Header.Topic);
+            await _producer!.SendWithDelayAsync(message, timeOut, cancellationToken);
+            return true;
         }
-        
-        Requeue(message, timeOut); 
-        tcs.SetResult(true);
-        return tcs.Task;
+
+        // Fallback: use a timer to invoke the requeue after a delay
+        _requeueTimer = _timeProvider.CreateTimer(
+            msg => RequeueNoDelay((Message)msg!),
+            message,
+            timeOut.Value,
+            TimeSpan.Zero
+        );
+
+        return true;
     }
 
     /// <inheritdoc cref="IDisposable"/>
