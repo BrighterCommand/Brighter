@@ -159,6 +159,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
+        /// When delay is zero or null, the message is sent immediately.
         /// When a scheduler is configured and delay is greater than zero, the scheduler is used.
         /// Otherwise, the delay is simulated by the <see cref="TimeProvider"/>.
         /// </summary>
@@ -166,10 +167,15 @@ namespace Paramore.Brighter
         /// <param name="delay">The delay of the send</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            delay ??= TimeSpan.Zero;
+            // Send immediately when no delay requested
+            if (delay is null || delay <= TimeSpan.Zero)
+            {
+                Send(message);
+                return;
+            }
 
             // Use scheduler when configured and delay is greater than zero
-            if (Scheduler is IAmAMessageSchedulerSync scheduler && delay > TimeSpan.Zero)
+            if (Scheduler is IAmAMessageSchedulerSync scheduler)
             {
                 scheduler.Schedule(message, delay.Value);
                 return;
@@ -186,6 +192,7 @@ namespace Paramore.Brighter
   
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
+        /// When delay is zero or null, the message is sent immediately.
         /// When an async scheduler is configured and delay is greater than zero, the scheduler is used.
         /// Otherwise, the delay is simulated by the <see cref="TimeProvider"/>.
         /// </summary>
@@ -194,10 +201,15 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">A cancellation token for send operation</param>
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
-            delay ??= TimeSpan.Zero;
+            // Send immediately when no delay requested
+            if (delay is null || delay <= TimeSpan.Zero)
+            {
+                await SendAsync(message, cancellationToken);
+                return;
+            }
 
             // Use async scheduler when configured and delay is greater than zero
-            if (Scheduler is IAmAMessageSchedulerAsync scheduler && delay > TimeSpan.Zero)
+            if (Scheduler is IAmAMessageSchedulerAsync scheduler)
             {
                 await scheduler.ScheduleAsync(message, delay.Value, cancellationToken);
                 return;
