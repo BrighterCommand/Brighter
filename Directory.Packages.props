@@ -44,7 +44,7 @@
     <PackageVersion Include="Fluid.Core" Version="2.31.0" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.1" />
     <PackageVersion Include="Google.Cloud.Firestore.V1" Version="4.1.0" />
-    <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.31.0" />
+    <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.32.0" />
     <PackageVersion Include="Google.Cloud.ResourceManager.V3" Version="2.6.0" />
     <PackageVersion Include="Google.Cloud.Spanner.Data" Version="5.12.0" />
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.14.0" />
