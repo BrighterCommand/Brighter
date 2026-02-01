@@ -64,18 +64,25 @@ public class InMemoryScheduler(
     public string Schedule(Message message, TimeSpan delay)
     {
         var id = getOrCreateMessageSchedulerId(message);
-        if (s_timers.TryGetValue(id, out var timer))
-        {
-            if (onConflict == OnSchedulerConflict.Throw)
-            {
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
 
-            timer.Dispose();
+        // Check for conflict before attempting atomic update
+        if (onConflict == OnSchedulerConflict.Throw && s_timers.ContainsKey(id))
+        {
+            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
         }
 
-        s_timers[id] = timeProvider.CreateTimer(Execute,
-            (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
+        // Use AddOrUpdate to atomically replace the timer, disposing the old one
+        s_timers.AddOrUpdate(
+            id,
+            _ => timeProvider.CreateTimer(Execute,
+                (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero),
+            (_, existingTimer) =>
+            {
+                existingTimer.Dispose();
+                return timeProvider.CreateTimer(Execute,
+                    (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
+            });
+
         return id;
     }
 
@@ -101,26 +108,41 @@ public class InMemoryScheduler(
         }
 
         var id = getOrCreateRequestSchedulerId(request);
-        if (s_timers.TryGetValue(id, out var timer))
-        {
-            if (onConflict == OnSchedulerConflict.Throw)
-            {
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
 
-            timer.Dispose();
+        // Check for conflict before attempting atomic update
+        if (onConflict == OnSchedulerConflict.Throw && s_timers.ContainsKey(id))
+        {
+            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
         }
 
-        s_timers[id] = timeProvider.CreateTimer(Execute,
-            (processor,
-                new FireSchedulerRequest
-                {
-                    Id = id,
-                    Async = false,
-                    SchedulerType = type,
-                    RequestType = typeof(TRequest).FullName!,
-                    RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                }), delay, TimeSpan.Zero);
+        // Use AddOrUpdate to atomically replace the timer, disposing the old one
+        s_timers.AddOrUpdate(
+            id,
+            _ => timeProvider.CreateTimer(Execute,
+                (processor,
+                    new FireSchedulerRequest
+                    {
+                        Id = id,
+                        Async = false,
+                        SchedulerType = type,
+                        RequestType = typeof(TRequest).FullName!,
+                        RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                    }), delay, TimeSpan.Zero),
+            (_, existingTimer) =>
+            {
+                existingTimer.Dispose();
+                return timeProvider.CreateTimer(Execute,
+                    (processor,
+                        new FireSchedulerRequest
+                        {
+                            Id = id,
+                            Async = false,
+                            SchedulerType = type,
+                            RequestType = typeof(TRequest).FullName!,
+                            RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                        }), delay, TimeSpan.Zero);
+            });
+
         return id;
     }
 
@@ -174,7 +196,7 @@ public class InMemoryScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync(Message message, TimeSpan delay,
+    public Task<string> ScheduleAsync(Message message, TimeSpan delay,
         CancellationToken cancellationToken = default)
     {
         if (delay < TimeSpan.Zero)
@@ -183,19 +205,28 @@ public class InMemoryScheduler(
         }
 
         var id = getOrCreateMessageSchedulerId(message);
-        if (s_timers.TryGetValue(id, out var timer))
-        {
-            if (onConflict == OnSchedulerConflict.Throw)
-            {
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
 
-            await timer.DisposeAsync();
+        // Check for conflict before attempting atomic update
+        if (onConflict == OnSchedulerConflict.Throw && s_timers.ContainsKey(id))
+        {
+            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
         }
 
-        s_timers[id] = timeProvider.CreateTimer(Execute,
-            (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
-        return id;
+        // Use AddOrUpdate to atomically replace the timer, disposing the old one
+        // Note: Timer disposal is synchronous here as AddOrUpdate doesn't support async callbacks,
+        // but ITimer.Dispose() is safe to call synchronously
+        s_timers.AddOrUpdate(
+            id,
+            _ => timeProvider.CreateTimer(Execute,
+                (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero),
+            (_, existingTimer) =>
+            {
+                existingTimer.Dispose();
+                return timeProvider.CreateTimer(Execute,
+                    (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
+            });
+
+        return Task.FromResult(id);
     }
 
     /// <inheritdoc />
@@ -212,7 +243,7 @@ public class InMemoryScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
@@ -221,27 +252,44 @@ public class InMemoryScheduler(
         }
 
         var id = getOrCreateRequestSchedulerId(request);
-        if (s_timers.TryGetValue(id, out var timer))
-        {
-            if (onConflict == OnSchedulerConflict.Throw)
-            {
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
 
-            await timer.DisposeAsync();
+        // Check for conflict before attempting atomic update
+        if (onConflict == OnSchedulerConflict.Throw && s_timers.ContainsKey(id))
+        {
+            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
         }
 
-        s_timers[id] = timeProvider.CreateTimer(Execute,
-            (processor,
-                new FireSchedulerRequest
-                {
-                    Id = id,
-                    Async = true,
-                    SchedulerType = type,
-                    RequestType = typeof(TRequest).FullName!,
-                    RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                }), delay, TimeSpan.Zero);
-        return id;
+        // Use AddOrUpdate to atomically replace the timer, disposing the old one
+        // Note: Timer disposal is synchronous here as AddOrUpdate doesn't support async callbacks,
+        // but ITimer.Dispose() is safe to call synchronously
+        s_timers.AddOrUpdate(
+            id,
+            _ => timeProvider.CreateTimer(Execute,
+                (processor,
+                    new FireSchedulerRequest
+                    {
+                        Id = id,
+                        Async = true,
+                        SchedulerType = type,
+                        RequestType = typeof(TRequest).FullName!,
+                        RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                    }), delay, TimeSpan.Zero),
+            (_, existingTimer) =>
+            {
+                existingTimer.Dispose();
+                return timeProvider.CreateTimer(Execute,
+                    (processor,
+                        new FireSchedulerRequest
+                        {
+                            Id = id,
+                            Async = true,
+                            SchedulerType = type,
+                            RequestType = typeof(TRequest).FullName!,
+                            RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                        }), delay, TimeSpan.Zero);
+            });
+
+        return Task.FromResult(id);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)" />

@@ -26,7 +26,7 @@ This task list implements universal scheduler delay support as defined in ADR-00
 
 Before using the scheduler more broadly, we need to fix the race condition identified in the ADR.
 
-- [ ] **TEST + IMPLEMENT: InMemoryScheduler uses atomic operations for timer management**
+- [x] **TEST + IMPLEMENT: InMemoryScheduler uses atomic operations for timer management**
   - **USE COMMAND**: `/test-first when scheduling message with existing id should atomically replace timer`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Scheduler`
   - Test file: `When_scheduling_message_with_existing_id_should_atomically_replace_timer.cs`
