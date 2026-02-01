@@ -23,11 +23,10 @@ THE SOFTWARE. */
 #endregion
 using Microsoft.CodeAnalysis;
 
-namespace Paramore.Brighter.Analyzer.Vistiors.Symbol
+namespace Paramore.Brighter.Analyzer.Visitors.Symbol
 {
     public class ChildOfVisitor(string className, string assmeblyName) : SymbolVisitor<bool>
     {
-
         public override bool VisitNamedType(INamedTypeSymbol symbol)
         {
             var type = symbol;

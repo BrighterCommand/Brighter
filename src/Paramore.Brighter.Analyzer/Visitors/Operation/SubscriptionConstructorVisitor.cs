@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using Microsoft.CodeAnalysis.Operations;
-using Paramore.Brighter.Analyzer.Vistiors.Symbol;
+using Paramore.Brighter.Analyzer.Visitors.Symbol;
 
 namespace Paramore.Brighter.Analyzer.Visitors.Operation
 {

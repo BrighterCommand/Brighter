@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Analyzer.Analyzers
 
         public static DiagnosticDescriptor MessagePumpMissingRule = new DiagnosticDescriptor(
                id: DiagnosticsIds.MessagePumpMissing,
-               title: "MessagePump Missing Missing",
+               title: "MessagePump Missing",
                messageFormat: "MessagePump assignment is Missing from {0}",
                category: SubscriptionCategory,
                defaultSeverity: DiagnosticSeverity.Warning,

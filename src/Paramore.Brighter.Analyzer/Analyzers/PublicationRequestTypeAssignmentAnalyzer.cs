@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Paramore.Brighter.Analyzer.Vistiors.Operation;
+using Paramore.Brighter.Analyzer.Visitors.Operation;
 
 namespace Paramore.Brighter.Analyzer.Analyzers
 {
@@ -48,7 +48,6 @@ namespace Paramore.Brighter.Analyzer.Analyzers
                category: RequestPublicationCategory,
                defaultSeverity: DiagnosticSeverity.Warning,
                isEnabledByDefault: true
-         //   helpLinkUri: GetRuleUrl(Rule)
          );
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get { return [RequestTypeMissingRule, WrongRequestTypeRule]; } }
 

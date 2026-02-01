@@ -25,10 +25,10 @@ THE SOFTWARE. */
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Operations;
-using Paramore.Brighter.Analyzer.Vistiors.Symbol;
+using Paramore.Brighter.Analyzer.Visitors.Symbol;
 
 
-namespace Paramore.Brighter.Analyzer.Vistiors.Operation
+namespace Paramore.Brighter.Analyzer.Visitors.Operation
 {
     public class RequestTypeAssignmentVisitor : OperationWalker
     {

@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Analyzer.Analyzers
 
         public static DiagnosticDescriptor WrapAttributeRule = new DiagnosticDescriptor(
                id: DiagnosticsIds.WrapWithAttribute,
-               title: "WrapAttribute",
+               title: "WrapWithAttribute",
                messageFormat: $"{{0}} should be applied '{BrighterAnalyzerGlobals.MapToMessage}' Method",
                category: WrapAttributeCategory,
                defaultSeverity: DiagnosticSeverity.Warning,
