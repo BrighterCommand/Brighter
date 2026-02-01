@@ -185,25 +185,31 @@ namespace Paramore.Brighter
         }
   
         /// <summary>
-        /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay
-        /// The delay is simulated by the <see cref="TimeProvider"/>
+        /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
+        /// When an async scheduler is configured and delay is greater than zero, the scheduler is used.
+        /// Otherwise, the delay is simulated by the <see cref="TimeProvider"/>.
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
         /// <param name="cancellationToken">A cancellation token for send operation</param>
-        public Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
-            delay ??= TimeSpan.FromMilliseconds(0);
+            delay ??= TimeSpan.Zero;
 
-            //we don't want to block, so we use a timer to invoke the requeue after a delay
+            // Use async scheduler when configured and delay is greater than zero
+            if (Scheduler is IAmAMessageSchedulerAsync scheduler && delay > TimeSpan.Zero)
+            {
+                await scheduler.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
+            }
+
+            // Fallback: use a timer to invoke the send after a delay
             _requeueTimer = _timeProvider.CreateTimer(
                 msg => SendAsync((Message)msg!, cancellationToken),
                 message,
                 delay.Value,
                 TimeSpan.Zero
             );
-            
-            return Task.CompletedTask;
         }
     }
 }
