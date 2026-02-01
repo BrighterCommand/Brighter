@@ -46,7 +46,7 @@ Before using the scheduler more broadly, we need to fix the race condition ident
 
 Modify the producer to use the configured scheduler instead of direct timers.
 
-- [ ] **TEST + IMPLEMENT: SendWithDelay uses scheduler when delay is greater than zero**
+- [x] **TEST + IMPLEMENT: SendWithDelay uses scheduler when delay is greater than zero**
   - **USE COMMAND**: `/test-first when sending with delay and scheduler configured should use scheduler`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_sending_with_delay_and_scheduler_configured_should_use_scheduler.cs`
@@ -61,7 +61,7 @@ Modify the producer to use the configured scheduler instead of direct timers.
     - If scheduler available, call `Scheduler.Schedule(message, delay)`
     - Keep direct timer as fallback when no scheduler configured
 
-- [ ] **TEST + IMPLEMENT: SendWithDelayAsync uses scheduler when delay is greater than zero**
+- [x] **TEST + IMPLEMENT: SendWithDelayAsync uses scheduler when delay is greater than zero**
   - **USE COMMAND**: `/test-first when sending async with delay and scheduler configured should use scheduler`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_sending_async_with_delay_and_scheduler_configured_should_use_scheduler.cs`
@@ -76,7 +76,7 @@ Modify the producer to use the configured scheduler instead of direct timers.
     - If async scheduler available, call `await Scheduler.ScheduleAsync(message, delay)`
     - Keep direct timer as fallback when no scheduler configured
 
-- [ ] **TEST + IMPLEMENT: SendWithDelay sends immediately when delay is zero**
+- [x] **TEST + IMPLEMENT: SendWithDelay sends immediately when delay is zero**
   - **USE COMMAND**: `/test-first when sending with zero delay should send immediately without scheduler`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_sending_with_zero_delay_should_send_immediately_without_scheduler.cs`
@@ -89,7 +89,7 @@ Modify the producer to use the configured scheduler instead of direct timers.
     - Add early return in `SendWithDelay()` when delay == TimeSpan.Zero
     - Call `Send(message)` directly
 
-- [ ] **TEST + IMPLEMENT: SendWithDelay falls back to timer when no scheduler configured**
+- [x] **TEST + IMPLEMENT: SendWithDelay falls back to timer when no scheduler configured**
   - **USE COMMAND**: `/test-first when sending with delay and no scheduler should use timer fallback`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_sending_with_delay_and_no_scheduler_should_use_timer_fallback.cs`
@@ -108,7 +108,7 @@ Modify the producer to use the configured scheduler instead of direct timers.
 
 Modify the consumer to delegate delayed requeues to the producer.
 
-- [ ] **TEST + IMPLEMENT: Requeue with delay delegates to producer SendWithDelay**
+- [x] **TEST + IMPLEMENT: Requeue with delay delegates to producer SendWithDelay**
   - **USE COMMAND**: `/test-first when requeuing with delay should delegate to producer`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_requeuing_with_delay_should_delegate_to_producer.cs`
@@ -123,7 +123,7 @@ Modify the consumer to delegate delayed requeues to the producer.
     - Producer should use `message.Header.Topic` for its topic
     - Modify `Requeue()` to call `_producer.SendWithDelay()` when timeout > 0
 
-- [ ] **TEST + IMPLEMENT: RequeueAsync with delay delegates to producer SendWithDelayAsync**
+- [x] **TEST + IMPLEMENT: RequeueAsync with delay delegates to producer SendWithDelayAsync**
   - **USE COMMAND**: `/test-first when requeuing async with delay should delegate to producer`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_requeuing_async_with_delay_should_delegate_to_producer.cs`
@@ -136,7 +136,7 @@ Modify the consumer to delegate delayed requeues to the producer.
     - Modify `RequeueAsync()` to call `_producer.SendWithDelayAsync()` when timeout > 0
     - Reuse the lazy producer created in `EnsureProducer()`
 
-- [ ] **TEST + IMPLEMENT: Requeue with zero or null delay uses direct bus enqueue**
+- [x] **TEST + IMPLEMENT: Requeue with zero or null delay uses direct bus enqueue**
   - **USE COMMAND**: `/test-first when requeuing with zero delay should use direct bus enqueue`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_requeuing_with_zero_delay_should_use_direct_bus_enqueue.cs`
@@ -149,7 +149,7 @@ Modify the consumer to delegate delayed requeues to the producer.
     - Preserve existing `RequeueNoDelay()` logic
     - Only delegate to producer when timeout > TimeSpan.Zero
 
-- [ ] **TEST + IMPLEMENT: Consumer disposes producer on disposal**
+- [x] **TEST + IMPLEMENT: Consumer disposes producer on disposal**
   - **USE COMMAND**: `/test-first when disposing consumer should dispose lazily created producer`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_disposing_consumer_should_dispose_lazily_created_producer.cs`
@@ -168,7 +168,7 @@ Modify the consumer to delegate delayed requeues to the producer.
 
 The consumer's lazily-created producer needs access to a scheduler.
 
-- [ ] **TEST + IMPLEMENT: Consumer passes scheduler to lazily created producer**
+- [x] **TEST + IMPLEMENT: Consumer passes scheduler to lazily created producer**
   - **USE COMMAND**: `/test-first when consumer creates producer should configure scheduler`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
   - Test file: `When_consumer_creates_producer_should_configure_scheduler.cs`
