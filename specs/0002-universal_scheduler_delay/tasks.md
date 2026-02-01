@@ -188,24 +188,24 @@ The consumer's lazily-created producer needs access to a scheduler.
 
 End-to-end tests verifying the complete flow for in-memory transport.
 
-- [ ] **TEST + IMPLEMENT: End-to-end delayed requeue via scheduler**
+- [x] **TEST + IMPLEMENT: End-to-end delayed requeue via scheduler**
   - **USE COMMAND**: `/test-first when handler defers message should requeue via scheduler after delay`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
+  - Test location: `tests/Paramore.Brighter.InMemory.Tests/Consumer`
   - Test file: `When_handler_defers_message_should_requeue_via_scheduler_after_delay.cs`
   - Test should verify:
     - Message is NOT immediately available after deferral
     - After advancing FakeTimeProvider, message becomes available
     - Message can be received and processed on retry
-    - Handled count is incremented
+    - Message content is preserved through the scheduler flow
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - This is a pure test task - no implementation changes needed
     - Uses FakeTimeProvider to control time
     - Verifies consumer → producer → scheduler → bus flow
 
-- [ ] **TEST + IMPLEMENT: Backward compatibility without explicit scheduler**
+- [x] **TEST + IMPLEMENT: Backward compatibility without explicit scheduler**
   - **USE COMMAND**: `/test-first when no scheduler configured should use timer fallback for backward compatibility`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch`
+  - Test location: `tests/Paramore.Brighter.InMemory.Tests/Consumer`
   - Test file: `When_no_scheduler_configured_should_use_timer_fallback_for_backward_compatibility.cs`
   - Test should verify:
     - Existing tests without scheduler configuration continue to work

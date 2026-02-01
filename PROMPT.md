@@ -2,7 +2,7 @@
 
 **Branch:** `universal_delay`
 **Spec:** `specs/0002-universal_scheduler_delay/`
-**Status:** Phases 1-4 complete - ready for Phase 5 (Integration Tests)
+**Status:** Phases 1-5 complete - PR 1 ready for review
 
 ## Quick Context
 
@@ -23,6 +23,7 @@ We're adding universal scheduler support for delayed message delivery across all
 - [x] **Phase 2: InMemoryProducer scheduler integration** (4 tasks)
 - [x] **Phase 3: InMemoryConsumer producer delegation** (4 tasks)
 - [x] **Phase 4: Consumer scheduler injection** (1 task - combined with Phase 3)
+- [x] **Phase 5: InMemory integration testing** (2 tasks)
 
 ### Phase 2 Summary - Producer Scheduler Integration
 Modified `InMemoryMessageProducer` to use configured scheduler for delayed sends:
@@ -52,9 +53,14 @@ Modified `InMemoryMessageConsumer` to delegate delayed requeues to producer:
 - `When_requeuing_with_zero_delay_should_use_direct_bus_enqueue`
 - `When_disposing_consumer_should_dispose_lazily_created_producer`
 
+### Phase 5 Summary - InMemory Integration Testing
+Added integration tests verifying the complete flow:
+- `When_handler_defers_message_should_requeue_via_scheduler_after_delay` (4 tests)
+- `When_no_scheduler_configured_should_use_timer_fallback_for_backward_compatibility` (5 tests)
+
 ### What's Next
-1. Continue with Phase 5: InMemory Integration Testing
-2. Then transport-specific phases (6-11) can be done as separate PRs
+1. PR 1 (Phases 1-5) is ready for review
+2. Transport-specific phases (6-11) can be done as separate PRs
 
 ## Implementation Summary
 
@@ -64,7 +70,7 @@ Modified `InMemoryMessageConsumer` to delegate delayed requeues to producer:
 | 2 | InMemoryProducer scheduler integration | 4 | ✅ Complete |
 | 3 | InMemoryConsumer producer delegation | 4 | ✅ Complete |
 | 4 | Consumer scheduler injection | 1 | ✅ Complete |
-| 5 | InMemory integration tests | 2 | Pending |
+| 5 | InMemory integration tests | 2 | ✅ Complete |
 | 6 | RabbitMQ consumer updates | 5 | Pending |
 | 7 | Kafka consumer updates | 3 | Pending |
 | 8 | MQTT consumer updates | 3 | Pending |
@@ -72,7 +78,7 @@ Modified `InMemoryMessageConsumer` to delegate delayed requeues to producer:
 | 10 | Redis consumer updates | 4 | Pending |
 | 11 | Postgres verification | 1 | Pending |
 
-**Total: 10/32 tasks complete**
+**Total: 12/32 tasks complete**
 
 ### Suggested PR Breakdown
 
@@ -139,8 +145,9 @@ dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.cspr
 dotnet test tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "FullyQualifiedName~Producer|FullyQualifiedName~Consumer|FullyQualifiedName~Scheduler"
 ```
 
-## Recent Commits (Phase 2-4)
+## Recent Commits (Phases 2-5)
 
+- `823eeafd6` - test: add Phase 5 InMemory integration tests for scheduler delay
 - `851363a8c` - test: verify consumer zero-delay requeue and producer disposal
 - `600048c1d` - feat: InMemoryMessageConsumer.RequeueAsync delegates to producer when scheduler configured
 - `2adabd4e2` - feat: InMemoryMessageConsumer.Requeue delegates to producer when scheduler configured
