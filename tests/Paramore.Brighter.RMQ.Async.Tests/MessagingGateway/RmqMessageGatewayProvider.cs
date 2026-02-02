@@ -1,14 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
+using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
+using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
-public class RmqMessageGatewayProvider : IAmAMessageGatewayProactorProvider
+public class RmqMessageGatewayProvider
+    : IAmAMessageGatewayProactorProvider,
+        IAmAMessageGatewayReactorProvider
 {
     private readonly RmqMessagingGatewayConnection _connection;
 
@@ -21,7 +26,26 @@ public class RmqMessageGatewayProvider : IAmAMessageGatewayProactorProvider
         };
     }
 
-    public async Task CleanUpAsync(IAmAMessageProducerAsync? producer, IAmAChannelAsync? channel)
+    public void CleanUp(
+        IAmAMessageProducerSync? producer,
+        IAmAChannelSync? channel,
+        IEnumerable<Message> messages
+    )
+    {
+        if (channel != null)
+        {
+            channel.Purge();
+            channel.Dispose();
+        }
+
+        producer?.Dispose();
+    }
+
+    public async Task CleanUpAsync(
+        IAmAMessageProducerAsync? producer,
+        IAmAChannelAsync? channel,
+        IEnumerable<Message> messages
+    )
     {
         if (channel != null)
         {
@@ -33,6 +57,21 @@ public class RmqMessageGatewayProvider : IAmAMessageGatewayProactorProvider
         {
             await producer.DisposeAsync();
         }
+    }
+
+    public IAmAChannelSync CreateChannel(RmqSubscription subscription)
+    {
+        var channel = new ChannelFactory(
+            new RmqMessageConsumerFactory(_connection)
+        ).CreateSyncChannel(subscription);
+
+        if (subscription.MakeChannels == OnMissingChannel.Create)
+        {
+            // Ensuring that the queue exists before return the channel
+            channel.Receive(TimeSpan.FromMilliseconds(100));
+        }
+
+        return channel;
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -51,6 +90,14 @@ public class RmqMessageGatewayProvider : IAmAMessageGatewayProactorProvider
         }
 
         return channel;
+    }
+
+    public IAmAMessageProducerSync CreateProducer(RmqPublication publication)
+    {
+        var produces = new RmqMessageProducerFactory(_connection, [publication]).Create();
+
+        var producer = produces.First().Value;
+        return (IAmAMessageProducerSync)producer;
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(

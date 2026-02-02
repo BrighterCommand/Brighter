@@ -47,13 +47,13 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
             );
 
             var prefix = configuration.MessagingGateway.Prefix;
-            // await GenerateAsync(
-            //     configuration,
-            //     Path.Combine("MessagingGateway", prefix, "Generated", "Reactor"),
-            //     Path.Combine("MessagingGateway", "Reactor"),
-            //     configuration.MessagingGateway,
-            //     filename => SkipTest(configuration.MessagingGateway, filename)
-            // );
+            await GenerateAsync(
+                configuration,
+                Path.Combine("MessagingGateway", prefix, "Generated", "Reactor"),
+                Path.Combine("MessagingGateway", "Reactor"),
+                configuration.MessagingGateway,
+                filename => SkipTest(configuration.MessagingGateway, filename)
+            );
 
             await GenerateAsync(
                 configuration,

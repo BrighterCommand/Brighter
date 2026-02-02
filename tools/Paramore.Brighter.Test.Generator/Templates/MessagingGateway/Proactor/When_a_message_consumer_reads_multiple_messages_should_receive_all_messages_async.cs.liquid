@@ -15,7 +15,7 @@ using Paramore.Brighter.Extensions;
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
 {% if Category != null %}
 [Trait("Category", "{{Category}}")]{% endif %}
-public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IAsyncLifetime
+public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageFactory _messageFactory;
@@ -27,8 +27,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
     private IAmAMessageProducerAsync? _producer;
     private IAmAChannelAsync? _channel;
 
-
-    public WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages()
+    public WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync()
     {
         _messageGatewayProvider = new {{ MessageGatewayProvider }}();
         _messageFactory = new {{ MessageFactory }}();
@@ -42,7 +41,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
 
     public async Task DisposeAsync()
     {
-        await _messageGatewayProvider.CleanUpAsync(_producer, _channel);
+        await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _messageFactory.CreatedMessages);
     }
 
     [Fact]
