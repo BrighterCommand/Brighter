@@ -4,6 +4,38 @@
 
 This document describes the reliability improvements made to Brighter's CI acceptance tests, which test MessagingGateways, Inboxes, and Outboxes against various middleware and database services.
 
+## Monitoring and Metrics
+
+A new automated monitoring workflow (`.github/workflows/ci-metrics.yml`) has been implemented to track CI health:
+
+### Features
+- **Automatic tracking**: Runs after each CI workflow completion
+- **Daily summaries**: Scheduled reports at 00:00 UTC  
+- **Pass rate monitoring**: Tracks success/failure/cancellation rates over the last 30 runs
+- **Duration tracking**: Monitors job execution times and identifies slow jobs
+- **Automated alerts**: Warns when metrics exceed thresholds
+
+### Alert Thresholds
+The monitoring workflow generates alerts when:
+- Pass rate drops below **80%**
+- More than **30%** of runs take longer than 7 minutes
+- Average duration exceeds **10 minutes**
+
+### Accessing Metrics
+1. View metrics in the **Actions** tab → **CI Metrics and Monitoring** workflow
+2. Each run generates a summary showing:
+   - Total runs, pass rate, success/failure/cancellation counts
+   - Average and maximum durations
+   - Number of slow runs (>7 minutes)
+   - Job-level performance breakdown
+3. Daily summaries provide trend analysis over time
+
+### Using Metrics for Improvements
+- Identify consistently slow jobs that need optimization
+- Track the impact of timeout/retry adjustments
+- Detect performance regressions early
+- Make data-driven decisions about resource allocation
+
 ## Problem Summary
 
 CI tests were exhibiting unreliable behavior, often failing due to timing issues that were difficult to reproduce locally. The primary issues were:
