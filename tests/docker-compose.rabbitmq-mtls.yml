@@ -1,0 +1,21 @@
+services:
+  rabbitmq-mtls:
+    image: rabbitmq:3-management
+    container_name: brighter-rabbitmq-mtls
+    hostname: rabbitmq-mtls
+    ports:
+      - "5671:5671"      # AMQPS (mTLS)
+      - "15672:15672"    # Management UI
+    volumes:
+      - ./certs/ca-cert.pem:/etc/rabbitmq/ca-cert.pem:ro
+      - ./certs/server-cert.pem:/etc/rabbitmq/server-cert.pem:ro
+      - ./certs/server-key.pem:/etc/rabbitmq/server-key.pem:ro
+      - ./rabbitmq-mtls.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
