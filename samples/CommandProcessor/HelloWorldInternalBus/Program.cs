@@ -66,8 +66,8 @@ builder.Services.AddConsumers(options =>
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
 var host = builder.Build();
 
-var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
+var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 
-commandProcessor?.Post(new GreetingCommand("Ian"));
+commandProcessor.Post(new GreetingCommand("Ian"));
 
 await host.RunAsync();
