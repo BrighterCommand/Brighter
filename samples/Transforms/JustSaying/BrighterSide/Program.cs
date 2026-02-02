@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Amazon;
 using Amazon.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,46 +13,44 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Transformers.JustSaying;
 using IRequestContext = Paramore.Brighter.IRequestContext;
 
-var host = new HostBuilder()
-    .ConfigureLogging(builder => builder.AddConsole())
-    .ConfigureServices(service =>
-    {
-        var connection = new AWSMessagingGatewayConnection(new BasicAWSCredentials("test", "teste"),
-            RegionEndpoint.USEast1,
-            cfg =>
-            {
-                cfg.ServiceURL = "http://localhost:4566";
-            });
-        
-        service
-            .AddHostedService<ServiceActivatorHostedService>()
-            .AddConsumers(configure =>
-            {
-                configure.Subscriptions = [
-                    new SqsSubscription<Greeting>(
-                        channelName: new ChannelName("brighter-queue"),
-                        routingKey: new RoutingKey(nameof(Greeting).ToLower()),
-                        messagePumpType: MessagePumpType.Reactor)
-                ];
+var builder = Host.CreateApplicationBuilder(args);
 
-                configure.DefaultChannelFactory = new ChannelFactory(connection);
-            })
-            .AddProducers(configure =>
-            {
-                configure.ProducerRegistry = new SnsProducerRegistryFactory(connection, 
-                        [
-                            new SnsPublication
-                            {
-                                Topic = nameof(Greeting).ToLower(),
-                                RequestType = typeof(Greeting)
-                            }
-                        ])
-                    .Create();
-            })
-            .TransformsFromAssemblies([typeof(JustSayingAttribute).Assembly])
-            .AutoFromAssemblies();
+var connection = new AWSMessagingGatewayConnection(new BasicAWSCredentials("test", "teste"),
+    RegionEndpoint.USEast1,
+    cfg =>
+    {
+        cfg.ServiceURL = "http://localhost:4566";
+    });
+
+builder.Services
+    .AddHostedService<ServiceActivatorHostedService>()
+    .AddConsumers(configure =>
+    {
+        configure.Subscriptions = [
+            new SqsSubscription<Greeting>(
+                channelName: new ChannelName("brighter-queue"),
+                routingKey: new RoutingKey(nameof(Greeting).ToLower()),
+                messagePumpType: MessagePumpType.Reactor)
+        ];
+
+        configure.DefaultChannelFactory = new ChannelFactory(connection);
     })
-    .Build();
+    .AddProducers(configure =>
+    {
+        configure.ProducerRegistry = new SnsProducerRegistryFactory(connection,
+                [
+                    new SnsPublication
+                    {
+                        Topic = nameof(Greeting).ToLower(),
+                        RequestType = typeof(Greeting)
+                    }
+                ])
+            .Create();
+    })
+    .TransformsFromAssemblies([typeof(JustSayingAttribute).Assembly])
+    .AutoFromAssemblies();
+
+var host = builder.Build();
 
 
 await host.StartAsync();
@@ -69,7 +67,7 @@ while (!cts.IsCancellationRequested)
     {
         continue;
     }
-    
+
     using var scope = host.Services.CreateScope();
     var processor = scope.ServiceProvider.GetRequiredService<IAmACommandProcessor>();
     await processor.PostAsync(new Greeting { Name = name });
@@ -78,7 +76,7 @@ while (!cts.IsCancellationRequested)
 await host.StopAsync();
 
 
-public class Greeting() : Command(Id.Random()) 
+public class Greeting() : Command(Id.Random())
 {
     public string Name { get; set; } = string.Empty;
 }
@@ -86,7 +84,7 @@ public class Greeting() : Command(Id.Random())
 public class GreetingMapper : IAmAMessageMapper<Greeting>, IAmAMessageMapperAsync<Greeting>
 {
     public IRequestContext? Context { get; set; }
-    
+
     [JustSaying(0, RaisingComponent = "brighter-sample", Tenant = "uk", Type = nameof(Greeting))]
     public Task<Message> MapToMessageAsync(Greeting request, Publication publication, CancellationToken cancellationToken = default)
     {
@@ -107,7 +105,7 @@ public class GreetingMapper : IAmAMessageMapper<Greeting>, IAmAMessageMapperAsyn
                 CorrelationId = Id.Random(),
                 MessageType = MessageType.MT_COMMAND,
                 Topic = publication.Topic!,
-            }, 
+            },
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options)));
     }
 

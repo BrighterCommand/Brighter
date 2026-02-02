@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.Logging.Attributes;
 
