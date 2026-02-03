@@ -34,7 +34,10 @@ env:
 
 jobs:
   build:
-    timeout-minutes: 30
+    # Increased from 30 to 40 minutes to prevent cancellations during test execution.
+    # The build includes compilation + running 3 test suites (Core.Tests, Extensions.Tests,
+    # Transforms.Adaptors.Tests) which can take 20-30 minutes in slower CI environments.
+    timeout-minutes: 40
     runs-on: ubuntu-latest
     steps:
       - name: Setup dotnet
@@ -164,7 +167,10 @@ jobs:
 
   redis-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Increased from 5 to 8 minutes to accommodate slower CI environments
+    # and service initialization time. This provides adequate buffer without
+    # being excessive for typical test execution (P95 < 5 min observed).
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -176,7 +182,7 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5             
+          --health-retries 10             
 
     steps:
       - uses: actions/checkout@v6
@@ -194,7 +200,7 @@ jobs:
 
   mqtt-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -220,7 +226,7 @@ jobs:
 
   rabbitmq-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -233,7 +239,7 @@ jobs:
           --health-cmd "rabbitmqctl node_health_check"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v6
@@ -294,13 +300,25 @@ jobs:
     steps:
     - name: Install KafkaCat
       run: |
-        sudo apt-get install kafkacat
-    - name: Sleep to let Kafka spin up
-      uses: jakejarvis/wait-action@master
-      with:
-        time: '30s'
-    - name: docker check
-      run: docker ps -a
+        sudo apt-get install -y kafkacat
+    - name: Wait for Kafka to be ready
+      run: |
+        echo "Waiting for Kafka to be ready..."
+        max_attempts=30
+        attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+          if kafkacat -b localhost:9092 -L > /dev/null 2>&1; then
+            echo "Kafka is ready!"
+            break
+          fi
+          attempt=$((attempt + 1))
+          echo "Attempt $attempt/$max_attempts: Kafka not ready yet, waiting 2 seconds..."
+          sleep 2
+        done
+        if [ $attempt -eq $max_attempts ] && ! kafkacat -b localhost:9092 -L > /dev/null 2>&1; then
+          echo "Kafka failed to become ready after $max_attempts attempts"
+          exit 1
+        fi
     - name: Checkout code
       uses: actions/checkout@v6
     - name: Setup dotnet
@@ -317,7 +335,7 @@ jobs:
 
   postgres-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -332,7 +350,7 @@ jobs:
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet 
@@ -349,7 +367,7 @@ jobs:
 
   sqlserver-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -376,7 +394,7 @@ jobs:
 
   mysql-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -387,7 +405,7 @@ jobs:
         env:
           MYSQL_DATABASE: BrighterTests
           MYSQL_ROOT_PASSWORD: root
-        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
+        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=10
 
     steps:
       - uses: actions/checkout@v6
@@ -412,7 +430,7 @@ jobs:
 
   dynamo-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -439,7 +457,7 @@ jobs:
 
   localstack-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: build
     env:
       LOCALSTACK_SERVICE_URL: http://localhost.localstack.cloud:4566
@@ -478,7 +496,7 @@ jobs:
 
   aws-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
@@ -513,7 +531,7 @@ jobs:
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
@@ -548,7 +566,7 @@ jobs:
 
   sqlite-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [ build ]
 
     steps:
@@ -567,7 +585,7 @@ jobs:
 
   azure-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
     steps:
       - uses: actions/checkout@v6
@@ -585,7 +603,7 @@ jobs:
 
   mongodb-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -601,7 +619,7 @@ jobs:
           --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
           --health-interval 20s
           --health-timeout 10s
-          --health-retries 10
+          --health-retries 15
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet
@@ -618,7 +636,7 @@ jobs:
     
   gcp-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
