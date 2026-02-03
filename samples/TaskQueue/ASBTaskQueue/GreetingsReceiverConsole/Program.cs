@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+using System;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,64 +10,46 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
-namespace GreetingsReceiverConsole
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Logging.SetMinimumLevel(LogLevel.Information);
+
+builder.Services.AddScoped<InstanceCount>();
+builder.Services.AddTransient(typeof(MonitoringAsyncHandler<>));
+builder.Services.AddTransient(typeof(MonitoringAttribute));
+
+var subscriptions = new Subscription[]
 {
-    static class Program
-    {
-        public async static Task Main(string[] args)
-        {
-            var host = new HostBuilder()
-                .ConfigureServices((_, services) =>
+    new AzureServiceBusSubscription<GreetingAsyncEvent>(
+        new SubscriptionName("Async Event"),
+        new ChannelName("paramore.example.greeting"),
+        new RoutingKey("greeting.Asyncevent"),
+        timeOut: TimeSpan.FromMilliseconds(400),
+        makeChannels: OnMissingChannel.Assume,
+        requeueCount: 3,
+        messagePumpType: MessagePumpType.Proactor),
 
-                {
-                    services.AddLogging();
+    new AzureServiceBusSubscription<GreetingEvent>(
+        new SubscriptionName("Event"),
+        new ChannelName("paramore.example.greeting"),
+        new RoutingKey("greeting.event"),
+        timeOut: TimeSpan.FromMilliseconds(400),
+        makeChannels: OnMissingChannel.Assume,
+        requeueCount: 3,
+        messagePumpType: MessagePumpType.Reactor)
+};
 
-                    services.AddScoped<InstanceCount>();
-                    services.AddTransient(typeof(MonitoringAsyncHandler<>));
-                    services.AddTransient(typeof(MonitoringAttribute));
+//TODO: add your ASB qualified name here
+var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
 
-                    var subscriptions = new Subscription[]
-                    {
-                        new AzureServiceBusSubscription<GreetingAsyncEvent>(
-                            new SubscriptionName("Async Event"),
-                            new ChannelName("paramore.example.greeting"),
-                            new RoutingKey("greeting.Asyncevent"),
-                            timeOut: TimeSpan.FromMilliseconds(400),
-                            makeChannels: OnMissingChannel.Assume,
-                            requeueCount: 3,
-                            messagePumpType: MessagePumpType.Proactor),
+var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
+builder.Services.AddConsumers(options =>
+{
+    options.Subscriptions = subscriptions;
+    options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+}).AutoFromAssemblies();
 
-                        new AzureServiceBusSubscription<GreetingEvent>(
-                            new SubscriptionName("Event"),
-                            new ChannelName("paramore.example.greeting"),
-                            new RoutingKey("greeting.event"),
-                            timeOut: TimeSpan.FromMilliseconds(400),
-                            makeChannels: OnMissingChannel.Assume,
-                            requeueCount: 3,
-                            messagePumpType: MessagePumpType.Reactor)
-                    };
+builder.Services.AddHostedService<ServiceActivatorHostedService>();
 
-                    //TODO: add your ASB qualified name here
-                    var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
-
-                    var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
-                    services.AddConsumers(options =>
-                    {
-                        options.Subscriptions = subscriptions;
-                        options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-                    })
-                    .AutoFromAssemblies();
-
-                    services.AddHostedService<ServiceActivatorHostedService>();
-                })
-                .ConfigureLogging((_, logging) => {
-                    logging.SetMinimumLevel(LogLevel.Information);
-                    logging.AddConsole();
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            await host.RunAsync();
-        }
-    }
-}
+var host = builder.Build();
+await host.RunAsync();

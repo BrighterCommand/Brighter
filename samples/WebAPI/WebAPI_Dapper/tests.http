@@ -8,7 +8,7 @@ POST http://localhost:5000/People/new HTTP/1.1
 Content-Type: application/json
 
 {
-  "Name" : "Tyrion"
+  "Name": "Tyrion"
 }
 
 ### Now see that person
@@ -22,7 +22,7 @@ POST http://localhost:5000/Greetings/Tyrion/new HTTP/1.1
 Content-Type: application/json
 
 {
-  "Greeting" : "I drink, and I know things"
+  "Greeting": "I drink, and I know things"
 }
 
 ### And now look up Tyrion's greetings

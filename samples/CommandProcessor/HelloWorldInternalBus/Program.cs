@@ -1,4 +1,29 @@
-﻿using HelloWorldInternalBus;
+﻿#region Licence
+
+/* The MIT License (MIT)
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using HelloWorldInternalBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
@@ -11,7 +36,7 @@ var routingKey = new RoutingKey("greeting.command");
 
 var bus = new InternalBus();
 
-var publications = new[] { new Publication { Topic = routingKey, RequestType = typeof(GreetingCommand)} }; 
+var publications = new[] { new Publication { Topic = routingKey, RequestType = typeof(GreetingCommand)} };
 
 var subscriptions = new[]
 {
@@ -22,31 +47,27 @@ var subscriptions = new[]
     )
 };
 
-var host = Host.CreateDefaultBuilder()
-    .ConfigureServices((context, services) =>
+var builder = Host.CreateApplicationBuilder();
+
+builder.Services.AddConsumers(options =>
     {
-        services.AddConsumers(options =>
-        {
-            options.Subscriptions = subscriptions;
-            options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
-            options.HandlerLifetime = ServiceLifetime.Scoped;
-            options.MapperLifetime = ServiceLifetime.Singleton;
-            options.InboxConfiguration = new InboxConfiguration(new InMemoryInbox(TimeProvider.System));
-        })
-        .AddProducers((config) =>
-        {
-            config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications, InstrumentationOptions.All).Create(); 
-            config.Outbox = new InMemoryOutbox(TimeProvider.System);
-        })
-        .AutoFromAssemblies();
-        
-        services.AddHostedService<ServiceActivatorHostedService>();
+        options.Subscriptions = subscriptions;
+        options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+        options.HandlerLifetime = ServiceLifetime.Scoped;
+        options.MapperLifetime = ServiceLifetime.Singleton;
+        options.InboxConfiguration = new InboxConfiguration(new InMemoryInbox(TimeProvider.System));
     })
-    .UseConsoleLifetime()
-    .Build();
+    .AddProducers((config) =>
+    {
+        config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications, InstrumentationOptions.All).Create();
+        config.Outbox = new InMemoryOutbox(TimeProvider.System);
+    })
+    .AutoFromAssemblies();
+builder.Services.AddHostedService<ServiceActivatorHostedService>();
+var host = builder.Build();
 
-var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
+var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 
-commandProcessor?.Post(new GreetingCommand("Ian"));
+commandProcessor.Post(new GreetingCommand("Ian"));
 
 await host.RunAsync();
