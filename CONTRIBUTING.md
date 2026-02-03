@@ -4,95 +4,57 @@
 
 Use this file to follow our coding guidelines when submitting to Brighter.
 
-## Project Structure
+## Table of Contents
 
-Our code is organized as follows:
+- [How to Use This File](#how-to-use-this-file)
+- [First Time Contributing?](#first-time-contributing)
+- [Architecture Decision Records](#architecture-decision-records)
+- [Code Style](#code-style)
+- [Testing](#testing)
+  - [TDD Style](#tdd-style)
+  - [Generated Tests](#generated-tests)
+- [Documentation](#documentation)
+  - [Licensing](#licensing)
+- [Dependency Management](#dependency-management)
+- [Making Changes](#making-changes)
+  - [Build & Test](#build--test)
+  - [Commit Messages](#commit-messages)
+  - [Repository Branching Strategy](#repository-branching-strategy)
+  - [Submitting Changes](#submitting-changes)
+- [Project Structure](#project-structure)
 
-- We add code for for the Brighter framework under the src directory
-  - Within src, we use projects for modularity
-    - We divide our projects by responsibility
-      - Paramore.Brighter contains core functionality for our Command Processor and Command Dispatcher. It also contains core code allowing the framework to act as a message producer in an event driven architecture.
-      - Paramore.Brighter.Archive.Azure contains an archiver implementation for Azure, which archives Outbox messages to Blob storage.
-      - Paramore.Brighter.Dapper support for using Dapper with Brighter.
-      - Paramore.Brighter.DynamoDb support for using DynamoDb with Brighter.
-      - Paramore.Brighter.Extensions.DependencyInjection provides extensions for working with .NET's ServiceCollection.
-      - Paramore.Brighter.Extensions.Diagnostics extensions for adding Brighter's OpenTelemetry support into an application.
-      - Paramore.Brighter.Inbox.DynamoDB an implementation of Brighter's Inbox, backed by DynamoDb.
-      - Paramore.Brighter.Inbox.MongoDb an implementation of Brighter's Inbox, backed by MongoDb.
-      - Paramore.Brighter.Inbox.MsSql an implementation of Brighter's Inbox, backed by MSSQL.
-      - Paramore.Brighter.Inbox.MySql an implementation of Brighter's Inbox, backed by MySQL.
-      - Paramore.Brighter.Inbox.Postgres an implementation of Brighter's Inbox, backed by Postgres.
-      - Paramore.Brighter.Inbox.Sqlite an implementation of Brighter's Inbox, backed by Sqlite.
-      - Paramore.Brighter.Locking.Azure a locking provider using Azure Blob storage, allows leader election for an Outbox Sweeper or Archiver.
-      - Paramore.Brighter.Locking.DynamoDB a locking provider using DynamoDB allows leader election for an Outbox Sweeper or Archiver.
-      - Paramore.Brighter.Locking.MongoDb a locking provider using MongoDb, allows leader election for an Outbox Sweeper or Archiver.
-      - Paramore.Brighter.Locking.MsSql a locking provider using MsSql, allows leader election for an Outbox Sweeper or Archiver.
-      - Paramore.Brighter.Locking.MySql a locking provider using MySql, allows leader election for an Outbox Sweeper or Archiver.
-      - Paramore.Brighter.Locking.PostgresSql a locking provider using Postgres, allows leader election for an Outbox Sweeper or Archiver.
-      - Paramore.Brighter.MessageScheduler.Aws a scheduler for delayed CommandProcessor operations, using Aws Scheduler to implement delays.
-      - Paramore.Brighter.MessageScheduler.Azure a scheduler for delayed CommandProcessor operations, using ASB Scheduler to implement delays.
-      - Paramore.Brighter.MessageScheduler.Hangfire a scheduler for delayed CommandProcessor operations, using Hangfire to implement delays.
-      - Paramore.Brighter.MessageScheduler.Quartz a scheduler for delayed CommandProcessor operations, using Quartz to implement delays.
-      - Paramore.Brighter.MessagingGateway.AWSSQS a messaging gateway that abstracts access to a broker, providing access to SNS & SQS.
-      - Paramore.Brighter.MessagingGateway.AzureServiceBus a messaging gateway that abstracts access to a broker, providing access to ASB.
-      - Paramore.Brighter.MessagingGateway.Kafka a messaging gateway that abstracts access to a broker, providing access to Kafka.
-      - Paramore.Brighter.MessagingGateway.MQTT a messaging gateway that abstracts access to a broker, providing access to MQTT.
-      - Paramore.Brighter.MessagingGateway.MsSql a messaging gateway that abstracts access to a broker, providing access to MSSQL used as a broker.
-      - Paramore.Brighter.MessagingGateway.Postgres a messaging gateway that abstracts access to a broker, providing access to Postgres used as a broker.
-      - Paramore.Brighter.MessagingGateway.Redis a messaging gateway that abstracts access to a broker, providing access to Redis used a broker.
-      - Paramore.Brighter.MessagingGateway.RMQ.Async a messaging gateway that abstracts access to a broker, providing access to RMQ used a broker. This uses RMQ client libraries of V7 or above, which are async-only.
-      - Paramore.Brighter.MessagingGateway.RMQ.Sync a messaging gateway that abstracts access to a broker, providing access to RMA used a broker. his uses RMQ client libraries of V6, which are sync-only.
-      - Paramore.Brighter.MongoDb support for using MongoDb with Brighter.
-      - Paramore.Brighter.MsSql support for using MSSQL with Brighter.
-      - Paramore.Brighter.MsSql.Azure support for using Azure MSSQL with Brighter.
-      - Paramore.Brighter.MsSql.Dapper support for using MSSQL via Dapper with Brighter.
-      - Paramore.Brighter.MsSql.EntityFrameworkCore support for using MSSQL via EF Core with Brighter.
-      - Paramore.Brighter.MySql support for using MySql with Brighter.
-      - Paramore.Brighter.MySql.Dapper support for using MySql via Dapper with Brighter.
-      - Paramore.Brighter.MySql.EntityFrameworkCore support for using MySql via EF Core with Brighter.
-      - Paramore.Brighter.Outbox.DynamoDB an implementation of Brighter's Outbox, backed by DynamoDb.
-      - Paramore.Brighter.Outbox.Hosting support for using HostedService to run an Outbox Sweeper or Archiver.
-      - Paramore.Brighter.Outbox.MongoDb an implementation of Brighter's Outbox, backed by MongoDb.
-      - Paramore.Brighter.Outbox.MsSql an implementation of Brighter's Outbox, backed by MSSQL.
-      - Paramore.Brighter.Outbox.MySql an implementation of Brighter's Outbox, backed by MySql.
-      - Paramore.Brighter.Outbox.PostgreSql an implementation of Brighter's Outbox, backed by PostgreSql.
-      - Paramore.Brighter.Outbox.Sqlite an implementation of Brighter's Outbox, backed by Sqlite.
-      - Paramore.Brighter.PostgreSql support for using Postgres with Brighter.
-      - Paramore.Brighter.PostgreSql.EntityFrameworkCore support for using Postgres via EF Core with Brighter.
-      - Paramore.Brighter.ServiceActivator.Control base library support for creating a control plane for dynamic configuration or Brighter.
-      - Paramore.Brighter.ServiceActivator.Control.Api HTTP API support for creating a control plane for dynamic configuration or Brighter.
-      - Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection provides extensions for working with .NET's ServiceCollection.
-      - Paramore.Brighter.ServiceActivator.Extensions.Diagnostics extensions for adding Brighter's Health Check support into an application.
-      - Paramore.Brighter.ServiceActivator.Extensions.Hosting support for running a Dispatcher as a background service.
-      - Paramore.Brighter.Sqlite support for using Sqlite with Brighter.
-      - Paramore.Brighter.Sqlite.Dapper support for using Sqlite with Dapper for Brighter.
-      - Paramore.Brighter.Sqlite.EntityFrameworkCore support for using Sqlite with EF Core for Brighter.
-      - Paramore.Brighter.Tranformers.AWS support for using AWS with a Claim Check.
-      - Paramore.Brighter.Transformers.Azure support for using Azure with a Claim Check.
-      - Paramore.Brighter.Transformers.MongoGridFS support for using MongoGridFS with a Claim Check.
-- We add code for for tests for the Brighter framework under the tests directory
-  - Within core, we use projects to partition our tests by their dependencies.
-  - Paramore.Brighter.AWS.Tests Messaging Gateway tests that depend on AWS SNS and SQS, and S3 for Claims Checks.
-  - Paramore.Brighter.AWSScheduler.Tests Scheduler tests that depend on AWS Scheduler.
-  - Paramore.Brighter.Azure.Tests Tests that depend on Azure Blob storage for Claims Checks.
-  - Paramore.Brighter.AzureServiceBus.Tests Messaging Gateway tests that depend on Azure Service Bus.
-  - Paramore.Brighter.Core.Tests Tests that exercise the core functionality from Paramore.Brighter and Paramore.ServiceActivator. No I/O dependencies, uses in-memory implementations instead.
-  - Paramore.Brighter.DynamoDB.Tests Tests of Outbox and Inbox implementations that use DynamoDB.
-  - Paramore.Brighter.Extensions.Tests Tests of Brighter's extensions to .NET HostBuilder.
-  - Paramore.Brighter.Hangfire.Tests Tests for the implementation of Brighter's scheduled CommandProcessor requests using Hangfire.
-  - Paramore.Brighter.InMemory.Tests Tests for the Brighter's in-memory messaging gateways (transports), outboxes, inboxes, schedulers etc.
-  - Paramore.Brighter.Kafka.Tests Messaging Gateway tests that depend on Kafka.
-  - Paramore.Brighter.MongoDb.Tests Tests of Outbox and Inbox implementations that use MongoDb.
-  - Paramore.Brighter.MQTT.Tests Messaging Gateway tests that depend on MQTT.
-  - Paramore.Brighter.MSSQL.Tests Tests of Outbox and Inbox implementations that use MSSQL; Messaging Gateway tests that depend on MSSQL.
-  - Paramore.Brighter.MySQL.Tests Tests of Outbox and Inbox implementations that use MySql
-  - Paramore.Brighter.PostgresSQL.Tests Tests of Outbox and Inbox implementations that use Postres.
-  - Paramore.Brighter.Quartz.Tests Tests for the implementation of Brighter's scheduled CommandProcessor requests using Quartz.
-  - Paramore.Brighter.Redis.Tests Messaging Gateway tests that depend on Redis.
-  - Paramore.Brighter.RMQ.Async.Tests Messaging Gateway tests that depend on RabbitMQ's .NET Client V7+.
-  - Paramore.Brighter.RMQ.Sync.Tests Messaging Gateway tests that depend on RabbitMQ's .NET Client V6.
-  - Paramore.Brighter.Sqlite.Tests Tests of Outbox and Inbox implementations that use Sqlite.
-  - Paramore.Test.Helpers Tools for helping write developer tests.
+---
+
+## First Time Contributing?
+
+Welcome! Here's how to get started:
+
+### Quick Setup
+1. Fork and clone the repository
+2. Ensure you have .NET 8 SDK or later installed: `dotnet --version`
+3. Build the solution: `dotnet build Brighter.sln`
+4. Run core tests (no external dependencies): `dotnet test tests/Paramore.Brighter.Core.Tests`
+
+### Your First Contribution
+1. Look for issues labeled ["good first issue"](https://github.com/BrighterCommand/Brighter/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+2. Comment on the issue to let others know you're working on it
+3. Read the relevant sections below:
+   - [Code Style](#code-style) - Understand our conventions (C# 12-14 standards)
+   - [Testing](#testing) - Learn our TDD approach
+   - [Documentation](#documentation) - XML doc requirements
+4. Make your changes following our guidelines
+5. Submit a PR targeting the `master` branch
+
+### Key Guidelines at a Glance
+- ✅ Use TDD where possible (write tests first)
+- ✅ Add XML documentation to all public APIs
+- ✅ Constants use `ALL_CAPS` naming convention
+- ✅ Include license header: `#region Licence` (British spelling)
+- ✅ Use Conventional Commits for commit messages
+- ✅ Use modern C# (we target .NET 8-10, compile with .NET 10 / C# 14)
+- ✅ Core tests use in-memory implementations (no external dependencies needed)
+
+---
 
 ## Architecture Decision Records
 
@@ -103,40 +65,6 @@ Our code is organized as follows:
   - Use the ADR to signal to others why Brighter is built the way it is, to others, including future maintainers.
 
   You can create the ADR as the first step on a new branch/fork. Then your first commit includes the ADR describing the change. This then allows you to create a draft PR which includes the ADR. This allows others to review their understanding of the change, and give feedback early on if those expectations are mismatched. If you update the design as you learn, add another ADR that supersedes the old one.
-
-## Dependency Management
-
-- Use Directory.Packages.props for central package management.
-- All projects should reference the central Directory.Packages.props file
-- Inside, you then define each of the respective package versions required of your projects using <PackageVersion /> elements that define the package ID and version.
-
-``` xml
-<Project>
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.1" />
-  </ItemGroup>
-</Project>
-```
-
-- Within the project files, you then reference the packages without specifying a version, as the version is managed centrally.
-
-``` xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" />
-  </ItemGroup>
-</Project>
-```
-
-- Align all Microsoft.Extensions.* and System.* package versions.
-- Avoid mixing preview and stable package versions.
-- Enable CentralPackageTransitivePinningEnabled where possible.
 
 ## Code Style
 
@@ -228,11 +156,6 @@ Our code is organized as follows:
   - Red: Write a failing test
   - Green: Make the test pass, commit any sins necessary to move fast
   - Refactor: Improve the design of the code.
-- Where possible, avoid writing tests after.
-  - This will not give you scope control - only writing the code required by tests.
-    - You should only write the code necessary for a test to pass; do not write speculative code.
-  - It will not push you to focus on design of your classes for behavior.
-    - Pay attention to the usability of your class and method; it should be self-describing.
 - Where possible, avoid writing tests after.
   - This will not give you scope control - only writing the code required by tests.
     - You should only write the code necessary for a test to pass; do not write speculative code.
@@ -368,18 +291,18 @@ public string Status { get; set; }
 - The license should be at the very top of each source file, before any using statements or code.
 - We use the MIT license.
 - You should add your name and the year, if it is a new file.
-- You should put the license comment in a `# region License` block
+- You should put the license comment in a `#region Licence` block (note: British spelling, no space)
 - An LLM should use the name and year of the contributor instructing the LLM
 - As an example
 
 ```csharp
-#region License
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © [Year] [Your Name] [Your Contact Email]
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -388,7 +311,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -396,8 +319,42 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
-# endregion
+#endregion
 ```
+
+## Dependency Management
+
+- Use Directory.Packages.props for central package management.
+- All projects should reference the central Directory.Packages.props file
+- Inside, you then define each of the respective package versions required of your projects using <PackageVersion /> elements that define the package ID and version.
+
+``` xml
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+</Project>
+```
+
+- Within the project files, you then reference the packages without specifying a version, as the version is managed centrally.
+
+``` xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
+</Project>
+```
+
+- Align all Microsoft.Extensions.* and System.* package versions.
+- Avoid mixing preview and stable package versions.
+- Enable CentralPackageTransitivePinningEnabled where possible.
 
 ## Making Changes
 
@@ -413,6 +370,98 @@ THE SOFTWARE. */
   - A failing test if possible (see below)
   - The stacktrace for any errors you encountered
 
+### Build & Test
+
+#### Building Locally
+
+- Use dotnet build and dotnet test to verify changes locally.
+- Ensure all tests pass before submitting a PR.
+
+```bash
+# Build entire solution
+dotnet build Brighter.sln
+
+# Run all tests
+dotnet test
+```
+
+#### Using Docker Compose for Testing
+
+We provide Docker Compose files to run infrastructure services needed for testing without installing them locally.
+
+**Option 1: Run All Services (Full Test Suite)**
+
+Use the main docker-compose.yaml to run everything:
+
+```bash
+docker-compose up -d
+```
+
+This starts: RabbitMQ, MySQL, MSSQL, PostgreSQL, Redis, DynamoDB, Kafka (with Zookeeper), Jaeger, Prometheus, and OpenTelemetry Collector.
+
+**Option 2: Run Specific Services (Targeted Testing)**
+
+If you're only working on a specific area, use the individual compose files:
+
+| Service | File | Use Case |
+|---------|------|----------|
+| RabbitMQ | `docker-compose-rmq.yaml` | Testing RabbitMQ messaging gateway |
+| Kafka | `docker-compose-kafka.yaml` | Testing Kafka messaging gateway |
+| MySQL | `docker-compose-mysql.yaml` | Testing MySQL outbox/inbox |
+| PostgreSQL | `docker-compose-postgres.yaml` | Testing PostgreSQL outbox/inbox |
+| MSSQL | `docker-compose-mssql.yaml` | Testing MSSQL outbox/inbox |
+| MongoDB | `docker-compose-mongodb.yaml` | Testing MongoDB outbox/inbox |
+| DynamoDB | `docker-compose-dynamodb.yaml` | Testing DynamoDB outbox/inbox |
+| Redis | `docker-compose-redis.yaml` | Testing Redis messaging gateway |
+| MQTT | `docker-compose-mqtt.yaml` | Testing MQTT messaging gateway |
+| RocketMQ | `docker-compose-rocketmq.yaml` | Testing RocketMQ messaging gateway |
+| LocalStack | `docker-compose-localstack.yaml` | Testing AWS services locally |
+| Jaeger | `docker-compose-jaeger.yaml` | Testing distributed tracing |
+| Prometheus | `docker-compose-prometheus.yaml` | Testing metrics collection |
+
+**Example - Testing only PostgreSQL outbox:**
+```bash
+docker-compose -f docker-compose-postgres.yaml up -d
+```
+
+**Example - Testing RabbitMQ with observability:**
+```bash
+docker-compose -f docker-compose-rmq.yaml -f docker-compose-jaeger.yaml up -d
+```
+
+**Note:** If you have locally installed versions of these services, you'll need to either stop them or edit the compose files to avoid port conflicts.
+
+**Cleanup:**
+```bash
+# Stop and remove containers
+docker-compose down
+
+# Stop specific compose file
+docker-compose -f docker-compose-postgres.yaml down
+
+# Remove volumes (clean slate)
+docker-compose down -v
+```
+
+### Commit Messages
+
+- Try to write a [good commit message](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).
+- Use imperative mood (e.g., "Add support for X", "Fix bug in Y").
+- Reference issues or PRs where relevant.
+- In order to keep a clean commit history, please use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#specification) when contributing to Brighter.
+
+### Repository Branching Strategy
+
+Understanding our branching strategy will help you target the right branch for your pull request:
+
+| Branch        | Description   |
+| ------------- | ------------- |
+| Master | The tip of active development. Anything in master should ship at the next release. Code here should conform to CI basics: compile, pass tests etc.  |
+| Release [X] | The code for an actively supported release. Created when master needs breaking changes that are not compatible with the current release. We support one 'historical' release. |
+| [Other]  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas. |
+
+**When submitting a pull request:** Target the `master` branch unless you're fixing a bug in a specific release branch.
+
 ### Submitting Changes
 
 - Fork the project
@@ -422,14 +471,7 @@ THE SOFTWARE. */
 - Push to your fork
 - Submit a pull request
 - Sit back, and wait.
-- Try pinging @BrighterCommmand on Twitter if you hear nothing
-
-### Commit Messages
-
-- Try to write a [good commit message](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).
-- Use imperative mood (e.g., "Add support for X", "Fix bug in Y").
-- Reference issues or PRs where relevant.
-- In order to keep a clean commit history, please use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#specification) when contributing to Brighter.
+- Try pinging @BrighterCommand on Twitter if you hear nothing
 
 ### Contributor License Agreement
 
@@ -439,32 +481,98 @@ The process of signing works through GitHub.
 
 To get started, <a href="https://www.clahub.com/agreements/iancooper/Paramore">sign the Contributor License Agreement</a>.
 
-## Support for Agentic Coding
-
-We are evolving our support for agentic coding; we are focused on making it easy to use Claude Code to work with Brighter, though other agents may benefit from this work.
-
-- CLAUDE.md: We provide a CLAUDE.md file to direct Claude Code to `docs/agent_instructions` for a version of these guidelines for agents
-- .claude
-  - commands: we provide a set of commands that help an agent follow Brighter's preferred workflow: Issue => ADR => Tasks => Implementation using TDD
-  - skills: we will provide skills that help an agent complete common tasks within Brighter.
-
-As our instructions are located in `docs/agent_instructions` it is relatively easy for other agents to use.
-
-
-We provide explicit support for CoPilot via:
-- .github
-  - We provide a copilot-instructions.md file that mirrors AGENTS.md and CLAUDE.md
-
-To avoid agents reward hacking, we are trialing [SlopWatch](https://github.com/Aaronontheweb/dotnet-slopwatch)
-- .slopwatch
-  - we have a baseline.json that allows us to ignore legacy repo concerns
-  - we have a post-hook installed for Claude Code to ensure it runs after the agent generates code
-
-We are open to receiving code that has been authored by agents. However, you are responsible for the code that you submit and should review the code and ensure that the agent follows our guidelines.  
-
 ### Contributor Code of Conduct
 
 Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms.
 
 The code of conduct is from [Contributor Covenant](http://contributor-covenant.org/)
 
+## Project Structure
+
+Our code is organized as follows:
+
+- We add code for for the Brighter framework under the src directory
+  - Within src, we use projects for modularity
+    - We divide our projects by responsibility
+      - Paramore.Brighter contains core functionality for our Command Processor and Command Dispatcher. It also contains core code allowing the framework to act as a message producer in an event driven architecture.
+      - Paramore.Brighter.Archive.Azure contains an archiver implementation for Azure, which archives Outbox messages to Blob storage.
+      - Paramore.Brighter.Dapper support for using Dapper with Brighter.
+      - Paramore.Brighter.DynamoDb support for using DynamoDb with Brighter.
+      - Paramore.Brighter.Extensions.DependencyInjection provides extensions for working with .NET's ServiceCollection.
+      - Paramore.Brighter.Extensions.Diagnostics extensions for adding Brighter's OpenTelemetry support into an application.
+      - Paramore.Brighter.Inbox.DynamoDB an implementation of Brighter's Inbox, backed by DynamoDb.
+      - Paramore.Brighter.Inbox.MongoDb an implementation of Brighter's Inbox, backed by MongoDb.
+      - Paramore.Brighter.Inbox.MsSql an implementation of Brighter's Inbox, backed by MSSQL.
+      - Paramore.Brighter.Inbox.MySql an implementation of Brighter's Inbox, backed by MySQL.
+      - Paramore.Brighter.Inbox.Postgres an implementation of Brighter's Inbox, backed by Postgres.
+      - Paramore.Brighter.Inbox.Sqlite an implementation of Brighter's Inbox, backed by Sqlite.
+      - Paramore.Brighter.Locking.Azure a locking provider using Azure Blob storage, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.DynamoDB a locking provider using DynamoDB allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.MongoDb a locking provider using MongoDb, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.MsSql a locking provider using MsSql, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.MySql a locking provider using MySql, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Locking.PostgresSql a locking provider using Postgres, allows leader election for an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.MessageScheduler.Aws a scheduler for delayed CommandProcessor operations, using Aws Scheduler to implement delays.
+      - Paramore.Brighter.MessageScheduler.Azure a scheduler for delayed CommandProcessor operations, using ASB Scheduler to implement delays.
+      - Paramore.Brighter.MessageScheduler.Hangfire a scheduler for delayed CommandProcessor operations, using Hangfire to implement delays.
+      - Paramore.Brighter.MessageScheduler.Quartz a scheduler for delayed CommandProcessor operations, using Quartz to implement delays.
+      - Paramore.Brighter.MessagingGateway.AWSSQS a messaging gateway that abstracts access to a broker, providing access to SNS & SQS.
+      - Paramore.Brighter.MessagingGateway.AzureServiceBus a messaging gateway that abstracts access to a broker, providing access to ASB.
+      - Paramore.Brighter.MessagingGateway.Kafka a messaging gateway that abstracts access to a broker, providing access to Kafka.
+      - Paramore.Brighter.MessagingGateway.MQTT a messaging gateway that abstracts access to a broker, providing access to MQTT.
+      - Paramore.Brighter.MessagingGateway.MsSql a messaging gateway that abstracts access to a broker, providing access to MSSQL used as a broker.
+      - Paramore.Brighter.MessagingGateway.Postgres a messaging gateway that abstracts access to a broker, providing access to Postgres used as a broker.
+      - Paramore.Brighter.MessagingGateway.Redis a messaging gateway that abstracts access to a broker, providing access to Redis used a broker.
+      - Paramore.Brighter.MessagingGateway.RMQ.Async a messaging gateway that abstracts access to a broker, providing access to RMQ used as a broker. This uses RMQ client libraries of V7 or above, which are async-only.
+      - Paramore.Brighter.MessagingGateway.RMQ.Sync a messaging gateway that abstracts access to a broker, providing access to RMQ used as a broker. This uses RMQ client libraries of V6, which are sync-only.
+      - Paramore.Brighter.MongoDb support for using MongoDb with Brighter.
+      - Paramore.Brighter.MsSql support for using MSSQL with Brighter.
+      - Paramore.Brighter.MsSql.Azure support for using Azure MSSQL with Brighter.
+      - Paramore.Brighter.MsSql.Dapper support for using MSSQL via Dapper with Brighter.
+      - Paramore.Brighter.MsSql.EntityFrameworkCore support for using MSSQL via EF Core with Brighter.
+      - Paramore.Brighter.MySql support for using MySql with Brighter.
+      - Paramore.Brighter.MySql.Dapper support for using MySql via Dapper with Brighter.
+      - Paramore.Brighter.MySql.EntityFrameworkCore support for using MySql via EF Core with Brighter.
+      - Paramore.Brighter.Outbox.DynamoDB an implementation of Brighter's Outbox, backed by DynamoDb.
+      - Paramore.Brighter.Outbox.Hosting support for using HostedService to run an Outbox Sweeper or Archiver.
+      - Paramore.Brighter.Outbox.MongoDb an implementation of Brighter's Outbox, backed by MongoDb.
+      - Paramore.Brighter.Outbox.MsSql an implementation of Brighter's Outbox, backed by MSSQL.
+      - Paramore.Brighter.Outbox.MySql an implementation of Brighter's Outbox, backed by MySql.
+      - Paramore.Brighter.Outbox.PostgreSql an implementation of Brighter's Outbox, backed by PostgreSql.
+      - Paramore.Brighter.Outbox.Sqlite an implementation of Brighter's Outbox, backed by Sqlite.
+      - Paramore.Brighter.PostgreSql support for using Postgres with Brighter.
+      - Paramore.Brighter.PostgreSql.EntityFrameworkCore support for using Postgres via EF Core with Brighter.
+      - Paramore.Brighter.ServiceActivator.Control base library support for creating a control plane for dynamic configuration or Brighter.
+      - Paramore.Brighter.ServiceActivator.Control.Api HTTP API support for creating a control plane for dynamic configuration or Brighter.
+      - Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection provides extensions for working with .NET's ServiceCollection.
+      - Paramore.Brighter.ServiceActivator.Extensions.Diagnostics extensions for adding Brighter's Health Check support into an application.
+      - Paramore.Brighter.ServiceActivator.Extensions.Hosting support for running a Dispatcher as a background service.
+      - Paramore.Brighter.Sqlite support for using Sqlite with Brighter.
+      - Paramore.Brighter.Sqlite.Dapper support for using Sqlite with Dapper for Brighter.
+      - Paramore.Brighter.Sqlite.EntityFrameworkCore support for using Sqlite with EF Core for Brighter.
+      - Paramore.Brighter.Tranformers.AWS support for using AWS with a Claim Check.
+      - Paramore.Brighter.Transformers.Azure support for using Azure with a Claim Check.
+      - Paramore.Brighter.Transformers.MongoGridFS support for using MongoGridFS with a Claim Check.
+- We add code for for tests for the Brighter framework under the tests directory
+  - Within core, we use projects to partition our tests by their dependencies.
+  - Paramore.Brighter.AWS.Tests Messaging Gateway tests that depend on AWS SNS and SQS, and S3 for Claims Checks.
+  - Paramore.Brighter.AWSScheduler.Tests Scheduler tests that depend on AWS Scheduler.
+  - Paramore.Brighter.Azure.Tests Tests that depend on Azure Blob storage for Claims Checks.
+  - Paramore.Brighter.AzureServiceBus.Tests Messaging Gateway tests that depend on Azure Service Bus.
+  - Paramore.Brighter.Core.Tests Tests that exercise the core functionality from Paramore.Brighter and Paramore.ServiceActivator. No I/O dependencies, uses in-memory implementations instead.
+  - Paramore.Brighter.DynamoDB.Tests Tests of Outbox and Inbox implementations that use DynamoDB.
+  - Paramore.Brighter.Extensions.Tests Tests of Brighter's extensions to .NET HostBuilder.
+  - Paramore.Brighter.Hangfire.Tests Tests for the implementation of Brighter's scheduled CommandProcessor requests using Hangfire.
+  - Paramore.Brighter.InMemory.Tests Tests for the Brighter's in-memory messaging gateways (transports), outboxes, inboxes, schedulers etc.
+  - Paramore.Brighter.Kafka.Tests Messaging Gateway tests that depend on Kafka.
+  - Paramore.Brighter.MongoDb.Tests Tests of Outbox and Inbox implementations that use MongoDb.
+  - Paramore.Brighter.MQTT.Tests Messaging Gateway tests that depend on MQTT.
+  - Paramore.Brighter.MSSQL.Tests Tests of Outbox and Inbox implementations that use MSSQL; Messaging Gateway tests that depend on MSSQL.
+  - Paramore.Brighter.MySQL.Tests Tests of Outbox and Inbox implementations that use MySql
+  - Paramore.Brighter.PostgresSQL.Tests Tests of Outbox and Inbox implementations that use Postgres.
+  - Paramore.Brighter.Quartz.Tests Tests for the implementation of Brighter's scheduled CommandProcessor requests using Quartz.
+  - Paramore.Brighter.Redis.Tests Messaging Gateway tests that depend on Redis.
+  - Paramore.Brighter.RMQ.Async.Tests Messaging Gateway tests that depend on RabbitMQ's .NET Client V7+.
+  - Paramore.Brighter.RMQ.Sync.Tests Messaging Gateway tests that depend on RabbitMQ's .NET Client V6.
+  - Paramore.Brighter.Sqlite.Tests Tests of Outbox and Inbox implementations that use Sqlite.
+  - Paramore.Test.Helpers Tools for helping write developer tests.
