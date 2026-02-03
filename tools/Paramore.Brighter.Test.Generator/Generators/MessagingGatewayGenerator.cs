@@ -109,6 +109,14 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
 
     private static bool SkipTest(MessagingGatewayConfiguration configuration, string fileName)
     {
+        if (
+            !configuration.HasSupportToPublishConfirmation
+            && fileName.Contains("confirming_posting")
+        )
+        {
+            return true;
+        }
+
         return false;
     }
 
@@ -122,9 +130,9 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
     {
         if (model is MessagingGatewayConfiguration messagingGatewayConfiguration)
         {
-            if (string.IsNullOrEmpty(messagingGatewayConfiguration.MessageFactory))
+            if (string.IsNullOrEmpty(messagingGatewayConfiguration.MessageBuilder))
             {
-                messagingGatewayConfiguration.MessageFactory = configuration.MessageFactory;
+                messagingGatewayConfiguration.MessageBuilder = configuration.MessageBuilder;
             }
 
             if (string.IsNullOrEmpty(messagingGatewayConfiguration.Namespace))

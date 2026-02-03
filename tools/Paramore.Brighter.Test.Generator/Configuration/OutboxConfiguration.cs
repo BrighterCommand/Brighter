@@ -51,9 +51,9 @@ public class OutboxConfiguration
     public string? Namespace { get; set; }
 
     /// <summary>
-    /// Gets or sets the message factory for creating test messages. If null, uses the parent configuration's message factory.
+    /// Gets or sets the message builder for creating test messages. If null, uses the parent configuration's message builder.
     /// </summary>
-    public string? MessageFactory { get; set; }
+    public string? MessageBuilder { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the outbox provider supports transactions.

@@ -123,9 +123,9 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     {
         if (model is OutboxConfiguration outboxConfiguration)
         {
-            if (string.IsNullOrEmpty(outboxConfiguration.MessageFactory))
+            if (string.IsNullOrEmpty(outboxConfiguration.MessageBuilder))
             {
-                outboxConfiguration.MessageFactory = configuration.MessageFactory;
+                outboxConfiguration.MessageBuilder = configuration.MessageBuilder;
             }
 
             if (string.IsNullOrEmpty(outboxConfiguration.Namespace))

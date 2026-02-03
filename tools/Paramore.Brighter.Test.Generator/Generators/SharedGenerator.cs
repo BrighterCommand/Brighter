@@ -33,9 +33,9 @@ public class SharedGenerator(ILogger<SharedGenerator> logger) : BaseGenerator(lo
 {
     public async Task GenerateAsync(TestConfiguration configuration)
     {
-        if (string.IsNullOrEmpty(configuration.MessageFactory))
+        if (string.IsNullOrEmpty(configuration.MessageBuilder))
         {
-            configuration.MessageFactory = "DefaultMessageFactory";
+            configuration.MessageBuilder = "DefaultMessageBuilder";
         }
 
         if (string.IsNullOrEmpty(configuration.MessageAssertion))

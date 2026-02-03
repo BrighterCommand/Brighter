@@ -43,10 +43,10 @@ public class TestConfiguration
     public string DestinationFolder { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the message factory to use for creating test messages.
-    /// If not specified, defaults to "DefaultMessageFactory".
+    /// Gets or sets the message builder to use for creating test messages.
+    /// If not specified, defaults to "DefaultMessageBuilder".
     /// </summary>
-    public string? MessageFactory { get; set; }
+    public string? MessageBuilder { get; set; }
 
     /// <summary>
     /// Gets or sets the message assertion helper to use for validating test messages.

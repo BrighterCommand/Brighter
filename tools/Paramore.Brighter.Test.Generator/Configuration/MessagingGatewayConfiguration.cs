@@ -41,10 +41,10 @@ public class MessagingGatewayConfiguration
     public string? Namespace { get; set; }
 
     /// <summary>
-    /// Gets or sets the message factory for creating test messages. If null, uses the parent configuration's message factory.
+    /// Gets or sets the message builder for creating test messages. If null, uses the parent configuration's message builder.
     /// </summary>
-    public string? MessageFactory { get; set; }
-    
+    public string? MessageBuilder { get; set; }
+
     /// <summary>
     /// Gets or sets the message assertion helper to use for validating test messages. If null, uses the parent configuration's message assertion.
     /// </summary>
@@ -64,7 +64,7 @@ public class MessagingGatewayConfiguration
     /// Gets or sets the publication configuration for the messaging gateway.
     /// </summary>
     public string Publication { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Gets or sets the subscription configuration for the messaging gateway.
     /// </summary>
@@ -74,4 +74,6 @@ public class MessagingGatewayConfiguration
     /// Gets or sets the delay between consecutive receive message operations in milliseconds.
     /// </summary>
     public int? DelayBetweenReceiveMessageInMilliseconds { get; set; }
+
+    public bool HasSupportToPublishConfirmation { get; set; }
 }
