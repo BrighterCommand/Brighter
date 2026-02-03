@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -33,7 +33,7 @@ using System.Collections.Generic;
 
 using Paramore.Brighter.Observability;
 
-namespace {{ Namespace }};
+namespace Paramore.Brighter.RMQ.Async.Tests;
 
 /// <summary>
 /// Default implementation of <see cref="IAmAMessageFactory"/> that creates messages with randomly generated test data.

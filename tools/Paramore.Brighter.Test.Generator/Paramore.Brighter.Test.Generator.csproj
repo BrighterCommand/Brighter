@@ -29,6 +29,14 @@
     <None Update="Templates\Outbox\Async\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+
+    <None Update="Templates\MessagingGateway\Proactor\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+
+    <None Update="Templates\MessagingGateway\Reactor\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

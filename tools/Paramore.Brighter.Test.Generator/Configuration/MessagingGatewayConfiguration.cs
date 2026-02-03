@@ -26,9 +26,9 @@ THE SOFTWARE. */
 namespace Paramore.Brighter.Test.Generator.Configuration;
 
 /// <summary>
-/// Represents the configuration for generating outbox tests.
+/// Represents the configuration for generating messaging gateway tests.
 /// </summary>
-public class OutboxConfiguration
+public class MessagingGatewayConfiguration
 {
     /// <summary>
     /// Gets or sets the prefix to use for the generated test class names.
@@ -36,17 +36,7 @@ public class OutboxConfiguration
     public string Prefix { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the transaction type used by the outbox implementation.
-    /// </summary>
-    public string Transaction { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the outbox provider implementation to test.
-    /// </summary>
-    public string OutboxProvider { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the namespace for the generated outbox test code. If null, uses the parent configuration's namespace.
+    /// Gets or sets the namespace for the generated messaging gateway test code. If null, uses the parent configuration's namespace.
     /// </summary>
     public string? Namespace { get; set; }
 
@@ -54,14 +44,34 @@ public class OutboxConfiguration
     /// Gets or sets the message factory for creating test messages. If null, uses the parent configuration's message factory.
     /// </summary>
     public string? MessageFactory { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the message assertion helper to use for validating test messages. If null, uses the parent configuration's message assertion.
+    /// </summary>
+    public string? MessageAssertion { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the outbox provider supports transactions.
+    /// Gets or sets the messaging gateway provider implementation to test.
     /// </summary>
-    public bool SupportsTransactions { get; set; } = true;
+    public string? MessageGatewayProvider { get; set; }
 
     /// <summary>
     /// Gets or sets the test category to apply to generated test classes.
     /// </summary>
     public string? Category { get; set; }
+
+    /// <summary>
+    /// Gets or sets the publication configuration for the messaging gateway.
+    /// </summary>
+    public string Publication { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Gets or sets the subscription configuration for the messaging gateway.
+    /// </summary>
+    public string Subscription { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the delay between consecutive receive message operations in milliseconds.
+    /// </summary>
+    public int? DelayBetweenReceiveMessageInMilliseconds { get; set; }
 }

@@ -36,24 +36,44 @@ public class TestConfiguration
     /// Gets or sets the namespace for the generated test code.
     /// </summary>
     public string Namespace { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Gets or sets the destination folder where the generated test files will be written.
     /// </summary>
     public string DestinationFolder { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Gets or sets the message factory to use for creating test messages.
+    /// If not specified, defaults to "DefaultMessageFactory".
     /// </summary>
     public string? MessageFactory { get; set; }
-    
+
+    /// <summary>
+    /// Gets or sets the message assertion helper to use for validating test messages.
+    /// If not specified, defaults to "DefaultMessageAssertion".
+    /// </summary>
+    public string? MessageAssertion { get; set; }
+
     /// <summary>
     /// Gets or sets the outbox configuration for generating outbox tests.
     /// </summary>
     public OutboxConfiguration? Outbox { get; set; }
-    
+
     /// <summary>
     /// Gets or sets a dictionary of named outbox configurations for generating multiple outbox tests.
     /// </summary>
     public Dictionary<string, OutboxConfiguration>? Outboxes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the messaging gateway configuration for generating messaging gateway tests.
+    /// Use this for a single gateway implementation, or use <see cref="MessagingGateways"/> for multiple implementations.
+    /// </summary>
+    public MessagingGatewayConfiguration? MessagingGateway { get; set; }
+
+    /// <summary>
+    /// Gets or sets a dictionary of named messaging gateway configurations for generating multiple gateway tests.
+    /// The key is used as the prefix for generated test class names if the configuration doesn't specify one.
+    /// Use this when testing multiple gateway implementations (e.g., RabbitMQ, AWS SNS/SQS, Azure Service Bus).
+    /// </summary>
+    public Dictionary<string, MessagingGatewayConfiguration>? MessagingGateways { get; set; }
 }
