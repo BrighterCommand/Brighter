@@ -1,0 +1,23 @@
+### Health Check
+GET https://localhost:5001/health
+Accept: application/json
+
+###
+
+### Create a Todo - Buy groceries
+POST https://localhost:5001/todos?title=Buy%20groceries&isCompleted=false
+Accept: application/json
+
+###
+
+### Create a Todo - Complete project
+POST https://localhost:5001/todos?title=Complete%20RabbitMQ%20mTLS%20implementation&isCompleted=true
+Accept: application/json
+
+###
+
+### Create a Todo - Write documentation
+POST https://localhost:5001/todos?title=Write%20documentation&isCompleted=false
+Accept: application/json
+
+###

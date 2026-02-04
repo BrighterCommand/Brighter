@@ -84,6 +84,9 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
             ContinuationTimeout = TimeSpan.FromSeconds(connection.ContinuationTimeout)
         };
 
+        // Configure SSL/TLS for mutual authentication if certificate is provided
+        RmqTlsConfigurator.ConfigureIfEnabled(_connectionFactory, connection);
+
         if (Connection.Exchange is null) throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
 
         DelaySupported = Connection.Exchange.SupportDelay;
