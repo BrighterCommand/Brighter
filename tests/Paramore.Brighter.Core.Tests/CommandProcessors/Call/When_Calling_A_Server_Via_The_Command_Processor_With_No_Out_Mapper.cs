@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var routingKey = new RoutingKey("MyRequest");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, new Publication{Topic =routingKey } ) },
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{Topic =routingKey } ) },
             });
 
             var tracer = new BrighterTracer(timeProvider);

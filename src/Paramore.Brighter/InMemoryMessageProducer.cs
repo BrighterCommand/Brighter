@@ -38,9 +38,7 @@ namespace Paramore.Brighter
     /// </summary>
     public sealed class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
-        private ITimer? _requeueTimer;
         private readonly IAmABus _bus;
-        private readonly TimeProvider _timeProvider;
         private readonly InstrumentationOptions _instrumentationOptions;
 
         /// <summary>
@@ -48,13 +46,12 @@ namespace Paramore.Brighter
         /// then inspect the messages that have been sent.
         /// </summary>
         /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
-        /// <param name="timeProvider">The <see cref="TimeProvider"/> we use to</param>
         /// <param name="publication">The <see cref="Publication"/> that we want to sent messages to via the publication; if null defaults to a Publication with a Topic of "Internal"</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-        public InMemoryMessageProducer(IAmABus bus, TimeProvider? timeProvider = null, Publication? publication = null, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+        public InMemoryMessageProducer(IAmABus bus, Publication? publication = null,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _bus = bus;
-            _timeProvider = timeProvider ?? TimeProvider.System;
             _instrumentationOptions = instrumentationOptions;
             Publication = publication ?? new Publication { Topic = new RoutingKey("Internal") };
         }
@@ -83,21 +80,13 @@ namespace Paramore.Brighter
         /// Dispose of the producer
         /// Clears the associated timer 
         /// </summary>
-        public void Dispose()
-        {
-            if (_requeueTimer != null)_requeueTimer.Dispose();
-            GC.SuppressFinalize(this);
-        }
+        public void Dispose() {}
         
         /// <summary>
         /// Dispose of the producer
         /// Clears the associated timer 
         /// </summary> 
-        public async ValueTask DisposeAsync()
-        {
-            if (_requeueTimer != null) await _requeueTimer.DisposeAsync();
-            GC.SuppressFinalize(this);
-        }
+        public ValueTask DisposeAsync() {return new ValueTask();}
 
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/>
@@ -128,7 +117,7 @@ namespace Paramore.Brighter
             if (batch is not MessageBatch messageBatch)
                 throw new NotImplementedException($"{nameof(SendAsync)} only supports ${typeof(MessageBatch)}");
 
-            var messages = messageBatch!.Content as Message[] ?? messageBatch.Content.ToArray();
+            var messages = messageBatch.Content as Message[] ?? messageBatch.Content.ToArray();
             foreach (var message in messages)
             {
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
@@ -143,6 +132,7 @@ namespace Paramore.Brighter
         /// Creates message batches
         /// </summary>
         /// <param name="messages">A collection of messages to create batches for</param>
+        /// <param name="cancellationToken">Allows cancellation of the ongoing operation</param>
         public ValueTask<IEnumerable<IAmAMessageBatch>> CreateBatchesAsync(IEnumerable<Message> messages, CancellationToken cancellationToken)
             => new([new MessageBatch(messages)]);
 
@@ -180,14 +170,9 @@ namespace Paramore.Brighter
                 scheduler.Schedule(message, delay.Value);
                 return;
             }
-
-            // Fallback: use a timer to invoke the send after a delay
-            _requeueTimer = _timeProvider.CreateTimer(
-                msg => Send((Message)msg!),
-                message,
-                delay.Value,
-                TimeSpan.Zero
-            );
+            
+            throw new ConfigurationException("No scheduler available, cannot send message without delay");
+ 
         }
   
         /// <summary>
@@ -215,13 +200,7 @@ namespace Paramore.Brighter
                 return;
             }
 
-            // Fallback: use a timer to invoke the send after a delay
-            _requeueTimer = _timeProvider.CreateTimer(
-                msg => SendAsync((Message)msg!, cancellationToken),
-                message,
-                delay.Value,
-                TimeSpan.Zero
-            );
+            throw new ConfigurationException("No scheduler available, cannot send message without delay"); 
         }
     }
 }

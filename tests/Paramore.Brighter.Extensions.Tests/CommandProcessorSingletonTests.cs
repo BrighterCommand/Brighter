@@ -201,7 +201,7 @@ public class CommandProcessorSingletonTests
         var internalBus = new InternalBus();
         var routingKey = new RoutingKey("test.singleton.command");
 
-        var producer = new InMemoryMessageProducer(internalBus, timeProvider, new Publication
+        var producer = new InMemoryMessageProducer(internalBus, new Publication
         {
             Topic = routingKey,
             RequestType = typeof(SingletonTestCommand)
@@ -246,7 +246,7 @@ public class CommandProcessorSingletonTests
         var internalBus = new InternalBus();
         var routingKey = new RoutingKey("test.func.singleton");
 
-        var producer = new InMemoryMessageProducer(internalBus, timeProvider, new Publication
+        var producer = new InMemoryMessageProducer(internalBus, new Publication
         {
             Topic = routingKey,
             RequestType = typeof(SingletonTestCommand)
@@ -298,7 +298,7 @@ public class CommandProcessorSingletonTests
         var internalBus = new InternalBus();
         var routingKey = new RoutingKey("test.concurrent.singleton");
 
-        var producer = new InMemoryMessageProducer(internalBus, timeProvider, new Publication
+        var producer = new InMemoryMessageProducer(internalBus, new Publication
         {
             Topic = routingKey,
             RequestType = typeof(SingletonTestCommand)

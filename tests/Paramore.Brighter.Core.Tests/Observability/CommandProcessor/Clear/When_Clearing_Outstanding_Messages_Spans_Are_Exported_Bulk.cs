@@ -64,7 +64,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var routingKey = new RoutingKey(_topic);
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+        InMemoryMessageProducer messageProducer = new(_internalBus, 
             new Publication
             {
                 Source = new Uri("http://localhost"),

@@ -33,7 +33,7 @@ namespace Paramore.Brighter.InMemory.Tests.Producer;
 /// Tests that InMemoryMessageProducer.SendWithDelay falls back to timer-based delivery
 /// when no scheduler is configured, ensuring backward compatibility.
 /// </summary>
-public class When_sending_with_delay_and_no_scheduler_should_use_timer_fallback
+public class SchedulerNotConfiguredTests 
 {
     private readonly InternalBus _bus;
     private readonly InMemoryMessageProducer _producer;
@@ -42,12 +42,11 @@ public class When_sending_with_delay_and_no_scheduler_should_use_timer_fallback
     private readonly Message _message;
     private readonly TimeSpan _delay;
 
-    public When_sending_with_delay_and_no_scheduler_should_use_timer_fallback()
+    public SchedulerNotConfiguredTests ()
     {
         // Arrange - no scheduler configured
         _bus = new InternalBus();
-        _timeProvider = new FakeTimeProvider();
-        _producer = new InMemoryMessageProducer(_bus, _timeProvider);
+        _producer = new InMemoryMessageProducer(_bus);
         // Note: Scheduler is NOT set - testing fallback behavior
 
         _routingKey = new RoutingKey("test.topic");
@@ -58,42 +57,13 @@ public class When_sending_with_delay_and_no_scheduler_should_use_timer_fallback
     }
 
     [Fact]
-    public void Should_not_send_message_immediately()
+    public void When_sending_with_delay_and_no_scheduler_should_throw_exception()
     {
-        // Act
-        _producer.SendWithDelay(_message, _delay);
-
-        // Assert - message should NOT be on the bus yet
-        var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Empty(messagesOnBus);
-    }
-
-    [Fact]
-    public void Should_send_message_after_delay_expires()
-    {
-        // Act
-        _producer.SendWithDelay(_message, _delay);
-
-        // Advance time past the delay
-        _timeProvider.Advance(_delay + TimeSpan.FromSeconds(1));
-
-        // Assert - message should now be on the bus
-        var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Single(messagesOnBus);
-        Assert.Equal(_message.Id, messagesOnBus.First().Id);
-    }
-
-    [Fact]
-    public void Should_not_send_message_before_delay_expires()
-    {
-        // Act
-        _producer.SendWithDelay(_message, _delay);
-
-        // Advance time but not past the delay
-        _timeProvider.Advance(_delay - TimeSpan.FromSeconds(1));
-
-        // Assert - message should NOT be on the bus yet
-        var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Empty(messagesOnBus);
+        // Assert
+        Assert.Throws<ConfigurationException>(() =>
+        {
+            // Act
+            _producer.SendWithDelay(_message, _delay);
+        });
     }
 }

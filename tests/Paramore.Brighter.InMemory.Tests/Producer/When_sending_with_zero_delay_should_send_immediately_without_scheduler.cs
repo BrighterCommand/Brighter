@@ -45,8 +45,7 @@ public class When_sending_with_zero_delay_should_send_immediately_without_schedu
     {
         // Arrange
         _bus = new InternalBus();
-        var timeProvider = new FakeTimeProvider();
-        _producer = new InMemoryMessageProducer(_bus, timeProvider);
+        _producer = new InMemoryMessageProducer(_bus);
         _scheduler = new SpyScheduler();
         _producer.Scheduler = _scheduler;
 

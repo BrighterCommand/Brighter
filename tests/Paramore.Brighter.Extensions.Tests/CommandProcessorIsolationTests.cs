@@ -115,7 +115,7 @@ public class CommandProcessorIsolationTests
                 var routingKey = new RoutingKey($"test.command.{index}");
                 var internalBus = new InternalBus();
 
-                var producer = new InMemoryMessageProducer(internalBus, timeProvider, new Publication
+                var producer = new InMemoryMessageProducer(internalBus, new Publication
                 {
                     Topic = routingKey,
                     RequestType = typeof(IsolationTestCommand)
@@ -186,7 +186,7 @@ public class CommandProcessorIsolationTests
                 var routingKey = new RoutingKey($"test.func.{index}");
                 var internalBus = new InternalBus();
 
-                var producer = new InMemoryMessageProducer(internalBus, timeProvider, new Publication
+                var producer = new InMemoryMessageProducer(internalBus, new Publication
                 {
                     Topic = routingKey,
                     RequestType = typeof(IsolationTestCommand)

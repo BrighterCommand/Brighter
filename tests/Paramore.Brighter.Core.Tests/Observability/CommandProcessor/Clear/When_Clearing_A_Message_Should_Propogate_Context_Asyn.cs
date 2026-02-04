@@ -62,7 +62,7 @@ public class AsyncMessageDispatchPropogateContextTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+        InMemoryMessageProducer messageProducer = new(_internalBus, 
             new Publication
             {
                 Source = new Uri("http://localhost"),

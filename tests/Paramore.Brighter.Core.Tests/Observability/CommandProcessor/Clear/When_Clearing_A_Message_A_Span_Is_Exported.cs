@@ -234,7 +234,6 @@ public class CommandProcessorClearObservabilityTests
         
         var messageProducer = new InMemoryMessageProducer(
             _internalBus,
-            _timeProvider,
             new Publication
             {
                 Source = publicationSource, RequestType = typeof(MyEvent), Topic = _routingKey, Type = _publicationType,

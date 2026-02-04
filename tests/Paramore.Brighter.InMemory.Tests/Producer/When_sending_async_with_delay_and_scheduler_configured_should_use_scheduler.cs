@@ -46,8 +46,7 @@ public class When_sending_async_with_delay_and_scheduler_configured_should_use_s
     {
         // Arrange
         _bus = new InternalBus();
-        var timeProvider = new FakeTimeProvider();
-        _producer = new InMemoryMessageProducer(_bus, timeProvider);
+        _producer = new InMemoryMessageProducer(_bus);
         _scheduler = new SpySchedulerAsync();
         _producer.Scheduler = _scheduler;
 

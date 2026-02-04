@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var cloudEventsType = new CloudEventsType("go.paramore.brighter.test");
             
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+            InMemoryMessageProducer messageProducer = new(_internalBus, 
                 new Publication()
                 {
                     DataSchema = new Uri("https://goparamore.io/schemas/MyCommand.json"),

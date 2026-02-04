@@ -44,8 +44,7 @@ public class When_sending_with_delay_and_scheduler_configured_should_use_schedul
     {
         // Arrange
         _bus = new InternalBus();
-        var timeProvider = new FakeTimeProvider();
-        _producer = new InMemoryMessageProducer(_bus, timeProvider);
+        _producer = new InMemoryMessageProducer(_bus);
         _scheduler = new SpyScheduler();
         _producer.Scheduler = _scheduler;
 

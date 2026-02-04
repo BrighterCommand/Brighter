@@ -345,7 +345,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     {
         if (_producer != null) return;
 
-        _producer = new InMemoryMessageProducer(_bus, _timeProvider, new Publication { Topic = topic })
+        _producer = new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
         {
             Scheduler = _scheduler
         };
