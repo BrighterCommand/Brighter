@@ -53,7 +53,7 @@ public class InMemoryScheduler(
     OnSchedulerConflict onConflict)
     : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync
 {
-    private static readonly ConcurrentDictionary<string, ITimer> s_timers = new();
+    private readonly ConcurrentDictionary<string, ITimer> _timers = new();
     private static readonly ILogger Logger = ApplicationLogging.CreateLogger<InMemoryScheduler>();
 
     /// <inheritdoc />
@@ -66,13 +66,13 @@ public class InMemoryScheduler(
         var id = getOrCreateMessageSchedulerId(message);
 
         // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && s_timers.ContainsKey(id))
+        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
         {
             throw new InvalidOperationException($"scheduler with '{id}' id already exists");
         }
 
         // Use AddOrUpdate to atomically replace the timer, disposing the old one
-        s_timers.AddOrUpdate(
+        _timers.AddOrUpdate(
             id,
             _ => timeProvider.CreateTimer(Execute,
                 (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero),
@@ -110,13 +110,13 @@ public class InMemoryScheduler(
         var id = getOrCreateRequestSchedulerId(request);
 
         // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && s_timers.ContainsKey(id))
+        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
         {
             throw new InvalidOperationException($"scheduler with '{id}' id already exists");
         }
 
         // Use AddOrUpdate to atomically replace the timer, disposing the old one
-        s_timers.AddOrUpdate(
+        _timers.AddOrUpdate(
             id,
             _ => timeProvider.CreateTimer(Execute,
                 (processor,
@@ -165,7 +165,7 @@ public class InMemoryScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        if (s_timers.TryGetValue(schedulerId, out var timer))
+        if (_timers.TryGetValue(schedulerId, out var timer))
         {
             timer.Change(delay, TimeSpan.Zero);
             return true;
@@ -177,7 +177,7 @@ public class InMemoryScheduler(
     /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel" />
     public void Cancel(string id)
     {
-        if (s_timers.TryRemove(id, out var timer))
+        if (_timers.TryRemove(id, out var timer))
         {
             timer.Dispose();
         }
@@ -207,7 +207,7 @@ public class InMemoryScheduler(
         var id = getOrCreateMessageSchedulerId(message);
 
         // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && s_timers.ContainsKey(id))
+        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
         {
             throw new InvalidOperationException($"scheduler with '{id}' id already exists");
         }
@@ -215,7 +215,7 @@ public class InMemoryScheduler(
         // Use AddOrUpdate to atomically replace the timer, disposing the old one
         // Note: Timer disposal is synchronous here as AddOrUpdate doesn't support async callbacks,
         // but ITimer.Dispose() is safe to call synchronously
-        s_timers.AddOrUpdate(
+        _timers.AddOrUpdate(
             id,
             _ => timeProvider.CreateTimer(Execute,
                 (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero),
@@ -254,7 +254,7 @@ public class InMemoryScheduler(
         var id = getOrCreateRequestSchedulerId(request);
 
         // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && s_timers.ContainsKey(id))
+        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
         {
             throw new InvalidOperationException($"scheduler with '{id}' id already exists");
         }
@@ -262,7 +262,7 @@ public class InMemoryScheduler(
         // Use AddOrUpdate to atomically replace the timer, disposing the old one
         // Note: Timer disposal is synchronous here as AddOrUpdate doesn't support async callbacks,
         // but ITimer.Dispose() is safe to call synchronously
-        s_timers.AddOrUpdate(
+        _timers.AddOrUpdate(
             id,
             _ => timeProvider.CreateTimer(Execute,
                 (processor,
@@ -305,13 +305,13 @@ public class InMemoryScheduler(
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.CancelAsync" /> 
     public async Task CancelAsync(string id, CancellationToken cancellationToken = default)
     {
-        if (s_timers.TryRemove(id, out var timer))
+        if (_timers.TryRemove(id, out var timer))
         {
             await timer.DisposeAsync();
         }
     }
 
-    private static void Execute(object? state)
+    private void Execute(object? state)
     {
         // .NET Standard doesn't support if(state is (IAmACommandProcessor, FireSchedulerMessage))
         var fireMessage = state as (IAmACommandProcessor, FireSchedulerMessage)?;
@@ -320,7 +320,7 @@ public class InMemoryScheduler(
             var (processor, message) = (fireMessage.Value.Item1, fireMessage.Value.Item2);
             BrighterAsyncContext.Run(() => processor.SendAsync(message));
 
-            if (s_timers.TryRemove(message.Id, out var timer))
+            if (_timers.TryRemove(message.Id, out var timer))
             {
                 timer.Dispose();
             }
@@ -334,7 +334,7 @@ public class InMemoryScheduler(
             var (processor, request) = (fireRequest.Value.Item1, fireRequest.Value.Item2);
             BrighterAsyncContext.Run(() => processor.SendAsync(request));
 
-            if (s_timers.TryRemove(request.Id, out var timer))
+            if (_timers.TryRemove(request.Id, out var timer))
             {
                 timer.Dispose();
             }
