@@ -1,90 +1,136 @@
 # Resume Prompt: Testing Support for Command Processor Handlers
 
 **Spec ID**: 0002-testing-support-for-command-processor-handlers
-**Last Updated**: 2026-02-05
+**Last Updated**: 2026-02-06
 
 ## Current Status
 
 ```
 [x] Requirements - APPROVED
-[x] Design (ADRs) - 2 ADRs created, 1 approved, 1 pending
-[ ] Tasks - Not yet created
-[ ] Implementation - Not started
+[x] Design (ADRs) - 2 ADRs, both ACCEPTED
+[x] Tasks - APPROVED
+[~] Implementation - Phases 1-3 COMPLETE, Phase 4+ remaining
 ```
 
 ## Completed Work
 
 ### Requirements (Approved)
 - `specs/0002-testing-support-for-command-processor-handlers/requirements.md`
-- Defines the need for testing tools for handlers that depend on `IAmACommandProcessor`
-- Two deliverables: new `Paramore.Brighter.Testing` assembly + documentation
 
-### ADRs Created
+### ADRs (Both Accepted)
 
-| ADR | File | Status | Description |
-|-----|------|--------|-------------|
-| 0037 | `Docs/adr/0037-testing-assembly-structure.md` | **Accepted** | Assembly structure, project layout, key components |
-| 0038 | `Docs/adr/0038-spy-command-processor-api.md` | **Proposed** | SpyCommandProcessor public API design (3-layer approach) |
+| ADR | File | Status |
+|-----|------|--------|
+| 0037 | `Docs/adr/0037-testing-assembly-structure.md` | **Accepted** |
+| 0038 | `Docs/adr/0038-spy-command-processor-api.md` | **Accepted** |
 
-## Key Design Decisions
+### Implementation Progress
 
-1. **New Assembly**: `Paramore.Brighter.Testing` in `src/`
-2. **Three Types**:
-   - `CommandType` enum - tracks which methods were called
-   - `RecordedCall` record - captures call details
-   - `SpyCommandProcessor` class - main spy implementation
-3. **Three-Layer API**:
-   - Layer 1: Quick checks (`WasCalled`, `CallCount`, `Observe<T>`)
-   - Layer 2: Request inspection (`GetRequests<T>`, `GetCalls`, `Commands`)
-   - Layer 3: Full detail (`RecordedCalls`, `DepositedRequests`)
-4. **Virtual Methods**: All interface implementations for extensibility
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | Project Setup | ✅ Complete |
+| 2 | Core Types (CommandType, RecordedCall) | ✅ Complete |
+| 3 | Layer 1 API (WasCalled, CallCount, Observe) | ✅ Complete |
+| 4 | Layer 2 API (GetRequests, GetCalls, Commands) | ⏳ Next |
+| 5 | Layer 3 API (RecordedCalls, DepositedRequests) | ⏳ Pending |
+| 6 | Outbox Pattern Support | ⏳ Pending |
+| 7 | State Management (Reset) | ⏳ Pending |
+| 8 | Complete Interface (Scheduled, Call, Transaction) | ⏳ Pending |
+| 9 | Extensibility (Virtual methods) | ⏳ Pending |
+| 10 | Documentation | ⏳ Pending |
+| 11 | Final Verification | ⏳ Pending |
+
+### Files Created
+
+```
+src/Paramore.Brighter.Testing/
+├── Paramore.Brighter.Testing.csproj
+├── CommandType.cs
+├── RecordedCall.cs
+└── SpyCommandProcessor.cs
+
+tests/Paramore.Brighter.Testing.Tests/
+├── Paramore.Brighter.Testing.Tests.csproj
+├── When_send_is_called_should_record_command_type.cs
+├── When_async_methods_called_should_record_async_command_types.cs
+├── When_method_called_should_capture_request_details.cs
+├── When_was_called_checks_for_invoked_method.cs
+├── When_call_count_returns_invocation_count.cs
+└── When_observe_dequeues_requests_in_order.cs
+```
+
+### Test Coverage
+
+- **22 tests passing** across net9.0 and net10.0
+- All Phase 1-3 behaviors verified
+
+### Git Commits
+
+```
+bcce195a3 feat: implement Paramore.Brighter.Testing assembly (Phases 1-3)
+9acef4547 chore: add implementation tasks for testing support spec
+```
+
+## What's Implemented
+
+### CommandType Enum
+All 13 command types: Send, SendAsync, Publish, PublishAsync, Post, PostAsync, Deposit, DepositAsync, Clear, ClearAsync, Call, Scheduler, SchedulerAsync
+
+### RecordedCall Record
+```csharp
+public record RecordedCall(CommandType Type, IRequest Request, DateTime Timestamp, RequestContext? Context = null);
+```
+
+### SpyCommandProcessor - Implemented API
+- `Commands` - IReadOnlyList<CommandType> of calls in order
+- `RecordedCalls` - IReadOnlyList<RecordedCall> with full details
+- `WasCalled(CommandType)` - bool check if method was called
+- `CallCount(CommandType)` - int count of calls
+- `Observe<T>()` - dequeue next request of type T (FIFO)
+- All `IAmACommandProcessor` interface methods (virtual)
 
 ## Next Steps
 
-To resume, run these commands in order:
+To resume implementation, run:
 
 ```bash
-# 1. Approve the pending ADR
-/spec:approve design 0038
-
-# 2. Create implementation tasks
-/spec:tasks
-
-# 3. Review and approve tasks
-/spec:approve tasks
-
-# 4. Begin TDD implementation
-/spec:implement
+/spec:implement Phase 4 to Phase 7
 ```
+
+### Phase 4 Tasks (Layer 2 API)
+- [ ] `GetRequests<T>()` - returns all requests of type without consuming
+- [ ] `GetCalls(CommandType)` - returns all RecordedCalls for a type
+- [ ] `Commands` property already implemented
+
+### Phase 5 Tasks (Layer 3 API)
+- [ ] `RecordedCalls` property already implemented
+- [ ] `DepositedRequests` - track outbox deposits by Id
+
+### Phase 6 Tasks (Outbox Support)
+- [ ] `ClearOutbox` moves deposited requests to observation queue
+- [ ] Batch `DepositPost` overloads
+
+### Phase 7 Tasks (State Management)
+- [ ] `Reset()` clears all recorded state
 
 ## Key Files to Reference
 
 | File | Purpose |
 |------|---------|
-| `specs/0002-.../requirements.md` | Full requirements |
+| `specs/0002-.../tasks.md` | Full task list with TDD commands |
+| `src/Paramore.Brighter.Testing/SpyCommandProcessor.cs` | Current implementation |
 | `Docs/adr/0037-testing-assembly-structure.md` | Assembly design |
 | `Docs/adr/0038-spy-command-processor-api.md` | API design |
-| `src/Paramore.Brighter/IAmACommandProcessor.cs` | Interface to implement |
-| `tests/.../TestDoubles/SpyCommandProcessor.cs` | Reference implementation |
 
-## Context Summary
+## Code Style Notes
 
-Users want to unit test handlers that depend on `IAmACommandProcessor`. The solution:
-
-1. **Create `Paramore.Brighter.Testing` NuGet package** with:
-   - `SpyCommandProcessor` - records all method calls for verification
-   - Supports outbox pattern (DepositPost/ClearOutbox)
-   - Virtual methods for custom spy behavior
-
-2. **Create documentation** at `Docs/guides/testing-handlers.md`:
-   - Using SpyCommandProcessor
-   - Using mocking frameworks (Moq, NSubstitute, FakeItEasy)
-   - Using in-memory bus for integration tests
+- Prefer primary constructors for simple classes
+- Use Shouldly for assertions (not FluentAssertions)
+- Test file naming: `When_[condition]_should_[behavior].cs`
+- Use `/test-first` command for TDD workflow
 
 ## Quick Resume Command
 
 ```
-Continue work on spec 0002-testing-support-for-command-processor-handlers.
-The requirements and ADR 0037 are approved. ADR 0038 is pending approval.
-Next step: approve ADR 0038, then create tasks with /spec:tasks.
+Please read specs/0002-testing-support-for-command-processor-handlers/PROMPT.md to resume work on the Testing assembly. Phases 1-3 are complete. Continue with Phase 4 (Layer 2 API).
 ```
