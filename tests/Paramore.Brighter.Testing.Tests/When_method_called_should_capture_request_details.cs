@@ -29,7 +29,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_method_called_should_capture_request_details
+public class SpyCommandProcessorCaptureRequestDetailsTests
 {
     private readonly SpyCommandProcessor _spy;
     private readonly TestCommand _command;
@@ -37,7 +37,7 @@ public class When_method_called_should_capture_request_details
     private readonly DateTime _beforeCall;
     private readonly DateTime _afterCall;
 
-    public When_method_called_should_capture_request_details()
+    public SpyCommandProcessorCaptureRequestDetailsTests()
     {
         //Arrange
         _spy = new SpyCommandProcessor();

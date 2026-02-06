@@ -29,13 +29,13 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_observe_dequeues_requests_in_order
+public class SpyCommandProcessorObserveTests
 {
     private readonly SpyCommandProcessor _spy;
     private readonly TestCommand _command1;
     private readonly TestCommand _command2;
 
-    public When_observe_dequeues_requests_in_order()
+    public SpyCommandProcessorObserveTests()
     {
         //Arrange
         _spy = new SpyCommandProcessor();

@@ -22,22 +22,14 @@ THE SOFTWARE. */
 #endregion
 
 using System.Threading.Tasks;
-using Paramore.Brighter;
-using Paramore.Brighter.Testing;
 using Shouldly;
 using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_async_methods_called_should_record_async_command_types
+public class SpyCommandProcessorRecordTests
 {
-    private readonly SpyCommandProcessor _spy;
-
-    public When_async_methods_called_should_record_async_command_types()
-    {
-        //Arrange
-        _spy = new SpyCommandProcessor();
-    }
+    private readonly SpyCommandProcessor _spy = new();
 
     [Fact]
     public async Task Then_send_async_should_record_send_async()

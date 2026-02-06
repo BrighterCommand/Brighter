@@ -29,18 +29,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_clear_outbox_moves_requests_to_queue
+public class SpyCommandProcessorOutboxTests
 {
-    private readonly SpyCommandProcessor _spy;
-    private readonly MyCommand _command1;
-    private readonly MyCommand _command2;
-
-    public When_clear_outbox_moves_requests_to_queue()
-    {
-        _spy = new SpyCommandProcessor();
-        _command1 = new MyCommand { Value = "first" };
-        _command2 = new MyCommand { Value = "second" };
-    }
+    private readonly SpyCommandProcessor _spy = new();
+    private readonly MyCommand _command1 = new() { Value = "first" };
+    private readonly MyCommand _command2 = new() { Value = "second" };
 
     [Fact]
     public void Should_not_be_observable_before_clear()

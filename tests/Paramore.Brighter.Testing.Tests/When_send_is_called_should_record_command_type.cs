@@ -28,19 +28,18 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_send_is_called_should_record_command_type
+public class SpyCommandProcessorCommandTypeTests
 {
     private readonly SpyCommandProcessor _spy;
-    private readonly TestCommand _command;
 
-    public When_send_is_called_should_record_command_type()
+    public SpyCommandProcessorCommandTypeTests()
     {
         //Arrange
         _spy = new SpyCommandProcessor();
-        _command = new TestCommand();
+        TestCommand command = new();
 
         //Act
-        _spy.Send(_command);
+        _spy.Send(command);
     }
 
     [Fact]

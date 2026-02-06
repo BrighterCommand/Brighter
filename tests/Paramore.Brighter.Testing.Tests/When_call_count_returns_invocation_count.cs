@@ -28,15 +28,9 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_call_count_returns_invocation_count
+public class SpyCommandProcessorCountTests
 {
-    private readonly SpyCommandProcessor _spy;
-
-    public When_call_count_returns_invocation_count()
-    {
-        //Arrange
-        _spy = new SpyCommandProcessor();
-    }
+    private readonly SpyCommandProcessor _spy = new();
 
     [Fact]
     public void Then_call_count_returns_zero_before_any_calls()

@@ -28,18 +28,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_deposit_post_called_tracks_in_deposited_requests
+public class SpyCommandProcessorDepositTests
 {
-    private readonly SpyCommandProcessor _spy;
-    private readonly MyCommand _command1;
-    private readonly MyCommand _command2;
-
-    public When_deposit_post_called_tracks_in_deposited_requests()
-    {
-        _spy = new SpyCommandProcessor();
-        _command1 = new MyCommand { Value = "first" };
-        _command2 = new MyCommand { Value = "second" };
-    }
+    private readonly SpyCommandProcessor _spy = new();
+    private readonly MyCommand _command1 = new() { Value = "first" };
+    private readonly MyCommand _command2 = new() { Value = "second" };
 
     [Fact]
     public void Should_return_id_from_deposit_post()

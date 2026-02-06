@@ -28,15 +28,9 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_was_called_checks_for_invoked_method
+public class SpyCommandProcessorInvokedMethodTests
 {
-    private readonly SpyCommandProcessor _spy;
-
-    public When_was_called_checks_for_invoked_method()
-    {
-        //Arrange
-        _spy = new SpyCommandProcessor();
-    }
+    private readonly SpyCommandProcessor _spy = new();
 
     [Fact]
     public void Then_was_called_returns_false_before_any_calls()

@@ -29,20 +29,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_get_calls_returns_matching_recorded_calls
+public class SpyCommandProcessorFindRecordedCallsTests
 {
-    private readonly SpyCommandProcessor _spy;
-    private readonly MyCommand _command1;
-    private readonly MyCommand _command2;
-    private readonly MyEvent _event1;
-
-    public When_get_calls_returns_matching_recorded_calls()
-    {
-        _spy = new SpyCommandProcessor();
-        _command1 = new MyCommand { Value = "first" };
-        _command2 = new MyCommand { Value = "second" };
-        _event1 = new MyEvent { Data = "event" };
-    }
+    private readonly SpyCommandProcessor _spy = new();
+    private readonly MyCommand _command1 = new() { Value = "first" };
+    private readonly MyCommand _command2 = new() { Value = "second" };
+    private readonly MyEvent _event1 = new() { Data = "event" };
 
     [Fact]
     public void Should_return_all_calls_for_command_type()

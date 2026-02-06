@@ -28,16 +28,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
-public class When_reset_clears_all_state
+public class SpyCommandProcessorClearTests
 {
-    private readonly SpyCommandProcessor _spy;
-    private readonly MyCommand _command;
-
-    public When_reset_clears_all_state()
-    {
-        _spy = new SpyCommandProcessor();
-        _command = new MyCommand { Value = "test" };
-    }
+    private readonly SpyCommandProcessor _spy = new();
+    private readonly MyCommand _command = new() { Value = "test" };
 
     [Fact]
     public void Should_clear_recorded_calls()
