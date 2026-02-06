@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -74,11 +75,10 @@ public class MessageDispatchInvalidMessageActionTests
     }
 
     [Fact]
-    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
-    public void When_a_message_mapper_throws_invalid_message_action()
+    public async Task When_a_message_mapper_throws_invalid_message_action()
     {
         // Assert: The message should be removed from the source queue
-        _dispatcher.End().Wait();
+        await _dispatcher.End();
 
         Assert.Empty(_bus.Stream(_routingKey));
 
