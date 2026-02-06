@@ -98,13 +98,13 @@ public class SpyCommandProcessorGetRequestsTests
         events.Single().ShouldBe(_event1);
     }
 
-    private class MyCommand : Command
+    private sealed class MyCommand : Command
     {
         public string Value { get; set; } = string.Empty;
         public MyCommand() : base(Id.Random()) { }
     }
 
-    private class MyEvent : Event
+    private sealed class MyEvent : Event
     {
         public string Data { get; set; } = string.Empty;
         public MyEvent() : base(Id.Random()) { }

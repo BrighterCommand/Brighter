@@ -9,7 +9,7 @@
 [x] Requirements - APPROVED
 [x] Design (ADRs) - 2 ADRs, both ACCEPTED
 [x] Tasks - APPROVED
-[~] Implementation - Phases 1-7 COMPLETE, Phase 8+ remaining
+[x] Implementation - All 11 Phases COMPLETE
 ```
 
 ## Completed Work
@@ -35,10 +35,10 @@
 | 5 | Layer 3 API (RecordedCalls, DepositedRequests) | ✅ Complete |
 | 6 | Outbox Pattern Support | ✅ Complete |
 | 7 | State Management (Reset) | ✅ Complete |
-| 8 | Complete Interface (Scheduled, Call, Transaction) | ⏳ Next |
-| 9 | Extensibility (Virtual methods) | ⏳ Pending |
-| 10 | Documentation | ⏳ Pending |
-| 11 | Final Verification | ⏳ Pending |
+| 8 | Complete Interface (Scheduled, Call, Transaction) | ✅ Complete |
+| 9 | Extensibility (Virtual methods) | ✅ Complete |
+| 10 | Documentation | ✅ Complete |
+| 11 | Final Verification | ✅ Complete |
 
 ### Files Created
 
@@ -61,17 +61,28 @@ tests/Paramore.Brighter.Testing.Tests/
 ├── When_get_calls_returns_matching_recorded_calls.cs
 ├── When_deposit_post_called_tracks_in_deposited_requests.cs
 ├── When_clear_outbox_moves_requests_to_queue.cs
-└── When_reset_clears_all_state.cs
+├── When_reset_clears_all_state.cs
+├── When_scheduled_methods_record_scheduler_types.cs
+├── When_call_invoked_records_and_returns_null.cs
+├── When_transaction_provider_overloads_record_correctly.cs
+└── When_subclass_overrides_executes_custom_behavior.cs
+
+Docs/guides/
+└── testing-handlers.md
 ```
 
 ### Test Coverage
 
-- **46 tests passing** across net9.0 and net10.0
-- All Phase 1-7 behaviors verified
+- **85 tests passing** across net9.0 and net10.0
+- All Phase 1-11 behaviors verified
+- 0 build warnings on source assembly
 
 ### Git Commits
 
 ```
+b9d3ceb48 fix: Test classes don't need GWT name
+008e6a4c3 feat: implement SpyCommandProcessor Phases 4-7
+826604ef7 chore: update PROMPT.md with Phase 1-3 completion status
 bcce195a3 feat: implement Paramore.Brighter.Testing assembly (Phases 1-3)
 9acef4547 chore: add implementation tasks for testing support spec
 ```
@@ -86,7 +97,7 @@ All 13 command types: Send, SendAsync, Publish, PublishAsync, Post, PostAsync, D
 public record RecordedCall(CommandType Type, IRequest Request, DateTime Timestamp, RequestContext? Context = null);
 ```
 
-### SpyCommandProcessor - Implemented API
+### SpyCommandProcessor - Complete API
 
 **Layer 1 (Quick Checks):**
 - `WasCalled(CommandType)` - bool check if method was called
@@ -111,51 +122,27 @@ public record RecordedCall(CommandType Type, IRequest Request, DateTime Timestam
 
 **Interface Methods:**
 - All `IAmACommandProcessor` interface methods implemented (virtual)
+- Scheduled overloads record `CommandType.Scheduler`/`SchedulerAsync` and return scheduler IDs
+- `Call<T, TResponse>()` records `CommandType.Call` and returns null
+- Transaction provider overloads (`DepositPost<T, TTransaction>`) work correctly
 
-## Next Steps
+**Extensibility:**
+- All methods are virtual for subclass customization
+- `ThrowingSpyCommandProcessor` example demonstrates override pattern
 
-To resume implementation, run:
+**Documentation:**
+- `Docs/guides/testing-handlers.md` - comprehensive usage guide
+- Core guide cross-reference added at Testing Strategies section
 
-```bash
-/spec:implement Phase 8 to Phase 11
-```
-
-### Phase 8 Tasks (Complete Interface)
-- [ ] Verify scheduled Send/Publish/Post methods record `CommandType.Scheduler`
-- [ ] Verify `Call<T, TResponse>()` records `CommandType.Call` and returns null
-- [ ] Verify transaction provider overloads work correctly
-
-### Phase 9 Tasks (Extensibility)
-- [ ] Verify all methods are virtual for subclass customization
-- [ ] Create example `ThrowingSpyCommandProcessor` in tests
-
-### Phase 10 Tasks (Documentation)
-- [ ] Create `Docs/guides/testing-handlers.md` guide
-- [ ] Update core guide with cross-reference
-
-### Phase 11 Tasks (Verification)
-- [ ] Full solution builds without warnings
-- [ ] All tests pass
-- [ ] Update PROMPT.md to reflect completed status
-
-## Key Files to Reference
+## Key Files
 
 | File | Purpose |
 |------|---------|
 | `specs/0002-.../tasks.md` | Full task list with TDD commands |
-| `src/Paramore.Brighter.Testing/SpyCommandProcessor.cs` | Current implementation |
+| `specs/0002-.../requirements.md` | Requirements specification |
+| `src/Paramore.Brighter.Testing/SpyCommandProcessor.cs` | Main implementation |
+| `src/Paramore.Brighter.Testing/CommandType.cs` | Command type enum |
+| `src/Paramore.Brighter.Testing/RecordedCall.cs` | Recorded call record |
 | `Docs/adr/0037-testing-assembly-structure.md` | Assembly design |
 | `Docs/adr/0038-spy-command-processor-api.md` | API design |
-
-## Code Style Notes
-
-- Prefer primary constructors for simple classes
-- Use Shouldly for assertions (not FluentAssertions)
-- Test file naming: `When_[condition]_should_[behavior].cs`
-- Use `/test-first` command for TDD workflow
-
-## Quick Resume Command
-
-```
-Please read specs/0002-testing-support-for-command-processor-handlers/PROMPT.md to resume work on the Testing assembly. Phases 1-7 are complete. Continue with Phase 8 (Complete Interface).
-```
+| `Docs/guides/testing-handlers.md` | Usage guide |
