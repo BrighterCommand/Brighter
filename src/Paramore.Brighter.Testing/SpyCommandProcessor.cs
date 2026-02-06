@@ -1,0 +1,411 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Paramore.Brighter.Testing;
+
+/// <summary>
+/// A spy implementation of IAmACommandProcessor for testing.
+/// Records all method calls for later verification.
+/// </summary>
+public class SpyCommandProcessor : IAmACommandProcessor
+{
+    private readonly List<RecordedCall> _recordedCalls = new();
+    private readonly Queue<IRequest> _requests = new();
+
+    /// <summary>
+    /// Gets a read-only list of command types in the order they were called.
+    /// </summary>
+    public IReadOnlyList<CommandType> Commands => _recordedCalls.Select(c => c.Type).ToList().AsReadOnly();
+
+    /// <summary>
+    /// Gets a read-only list of all recorded calls with full details.
+    /// </summary>
+    public IReadOnlyList<RecordedCall> RecordedCalls => _recordedCalls.AsReadOnly();
+
+    /// <summary>
+    /// Check if a specific method type was called at least once.
+    /// </summary>
+    /// <param name="type">The command type to check for.</param>
+    /// <returns>True if the method was called at least once, false otherwise.</returns>
+    public bool WasCalled(CommandType type) => _recordedCalls.Any(c => c.Type == type);
+
+    /// <summary>
+    /// Get the number of times a specific method type was called.
+    /// </summary>
+    /// <param name="type">The command type to count.</param>
+    /// <returns>The number of times the method was called.</returns>
+    public int CallCount(CommandType type) => _recordedCalls.Count(c => c.Type == type);
+
+    /// <summary>
+    /// Dequeue the next captured request of the specified type in FIFO order.
+    /// Useful for sequential verification of multiple calls.
+    /// </summary>
+    /// <typeparam name="T">The type of request to observe.</typeparam>
+    /// <returns>The next request of type T.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no request of type T is in the queue.</exception>
+    public T Observe<T>() where T : class, IRequest
+    {
+        var queue = new Queue<IRequest>();
+        while (_requests.Count > 0)
+        {
+            var request = _requests.Dequeue();
+            if (request is T typed)
+            {
+                // Put remaining items back
+                while (queue.Count > 0)
+                {
+                    _requests.Enqueue(queue.Dequeue());
+                }
+                return typed;
+            }
+            queue.Enqueue(request);
+        }
+
+        // Restore the queue
+        while (queue.Count > 0)
+        {
+            _requests.Enqueue(queue.Dequeue());
+        }
+
+        throw new InvalidOperationException($"No request of type {typeof(T).Name} found in the queue.");
+    }
+
+    private void RecordCall(CommandType type, IRequest request, RequestContext? context = null)
+    {
+        _recordedCalls.Add(new RecordedCall(type, request, DateTime.UtcNow, context));
+        _requests.Enqueue(request);
+    }
+
+    /// <inheritdoc />
+    public virtual void Send<TRequest>(TRequest command, RequestContext? requestContext = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Send, command, requestContext);
+    }
+
+    /// <inheritdoc />
+    public virtual string Send<TRequest>(DateTimeOffset at, TRequest command, RequestContext? requestContext = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Scheduler, command, requestContext);
+        return Guid.NewGuid().ToString();
+    }
+
+    /// <inheritdoc />
+    public virtual string Send<TRequest>(TimeSpan delay, TRequest command, RequestContext? requestContext = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Scheduler, command, requestContext);
+        return Guid.NewGuid().ToString();
+    }
+
+    /// <inheritdoc />
+    public virtual Task SendAsync<TRequest>(TRequest command, RequestContext? requestContext = null,
+        bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.SendAsync, command, requestContext);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task<string> SendAsync<TRequest>(DateTimeOffset at, TRequest command,
+        RequestContext? requestContext = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.SchedulerAsync, command, requestContext);
+        return Task.FromResult(Guid.NewGuid().ToString());
+    }
+
+    /// <inheritdoc />
+    public virtual Task<string> SendAsync<TRequest>(TimeSpan delay, TRequest command,
+        RequestContext? requestContext = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.SchedulerAsync, command, requestContext);
+        return Task.FromResult(Guid.NewGuid().ToString());
+    }
+
+    /// <inheritdoc />
+    public virtual void Publish<TRequest>(TRequest @event, RequestContext? requestContext = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Publish, @event, requestContext);
+    }
+
+    /// <inheritdoc />
+    public virtual string Publish<TRequest>(DateTimeOffset at, TRequest @event, RequestContext? requestContext = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Scheduler, @event, requestContext);
+        return Guid.NewGuid().ToString();
+    }
+
+    /// <inheritdoc />
+    public virtual string Publish<TRequest>(TimeSpan delay, TRequest @event, RequestContext? requestContext = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Scheduler, @event, requestContext);
+        return Guid.NewGuid().ToString();
+    }
+
+    /// <inheritdoc />
+    public virtual Task PublishAsync<TRequest>(TRequest @event, RequestContext? requestContext = null,
+        bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.PublishAsync, @event, requestContext);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task<string> PublishAsync<TRequest>(DateTimeOffset at, TRequest @event,
+        RequestContext? requestContext = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.SchedulerAsync, @event, requestContext);
+        return Task.FromResult(Guid.NewGuid().ToString());
+    }
+
+    /// <inheritdoc />
+    public virtual Task<string> PublishAsync<TRequest>(TimeSpan delay, TRequest @event,
+        RequestContext? requestContext = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.SchedulerAsync, @event, requestContext);
+        return Task.FromResult(Guid.NewGuid().ToString());
+    }
+
+    /// <inheritdoc />
+    public virtual void Post<TRequest>(TRequest request, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Post, request, requestContext);
+    }
+
+    /// <inheritdoc />
+    public virtual string Post<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Scheduler, request, requestContext);
+        return Guid.NewGuid().ToString();
+    }
+
+    /// <inheritdoc />
+    public virtual string Post<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Scheduler, request, requestContext);
+        return Guid.NewGuid().ToString();
+    }
+
+    /// <inheritdoc />
+    public virtual Task PostAsync<TRequest>(TRequest request, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.PostAsync, request, requestContext);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task<string> PostAsync<TRequest>(DateTimeOffset at, TRequest request,
+        RequestContext? requestContext = null, Dictionary<string, object>? args = null,
+        bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.SchedulerAsync, request, requestContext);
+        return Task.FromResult(Guid.NewGuid().ToString());
+    }
+
+    /// <inheritdoc />
+    public virtual Task<string> PostAsync<TRequest>(TimeSpan delay, TRequest request,
+        RequestContext? requestContext = null, Dictionary<string, object>? args = null,
+        bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.SchedulerAsync, request, requestContext);
+        return Task.FromResult(Guid.NewGuid().ToString());
+    }
+
+    /// <inheritdoc />
+    public virtual Id DepositPost<TRequest>(TRequest request, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Deposit, request, requestContext);
+        return request.Id;
+    }
+
+    /// <inheritdoc />
+    public virtual Id DepositPost<TRequest, TTransaction>(TRequest request,
+        IAmABoxTransactionProvider<TTransaction> transactionProvider, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null, string? batchId = null)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.Deposit, request, requestContext);
+        return request.Id;
+    }
+
+    /// <inheritdoc />
+    public virtual Id[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext? requestContext,
+        Dictionary<string, object>? args = null)
+        where TRequest : class, IRequest
+    {
+        var ids = new List<Id>();
+        foreach (var request in requests)
+        {
+            RecordCall(CommandType.Deposit, request, requestContext);
+            ids.Add(request.Id);
+        }
+        return ids.ToArray();
+    }
+
+    /// <inheritdoc />
+    public virtual Id[] DepositPost<TRequest, TTransaction>(IEnumerable<TRequest> requests,
+        IAmABoxTransactionProvider<TTransaction> transactionProvider, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null)
+        where TRequest : class, IRequest
+    {
+        var ids = new List<Id>();
+        foreach (var request in requests)
+        {
+            RecordCall(CommandType.Deposit, request, requestContext);
+            ids.Add(request.Id);
+        }
+        return ids.ToArray();
+    }
+
+    /// <inheritdoc />
+    public virtual Task<Id> DepositPostAsync<TRequest>(TRequest request, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        RecordCall(CommandType.DepositAsync, request, requestContext);
+        return Task.FromResult(request.Id);
+    }
+
+    /// <inheritdoc />
+    public virtual Task<Id> DepositPostAsync<T, TTransaction>(T request,
+        IAmABoxTransactionProvider<TTransaction> transactionProvider, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default, string? batchId = null)
+        where T : class, IRequest
+    {
+        RecordCall(CommandType.DepositAsync, request, requestContext);
+        return Task.FromResult(request.Id);
+    }
+
+    /// <inheritdoc />
+    public virtual Task<Id[]> DepositPostAsync<TRequest>(IEnumerable<TRequest> requests,
+        RequestContext? requestContext = null, Dictionary<string, object>? args = null,
+        bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+    {
+        var ids = new List<Id>();
+        foreach (var request in requests)
+        {
+            RecordCall(CommandType.DepositAsync, request, requestContext);
+            ids.Add(request.Id);
+        }
+        return Task.FromResult(ids.ToArray());
+    }
+
+    /// <inheritdoc />
+    public virtual Task<Id[]> DepositPostAsync<T, TTransaction>(IEnumerable<T> requests,
+        IAmABoxTransactionProvider<TTransaction> transactionProvider, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default)
+        where T : class, IRequest
+    {
+        var ids = new List<Id>();
+        foreach (var request in requests)
+        {
+            RecordCall(CommandType.DepositAsync, request, requestContext);
+            ids.Add(request.Id);
+        }
+        return Task.FromResult(ids.ToArray());
+    }
+
+    /// <inheritdoc />
+    public virtual void ClearOutbox(Id[] ids, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null)
+    {
+        // ClearOutbox doesn't have a request, so we create a synthetic one for tracking
+        _recordedCalls.Add(new RecordedCall(CommandType.Clear, new ClearOutboxRequest(ids), DateTime.UtcNow, requestContext));
+    }
+
+    /// <inheritdoc />
+    public virtual Task ClearOutboxAsync(IEnumerable<Id> posts, RequestContext? requestContext = null,
+        Dictionary<string, object>? args = null, bool continueOnCapturedContext = true,
+        CancellationToken cancellationToken = default)
+    {
+        // ClearOutboxAsync doesn't have a request, so we create a synthetic one for tracking
+        _recordedCalls.Add(new RecordedCall(CommandType.ClearAsync, new ClearOutboxRequest(posts.ToArray()), DateTime.UtcNow, requestContext));
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
+        where T : class, ICall
+        where TResponse : class, IResponse
+    {
+        RecordCall(CommandType.Call, request, requestContext);
+        return null;
+    }
+
+    /// <summary>
+    /// Synthetic request type for tracking ClearOutbox calls.
+    /// </summary>
+    private sealed class ClearOutboxRequest : IRequest
+    {
+        public Id Id { get; set; } = Id.Random();
+        public Id? CorrelationId { get; set; }
+        public ReplyAddress? ReplyTo { get; set; }
+
+        /// <summary>
+        /// The Ids that were cleared from the outbox.
+        /// </summary>
+        public Id[] ClearedIds { get; }
+
+        public ClearOutboxRequest(Id[] ids)
+        {
+            ClearedIds = ids;
+        }
+    }
+}
