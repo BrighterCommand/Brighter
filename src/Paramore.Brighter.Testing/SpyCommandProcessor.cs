@@ -37,6 +37,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
 {
     private readonly List<RecordedCall> _recordedCalls = new();
     private readonly Queue<IRequest> _requests = new();
+    private readonly Dictionary<Id, IRequest> _depositedRequests = new();
 
     /// <summary>
     /// Gets a read-only list of command types in the order they were called.
@@ -47,6 +48,24 @@ public class SpyCommandProcessor : IAmACommandProcessor
     /// Gets a read-only list of all recorded calls with full details.
     /// </summary>
     public IReadOnlyList<RecordedCall> RecordedCalls => _recordedCalls.AsReadOnly();
+
+    /// <summary>
+    /// Gets a read-only dictionary of requests deposited to the outbox, keyed by their Id.
+    /// Requests are added here when <see cref="DepositPost{TRequest}(TRequest, RequestContext?, Dictionary{string, object}?)"/> is called,
+    /// and moved to the observation queue when <see cref="ClearOutbox"/> is called.
+    /// </summary>
+    public IReadOnlyDictionary<Id, IRequest> DepositedRequests => _depositedRequests;
+
+    /// <summary>
+    /// Resets all recorded state, clearing recorded calls, commands, observation queue, and deposited requests.
+    /// Useful for reusing the spy across multiple test scenarios.
+    /// </summary>
+    public void Reset()
+    {
+        _recordedCalls.Clear();
+        _requests.Clear();
+        _depositedRequests.Clear();
+    }
 
     /// <summary>
     /// Check if a specific method type was called at least once.
@@ -61,6 +80,30 @@ public class SpyCommandProcessor : IAmACommandProcessor
     /// <param name="type">The command type to count.</param>
     /// <returns>The number of times the method was called.</returns>
     public int CallCount(CommandType type) => _recordedCalls.Count(c => c.Type == type);
+
+    /// <summary>
+    /// Get all captured requests of the specified type without consuming them.
+    /// Unlike <see cref="Observe{T}"/>, this method is non-destructive and can be called multiple times.
+    /// </summary>
+    /// <typeparam name="T">The type of request to retrieve.</typeparam>
+    /// <returns>An enumerable of all requests of type T.</returns>
+    public IEnumerable<T> GetRequests<T>() where T : class, IRequest
+    {
+        return _recordedCalls
+            .Where(c => c.Request is T)
+            .Select(c => (T)c.Request);
+    }
+
+    /// <summary>
+    /// Get all recorded calls for a specific command type.
+    /// Returns full <see cref="RecordedCall"/> objects with Type, Request, Timestamp, and Context.
+    /// </summary>
+    /// <param name="type">The command type to filter by.</param>
+    /// <returns>An enumerable of all recorded calls matching the command type.</returns>
+    public IEnumerable<RecordedCall> GetCalls(CommandType type)
+    {
+        return _recordedCalls.Where(c => c.Type == type);
+    }
 
     /// <summary>
     /// Dequeue the next captured request of the specified type in FIFO order.
@@ -100,6 +143,12 @@ public class SpyCommandProcessor : IAmACommandProcessor
     {
         _recordedCalls.Add(new RecordedCall(type, request, DateTime.UtcNow, context));
         _requests.Enqueue(request);
+    }
+
+    private void RecordDeposit(CommandType type, IRequest request, RequestContext? context = null)
+    {
+        _recordedCalls.Add(new RecordedCall(type, request, DateTime.UtcNow, context));
+        _depositedRequests[request.Id] = request;
     }
 
     /// <inheritdoc />
@@ -267,7 +316,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
         Dictionary<string, object>? args = null)
         where TRequest : class, IRequest
     {
-        RecordCall(CommandType.Deposit, request, requestContext);
+        RecordDeposit(CommandType.Deposit, request, requestContext);
         return request.Id;
     }
 
@@ -277,7 +326,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
         Dictionary<string, object>? args = null, string? batchId = null)
         where TRequest : class, IRequest
     {
-        RecordCall(CommandType.Deposit, request, requestContext);
+        RecordDeposit(CommandType.Deposit, request, requestContext);
         return request.Id;
     }
 
@@ -289,7 +338,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
         var ids = new List<Id>();
         foreach (var request in requests)
         {
-            RecordCall(CommandType.Deposit, request, requestContext);
+            RecordDeposit(CommandType.Deposit, request, requestContext);
             ids.Add(request.Id);
         }
         return ids.ToArray();
@@ -304,7 +353,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
         var ids = new List<Id>();
         foreach (var request in requests)
         {
-            RecordCall(CommandType.Deposit, request, requestContext);
+            RecordDeposit(CommandType.Deposit, request, requestContext);
             ids.Add(request.Id);
         }
         return ids.ToArray();
@@ -316,7 +365,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
         CancellationToken cancellationToken = default)
         where TRequest : class, IRequest
     {
-        RecordCall(CommandType.DepositAsync, request, requestContext);
+        RecordDeposit(CommandType.DepositAsync, request, requestContext);
         return Task.FromResult(request.Id);
     }
 
@@ -327,7 +376,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
         CancellationToken cancellationToken = default, string? batchId = null)
         where T : class, IRequest
     {
-        RecordCall(CommandType.DepositAsync, request, requestContext);
+        RecordDeposit(CommandType.DepositAsync, request, requestContext);
         return Task.FromResult(request.Id);
     }
 
@@ -340,7 +389,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
         var ids = new List<Id>();
         foreach (var request in requests)
         {
-            RecordCall(CommandType.DepositAsync, request, requestContext);
+            RecordDeposit(CommandType.DepositAsync, request, requestContext);
             ids.Add(request.Id);
         }
         return Task.FromResult(ids.ToArray());
@@ -356,7 +405,7 @@ public class SpyCommandProcessor : IAmACommandProcessor
         var ids = new List<Id>();
         foreach (var request in requests)
         {
-            RecordCall(CommandType.DepositAsync, request, requestContext);
+            RecordDeposit(CommandType.DepositAsync, request, requestContext);
             ids.Add(request.Id);
         }
         return Task.FromResult(ids.ToArray());
@@ -368,6 +417,15 @@ public class SpyCommandProcessor : IAmACommandProcessor
     {
         // ClearOutbox doesn't have a request, so we create a synthetic one for tracking
         _recordedCalls.Add(new RecordedCall(CommandType.Clear, new ClearOutboxRequest(ids), DateTime.UtcNow, requestContext));
+
+        // Move deposited requests to the observation queue
+        foreach (var id in ids)
+        {
+            if (_depositedRequests.TryGetValue(id, out var request))
+            {
+                _requests.Enqueue(request);
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -375,8 +433,18 @@ public class SpyCommandProcessor : IAmACommandProcessor
         Dictionary<string, object>? args = null, bool continueOnCapturedContext = true,
         CancellationToken cancellationToken = default)
     {
+        var idArray = posts.ToArray();
         // ClearOutboxAsync doesn't have a request, so we create a synthetic one for tracking
-        _recordedCalls.Add(new RecordedCall(CommandType.ClearAsync, new ClearOutboxRequest(posts.ToArray()), DateTime.UtcNow, requestContext));
+        _recordedCalls.Add(new RecordedCall(CommandType.ClearAsync, new ClearOutboxRequest(idArray), DateTime.UtcNow, requestContext));
+
+        // Move deposited requests to the observation queue
+        foreach (var id in idArray)
+        {
+            if (_depositedRequests.TryGetValue(id, out var request))
+            {
+                _requests.Enqueue(request);
+            }
+        }
         return Task.CompletedTask;
     }
 
