@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Testing utilities for Paramore.Brighter. Provides SpyCommandProcessor for verifying handler interactions with IAmACommandProcessor.</Description>
+    <Authors>Ian Cooper</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Brighter;Testing;Spy;Mock;Unit Test;Command Processor</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+</Project>
