@@ -47,7 +47,6 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private readonly TimeSpan _ackTimeout;
     private readonly ITimer _lockTimer;
     private readonly IAmAMessageScheduler? _scheduler;
-    private ITimer? _requeueTimer;
     private InMemoryMessageProducer? _producer;
 
     /// <summary>
@@ -93,6 +92,15 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         );
 
     }
+    
+    /// <summary>
+    /// Disposes of the consumer, will remove timers, producers, etc.
+    /// </summary>
+    ~InMemoryMessageConsumer()
+    {
+        DisposeCore();
+    }
+
 
     /// <summary>
     /// Acknowledges the specified message.
@@ -252,15 +260,8 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             return true;
         }
 
-        // Fallback: use a timer to invoke the requeue after a delay
-        _requeueTimer = _timeProvider.CreateTimer(
-            msg => RequeueNoDelay((Message)msg!),
-            message,
-            timeOut.Value,
-            TimeSpan.Zero
-        );
+        throw new ConfigurationException($"Cannot requeue {message.Id} with delay as unable to create producer"); 
 
-        return true;
     }
 
     /// <summary>
@@ -290,15 +291,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             return true;
         }
 
-        // Fallback: use a timer to invoke the requeue after a delay
-        _requeueTimer = _timeProvider.CreateTimer(
-            msg => RequeueNoDelay((Message)msg!),
-            message,
-            timeOut.Value,
-            TimeSpan.Zero
-        );
-
-        return true;
+        throw new ConfigurationException($"Cannot requeue {message.Id} with delay as unable to create producer"); 
     }
 
     /// <inheritdoc cref="IDisposable"/>
@@ -315,6 +308,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         GC.SuppressFinalize(this); 
     }
     
+
     private void CheckLockedMessages()
     {
         var now = _timeProvider.GetUtcNow();
@@ -330,14 +324,12 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private void DisposeCore()
     {
         _lockTimer.Dispose();
-        _requeueTimer?.Dispose();
         _producer?.Dispose();
     }
 
     private async ValueTask DisposeAsyncCore()
     {
         await _lockTimer.DisposeAsync().ConfigureAwait(false);
-        if (_requeueTimer != null) await _requeueTimer.DisposeAsync().ConfigureAwait(false);
         if (_producer != null) await _producer.DisposeAsync().ConfigureAwait(false);
     }
 
@@ -345,25 +337,24 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     {
         if (_producer != null) return;
 
-        _producer = new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
+        var newProducer = new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
         {
             Scheduler = _scheduler
         };
+        // Thread-safe lazy initialization
+        var original = Interlocked.CompareExchange(ref _producer, newProducer, null);
+        if (original != null)
+        {
+            // Another thread set _producer, dispose the one we created
+            newProducer.Dispose();
+        }
     }
     
     private bool RequeueNoDelay(Message message)
     {
-        try
-        {
-            _lockedMessages.TryRemove(message.Id, out _); //--allow requeue even if not from locked msg in bus
-            _bus.Enqueue(message);
-            return true;
-
-        }
-        finally
-        {
-            _requeueTimer?.Dispose();
-        }
+        _lockedMessages.TryRemove(message.Id, out _); //--allow requeue even if not from locked msg in bus
+        _bus.Enqueue(message);
+        return true;
     }
 
     private sealed record LockedMessage(Message Message, DateTimeOffset LockedAt);

@@ -200,7 +200,7 @@ namespace Paramore.Brighter
                 return;
             }
 
-            throw new ConfigurationException("No scheduler available, cannot send message without delay"); 
+            throw new ConfigurationException("No scheduler available, cannot send message with delay"); 
         }
     }
 }

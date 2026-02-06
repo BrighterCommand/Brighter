@@ -74,11 +74,11 @@ This inconsistency creates several problems:
 
 - As a consequence, if no scheduler is explicitly configured, `InMemoryScheduler` SHOULD be used as the default - `InMemoryMessageProducer` MUST use the configured scheduler for `SendWithDelay`/`SendWithDelayAsync`
 - MUST replace the current direct `TimeProvider.CreateTimer()` implementation
-- MUST maintain backward compatibility with existing tests that don't configure a scheduler
+- MUST throw a `ConfigurationException` if a `SendWithDelay` is called with a `timeOut` that is above zero but no Scheduler has been set. Do not fall back to a timer as a single timer will be overwritten by subsequent calls, leading to erratic behavior. 
 - The `Requeue(Message message, TimeSpan? timeOut)` method SHOULD delegate to the `InMemoryMessageProducer` `SendWithDelay` when `timeOut` is specified
 - The `RequeueAsync(Message message, TimeSpan? timeOut)` method SHOULD delegate to the `InMemoryMessageProducer`
   `SendWithDelayAsync` when `timeOut` is specified
-- MUST maintain backward compatibility with existing behavior, but should not delay if `timeout` is `TimeSpan.Zero`
+- SHOULD maintain backward compatibility with existing behavior, when a scheduler is set, but should not delay if `timeout` is `TimeSpan.Zero`
 - The `InMemoryMessageConsumer` needs to create the `InMemoryMessageProducer` lazily, in case delay is never used.
   It should use the topic for the message to be sent as the topic for the producer that it creates.
 
@@ -129,7 +129,7 @@ A repost always updates the handled count. Once the handled count exceeds a user
 │                               │  else if (Scheduler != null)             │  │
 │                               │     → Scheduler.Schedule(msg, delay)     │  │
 │                               │  else                                    │  │
-│                               │     → Fallback: direct timer (legacy)    │  │
+│                               │     → throw new ConfigurationException() │  │
 │                               └──────────────────────────────────────────┘  │
 │                                                              │               │
 │                                                              ▼               │
@@ -175,8 +175,8 @@ SendWithDelay(message, delay):
     else if Scheduler is IAmAMessageSchedulerSync:
         Scheduler.Schedule(message, delay)
     else:
-        // Legacy fallback: direct timer
-        _timeProvider.CreateTimer(Send, message, delay)
+        // Inform the user a scheduler was not configuree
+        throw new ConfigurationException("No scheduler available, cannot send message with delay")
 ```
 
 #### 2. InMemoryMessageConsumer (Modified)
@@ -285,8 +285,6 @@ else
 
 ```
 
-
-
 ### Technology Choices
 
 | Choice | Rationale |
@@ -301,8 +299,7 @@ else
 **Phase 1: InMemoryMessageProducer**
 1. Modify `SendWithDelay()` to check for and use scheduler
 2. Modify `SendWithDelayAsync()` similarly
-3. Keep a direct timer as a fallback when no scheduler is configured
-4. Add tests verifying scheduler integration
+3. Add tests verifying scheduler integration
 
 **Phase 2: InMemoryMessageConsumer**
 1. Add lazy `InMemoryMessageProducer` field
@@ -323,7 +320,6 @@ else
 - **Consistent behavior**: In-memory transport behaves like production transports
 - **Better testability**: Tests can verify scheduler behavior using `TimeProvider`
 - **Flexibility**: Users can swap schedulers without changing transport code
-- **Backward compatible**: Existing code continues to work via fallback
 - **Follows established pattern**: Mirrors `RmqMessageProducer` implementation
 
 ### Negative
