@@ -23,35 +23,31 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
-using Microsoft.Extensions.Time.Testing;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Producer;
 
 /// <summary>
-/// Tests that InMemoryMessageProducer.SendWithDelay falls back to timer-based delivery
-/// when no scheduler is configured, ensuring backward compatibility.
+/// Tests that InMemoryMessageProducer.SendWithDelay throws ConfigurationException
+/// when no scheduler is configured and delay is greater than zero.
 /// </summary>
-public class SchedulerNotConfiguredTests 
+public class SchedulerNotConfiguredTests
 {
-    private readonly InternalBus _bus;
     private readonly InMemoryMessageProducer _producer;
-    private readonly FakeTimeProvider _timeProvider;
-    private readonly RoutingKey _routingKey;
     private readonly Message _message;
     private readonly TimeSpan _delay;
 
-    public SchedulerNotConfiguredTests ()
+    public SchedulerNotConfiguredTests()
     {
         // Arrange - no scheduler configured
-        _bus = new InternalBus();
-        _producer = new InMemoryMessageProducer(_bus);
-        // Note: Scheduler is NOT set - testing fallback behavior
+        var bus = new InternalBus();
+        _producer = new InMemoryMessageProducer(bus);
+        // Note: Scheduler is NOT set - testing exception behavior
 
-        _routingKey = new RoutingKey("test.topic");
+        var routingKey = new RoutingKey("test.topic");
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_EVENT),
             new MessageBody("test content"));
         _delay = TimeSpan.FromSeconds(30);
     }
@@ -64,6 +60,17 @@ public class SchedulerNotConfiguredTests
         {
             // Act
             _producer.SendWithDelay(_message, _delay);
+        });
+    }
+
+    [Fact]
+    public async Task When_sending_async_with_delay_and_no_scheduler_should_throw_exception()
+    {
+        // Assert
+        await Assert.ThrowsAsync<ConfigurationException>(async () =>
+        {
+            // Act
+            await _producer.SendWithDelayAsync(_message, _delay);
         });
     }
 }
