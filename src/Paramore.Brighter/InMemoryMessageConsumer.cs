@@ -244,6 +244,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="message">The message to requeue</param>
     /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
+    /// <remarks>The requeue method will use the topic of the first message that it receives to create a producer, and use that to requeue</remarks>
     public bool Requeue(Message message, TimeSpan? timeOut = null)
     {
         timeOut ??= TimeSpan.Zero;
@@ -260,7 +261,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             return true;
         }
 
-        throw new ConfigurationException($"Cannot requeue {message.Id} with delay as unable to create producer"); 
+        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
 
     }
 
@@ -273,6 +274,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
     /// <param name="cancellationToken">Allows the asynchronous operation to be cancelled</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
+    /// <remarks>The requeue method will use the topic of the first message that it receives to create a producer, and use that to requeue</remarks>
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -291,7 +293,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             return true;
         }
 
-        throw new ConfigurationException($"Cannot requeue {message.Id} with delay as unable to create producer"); 
+        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
     }
 
     /// <inheritdoc cref="IDisposable"/>

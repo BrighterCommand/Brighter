@@ -176,7 +176,7 @@ SendWithDelay(message, delay):
         Scheduler.Schedule(message, delay)
     else:
         // Inform the user a scheduler was not configuree
-        throw new ConfigurationException("No scheduler available, cannot send message with delay")
+        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
 ```
 
 #### 2. InMemoryMessageConsumer (Modified)
@@ -326,7 +326,6 @@ else
 
 - **Slight complexity increase**: Consumer now has optional dependency on producer
 - **Indirect message path**: Delayed requeues go through scheduler → CommandProcessor → producer → bus instead of direct to bus
-- **Static timer dictionary in InMemoryScheduler**: The `InMemoryScheduler` uses a static `ConcurrentDictionary` which could cause issues in test isolation if not properly cleaned up
 
 ### Risks and Mitigations
 
