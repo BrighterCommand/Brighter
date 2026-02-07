@@ -31,7 +31,6 @@ public class AsyncInMemoryConsumerRequeueTests
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
-
         var handlerFactory = new SimpleHandlerFactory(
             _ => throw new ConfigurationException(),
             t =>
@@ -61,7 +60,7 @@ public class AsyncInMemoryConsumerRequeueTests
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
 
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var trace = new BrighterTracer(_timeProvider);
         var outbox = new InMemoryOutbox(_timeProvider)
@@ -110,7 +109,8 @@ public class AsyncInMemoryConsumerRequeueTests
         
         _internalBus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider, 
+            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler: _scheduler);
         
         //act
         var receivedMessage = await consumer.ReceiveAsync();
@@ -129,21 +129,22 @@ public class AsyncInMemoryConsumerRequeueTests
             new MessageHeader(Id.Random(), _routingKey, MessageType.MT_EVENT),
             new MessageBody("a test body"));
         
-        var bus = new InternalBus();
-        bus.Enqueue(expectedMessage);
+        _internalBus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, 
+        var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider, 
             ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler:_scheduler);
         
         //act
         var receivedMessage = await consumer.ReceiveAsync();
+        Assert.Empty(_internalBus.Stream(_routingKey));
+        
         await consumer.RequeueAsync(receivedMessage.Single(), TimeSpan.FromMilliseconds(1000));
         
         //assert
-        Assert.Empty(bus.Stream(_routingKey));
+        Assert.Empty(_internalBus.Stream(_routingKey));
         
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
         
-        Assert.Single(bus.Stream(_routingKey));
+        Assert.Single(_internalBus.Stream(_routingKey));
     }
 }
