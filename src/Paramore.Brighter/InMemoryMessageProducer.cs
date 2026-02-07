@@ -155,6 +155,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
+        /// <exception cref="ConfigurationException">Thrown if scheduler not available</exception>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
             // Send immediately when no delay requested
@@ -184,6 +185,7 @@ namespace Paramore.Brighter
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
         /// <param name="cancellationToken">A cancellation token for send operation</param>
+        /// <exception cref="ConfigurationException">Thrown if scheduler not available</exception>
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
             // Send immediately when no delay requested
