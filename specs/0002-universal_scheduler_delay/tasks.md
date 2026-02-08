@@ -224,7 +224,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
 
 ### RMQ Async Consumer
 
-- [ ] **TEST + IMPLEMENT: RMQ async consumer uses producer SendWithDelayAsync when native delay not supported**
+- [x] **TEST + IMPLEMENT: RMQ async consumer uses producer SendWithDelayAsync when native delay not supported**
   - **USE COMMAND**: `/test-first when rmq async consumer requeues without native delay should use producer`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_async_consumer_requeues_without_native_delay_should_use_producer.cs`
@@ -240,7 +240,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
     - Replace `Task.Delay(timeout.Value, cancellationToken)` block with producer call
     - Producer needs scheduler injected (add to constructor or property)
 
-- [ ] **TEST + IMPLEMENT: RMQ async consumer creates producer lazily with correct configuration**
+- [x] **TEST + IMPLEMENT: RMQ async consumer creates producer lazily with correct configuration**
   - **USE COMMAND**: `/test-first when rmq async consumer creates producer should use message topic and scheduler`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_async_consumer_creates_producer_should_use_message_topic_and_scheduler.cs`
@@ -254,7 +254,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
     - Create producer with message topic
     - Set scheduler on producer
 
-- [ ] **TEST + IMPLEMENT: RMQ async consumer disposes lazily created producer**
+- [x] **TEST + IMPLEMENT: RMQ async consumer disposes lazily created producer**
   - **USE COMMAND**: `/test-first when rmq async consumer disposes should dispose producer`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_async_consumer_disposes_should_dispose_producer.cs`
