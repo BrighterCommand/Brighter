@@ -15,14 +15,14 @@ public class InMemoryConsumerRejectTests
         var routingKey = new RoutingKey(myTopic);
 
         var expectedMessage = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_EVENT),
+            new MessageHeader(Id.Random(), routingKey, MessageType.MT_EVENT),
             new MessageBody("a test body"));
         
         var bus = new InternalBus();
         bus.Enqueue(expectedMessage);
 
         var timeProvider = new FakeTimeProvider();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
         
         //act
         var receivedMessage = consumer.Receive().Single();

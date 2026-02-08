@@ -105,7 +105,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         SnsAttributes? snsAttributes,
         SqsAttributes? sqsAttributes,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
-    => BrighterAsyncContext.Run(async () => await EnsureSubscriptionAsync(isFifo, queueUrl, routingKey, findTopicBy, snsAttributes, sqsAttributes, makeChannels));
+    => BrighterAsyncContext.Run(() => EnsureSubscriptionAsync(isFifo, queueUrl, routingKey, findTopicBy, snsAttributes, sqsAttributes, makeChannels));
     
 
     protected async Task<RoutingKey> EnsureSubscriptionAsync(

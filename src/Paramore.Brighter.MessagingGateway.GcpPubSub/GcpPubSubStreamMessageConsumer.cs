@@ -58,8 +58,9 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// to signal processing completion and prevents redelivery, while logging the rejection.
     /// </summary>
     /// <param name="message">The message to reject.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <returns>Always returns <c>true</c> indicating the operation was processed.</returns>
-    public bool Reject(Message message)
+    public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle) || receiptHandle is not GcpStreamMessage gcpStreamMessage)
         {
@@ -76,11 +77,12 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// to signal processing completion and prevents redelivery, while logging the rejection.
     /// </summary>
     /// <param name="message">The message to reject.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that returns <c>true</c>.</returns>
-    public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(Reject(message));
+        return Task.FromResult(Reject(message, reason));
     }
 
     /// <summary>
@@ -146,7 +148,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// <returns>An array containing one message if available, or an array with a default message if a timeout occurs.</returns>
     public Message[] Receive(TimeSpan? timeOut = null)
     {
-        return BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+        return BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
     }
     
     /// <summary>

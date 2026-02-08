@@ -52,7 +52,7 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
     /// <param name="subscription">The subscription details.</param>
     /// <returns>An asynchronous Brighter channel.</returns>
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
-        => BrighterAsyncContext.Run(async () => await CreateAsyncChannelAsync(subscription));
+        => BrighterAsyncContext.Run(() => CreateAsyncChannelAsync(subscription));
 
     /// <summary>
     /// Asynchronously creates an <see cref="IAmAChannelAsync"/> for the given subscription.

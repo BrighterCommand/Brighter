@@ -92,7 +92,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Sync over async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void PublishMessage(Message message) => BrighterAsyncContext.Run(async () => await PublishMessageAsync(message));
+        public void PublishMessage(Message message) => BrighterAsyncContext.Run(() => PublishMessageAsync(message));
 
         /// <summary>
         /// Sends the specified message asynchronously.

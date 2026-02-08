@@ -94,18 +94,18 @@ return;
 
 static PolicyRegistry? RegisterPolicies()
 {
-    var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
-    {
+    var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(
+    [
         TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
-    });
+    ]);
 
     var circuitBreakerPolicy =
         Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-    var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[]
-    {
+    var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(
+    [
         TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
-    });
+    ]);
 
     var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
         .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));

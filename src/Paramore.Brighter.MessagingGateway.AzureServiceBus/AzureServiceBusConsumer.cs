@@ -143,7 +143,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
+    public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
         
     /// <summary>
     /// Purges the specified queue name.
@@ -159,7 +159,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// </summary>
     /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
         
     /// <summary>
     /// Receives the specified queue name.
@@ -232,16 +232,18 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+    public bool Reject(Message message, MessageRejectionReason? reason = null) => BrighterAsyncContext.Run(() => RejectAsync(message, reason));
 
     /// <summary>
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">Cancel the rejection</param>
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
     {
         try
         {
@@ -250,7 +252,11 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
 
             if (string.IsNullOrEmpty(lockToken))
                 throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-            Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+           
+            var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
+            var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+            
+            Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken} Due to {Reason} because of {Description}", message.Id, lockToken, reasonString, description);
 
             if(ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
@@ -274,7 +280,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
+    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
 
     /// <summary>
     /// Requeues the specified message.

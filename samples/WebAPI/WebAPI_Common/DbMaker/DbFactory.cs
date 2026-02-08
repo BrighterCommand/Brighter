@@ -21,11 +21,11 @@ public static class DbFactory
         );
     
         var entityTableName = tableRequest.TableName;
-        (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] { entityTableName }).Result;
+        (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables([entityTableName]).Result;
         if (!hasTables.exist)
         {
             var buildTable = dbTableBuilder.Build(tableRequest).Result;
-            dbTableBuilder.EnsureTablesReady(new[] { tableRequest.TableName }, TableStatus.ACTIVE).Wait();
+            dbTableBuilder.EnsureTablesReady([tableRequest.TableName], TableStatus.ACTIVE).Wait();
         }
     }    
 }

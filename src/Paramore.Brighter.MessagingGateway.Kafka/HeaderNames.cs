@@ -62,21 +62,46 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public const string MESSAGE_ID = "MessageId";
 
-        /// <summary>
-        /// Used for a request-reply message to indicate the private channel to reply to
-        /// </summary>
-        public const string REPLY_TO = "ReplyTo";
+       /// <summary>
+       /// The topic we were sent to, before being diverted to DLQ or invalid message channel
+       /// </summary>
+       public const string ORIGINAL_TOPIC = "OriginalTopic";
+       
+       /// <summary>
+       /// The original type of the message (as may have changed to MT_UNACCEPTABLE)
+       /// </summary>
+       public const string ORIGINAL_TYPE = "OriginalType";
 
         /// <summary>
         /// The key used to partition this message
         /// </summary>
-        public static string PARTITIONKEY = "PartitionKey";
+        public const string PARTITIONKEY = "PartitionKey";
 
         /// <summary>
         /// What is the offset into the partition of the message
         /// </summary>
-        public static string PARTITION_OFFSET = "TopicPartitionOffset";
+        public const string PARTITION_OFFSET = "TopicPartitionOffset";
+        
+        ///<summary>
+        /// Why was the message rejected?
+        /// </summary>
+        public const string REJECTION_MESSAGE = "RejectionMessage";
+        
+        /// <summary>
+        /// Why was this message rejected
+        /// </summary>
+        public const string REJECTION_REASON = "RejectionReason";
 
+        /// <summary>
+        /// If we rejected the message, when did we?
+        /// </summary>
+        public const string REJECTION_TIMESTAMP = "RejectionTimestamp";
+        
+        /// <summary>
+        /// Used for a request-reply message to indicate the private channel to reply to
+        /// </summary>
+        public const string REPLY_TO = "ReplyTo";
+        
         /// <summary>
         /// The time that message was sent
         /// </summary>

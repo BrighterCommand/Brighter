@@ -10,14 +10,32 @@
 
 ## TDD Style
 
+**MANDATORY Tool**: ALWAYS use the `/test-first <behavior>` command (see [.claude/commands/tdd/test-first.md](../../.claude/commands/tdd/test-first.md)) when writing new tests.
+
+- **DO NOT write test files manually** (using Write tool) and proceed to implementation
+- **DO NOT run tests without approval**
+- **STOP after writing the test and ASK FOR APPROVAL**
+- The user will review the test in their IDE, not in CLI output
+- This is NOT optional - the approval gate is MANDATORY when working with Claude Code
+
+This ensures the mandatory approval step is never skipped and tests are reviewed before implementation.
+
 - We write developer tests
   - Failure of a test case implicates the most recent edit.
   - Do not use mocks to isolate the System Under Test (SUT).
     - We prefer developer tests that implicate the most recent edit, not isolation of classes.
 - Where possible, we are test first
   - Red: Write a failing test
+  - **APPROVAL**: Get approval for the test before implementing
   - Green: Make the test pass, commit any sins necessary to move fast
   - Refactor: Improve the design of the code.
+- **Approval Workflow** (⛔ MANDATORY - NOT OPTIONAL):
+  - When working on a feature, ALWAYS use `/test-first <behavior>` - do not write tests manually
+  - The skill will write the test and ASK FOR APPROVAL before proceeding
+  - The user will review the test in their IDE
+  - DO NOT run tests or start implementation without explicit user approval
+  - After approval, implement the minimum code to make the test pass
+  - The approval step is MANDATORY when working with Claude Code - you cannot bypass it
 - Where possible, avoid writing tests after.
   - This will not give you scope control - only writing the code required by tests.
     - You should only write the code necessary for a test to pass; do not write speculative code.
@@ -50,6 +68,17 @@
   - By following the rules for only testing behaviors, you only need to write tests for the behaviors exposed from the module not its details.
   - Private or Internal classes used in the implementation do not need tests - they are covered by the behavior that led to their creation.
 
+## No InternalsVisibleTo
+
+- **NEVER use `InternalsVisibleTo` to expose internal classes for testing.**
+- Internal classes should NOT be driven by unit tests directly.
+- Internal classes should emerge as implementation details through refactoring:
+  1. First, implement behavior in the public class (keep it simple)
+  2. As complexity grows, extract internal helper classes through refactoring
+  3. Tests always go through the public interface - internal classes are covered by those tests
+- If you need to inject a dependency for testing (e.g., randomness, I/O), make the interface **public** so it can be injected through the public API.
+- The goal is that tests are coupled to behavior, not implementation. Refactoring internals should never break tests.
+
 ## Test Doubles
 
 - Use fakes or mocks for I/O for testing core libraries such as Paramore.Brighter or Paramore.Brighter.ServiceActivator
@@ -59,11 +88,26 @@
   - See [ADR 0023](docs/adr/0023-reactor-and-nonblocking-io.md) for advice on how to replace I/O.
 - Do NOT use fakes or mocks for isolating a class.
   - We use developer tests: isolation is to the most recent edit, not a class.
-  - Do not inject dependencies into a constructor or property for test isolation 
-- You MAY use fakes or mocks (test doubles) for I/O or the strategy pattern. Prefer in-memory alternatives to fakes to mocks. 
+  - Do not inject dependencies into a constructor or property for test isolation
+- You MAY use fakes or mocks (test doubles) for I/O or the strategy pattern. Prefer in-memory alternatives to fakes to mocks.
   - You may use a test double to replace I/O as it is slow and has shared fixture making tests brittle.
   - You should look at using an in-memory substitute if testing core functionality that can use a range of alternative I/O. For example you can use an in-memory substitute such as InMemoryMessageProducer or InMemoryOutbox.
   - If you are testing the implementation of a messaging gateway (transport), outbox, inbox or other I/O adapter, you should create a suite of tests that use those directly to prove the implementation works. We separate these into test assemblies that require the dependency on a broker or database to run. This allows the core tests, that substitute I/O to run without additional dependencies, and indicates what dependencies you need to run a particular test suite.
   or use of the strategy pattern to satisfy the open-closed principle.
 - Only add code needed to satisfy a behavioral requirement expressed in a test.
   - Do not add speculative code, the need for which is not indicated by test.
+
+## Testing Middleware with Docker
+
+- When testing messaging gateways (Kafka, RabbitMQ, etc.) or databases, use Docker for test infrastructure
+- Docker Compose files for test infrastructure are located in the solution root (e.g., `docker-compose-kafka.yaml`)
+- Integration tests that require middleware should:
+  - Be in separate test assemblies (e.g., `Paramore.Brighter.Kafka.Tests`)
+  - Use docker-compose to spin up required infrastructure
+  - Test actual integration with the middleware, not mocked behavior
+  - Follow the same TDD workflow: write failing test, get approval, implement
+- Even when testing middleware, follow test-first practices:
+  - Write the integration test that exercises the behavior
+  - Get approval for the test
+  - Implement the code to make it pass
+  - This ensures you're building the right behavior from the start

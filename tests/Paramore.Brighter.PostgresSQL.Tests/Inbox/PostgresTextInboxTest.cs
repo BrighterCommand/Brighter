@@ -9,6 +9,7 @@ public class PostgresTextInboxTest : RelationalDatabaseInboxTests
     protected override string DefaultConnectingString => Const.ConnectionString;
     protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false;
+    protected override bool JsonMessagePayload => false;
     
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
@@ -20,7 +21,7 @@ public class PostgresTextInboxTest : RelationalDatabaseInboxTests
         using var connection = new NpgsqlConnection(configuration.ConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = PostgreSqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload);
+        command.CommandText = PostgreSqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload, JsonMessagePayload);
         command.ExecuteNonQuery();
     }
 

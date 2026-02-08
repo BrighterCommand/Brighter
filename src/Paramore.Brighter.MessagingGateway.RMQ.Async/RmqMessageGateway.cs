@@ -84,6 +84,9 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
             ContinuationTimeout = TimeSpan.FromSeconds(connection.ContinuationTimeout)
         };
 
+        // Configure SSL/TLS for mutual authentication if certificate is provided
+        RmqTlsConfigurator.ConfigureIfEnabled(_connectionFactory, connection);
+
         if (Connection.Exchange is null) throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
 
         DelaySupported = Connection.Exchange.SupportDelay;
@@ -123,7 +126,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     private async Task ConnectWithCircuitBreakerAsync(ChannelName queueName, OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {
-        await _circuitBreakerPolicy.ExecuteAsync(async () => await ConnectWithRetryAsync(queueName, makeExchange, cancellationToken));
+        await _circuitBreakerPolicy.ExecuteAsync(() => ConnectWithRetryAsync(queueName, makeExchange, cancellationToken));
     }
 
     private async Task ConnectWithRetryAsync(ChannelName queueName, OnMissingChannel makeExchange, CancellationToken cancellationToken = default)

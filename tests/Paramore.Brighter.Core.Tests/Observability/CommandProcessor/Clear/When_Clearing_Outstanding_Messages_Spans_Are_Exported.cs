@@ -11,6 +11,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -117,7 +118,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        _commandProcessor.DepositPost(new[]{eventOne, eventTwo, eventThree}, context);
+        _commandProcessor.DepositPost([eventOne, eventTwo, eventThree], context);
         
         //reset the parent span as deposit and clear are siblings
         

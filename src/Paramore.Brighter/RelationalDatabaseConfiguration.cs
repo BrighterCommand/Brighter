@@ -17,6 +17,7 @@
         /// <param name="queueStoreTable">Name of the queue store table.</param>
         /// <param name="schemaName">The schema name.</param>
         /// <param name="binaryMessagePayload">Is the message payload binary, or a UTF-8 string, default is false or UTF-8</param>
+        /// <param name="jsonMessagePayload">Whether to persist the message payload using the database’s native JSON type</param>
         public RelationalDatabaseConfiguration(
             string connectionString,
             string? databaseName = null,
@@ -24,7 +25,8 @@
             string? inboxTableName = null,
             string? queueStoreTable = null,
             string? schemaName = null,
-            bool binaryMessagePayload = false
+            bool binaryMessagePayload = false,
+            bool jsonMessagePayload = false
         )
         {
             DatabaseName = databaseName ?? DATABASE_NAME;
@@ -34,12 +36,18 @@
             QueueStoreTable = queueStoreTable ?? QUEUE_TABLE_NAME;
             SchemaName = schemaName;
             BinaryMessagePayload = binaryMessagePayload;
+            JsonMessagePayload = jsonMessagePayload;
         }
 
         /// <summary>
         /// Is the message payload binary, or a UTF-8 string. Default is false or UTF-8
         /// </summary>
         public bool BinaryMessagePayload { get; protected set; }
+
+        /// <summary>
+        /// Whether to persist the message payload using the database’s native JSON type
+        /// </summary>
+        public bool JsonMessagePayload { get; protected set; }
 
         /// <summary>
         /// Gets the connection string.

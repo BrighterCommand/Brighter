@@ -65,10 +65,7 @@ namespace Paramore.Test.Helpers.Loggers
         public JsonConsoleFormatter(IOptionsMonitor<CoreJsonConsoleFormatterOptions> options)
             : base(ConsoleFormatterNames.Json)
         {
-            if (options is null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
+            ArgumentNullException.ThrowIfNull(options);
 
             ReloadLoggerOptions(options.CurrentValue);
             _optionsReloadToken = options.OnChange(ReloadLoggerOptions);
@@ -85,10 +82,7 @@ namespace Paramore.Test.Helpers.Loggers
         public JsonConsoleFormatter(CoreJsonConsoleFormatterOptions options)
             : base(ConsoleFormatterNames.Json)
         {
-            if (options is null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
+            ArgumentNullException.ThrowIfNull(options);
 
             ReloadLoggerOptions(options);
         }
@@ -141,10 +135,7 @@ namespace Paramore.Test.Helpers.Loggers
         /// </remarks>
         public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
         {
-            if (textWriter is null)
-            {
-                throw new ArgumentNullException(nameof(textWriter));
-            }
+            ArgumentNullException.ThrowIfNull(textWriter);
 
             string message = logEntry.Formatter(logEntry.State, logEntry.Exception);
 
@@ -284,10 +275,7 @@ namespace Paramore.Test.Helpers.Loggers
                                     DateTimeOffset stamp,
                                     CoreJsonConsoleFormatterOptions formatterOptions)
         {
-            if (textWriter is null)
-            {
-                throw new ArgumentNullException(nameof(textWriter));
-            }
+            ArgumentNullException.ThrowIfNull(textWriter);
 
             const int DefaultBufferSize = 1024;
 

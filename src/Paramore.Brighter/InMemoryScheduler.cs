@@ -1,4 +1,29 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2025 Rafael Andrade
+    
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Threading;
@@ -137,7 +162,7 @@ public class InMemoryScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,
+    public Task<string> ScheduleAsync(Message message, DateTimeOffset at,
         CancellationToken cancellationToken = default)
     {
         if (at < timeProvider.GetUtcNow())
@@ -145,7 +170,7 @@ public class InMemoryScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        return await ScheduleAsync(message, at - timeProvider.GetUtcNow(), cancellationToken);
+        return ScheduleAsync(message, at - timeProvider.GetUtcNow(), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -174,7 +199,7 @@ public class InMemoryScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default)
         where TRequest : class, IRequest
     {
@@ -183,7 +208,7 @@ public class InMemoryScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        return await ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), cancellationToken);
+        return ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -245,7 +270,7 @@ public class InMemoryScheduler(
         if (fireMessage != null)
         {
             var (processor, message) = (fireMessage.Value.Item1, fireMessage.Value.Item2);
-            BrighterAsyncContext.Run(async () => await processor.SendAsync(message));
+            BrighterAsyncContext.Run(() => processor.SendAsync(message));
 
             if (s_timers.TryRemove(message.Id, out var timer))
             {
@@ -259,7 +284,7 @@ public class InMemoryScheduler(
         if (fireRequest != null)
         {
             var (processor, request) = (fireRequest.Value.Item1, fireRequest.Value.Item2);
-            BrighterAsyncContext.Run(async () => await processor.SendAsync(request));
+            BrighterAsyncContext.Run(() => processor.SendAsync(request));
 
             if (s_timers.TryRemove(request.Id, out var timer))
             {
