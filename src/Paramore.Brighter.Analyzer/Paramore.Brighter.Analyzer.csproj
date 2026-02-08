@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(BrighterNetStandardTargetFrameworks)</TargetFrameworks>
+    <Authors>Aboubakr Nasef</Authors>
+    <Description>Analyzers for the brighter library</Description>
+    <PackageTags>Analyzer;Scheduler;Message Scheduling;Command Processor;Brighter</PackageTags>
+    <IsPackable>false</IsPackable>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <developmentDependency>true</developmentDependency>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+</Project>

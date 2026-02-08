@@ -1,0 +1,5 @@
+dotnet_diagnostic.BRT001.severity = warning
+dotnet_diagnostic.BRT002.severity = warning
+dotnet_diagnostic.BRT003.severity = warning
+dotnet_diagnostic.BRT004.severity = warning
+dotnet_diagnostic.BRT005.severity = warning
