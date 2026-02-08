@@ -267,7 +267,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
 
 ### RMQ Sync Consumer
 
-- [ ] **TEST + IMPLEMENT: RMQ sync consumer uses producer SendWithDelay when native delay not supported**
+- [x] **TEST + IMPLEMENT: RMQ sync consumer uses producer SendWithDelay when native delay not supported**
   - **USE COMMAND**: `/test-first when rmq sync consumer requeues without native delay should use producer`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_sync_consumer_requeues_without_native_delay_should_use_producer.cs`
@@ -281,7 +281,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
     - Add lazy `RmqMessageProducer?` field
     - Replace `Task.Delay(timeout.Value).Wait()` block with producer call
 
-- [ ] **TEST + IMPLEMENT: RMQ sync consumer creates producer lazily and disposes it**
+- [x] **TEST + IMPLEMENT: RMQ sync consumer creates producer lazily and disposes it**
   - **USE COMMAND**: `/test-first when rmq sync consumer creates and disposes producer correctly`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_sync_consumer_creates_and_disposes_producer_correctly.cs`
