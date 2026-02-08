@@ -51,6 +51,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     private PullConsumer? _consumer;
     private RmqMessageProducer? _producer;
+    private readonly IAmAMessageScheduler? _scheduler;
     private readonly ChannelName _queueName;
     private readonly RoutingKeys _routingKeys;
     private readonly bool _isDurable;
@@ -81,6 +82,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="maxQueueLength">How lare can the buffer grow before we stop accepting new work?</param>
     /// <param name="makeChannels">Should we validate, or create missing channels</param>
     /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
+    /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
@@ -93,9 +95,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         TimeSpan? ttl = null,
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
-        QueueType queueType = QueueType.Classic)
+        QueueType queueType = QueueType.Classic,
+        IAmAMessageScheduler? scheduler = null)
         : this(connection, queueName, new RoutingKeys(routingKey), isDurable, highAvailability,
-            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType)
+            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType, scheduler)
     {
     }
 
@@ -114,6 +117,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="maxQueueLength">The maximum number of messages on the queue before we begin to reject publication of messages</param>
     /// <param name="makeChannels">Should we validate or create missing channels</param>
     /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
+    /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
@@ -126,7 +130,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         TimeSpan? ttl = null,
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
-        QueueType queueType = QueueType.Classic)
+        QueueType queueType = QueueType.Classic,
+        IAmAMessageScheduler? scheduler = null)
         : base(connection)
     {
         _queueName = queueName;
@@ -142,7 +147,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         _ttl = ttl;
         _maxQueueLength = maxQueueLength;
         _queueType = queueType;
-        
+        _scheduler = scheduler;
+
         // Validate quorum queue requirements
         if (_queueType == QueueType.Quorum)
         {
@@ -560,7 +566,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     {
         if (_producer != null) return;
 
-        var newProducer = new RmqMessageProducer(Connection);
+        var newProducer = new RmqMessageProducer(Connection)
+        {
+            Scheduler = _scheduler
+        };
         var original = Interlocked.CompareExchange(ref _producer, newProducer, null);
         if (original != null)
         {
