@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
@@ -51,6 +52,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
         private PullConsumer? _consumer;
+        private RmqMessageProducer? _producer;
+        private readonly IAmAMessageScheduler? _scheduler;
         private readonly ChannelName _queueName;
         private readonly RoutingKeys _routingKeys;
         private readonly bool _isDurable;
@@ -79,6 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="ttl">How long before a message on the queue expires. Defaults to infinite</param>
         /// <param name="maxQueueLength">How lare can the buffer grow before we stop accepting new work?</param>
         /// <param name="makeChannels">Should we validate, or create missing channels</param>
+        /// <param name="scheduler">Optional scheduler for delayed message delivery when native delay is not supported</param>
         public RmqMessageConsumer(
             RmqMessagingGatewayConnection connection,
             ChannelName queueName,
@@ -90,9 +94,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             RoutingKey? deadLetterRoutingKey = null,
             TimeSpan? ttl = null,
             int? maxQueueLength = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            IAmAMessageScheduler? scheduler = null)
             : this(connection, queueName, new RoutingKeys([routingKey]), isDurable, highAvailability,
-                batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels)
+                batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, scheduler)
         {
         }
 
@@ -110,6 +115,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="ttl">How long before a message on the queue expires. Defaults to infinite</param>
         /// <param name="maxQueueLength">The maximum number of messages on the queue before we begin to reject publication of messages</param>
         /// <param name="makeChannels">Should we validate or create missing channels</param>
+        /// <param name="scheduler">Optional scheduler for delayed message delivery when native delay is not supported</param>
         public RmqMessageConsumer(
             RmqMessagingGatewayConnection connection,
             ChannelName queueName,
@@ -121,7 +127,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             RoutingKey? deadLetterRoutingKey = null,
             TimeSpan? ttl = null,
             int? maxQueueLength = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            IAmAMessageScheduler? scheduler = null)
             : base(connection)
         {
             _queueName = queueName;
@@ -130,13 +137,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             _highAvailability = highAvailability;
             _batchSize = Convert.ToUInt16(batchSize);
             _makeChannels = makeChannels;
-            _consumerTag = Connection.Name + Uuid.New(); 
+            _consumerTag = Connection.Name + Uuid.New();
             _deadLetterQueueName = deadLetterQueueName;
             _deadLetterRoutingKey = deadLetterRoutingKey;
             //NOTE: Weird because netstandard20 can't understand that isnullor empty checks for null
             _hasDlq = !string.IsNullOrEmpty(deadLetterQueueName ?? string.Empty) && !string.IsNullOrEmpty(_deadLetterRoutingKey ?? string.Empty);
             _ttl = ttl;
             _maxQueueLength = maxQueueLength;
+            _scheduler = scheduler;
         }
 
         /// <summary>
@@ -295,15 +303,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 EnsureBroker(_queueName);
 
                 //Ensure Broker will create a channel if it is not already created
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection);
-                if (DelaySupported)
+                if (DelaySupported || timeout <= TimeSpan.Zero)
                 {
+                    var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection);
                     rmqMessagePublisher.RequeueMessage(message, _queueName, timeout.Value);
                 }
                 else
                 {
-                    if (timeout > TimeSpan.Zero) Task.Delay(timeout.Value).Wait();
-                    rmqMessagePublisher.RequeueMessage(message, _queueName, TimeSpan.Zero);
+                    EnsureProducer();
+                    _producer!.SendWithDelay(message, timeout);
                 }
 
                 //ack the original message to remove it from the queue
@@ -324,6 +332,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
 
   
+
+        private void EnsureProducer()
+        {
+            if (_producer != null) return;
+
+            var newProducer = new RmqMessageProducer(Connection)
+            {
+                Scheduler = _scheduler
+            };
+            var original = Interlocked.CompareExchange(ref _producer, newProducer, null);
+            if (original != null)
+            {
+                newProducer.Dispose();
+            }
+        }
 
         protected virtual void EnsureChannel()
         {
@@ -497,6 +520,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         public override void Dispose()
         {
             CancelConsumer();
+            _producer?.Dispose();
             Dispose(true);
             GC.SuppressFinalize(this);
         }
