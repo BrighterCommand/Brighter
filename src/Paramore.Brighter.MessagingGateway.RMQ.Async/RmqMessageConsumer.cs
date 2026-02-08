@@ -50,6 +50,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
     private PullConsumer? _consumer;
+    private RmqMessageProducer? _producer;
     private readonly ChannelName _queueName;
     private readonly RoutingKeys _routingKeys;
     private readonly bool _isDurable;
@@ -345,24 +346,20 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         try
         {
             Log.RequeueingMessage(s_logger, message.Id, timeout.Value.TotalMilliseconds);
-            
+
             await EnsureChannelAsync(cancellationToken);
-            
+
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
-            var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
-            if (DelaySupported)
+            if (DelaySupported || timeout <= TimeSpan.Zero)
             {
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
                 await rmqMessagePublisher.RequeueMessageAsync(message, _queueName, timeout.Value, cancellationToken);
             }
             else
             {
-                if (timeout > TimeSpan.Zero)
-                {
-                    await Task.Delay(timeout.Value, cancellationToken);
-                }
-
-                await rmqMessagePublisher.RequeueMessageAsync(message, _queueName, TimeSpan.Zero, cancellationToken);
+                EnsureProducer();
+                await _producer!.SendWithDelayAsync(message, timeout, cancellationToken);
             }
 
             //ack the original message to remove it from the queue
@@ -559,6 +556,18 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         return arguments;
     }
 
+    private void EnsureProducer()
+    {
+        if (_producer != null) return;
+
+        var newProducer = new RmqMessageProducer(Connection);
+        var original = Interlocked.CompareExchange(ref _producer, newProducer, null);
+        if (original != null)
+        {
+            newProducer.Dispose();
+        }
+    }
+
     private string GetDeadletterExchangeName()
     {
         //never likely to happen as caller will generally have asserted this
@@ -574,13 +583,15 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     public override void Dispose()
     {
         BrighterAsyncContext.Run(() => CancelConsumerAsync(CancellationToken.None));
+        _producer?.Dispose();
         Dispose(true);
         GC.SuppressFinalize(this);
     }
-    
+
     public override async ValueTask DisposeAsync()
     {
         await CancelConsumerAsync(CancellationToken.None);
+        _producer?.Dispose();
         Dispose(true);
         GC.SuppressFinalize(this);
     }
