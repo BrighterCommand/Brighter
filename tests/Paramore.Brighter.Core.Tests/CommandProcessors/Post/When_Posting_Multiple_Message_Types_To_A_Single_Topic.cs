@@ -40,7 +40,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             var messageProducer = new InMemoryMessageProducer(
                 _internalBus, 
-                timeProvider, 
                 new Publication
                 {
                     Topic = routingKey, 
@@ -52,7 +51,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             //This producer is for a different command type, but the same topic
             var otherMessageProducer = new InMemoryMessageProducer(
                 _internalBus, 
-                timeProvider, 
                 new Publication
                 {
                     Topic = routingKey, 

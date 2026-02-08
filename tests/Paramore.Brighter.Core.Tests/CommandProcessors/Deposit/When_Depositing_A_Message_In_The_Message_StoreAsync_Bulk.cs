@@ -38,13 +38,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 
             var timeProvider = new FakeTimeProvider();
 
-            InMemoryMessageProducer commandMessageProducer = new(_internalBus, timeProvider, new Publication 
+            InMemoryMessageProducer commandMessageProducer = new(_internalBus, new Publication 
             {
                 Topic =  new RoutingKey(_commandTopic),
                 RequestType = typeof(MyCommand)
             } );
 
-            InMemoryMessageProducer eventMessageProducer = new(_internalBus, timeProvider, new Publication
+            InMemoryMessageProducer eventMessageProducer = new(_internalBus, new Publication
             {
                 Topic =  new RoutingKey(_eventTopic),
                 RequestType = typeof(MyEvent)

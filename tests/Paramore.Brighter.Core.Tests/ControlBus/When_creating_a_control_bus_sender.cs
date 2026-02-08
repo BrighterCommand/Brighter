@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public ControlBusSenderFactoryTests()
         {
             _outbox = new InMemoryOutbox(TimeProvider.System);
-            _gateway = new InMemoryMessageProducer(new InternalBus(), TimeProvider.System);
+            _gateway = new InMemoryMessageProducer(new InternalBus());
 
             _senderFactory = new ControlBusSenderFactory();
         }

@@ -46,7 +46,7 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                [RoutingKey] = new InMemoryMessageProducer(InternalBus, TimeProvider, new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) })
+                [RoutingKey] = new InMemoryMessageProducer(InternalBus, new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) })
             });
 
             var messageMapperRegistry = GetMapperRegistery();
