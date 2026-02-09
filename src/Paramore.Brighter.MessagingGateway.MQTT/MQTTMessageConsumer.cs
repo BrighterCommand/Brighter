@@ -21,11 +21,13 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     public partial class MqttMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private readonly string _topic;
+        private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
         private readonly Queue<Message> _messageQueue = new();
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageConsumer>();
         private readonly Message _noopMessage = new();
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
+        private MqttMessageProducer? _requeueProducer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttMessageConsumer"/> class.
@@ -46,6 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </remarks>
         public MqttMessageConsumer(MqttMessagingGatewayConsumerConfiguration configuration)
         {
+            _configuration = configuration;
             _topic = $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
@@ -105,12 +108,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         public void Dispose()
         {
+            _requeueProducer?.Dispose();
             _mqttClient.Dispose();
         }
 
 
         public ValueTask DisposeAsync()
         {
+            _requeueProducer?.Dispose();
             _mqttClient.Dispose();
             return new ValueTask(Task.CompletedTask);
         }
@@ -191,19 +196,50 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
 
         /// <summary>
-        /// Not implemented Requeue Method.
+        /// Requeues a message by publishing it back to the same topic via a lazily-created producer.
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="delay"></param>
+        /// <param name="message">The message to requeue.</param>
+        /// <param name="delay">Optional delay before the message becomes available. Requires a scheduler when non-zero.</param>
+        /// <returns><c>true</c> if the message was successfully requeued.</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
-            return false;
+            message.Header.UpdateHandledCount();
+            EnsureRequeueProducer();
+            _requeueProducer!.SendWithDelay(message, delay);
+            return true;
         }
 
         public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(false);
+        }
+
+        /// <summary>
+        /// Ensures a requeue producer exists, creating one lazily on first use.
+        /// Uses <see cref="Interlocked.CompareExchange{T}"/> for thread-safe initialization.
+        /// </summary>
+        private void EnsureRequeueProducer()
+        {
+            if (_requeueProducer != null) return;
+
+            var producerConfig = new MqttMessagingGatewayProducerConfiguration
+            {
+                Hostname = _configuration.Hostname,
+                Port = _configuration.Port,
+                TopicPrefix = _configuration.TopicPrefix,
+                CleanSession = _configuration.CleanSession,
+                Username = _configuration.Username,
+                Password = _configuration.Password
+            };
+
+            var publisher = new MqttMessagePublisher(producerConfig);
+            var newProducer = new MqttMessageProducer(publisher, new Publication());
+            var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
+            if (original != null)
+            {
+                newProducer.Dispose();
+            }
         }
 
         private async Task Connect(int connectionAttempts)
