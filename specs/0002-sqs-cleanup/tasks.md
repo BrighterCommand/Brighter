@@ -18,7 +18,7 @@ Task 4 (SQS test tags)    ────────▶ Task 5 (Cleanup script)
 
 ## Phase 1: Make SNS Tags Configurable (production code)
 
-- [ ] **TEST + IMPLEMENT: SnsAttributes accepts and stores custom tags**
+- [x] **TEST + IMPLEMENT: SnsAttributes accepts and stores custom tags**
   - **USE COMMAND**: `/test-first when creating SnsAttributes with custom tags they should be stored and retrievable`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/`
   - Test file: `When_creating_sns_attributes_with_tags.cs`
@@ -34,7 +34,7 @@ Task 4 (SQS test tags)    ────────▶ Task 5 (Cleanup script)
     - Store tags in constructor body: `Tags = tags;`
     - Apply identical changes to `src/Paramore.Brighter.MessagingGateway.AWSSQS.V4/SnsAttributes.cs`
 
-- [ ] **TEST + IMPLEMENT: CreateTopicAsync applies custom tags from SnsAttributes**
+- [x] **TEST + IMPLEMENT: CreateTopicAsync applies custom tags from SnsAttributes**
   - **USE COMMAND**: `/test-first when creating an SNS topic with custom tags they should be applied alongside the default Source tag`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sns/Standard/Proactor/`
   - Test file: `When_creating_a_topic_with_custom_tags_async.cs`
@@ -51,7 +51,7 @@ Task 4 (SQS test tags)    ────────▶ Task 5 (Cleanup script)
 
 ## Phase 2: Tag Test Resources with `Environment=Test`
 
-- [ ] **TEST + IMPLEMENT: SNS test resources are tagged with Environment=Test**
+- [x] **TEST + IMPLEMENT: SNS test resources are tagged with Environment=Test**
   - **USE COMMAND**: `/test-first when an SNS PubSub test creates resources they should be tagged with Environment=Test`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sns/Standard/Proactor/`
   - Test file: `When_posting_a_message_resources_are_tagged_async.cs`
