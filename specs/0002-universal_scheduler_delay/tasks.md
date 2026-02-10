@@ -299,7 +299,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
 
 Kafka streams are immutable so traditional requeue is not possible. However, for delayed retry we can use the producer to send a new message.
 
-- [ ] **TEST + IMPLEMENT: Kafka consumer uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: Kafka consumer uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when kafka consumer requeues with delay should use producer`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway`
   - Test file: `When_kafka_consumer_requeues_with_delay_should_use_producer.cs`
@@ -315,7 +315,7 @@ Kafka streams are immutable so traditional requeue is not possible. However, for
     - When delay > 0, create producer and call `SendWithDelay()`
     - Keep no-op behavior when delay is null or zero
 
-- [ ] **TEST + IMPLEMENT: Kafka consumer RequeueAsync uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: Kafka consumer RequeueAsync uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when kafka consumer requeues async with delay should use producer`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway`
   - Test file: `When_kafka_consumer_requeues_async_with_delay_should_use_producer.cs`
@@ -328,7 +328,7 @@ Kafka streams are immutable so traditional requeue is not possible. However, for
     - Use same lazy producer
     - Call `SendWithDelayAsync()` when delay > 0
 
-- [ ] **TEST + IMPLEMENT: Kafka consumer creates producer with correct configuration**
+- [x] **TEST + IMPLEMENT: Kafka consumer creates producer with correct configuration**
   - **USE COMMAND**: `/test-first when kafka consumer creates producer should configure correctly`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway`
   - Test file: `When_kafka_consumer_creates_producer_should_configure_correctly.cs`
@@ -348,7 +348,7 @@ Kafka streams are immutable so traditional requeue is not possible. However, for
 
 MQTT currently returns false for requeue. Implement using producer for delayed retry.
 
-- [ ] **TEST + IMPLEMENT: MQTT consumer uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: MQTT consumer uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when mqtt consumer requeues with delay should use producer`
   - Test location: `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway`
   - Test file: `When_mqtt_consumer_requeues_with_delay_should_use_producer.cs`

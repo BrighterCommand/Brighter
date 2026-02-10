@@ -2,7 +2,7 @@
 
 **Branch:** `universal_delay`
 **Spec:** `specs/0002-universal_scheduler_delay/`
-**Status:** Phases 1-5 complete - PR 1 ready for review
+**Status:** Phase 8 (MQTT) in progress - task 1 of 3 complete
 
 ## Quick Context
 
@@ -24,43 +24,32 @@ We're adding universal scheduler support for delayed message delivery across all
 - [x] **Phase 3: InMemoryConsumer producer delegation** (4 tasks)
 - [x] **Phase 4: Consumer scheduler injection** (1 task - combined with Phase 3)
 - [x] **Phase 5: InMemory integration testing** (2 tasks)
+- [x] **Phase 6: RabbitMQ consumer updates** (5 tasks)
+- [x] **Phase 7: Kafka consumer updates** (3 tasks + refactored producer creation to deduplicate 5 methods into 1)
+- [x] **Phase 8, Task 1: MQTT sync consumer requeues via producer**
 
-### Phase 2 Summary - Producer Scheduler Integration
-Modified `InMemoryMessageProducer` to use configured scheduler for delayed sends:
-- `SendWithDelay()` uses scheduler when configured and delay > 0
-- `SendWithDelayAsync()` uses async scheduler when configured and delay > 0
-- Zero/null delay sends immediately via `Send()`
-- Timer fallback preserved for backward compatibility
+### Phase 8 Progress - MQTT Consumer Updates
 
-**Tests added:**
-- `When_sending_with_delay_and_scheduler_configured_should_use_scheduler`
-- `When_sending_async_with_delay_and_scheduler_configured_should_use_scheduler`
-- `When_sending_with_zero_delay_should_send_immediately_without_scheduler`
-- `When_sending_with_delay_and_no_scheduler_should_use_timer_fallback`
+MQTT previously returned `false` for requeue (not implemented). Now implementing requeue via lazily-created producer, same pattern as Kafka.
 
-### Phase 3 Summary - Consumer Producer Delegation
-Modified `InMemoryMessageConsumer` to delegate delayed requeues to producer:
-- Added optional `scheduler` parameter to constructor
-- `Requeue()` delegates to `producer.SendWithDelay()` when scheduler configured
-- `RequeueAsync()` delegates to `producer.SendWithDelayAsync()` when scheduler configured
-- Zero/null delay uses direct bus enqueue (existing behavior)
-- Lazy producer created on first delayed requeue
-- Producer disposed with consumer
+**Task 1 complete - sync `Requeue()`:**
+- `Requeue()` increments `HandledCount`, calls `EnsureRequeueProducer()`, then `SendWithDelay()`
+- `EnsureRequeueProducer()` creates a `MqttMessageProducer` with a **separate config** (no ClientID to avoid broker disconnecting the consumer)
+- Uses `Interlocked.CompareExchange` for thread-safe lazy creation
+- Producer disposed in `Dispose()` and `DisposeAsync()`
 
-**Tests added:**
-- `When_requeuing_with_delay_should_delegate_to_producer`
-- `When_requeuing_async_with_delay_should_delegate_to_producer`
-- `When_requeuing_with_zero_delay_should_use_direct_bus_enqueue`
-- `When_disposing_consumer_should_dispose_lazily_created_producer`
+**Key gotcha:** The requeue producer config must NOT copy the consumer's `ClientID`. MQTT brokers disconnect the first client when a second connects with the same ID. Omitting the ClientID lets MQTTnet generate a unique one.
 
-### Phase 5 Summary - InMemory Integration Testing
-Added integration tests verifying the complete flow:
-- `When_handler_defers_message_should_requeue_via_scheduler_after_delay` (4 tests)
-- `When_no_scheduler_configured_should_use_timer_fallback_for_backward_compatibility` (5 tests)
+**Remaining Phase 8 tasks:**
+- [ ] Task 2: `RequeueAsync()` delegates to producer `SendWithDelayAsync()`
+- [ ] Task 3: Producer configuration (scheduler injection) and disposal verification
+
+**Test file added:**
+- `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway/Reactor/When_mqtt_consumer_requeues_with_delay_should_use_producer.cs`
 
 ### What's Next
-1. PR 1 (Phases 1-5) is ready for review
-2. Transport-specific phases (6-11) can be done as separate PRs
+1. Continue Phase 8: MQTT async requeue (task 2), then config/dispose (task 3)
+2. After Phase 8: MsSql (9), Redis (10), Postgres verification (11)
 
 ## Implementation Summary
 
@@ -71,26 +60,26 @@ Added integration tests verifying the complete flow:
 | 3 | InMemoryConsumer producer delegation | 4 | ✅ Complete |
 | 4 | Consumer scheduler injection | 1 | ✅ Complete |
 | 5 | InMemory integration tests | 2 | ✅ Complete |
-| 6 | RabbitMQ consumer updates | 5 | Pending |
-| 7 | Kafka consumer updates | 3 | Pending |
-| 8 | MQTT consumer updates | 3 | Pending |
+| 6 | RabbitMQ consumer updates | 5 | ✅ Complete |
+| 7 | Kafka consumer updates | 3 | ✅ Complete |
+| 8 | MQTT consumer updates | 3 | 🔧 1/3 Complete |
 | 9 | MsSql consumer updates | 4 | Pending |
 | 10 | Redis consumer updates | 4 | Pending |
 | 11 | Postgres verification | 1 | Pending |
 
-**Total: 12/32 tasks complete**
+**Total: 21/32 tasks complete**
 
 ### Suggested PR Breakdown
 
-| PR | Phases | Description |
-|----|--------|-------------|
-| PR 1 | 1-5 | Core: InMemory scheduler/producer/consumer |
-| PR 2 | 6 | RabbitMQ consumer updates |
-| PR 3 | 7 | Kafka consumer updates |
-| PR 4 | 8 | MQTT consumer updates |
-| PR 5 | 9 | MsSql consumer updates |
-| PR 6 | 10 | Redis consumer updates |
-| PR 7 | 11 | Postgres verification |
+| PR | Phases | Description | Status |
+|----|--------|-------------|--------|
+| PR 1 | 1-5 | Core: InMemory scheduler/producer/consumer | Ready for review |
+| PR 2 | 6 | RabbitMQ consumer updates | Ready for review |
+| PR 3 | 7 | Kafka consumer updates | Ready for review |
+| PR 4 | 8 | MQTT consumer updates | In progress |
+| PR 5 | 9 | MsSql consumer updates | Pending |
+| PR 6 | 10 | Redis consumer updates | Pending |
+| PR 7 | 11 | Postgres verification | Pending |
 
 ## Key Files
 
@@ -103,15 +92,19 @@ Added integration tests verifying the complete flow:
 | InMemoryScheduler | `src/Paramore.Brighter/InMemoryScheduler.cs` |
 | InMemoryProducer | `src/Paramore.Brighter/InMemoryMessageProducer.cs` |
 | InMemoryConsumer | `src/Paramore.Brighter/InMemoryMessageConsumer.cs` |
+| RMQ Async Consumer | `src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs` |
+| RMQ Sync Consumer | `src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageConsumer.cs` |
+| Kafka Consumer | `src/Paramore.Brighter.MessagingGateway.Kafka/KafkaMessageConsumer.cs` |
+| MQTT Consumer | `src/Paramore.Brighter.MessagingGateway.MQTT/MQTTMessageConsumer.cs` |
 
 ## Transport Analysis
 
 | Transport | Current Delay | Native Support | Change Needed |
 |-----------|--------------|----------------|---------------|
 | InMemory | Direct timer | No | ✅ Uses scheduler via producer |
-| RMQ | `Task.Delay()` fallback | Yes (flag) | Use producer when native unavailable |
-| Kafka | No-op | No | Use producer |
-| MQTT | Returns false | No | Use producer |
+| RMQ | `Task.Delay()` fallback | Yes (flag) | ✅ Uses producer when native unavailable |
+| Kafka | No-op | No | ✅ Uses producer for requeue |
+| MQTT | Returns false | No | 🔧 Sync done, async pending |
 | MsSql | Ignores delay | No | Use producer |
 | Postgres | SQL UPDATE | Yes | Verify only |
 | Redis | Removed (blocked pump) | No | Use producer |
@@ -124,6 +117,18 @@ Added integration tests verifying the complete flow:
 
 # Continue TDD implementation
 /spec:implement
+
+# Run MQTT tests
+dotnet test tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj
+
+# Run Kafka tests
+dotnet test tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj
+
+# Run RMQ Async tests
+dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj
+
+# Run RMQ Sync tests
+dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj
 
 # Run InMemory tests
 dotnet test tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj
@@ -140,18 +145,4 @@ dotnet test Brighter.sln
 
 # Run specific test project
 dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj
-
-# Run InMemory tests (Producer + Consumer + Scheduler)
-dotnet test tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "FullyQualifiedName~Producer|FullyQualifiedName~Consumer|FullyQualifiedName~Scheduler"
 ```
-
-## Recent Commits (Phases 2-5)
-
-- `823eeafd6` - test: add Phase 5 InMemory integration tests for scheduler delay
-- `851363a8c` - test: verify consumer zero-delay requeue and producer disposal
-- `600048c1d` - feat: InMemoryMessageConsumer.RequeueAsync delegates to producer when scheduler configured
-- `2adabd4e2` - feat: InMemoryMessageConsumer.Requeue delegates to producer when scheduler configured
-- `a44772523` - test: verify timer fallback when no scheduler configured
-- `b5ffa2d9a` - feat: SendWithDelay sends immediately when delay is zero
-- `d5ec98daa` - feat: InMemoryMessageProducer.SendWithDelayAsync uses scheduler when configured
-- `c734dfd64` - feat: InMemoryMessageProducer.SendWithDelay uses scheduler when configured
