@@ -64,6 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly RoutingKey? _invalidMessageRoutingKey;
         private readonly Lazy<KafkaMessageProducer?>? _deadLetterProducer;
         private readonly Lazy<KafkaMessageProducer?>? _invalidMessageProducer;
+        private readonly IAmAMessageScheduler? _scheduler;
         private KafkaMessageProducer? _requeueProducer;
 
 
@@ -100,6 +101,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="timeProvider">The <see cref="TimeProvider"/> used to create the timer for sweeping uncommitted offsets. Defaults to <see cref="TimeProvider.System"/> if not specified. Can be overridden for testing purposes.</param>
         /// <param name="deadLetterRoutingKey">If we support a dead letter topic what is the <see cref="RoutingKey"/></param>
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
+        /// <param name="scheduler">Optional scheduler for delayed requeue operations. When provided, the lazily-created
+        /// requeue producer will use this scheduler for delayed sends.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -120,7 +123,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Action<ConsumerConfig>? configHook = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
-            TimeProvider? timeProvider = null
+            TimeProvider? timeProvider = null,
+            IAmAMessageScheduler? scheduler = null
             )
         {
             if (groupId is null)
@@ -129,7 +133,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Topic = routingKey ?? throw new ConfigurationException("You must set a RoutingKey as the Topic for the consumer");
             
             _configuration = configuration ?? throw new ConfigurationException("You must set a KafkaMessagingGatewayConfiguration to connect to a broker");
-            
+            _scheduler = scheduler;
+
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
             if (_deadLetterRoutingKey != null)
@@ -844,6 +849,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var newProducer = CreateProducer(Topic!);
             if (newProducer == null) return;
 
+            newProducer.Scheduler = _scheduler;
             var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
             if (original != null)
             {
