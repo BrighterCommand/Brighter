@@ -396,7 +396,7 @@ MQTT currently returns false for requeue. Implement using producer for delayed r
 
 MsSql currently ignores the delay parameter. Implement using producer for delayed retry.
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: MsSql consumer uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when mssql consumer requeues with delay should use producer`
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_requeues_with_delay_should_use_producer.cs`
@@ -410,7 +410,7 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
     - Add lazy producer field
     - When delay > 0, use producer's `SendWithDelay()` instead of `_sqlMessageQueue.Send()`
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer RequeueAsync uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: MsSql consumer RequeueAsync uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when mssql consumer requeues async with delay should use producer`
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_requeues_async_with_delay_should_use_producer.cs`
@@ -423,7 +423,7 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
     - Use same lazy producer
     - Call `SendWithDelayAsync()` when delay > 0
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer preserves immediate requeue behavior**
+- [x] **TEST + IMPLEMENT: MsSql consumer preserves immediate requeue behavior**
   - **USE COMMAND**: `/test-first when mssql consumer requeues with zero delay should use direct queue`
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_requeues_with_zero_delay_should_use_direct_queue.cs`
@@ -435,7 +435,7 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
     - Preserve existing direct queue behavior for zero/null delay
     - Only use producer when delay > 0
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer creates producer with correct configuration and disposes it**
+- [x] **TEST + IMPLEMENT: MsSql consumer creates producer with correct configuration and disposes it**
   - **USE COMMAND**: `/test-first when mssql consumer creates producer should configure and dispose correctly`
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_creates_producer_should_configure_and_dispose_correctly.cs`

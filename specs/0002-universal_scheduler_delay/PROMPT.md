@@ -48,11 +48,11 @@ Use `/spec:implement` to continue implementation from the next incomplete task.
 - [x] MQTT consumer RequeueAsync uses producer for delayed requeue
 - [x] MQTT consumer creates producer with correct configuration and disposes it
 
-### Phase 9: MsSql Consumer Updates - NOT STARTED
-- [ ] MsSql consumer uses producer for delayed requeue
-- [ ] MsSql consumer RequeueAsync uses producer for delayed requeue
-- [ ] MsSql consumer preserves immediate requeue behavior
-- [ ] MsSql consumer creates producer with correct configuration and disposes it
+### Phase 9: MsSql Consumer Updates - COMPLETE
+- [x] MsSql consumer uses producer for delayed requeue
+- [x] MsSql consumer RequeueAsync uses producer for delayed requeue
+- [x] MsSql consumer preserves immediate requeue behavior
+- [x] MsSql consumer creates producer with correct configuration and disposes it
 
 ### Phase 10: Redis Consumer Updates - NOT STARTED
 - [ ] Redis consumer uses producer for delayed requeue
