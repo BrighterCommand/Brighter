@@ -54,11 +54,11 @@ Use `/spec:implement` to continue implementation from the next incomplete task.
 - [x] MsSql consumer preserves immediate requeue behavior
 - [x] MsSql consumer creates producer with correct configuration and disposes it
 
-### Phase 10: Redis Consumer Updates - NOT STARTED
-- [ ] Redis consumer uses producer for delayed requeue
-- [ ] Redis consumer RequeueAsync uses producer for delayed requeue
-- [ ] Redis consumer preserves immediate requeue behavior
-- [ ] Redis consumer creates producer with correct configuration and disposes it
+### Phase 10: Redis Consumer Updates - COMPLETE
+- [x] Redis consumer uses producer for delayed requeue
+- [x] Redis consumer RequeueAsync uses producer for delayed requeue
+- [x] Redis consumer preserves immediate requeue behavior
+- [x] Redis consumer creates producer with correct configuration and disposes it
 
 ### Phase 11: Postgres Consumer (Verification Only) - NOT STARTED
 - [ ] Verify Postgres consumer delay works correctly with native SQL

@@ -459,7 +459,7 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
 
 Redis previously had delay support but it was removed because it blocked the pump. Re-implement using producer.
 
-- [ ] **TEST + IMPLEMENT: Redis consumer uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: Redis consumer uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when redis consumer requeues with delay should use producer`
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_requeues_with_delay_should_use_producer.cs`
@@ -474,7 +474,7 @@ Redis previously had delay support but it was removed because it blocked the pum
     - Add lazy `RedisMessageProducer?` field
     - When delay > 0, use producer's `SendWithDelay()` instead of direct list add
 
-- [ ] **TEST + IMPLEMENT: Redis consumer RequeueAsync uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: Redis consumer RequeueAsync uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when redis consumer requeues async with delay should use producer`
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_requeues_async_with_delay_should_use_producer.cs`
@@ -487,7 +487,7 @@ Redis previously had delay support but it was removed because it blocked the pum
     - Use same lazy producer
     - Call `SendWithDelayAsync()` when delay > 0
 
-- [ ] **TEST + IMPLEMENT: Redis consumer preserves immediate requeue behavior**
+- [x] **TEST + IMPLEMENT: Redis consumer preserves immediate requeue behavior**
   - **USE COMMAND**: `/test-first when redis consumer requeues with zero delay should use direct list`
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_requeues_with_zero_delay_should_use_direct_list.cs`
@@ -500,7 +500,7 @@ Redis previously had delay support but it was removed because it blocked the pum
     - Preserve existing direct list behavior for zero/null delay
     - Only use producer when delay > 0
 
-- [ ] **TEST + IMPLEMENT: Redis consumer creates producer with correct configuration and disposes it**
+- [x] **TEST + IMPLEMENT: Redis consumer creates producer with correct configuration and disposes it**
   - **USE COMMAND**: `/test-first when redis consumer creates producer should configure and dispose correctly`
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_creates_producer_should_configure_and_dispose_correctly.cs`
