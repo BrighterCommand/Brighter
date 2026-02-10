@@ -27,28 +27,34 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private readonly Message _noopMessage = new();
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
+        private readonly IAmAMessageScheduler? _scheduler;
         private MqttMessageProducer? _requeueProducer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttMessageConsumer"/> class.
         /// </summary>
         /// <param name="configuration">
-        /// The configuration settings for the MQTT message consumer, including connection details, 
+        /// The configuration settings for the MQTT message consumer, including connection details,
         /// topic prefix, client credentials, and other options.
+        /// </param>
+        /// <param name="scheduler">
+        /// Optional scheduler for delayed message redelivery. When provided, the lazily-created
+        /// requeue producer will use this scheduler for delayed sends.
         /// </param>
         /// <exception cref="ArgumentNullException">
         /// Thrown when the <paramref name="configuration.TopicPrefix"/> is null.
         /// </exception>
         /// <remarks>
-        /// This constructor sets up the MQTT client with the provided configuration, establishes 
+        /// This constructor sets up the MQTT client with the provided configuration, establishes
         /// the connection to the broker, and subscribes to the specified topic.
         ///
         /// 04/03/2025:
         ///     - Removed support for user properties as they are not supported in v3.1.1 of the MQTT protocol.
         /// </remarks>
-        public MqttMessageConsumer(MqttMessagingGatewayConsumerConfiguration configuration)
+        public MqttMessageConsumer(MqttMessagingGatewayConsumerConfiguration configuration, IAmAMessageScheduler? scheduler = null)
         {
             _configuration = configuration;
+            _scheduler = scheduler;
             _topic = $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
@@ -209,10 +215,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             return true;
         }
 
-        public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
+        /// <summary>
+        /// Requeues a message asynchronously by publishing it back to the same topic via a lazily-created producer.
+        /// </summary>
+        /// <param name="message">The message to requeue.</param>
+        /// <param name="delay">Optional delay before the message becomes available. Requires a scheduler when non-zero.</param>
+        /// <param name="cancellationToken">Allows cancellation of the requeue operation.</param>
+        /// <returns><c>true</c> if the message was successfully requeued.</returns>
+        public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(false);
+            message.Header.UpdateHandledCount();
+            EnsureRequeueProducer();
+            await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
+            return true;
         }
 
         /// <summary>
@@ -234,7 +250,10 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             };
 
             var publisher = new MqttMessagePublisher(producerConfig);
-            var newProducer = new MqttMessageProducer(publisher, new Publication());
+            var newProducer = new MqttMessageProducer(publisher, new Publication())
+            {
+                Scheduler = _scheduler
+            };
             var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
             if (original != null)
             {

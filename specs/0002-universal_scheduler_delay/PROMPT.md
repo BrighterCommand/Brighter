@@ -42,10 +42,10 @@ Use `/spec:implement` to continue implementation from the next incomplete task.
 - [ ] Kafka consumer RequeueAsync uses producer for delayed requeue
 - [ ] Kafka consumer creates producer with correct configuration
 
-### Phase 8: MQTT Consumer Updates - NOT STARTED
-- [ ] MQTT consumer uses producer for delayed requeue
-- [ ] MQTT consumer RequeueAsync uses producer for delayed requeue
-- [ ] MQTT consumer creates producer with correct configuration and disposes it
+### Phase 8: MQTT Consumer Updates - COMPLETE
+- [x] MQTT consumer uses producer for delayed requeue
+- [x] MQTT consumer RequeueAsync uses producer for delayed requeue
+- [x] MQTT consumer creates producer with correct configuration and disposes it
 
 ### Phase 9: MsSql Consumer Updates - NOT STARTED
 - [ ] MsSql consumer uses producer for delayed requeue

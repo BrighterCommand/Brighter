@@ -363,7 +363,7 @@ MQTT currently returns false for requeue. Implement using producer for delayed r
     - When delay > 0, create producer and call `SendWithDelay()`
     - Return true on success
 
-- [ ] **TEST + IMPLEMENT: MQTT consumer RequeueAsync uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: MQTT consumer RequeueAsync uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when mqtt consumer requeues async with delay should use producer`
   - Test location: `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway`
   - Test file: `When_mqtt_consumer_requeues_async_with_delay_should_use_producer.cs`
@@ -376,7 +376,7 @@ MQTT currently returns false for requeue. Implement using producer for delayed r
     - Use same lazy producer
     - Call `SendWithDelayAsync()` when delay > 0
 
-- [ ] **TEST + IMPLEMENT: MQTT consumer creates producer with correct configuration and disposes it**
+- [x] **TEST + IMPLEMENT: MQTT consumer creates producer with correct configuration and disposes it**
   - **USE COMMAND**: `/test-first when mqtt consumer creates producer should configure and dispose correctly`
   - Test location: `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway`
   - Test file: `When_mqtt_consumer_creates_producer_should_configure_and_dispose_correctly.cs`
