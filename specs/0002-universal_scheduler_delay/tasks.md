@@ -524,7 +524,7 @@ Redis previously had delay support but it was removed because it blocked the pum
 
 Postgres has native delay support via SQL UPDATE with `visible_timeout`. Verify it works correctly.
 
-- [ ] **TEST: Verify Postgres consumer delay works correctly with native SQL**
+- [x] **TEST: Verify Postgres consumer delay works correctly with native SQL**
   - **USE COMMAND**: `/test-first when postgres consumer requeues with delay should use native sql`
   - Test location: `tests/Paramore.Brighter.Postgres.Tests/MessagingGateway`
   - Test file: `When_postgres_consumer_requeues_with_delay_should_use_native_sql.cs`

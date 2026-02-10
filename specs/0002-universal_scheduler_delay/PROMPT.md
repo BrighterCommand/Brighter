@@ -60,8 +60,8 @@ Use `/spec:implement` to continue implementation from the next incomplete task.
 - [x] Redis consumer preserves immediate requeue behavior
 - [x] Redis consumer creates producer with correct configuration and disposes it
 
-### Phase 11: Postgres Consumer (Verification Only) - NOT STARTED
-- [ ] Verify Postgres consumer delay works correctly with native SQL
+### Phase 11: Postgres Consumer (Verification Only) - COMPLETE
+- [x] Verify Postgres consumer delay works correctly with native SQL
 
 ## Implementation Pattern
 
