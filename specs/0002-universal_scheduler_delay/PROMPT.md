@@ -37,10 +37,11 @@ Use `/spec:implement` to continue implementation from the next incomplete task.
 - [x] RMQ sync consumer uses producer SendWithDelay when native delay not supported
 - [x] RMQ sync consumer creates producer lazily and disposes it
 
-### Phase 7: Kafka Consumer Updates - NOT STARTED
-- [ ] Kafka consumer uses producer for delayed requeue
-- [ ] Kafka consumer RequeueAsync uses producer for delayed requeue
-- [ ] Kafka consumer creates producer with correct configuration
+### Phase 7: Kafka Consumer Updates - COMPLETE
+- [x] Kafka consumer uses producer for delayed requeue
+- [x] Kafka consumer RequeueAsync uses producer for delayed requeue
+- [x] Kafka consumer creates producer with correct configuration
+- [x] Kafka consumer passes scheduler to lazily-created requeue producer (bug fix)
 
 ### Phase 8: MQTT Consumer Updates - COMPLETE
 - [x] MQTT consumer uses producer for delayed requeue
