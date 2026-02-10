@@ -158,18 +158,25 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
+        /// <param name="delay">When greater than zero, uses a producer with scheduler for delayed requeue</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the operation</param>
         /// <returns>True when message is requeued</returns>
         public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             delay ??= TimeSpan.Zero;
-            
-            // delay is not natively supported - don't block with Task.Delay
-            var topic = message.Header.Topic;
 
+            var topic = message.Header.Topic;
             Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
 
-            await _sqlMessageQueue.SendAsync(message, topic, null, cancellationToken: cancellationToken); 
+            if (delay > TimeSpan.Zero)
+            {
+                message.Header.UpdateHandledCount();
+                EnsureRequeueProducer();
+                await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
+                return true;
+            }
+
+            await _sqlMessageQueue.SendAsync(message, topic, null, cancellationToken: cancellationToken);
             return true;
         }
 
