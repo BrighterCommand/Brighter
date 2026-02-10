@@ -69,7 +69,7 @@ Task 4 (SQS test tags)    ────────▶ Task 5 (Cleanup script)
     - For tests that don't currently specify `SqsAttributes`, add `queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } })` to the subscription constructor
     - For SNS tests that don't currently specify `SnsAttributes`, add `topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])` to the subscription constructor
 
-- [ ] **TEST + IMPLEMENT: SQS point-to-point test resources are tagged with Environment=Test**
+- [x] **TEST + IMPLEMENT: SQS point-to-point test resources are tagged with Environment=Test**
   - **USE COMMAND**: `/test-first when an SQS point-to-point test creates resources they should be tagged with Environment=Test`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Proactor/`
   - Test file: `When_posting_a_message_resources_are_tagged_async.cs`
