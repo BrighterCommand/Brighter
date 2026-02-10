@@ -2,10 +2,10 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AwsDynamoDbV4>4.0.13</AwsDynamoDbV4>
+    <AwsDynamoDbV4>4.0.14</AwsDynamoDbV4>
     <AWSSDKIdentityManagementV4>4.0.9.7</AWSSDKIdentityManagementV4>
     <AWSSDKSchedulerV4>4.0.2.13</AWSSDKSchedulerV4>
-    <AWSSDKV4>4.0.18.1</AWSSDKV4>
+    <AWSSDKV4>4.0.18.3</AWSSDKV4>
     <AWSSecurityTokenV4>4.0.5.9</AWSSecurityTokenV4>
     <AWSSQSV4>4.0.2.14</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.2.16</AWSSDKSimpleNotificationServiceV4>
@@ -50,12 +50,12 @@
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.14.0" />
     <PackageVersion Include="Google.Cloud.Tasks.V2" Version="3.5.0" />
     <PackageVersion Include="Grpc.Core.Api" Version="2.76.0" />
-    <PackageVersion Include="Hangfire.Core" Version="1.8.22" />
+    <PackageVersion Include="Hangfire.Core" Version="1.8.23" />
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
     <PackageVersion Include="JustSaying" Version="8.0.0" />
     <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="8.0.0" />
-    <PackageVersion Include="MassTransit" Version="9.0.0" />
-    <PackageVersion Include="MassTransit.AmazonSQS" Version="9.0.0" />
+    <PackageVersion Include="MassTransit" Version="9.0.1" />
+    <PackageVersion Include="MassTransit.AmazonSQS" Version="9.0.1" />
     <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="10.0.2" />
@@ -120,7 +120,7 @@
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.10.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.1" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.2" />
     <PackageVersion Include="System.CommandLine" Version="2.0.2" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.2" />
@@ -173,7 +173,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.2" />
-    <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="9.0.4" />
+    <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="10.0.0" />
     <PackageVersion Include="Npgsql" Version="10.0.1" />
     <PackageVersion Include="TickerQ" Version="10.0.2" />
   </ItemGroup>

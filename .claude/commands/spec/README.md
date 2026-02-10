@@ -38,6 +38,10 @@ The spec commands provide a structured approach to designing and implementing fe
  Implementation ─────────► /spec:implement
       │                   (TDD: Tests → Code)
       │
+      ├── OR (unattended) ► /spec:ralph-tasks
+      │                     /spec:ralph-implement [count]
+      │                     scripts/ralph.sh [n] [max] [cooldown]
+      │
       ▼
  Pull Request
 ```
@@ -351,6 +355,110 @@ The implement command follows a rigorous Red-Green-Refactor cycle:
 
 ---
 
+### `/spec:ralph-tasks`
+
+Generate `ralph-tasks.md` for unattended TDD implementation via the Ralph loop.
+
+```bash
+/spec:ralph-tasks
+```
+
+Creates `specs/{current-spec}/ralph-tasks.md` - a variant of `tasks.md` reformatted for unattended execution:
+
+- **No approval gates**: No `⛔ STOP HERE` or `/test-first` directives
+- **RALPH-VERIFY**: Each task includes an exact `dotnet test --filter` command
+- **References**: Each task lists files/ADRs to read (self-contained for fresh context)
+- **Strict atomicity**: One behavior per task, ~200 lines max, ordered by dependency
+
+**Requirements:**
+- Tasks must be approved (`.tasks-approved` exists)
+- All ADRs must be approved (Status: Accepted)
+
+**Ralph task format:**
+```markdown
+- [ ] **[Brief behavior description]**
+  - **Behavior**: [Precise behavioral specification]
+  - **Test file**: `tests/[Project]/[When_condition_should_behavior.cs]`
+  - **Test should verify**:
+    - [Point 1]
+    - [Point 2]
+  - **Implementation files**:
+    - `src/[Project]/[File.cs]` - [What to add/change]
+  - **RALPH-VERIFY**: `dotnet test tests/[Project]/ --filter "FullyQualifiedName~When_condition_should_behavior"`
+  - **References**: [ADR numbers, requirement sections, existing code files]
+```
+
+---
+
+### `/spec:ralph-implement [count]`
+
+Unattended TDD implementation from `ralph-tasks.md`. Core command invoked by the Ralph loop bash script.
+
+```bash
+# Implement next task (default)
+/spec:ralph-implement
+
+# Implement next 3 tasks
+/spec:ralph-implement 3
+```
+
+**Key difference from `/spec:implement`**: No `AskUserQuestion` - runs completely unattended.
+
+**Workflow per task:**
+1. Check for `RALPH_STOP` file (halt if present)
+2. Read task references for context
+3. 🔴 RED: Write test, verify it fails
+4. 🟢 GREEN: Write minimum implementation, verify test passes, check for regressions
+5. 🔵 REFACTOR: Apply Tidy First improvements
+6. Commit and mark task complete in `ralph-tasks.md`
+
+**Stop mechanisms:**
+- `count` parameter limits tasks per invocation
+- `RALPH_STOP` file at repo root halts after current task
+- Automatically stops when all tasks complete
+
+**Error handling:** Failed tasks are marked `- [!]` with an explanation and skipped.
+
+**Requirements:**
+- Tasks must be approved (`.tasks-approved` exists)
+- `ralph-tasks.md` must exist (run `/spec:ralph-tasks` first)
+
+---
+
+### Using the Ralph Loop
+
+The Ralph loop enables unattended, overnight TDD implementation by running Claude Code in a bash loop with fresh context per iteration.
+
+**Setup:**
+```bash
+# 1. Complete the spec workflow up to approved tasks
+/spec:requirements 123
+/spec:approve requirements
+/spec:design message-serialization
+/spec:approve design
+/spec:tasks
+/spec:approve tasks
+
+# 2. Generate ralph-tasks from approved tasks
+/spec:ralph-tasks
+
+# 3. Review ralph-tasks.md in your IDE
+
+# 4. Run the loop
+./scripts/ralph.sh              # defaults: 1 task/run, 50 max iterations
+./scripts/ralph.sh 2 20 10      # 2 tasks/run, 20 max iterations, 10s cooldown
+
+# 5. Stop the loop (if needed)
+touch RALPH_STOP                # halts after current task completes
+```
+
+**Environment variables:**
+```bash
+RALPH_MODEL=opus RALPH_BUDGET=10 ./scripts/ralph.sh
+```
+
+---
+
 ## Complete Example
 
 Here's a complete workflow for adding a new feature:
@@ -409,6 +517,7 @@ Brighter/
 │       ├── .adr-list                      # List of associated ADRs
 │       ├── requirements.md                # User requirements
 │       ├── tasks.md                       # Implementation tasks
+│       ├── ralph-tasks.md                 # Unattended TDD tasks (optional)
 │       └── README.md                      # Spec overview
 ├── docs/
 │   └── adr/
