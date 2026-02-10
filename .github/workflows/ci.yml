@@ -528,6 +528,12 @@ jobs:
         run: |
           dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
           dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+      - name: Cleanup orphaned test resources
+        if: always()
+        run: |
+          chmod +x ./clean_failed_tests_aws_assets.sh
+          ./clean_failed_tests_aws_assets.sh
+        continue-on-error: true
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
@@ -563,6 +569,12 @@ jobs:
         run: |
           dotnet test ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
           dotnet test ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+      - name: Cleanup orphaned test resources
+        if: always()
+        run: |
+          chmod +x ./clean_failed_tests_aws_assets.sh
+          ./clean_failed_tests_aws_assets.sh
+        continue-on-error: true
 
   sqlite-ci:
     runs-on: ubuntu-latest

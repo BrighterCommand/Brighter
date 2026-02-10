@@ -84,7 +84,7 @@ Task 4 (SQS test tags)    ────────▶ Task 5 (Cleanup script)
 
 ## Phase 3: Cleanup Script
 
-- [ ] **TEST + IMPLEMENT: Cleanup script identifies and deletes only tagged test resources**
+- [x] **TEST + IMPLEMENT: Cleanup script identifies and deletes only tagged test resources**
   - **USE COMMAND**: `/test-first when running the cleanup script it should delete resources tagged Environment=Test and leave untagged resources`
   - Test location: project root
   - Test file: `test_clean_failed_tests_aws_assets.sh` (bash test script)
@@ -108,7 +108,7 @@ Task 4 (SQS test tags)    ────────▶ Task 5 (Cleanup script)
 
 ## Phase 4: CI Integration
 
-- [ ] **IMPLEMENT: Add cleanup step to CI workflow after AWS test jobs**
+- [x] **IMPLEMENT: Add cleanup step to CI workflow after AWS test jobs**
   - Implementation should:
     - Add a new step to the `aws-ci` job in `.github/workflows/ci.yml` after the test step:
       ```yaml
