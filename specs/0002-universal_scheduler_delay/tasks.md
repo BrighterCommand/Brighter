@@ -440,14 +440,18 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_creates_producer_should_configure_and_dispose_correctly.cs`
   - Test should verify:
-    - Producer uses message topic
-    - Producer has scheduler configured
-    - Producer is disposed with consumer
+    - Create consumer directly (not via factory) with a `SpySchedulerSync` injected
+    - Requeue with a **non-zero delay** (e.g. `TimeSpan.FromSeconds(5)`) to exercise the scheduler path
+    - Assert the spy scheduler's `Schedule()` was called with the correct delay — this proves the scheduler was wired through to the lazily-created producer
+    - Producer is disposed with consumer (dispose after requeue should not throw)
+    - Dispose without requeue should also not throw
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Add scheduler parameter to consumer constructor
-    - Add `EnsureProducer()` method
+    - Store in `_scheduler` field
+    - Set `Scheduler = _scheduler` on producer in `EnsureProducer()`
     - Add producer disposal
+  - **Lesson from Kafka/MQTT**: Tests that only requeue with null/zero delay never hit the scheduler cast in `SendWithDelay` — a spy with non-zero delay is required to catch missing wiring
 
 ---
 
@@ -501,14 +505,18 @@ Redis previously had delay support but it was removed because it blocked the pum
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_creates_producer_should_configure_and_dispose_correctly.cs`
   - Test should verify:
-    - Producer uses message topic
-    - Producer has scheduler configured
-    - Producer is disposed with consumer
+    - Create consumer directly (not via factory) with a `SpySchedulerSync` injected
+    - Requeue with a **non-zero delay** (e.g. `TimeSpan.FromSeconds(5)`) to exercise the scheduler path
+    - Assert the spy scheduler's `Schedule()` was called with the correct delay — this proves the scheduler was wired through to the lazily-created producer
+    - Producer is disposed with consumer (dispose after requeue should not throw)
+    - Dispose without requeue should also not throw
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Add scheduler parameter to consumer constructor
-    - Add `EnsureProducer()` method
+    - Store in `_scheduler` field
+    - Set `Scheduler = _scheduler` on producer in `EnsureProducer()`
     - Add producer disposal
+  - **Lesson from Kafka/MQTT**: Tests that only requeue with null/zero delay never hit the scheduler cast in `SendWithDelay` — a spy with non-zero delay is required to catch missing wiring
 
 ---
 
