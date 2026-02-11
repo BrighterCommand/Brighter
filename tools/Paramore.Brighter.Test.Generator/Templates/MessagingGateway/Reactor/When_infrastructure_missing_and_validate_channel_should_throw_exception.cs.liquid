@@ -29,9 +29,16 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException : I
         _messageBuilder = new {{ MessageBuilder }}();
     }
 
-    public async void Dispose()
+    public void Dispose()
     {
-        _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
+        try
+        {
+            _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
+        }
+        catch
+        {
+            // The infrastructure might not exist, so we ignore any cleanup errors
+        }
     }
 
     [Fact]

@@ -36,7 +36,14 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
 
     public async Task DisposeAsync()
     {
-        await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
+        try
+        {
+            await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
+        }
+        catch
+        {
+            // The infrastructure might not exist, so we ignore any cleanup errors
+        }
     }
 
     [Fact]
