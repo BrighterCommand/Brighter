@@ -12,8 +12,8 @@ Fix the AWS SQS message consumer to send rejected messages directly to a DLQ que
 ## Workflow Status
 
 - [x] Requirements defined
-- [ ] Requirements approved
-- [ ] ADRs created (may not need new ADR - covered by ADR 0034)
+- [x] Requirements approved
+- [x] ADRs created
 - [ ] Tasks created
 - [ ] Tasks approved
 - [ ] Implementation complete
@@ -28,6 +28,7 @@ Fix the AWS SQS message consumer to send rejected messages directly to a DLQ que
 
 - [ADR 0034: Provide DLQ Where Missing](../../docs/adr/0034-provide-dlq-where-missing.md) - High-level DLQ strategy (existing)
 - [ADR 0036: Message Rejection Routing Strategy](../../docs/adr/0036-message-rejection-routing-strategy.md) - Routing logic (existing)
+- [ADR 0038: AWS SQS DLQ Direct Send](../../docs/adr/0038-aws-sqs-dlq-direct-send.md) - SQS-specific implementation decisions
 
 ## Scope
 
