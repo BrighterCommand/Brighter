@@ -73,7 +73,11 @@ The DLQ target is an SQS queue identified by a `RoutingKey`. The consumer needs 
 
 ### 5. Producer Creation
 
-The `SqsMessageConsumerFactory` will create lazy `SqsMessageProducer` instances for DLQ and invalid message channels, following the same pattern as `KafkaMessageConsumerFactory`. The producer's sync/async variant matches the consumer per ADR 0034.
+The `SqsMessageConsumer` will create lazy `SqsMessageProducer` instances for DLQ and invalid message channels, following the same pattern as `KafkaMessageConsumer`. 
+
+It needs to use the `SqsMessageProducerFactory` to create a producer, so as to pick up the call to `ConfirmQueueExists` or `ConfirmQueueExistsAsync`. The publication used to create the producer, should inherit the MakeChannels setting from the consumer.  
+
+The producer's sync/async variant matches the consumer per ADR 0034.
 
 ### 6. Metadata Enrichment
 
