@@ -39,8 +39,9 @@ public interface IAmAMessageGatewayReactorProvider
     /// <param name="routingKey">The routing key to subscribe to.</param>
     /// <param name="channelName">The channel name for receiving messages.</param>
     /// <param name="makeChannel">The action to take when the channel is missing.</param>
+    /// <param name="setupDeadLetterQueue">Whether to set up a dead letter queue.</param>
     /// <returns>A subscription configuration.</returns>
-    Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName, OnMissingChannel makeChannel);
+    Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName, OnMissingChannel makeChannel, bool setupDeadLetterQueue = false);
 
     /// <summary>
     /// Creates an synchronous message producer for the specified publication.
@@ -64,4 +65,11 @@ public interface IAmAMessageGatewayReactorProvider
     /// <param name="messages">The messages to clean up.</param>
     /// <returns>A task representing the cleanup operation.</returns>
     void CleanUp(IAmAMessageProducerSync? producer, IAmAChannelSync? channel, IEnumerable<Message> messages);
+
+    /// <summary>
+    /// Gets a message from the dead letter queue for the specified subscription.
+    /// </summary>
+    /// <param name="subscription">The subscription configuration.</param>
+    /// <returns>The message from the dead letter queue.</returns>
+    Message GetMessageFromDeadLetterQueue(Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription subscription);
 }

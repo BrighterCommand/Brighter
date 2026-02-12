@@ -3,16 +3,13 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 using Xunit;
 
-using Paramore.Brighter.Extensions;
-
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
+public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -26,7 +23,7 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
     private IAmAMessageProducerAsync? _producer;
     private IAmAChannelAsync? _channel;
 
-    public WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync()
+    public WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync()
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
@@ -44,7 +41,7 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
     }
 
     [Fact]
-    public async Task When_confirming_posting_a_message_should_receive_publish_confirmation_async()
+    public async Task When_requeing_a_failed_message_should_receive_message_again_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -55,19 +52,38 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var confirmation = (ISupportPublishConfirmation)_producer;
-
-        var messageSent = false;
-        confirmation.OnMessagePublished += (confirmed, _) => messageSent = confirmed;
-
         var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
         _sentMessages.Add(message);
-        
-        // Act
+
         await _producer.SendAsync(message);
+
         await Task.Delay(5000);
-        
+
+        // Act
+        var received = await _channel.ReceiveAsync(null);
+        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+
+        await _channel.RequeueAsync(received);
+
+        await Task.Delay(5000);
+
+        // Retry receiving in case the requeued message is not immediately available
+        Message requeued = new Message();
+        for (var i = 0; i < 10; i++)
+        {
+            requeued = await _channel.ReceiveAsync(null);
+            if (requeued.Header.MessageType != MessageType.MT_NONE)
+            {
+                break;
+            }
+
+            await Task.Delay(5000);
+        }
+
         // Assert
-        Assert.True(messageSent);
+        Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
+        Assert.Equal(message.Body.Value, requeued.Body.Value);
+        Assert.Equal(message.Header.Topic, requeued.Header.Topic);
+        Assert.Equal(message.Header.MessageType, requeued.Header.MessageType);
     }
 }

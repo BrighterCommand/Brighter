@@ -3,21 +3,21 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
+using OpenTelemetry;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Xunit;
-
-using Paramore.Brighter.Extensions;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
 {% if Category != null %}
 [Trait("Category", "{{Category}}")]{% endif %}
-public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
+public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
-    private readonly IAmAMessageAssertion _messageAssertion;
 
     private List<Message> _sentMessages = [];
 
@@ -27,11 +27,10 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
     private IAmAMessageProducerAsync? _producer;
     private IAmAChannelAsync? _channel;
 
-    public WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync()
+    public WhenSendingAMessageShouldPropagateActivityContextAsync()
     {
         _messageGatewayProvider = new {{ MessageGatewayProvider }}();
         _messageBuilder = new {{ MessageBuilder }}();
-        _messageAssertion = new {{ MessageAssertion }}();
     }
 
     public Task InitializeAsync()
@@ -45,9 +44,24 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
     }
 
     [Fact]
-    public async Task When_confirming_posting_a_message_should_receive_publish_confirmation_async()
+    public async Task When_sending_a_message_should_propagate_activity_context_async()
     {
         // Arrange
+        var builder = Sdk.CreateTracerProviderBuilder();
+        var exportedActivities = new List<Activity>();
+
+        var tracerProvider = builder
+            .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
+            .ConfigureResource(r => r.AddService("message-producer-tracer"))
+            .AddInMemoryExporter(exportedActivities)
+            .Build();
+
+        var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessageProducerTests");
+        parentActivity!.TraceStateString = "brighter=00f067aa0ba902b7,congo=t61rcWkgMzE";
+
+        Baggage.SetBaggage("key", "value");
+        Baggage.SetBaggage("key2", "value2");
+
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -55,20 +69,26 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
 
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
+        _producer.Span = parentActivity;
 
-        var confirmation = (ISupportPublishConfirmation)_producer;
-
-        var messageSent = false;
-        confirmation.OnMessagePublished += (confirmed, _) => messageSent = confirmed;
-
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder
+            .SetTopic(_publication.Topic!)
+            .SetPartitionKey(PartitionKey.Empty)
+            .SetTraceParent(null)
+            .SetTraceState(null)
+            .SetBaggage(new Paramore.Brighter.Observability.Baggage())
+            .Build();
         _sentMessages.Add(message);
-        
+
         // Act
         await _producer.SendAsync(message);
-        {%if DelayBetweenReceiveMessageInMilliseconds != null %}await Task.Delay({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
-        
+
+        parentActivity.Stop();
+        tracerProvider.ForceFlush();
+
         // Assert
-        Assert.True(messageSent);
+        Assert.NotNull(message.Header.TraceParent);
+        Assert.Equal("brighter=00f067aa0ba902b7,congo=t61rcWkgMzE", message.Header.TraceState);
+        Assert.Equal("key=value,key2=value2", message.Header.Baggage.ToString());
     }
 }

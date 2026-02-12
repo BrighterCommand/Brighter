@@ -126,7 +126,8 @@ public class RmqMessageGatewayProvider
     public RmqSubscription CreateSubscription(
         RoutingKey routingKey,
         ChannelName channelName,
-        OnMissingChannel makeChannel
+        OnMissingChannel makeChannel,
+        bool setupDeadLetterQueue = false
     )
     {
         return new RmqSubscription<MyCommand>(
@@ -146,5 +147,18 @@ public class RmqMessageGatewayProvider
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
         return new RoutingKey($"Topic{Uuid.New():N}");
+    }
+
+    public Task<Message> GetMessageFromDeadLetterQueueAsync(
+        RmqSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        throw new NotImplementedException();
+    }
+
+    public Message GetMessageFromDeadLetterQueue(RmqSubscription subscription)
+    {
+        throw new NotImplementedException();
     }
 }

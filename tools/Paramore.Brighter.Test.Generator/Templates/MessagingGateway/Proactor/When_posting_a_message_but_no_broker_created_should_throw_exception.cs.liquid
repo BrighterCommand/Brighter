@@ -3,56 +3,64 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Threading.Tasks;
 
 using Xunit;
 
-namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Reactor;
+namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
 {% if Category != null %}
 [Trait("Category", "{{Category}}")]{% endif %}
-public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
+public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IAsyncLifetime
 {
-    private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
+    private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
 
     private List<Message> _sentMessages = [];
 
-    private {{ Subscription }}? _subscription;
     private {{ Publication }}? _publication;
 
-    private IAmAMessageProducerSync? _producer;
-    private IAmAChannelSync? _channel;
+    private IAmAMessageProducerAsync? _producer;
 
-    public WhenInfrastructureMissingAndAssumeChannelShouldThrowException()
+    public WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync()
     {
         _messageGatewayProvider = new {{ MessageGatewayProvider }}();
         _messageBuilder = new {{ MessageBuilder }}();
     }
 
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        try
+        {
+            await _messageGatewayProvider.CleanUpAsync(_producer, null, _sentMessages);
+        }
+        catch
+        {
+            // The infrastructure might not exist, so we ignore any cleanup errors
+        }
+    }
+
     [Fact]
-    public void When_infrastructure_missing_and_assume_channel_should_throw_exception()
+    public async Task When_posting_a_message_but_no_broker_created_should_throw_exception_async()
     {
         try
         {
             // Arrange
             _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-            _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
-                _messageGatewayProvider.GetOrCreateChannelName(),
-                OnMissingChannel.Assume);
-
-            _producer = _messageGatewayProvider.CreateProducer(_publication);
-            _channel = _messageGatewayProvider.CreateChannel(_subscription);
+            _publication.MakeChannels = OnMissingChannel.Validate;
+            _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
 
             var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
             _sentMessages.Add(message);
 
             // Act
-            _producer.Send(message);
-
-            {%if DelayBetweenReceiveMessageInMilliseconds != null %}Thread.Sleep({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
+            await _producer.SendAsync(message);
 
             // Assert
-            _channel.Receive(null);
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

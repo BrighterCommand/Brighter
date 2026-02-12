@@ -41,8 +41,17 @@ public interface IAmAMessageGatewayProactorProvider
     /// <param name="routingKey">The routing key to subscribe to.</param>
     /// <param name="channelName">The channel name for receiving messages.</param>
     /// <param name="makeChannel">The action to take when the channel is missing.</param>
+    /// <param name="setupDeadLetterQueue">Whether to set up a dead letter queue.</param>
     /// <returns>A subscription configuration.</returns>
-    Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName, OnMissingChannel makeChannel);
+    Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName, OnMissingChannel makeChannel, bool setupDeadLetterQueue = false);
+
+    /// <summary>
+    /// Retrieves a message from the dead letter queue for the specified subscription.
+    /// </summary>
+    /// <param name="subscription">The subscription configuration.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>A message from the dead letter queue.</returns>
+    Task<Message> GetMessageFromDeadLetterQueueAsync(Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription subscription, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates an asynchronous message producer for the specified publication.

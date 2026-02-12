@@ -10,38 +10,44 @@ using Xunit;
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Reactor;
 {% if Category != null %}
 [Trait("Category", "{{Category}}")]{% endif %}
-public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
+public class WhenPostingAMessageButNoBrokerCreatedShouldThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
 
     private List<Message> _sentMessages = [];
 
-    private {{ Subscription }}? _subscription;
     private {{ Publication }}? _publication;
 
     private IAmAMessageProducerSync? _producer;
-    private IAmAChannelSync? _channel;
 
-    public WhenInfrastructureMissingAndAssumeChannelShouldThrowException()
+    public WhenPostingAMessageButNoBrokerCreatedShouldThrowException()
     {
         _messageGatewayProvider = new {{ MessageGatewayProvider }}();
         _messageBuilder = new {{ MessageBuilder }}();
     }
 
+    public void Dispose()
+    {
+        try
+        {
+            _messageGatewayProvider.CleanUp(_producer, null, _sentMessages);
+        }
+        catch
+        {
+            // The infrastructure might not exist, so we ignore any cleanup errors
+        }
+    }
+
     [Fact]
-    public void When_infrastructure_missing_and_assume_channel_should_throw_exception()
+    public void When_posting_a_message_but_no_broker_created_should_throw_exception()
     {
         try
         {
             // Arrange
             _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-            _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
-                _messageGatewayProvider.GetOrCreateChannelName(),
-                OnMissingChannel.Assume);
-
+            _publication.MakeChannels = OnMissingChannel.Validate;
             _producer = _messageGatewayProvider.CreateProducer(_publication);
-            _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
             var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
             _sentMessages.Add(message);
@@ -49,10 +55,7 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
             // Act
             _producer.Send(message);
 
-            {%if DelayBetweenReceiveMessageInMilliseconds != null %}Thread.Sleep({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
-
             // Assert
-            _channel.Receive(null);
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

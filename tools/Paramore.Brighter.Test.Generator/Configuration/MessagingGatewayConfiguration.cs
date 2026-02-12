@@ -76,4 +76,12 @@ public class MessagingGatewayConfiguration
     public int? DelayBetweenReceiveMessageInMilliseconds { get; set; }
 
     public bool HasSupportToPublishConfirmation { get; set; }
+    
+    public bool HasSupportToDelayedMessages { get; set; }
+    
+    public bool HasSupportToPartitionKey { get; set; }
+    
+    public bool HasSupportToDeadLetterQueue { get; set; }
+    
+    public bool HasSupportToValidateBrokerExistence { get; set; }
 }

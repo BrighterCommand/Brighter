@@ -117,6 +117,46 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
             return true;
         }
 
+        if (
+            !configuration.HasSupportToDelayedMessages
+            && fileName.Contains("delayed_message")
+        )
+        {
+            return true;
+        }
+
+        if (
+            !configuration.HasSupportToDelayedMessages
+            && fileName.Contains("with_delay")
+        )
+        {
+            return true;
+        }
+
+        if (
+            !configuration.HasSupportToPartitionKey
+            && fileName.Contains("partition_key")
+        )
+        {
+            return true;
+        }
+
+        if (
+            !configuration.HasSupportToDeadLetterQueue
+            && fileName.Contains("dead_letter_queue")
+        )
+        {
+            return true;
+        }
+
+        if (
+            !configuration.HasSupportToValidateBrokerExistence
+            && fileName.Contains("no_broker_created")
+        )
+        {
+            return true;
+        }
+
         return false;
     }
 

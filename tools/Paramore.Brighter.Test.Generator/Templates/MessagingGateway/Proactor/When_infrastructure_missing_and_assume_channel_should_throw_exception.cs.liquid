@@ -10,7 +10,7 @@ using Xunit;
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
 {% if Category != null %}
 [Trait("Category", "{{Category}}")]{% endif %}
-public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync : IAsyncLifetime
+public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -27,23 +27,6 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync 
     {
         _messageGatewayProvider = new {{ MessageGatewayProvider }}();
         _messageBuilder = new {{ MessageBuilder }}();
-    }
-
-    public Task InitializeAsync()
-    {
-        return Task.CompletedTask;
-    }
-
-    public async Task DisposeAsync()
-    {
-        try
-        {
-            await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
-        }
-        catch
-        {
-            // The infrastructure might not exist, so we ignore any cleanup errors
-        }
     }
 
     [Fact]
