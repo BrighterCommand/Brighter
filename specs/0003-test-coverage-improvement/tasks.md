@@ -38,6 +38,8 @@ Tests are organized by phase and priority. Each phase can be worked on independe
 | 5 | In-Memory Components | 18 | P4 - Medium |
 | 6 | DI Extensions | 17 | P5 - Lower |
 | 7 | Observability & Misc | 22 | P3 - Medium |
+| 8 | Additional 0% Coverage | 29 | P3 - Medium |
+| 9 | Low Coverage Improvements | 11 | P4 - Lower |
 
 ---
 
@@ -727,18 +729,282 @@ These are fundamental types used throughout the codebase. Testing them ensures t
 
 ---
 
+## Phase 8: Additional 0% Coverage Classes (Priority 3 - Medium)
+
+These classes currently have 0% test coverage and are unit-testable without external dependencies.
+
+### 8.1 Newtonsoft JSON Converters (0% Coverage)
+
+- [ ] **TEST: When serializing channel name with newtonsoft**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/JsonConverters/Newtonsoft/`
+  - Test file: `When_serializing_channel_name_with_newtonsoft.cs`
+  - Test should verify NChannelNameConverter serialization and deserialization
+
+- [ ] **TEST: When serializing partition key with newtonsoft**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/JsonConverters/Newtonsoft/`
+  - Test file: `When_serializing_partition_key_with_newtonsoft.cs`
+  - Test should verify NPartitionKeyConverter serialization and deserialization
+
+- [ ] **TEST: When serializing subscription name with newtonsoft**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/JsonConverters/Newtonsoft/`
+  - Test file: `When_serializing_subscription_name_with_newtonsoft.cs`
+  - Test should verify NSubscriptionNameConverter serialization and deserialization
+
+- [ ] **TEST: When serializing trace parent with newtonsoft**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/JsonConverters/Newtonsoft/`
+  - Test file: `When_serializing_trace_parent_with_newtonsoft.cs`
+  - Test should verify NTraceParentConverter serialization and deserialization
+
+- [ ] **TEST: When serializing trace state with newtonsoft**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/JsonConverters/Newtonsoft/`
+  - Test file: `When_serializing_trace_state_with_newtonsoft.cs`
+  - Test should verify NTraceStateConverter serialization and deserialization
+
+### 8.2 Policy Handlers (0% Coverage)
+
+- [ ] **TEST: When timeout policy handler times out**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Policies/`
+  - Test file: `When_timeout_policy_handler_times_out.cs`
+  - Test should verify:
+    - TimeoutPolicyHandler cancels after timeout
+    - CancellationToken is properly propagated
+    - TimeoutException is thrown appropriately
+
+- [ ] **TEST: When timeout policy handler completes within timeout**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Policies/`
+  - Test file: `When_timeout_policy_handler_completes_within_timeout.cs`
+  - Test should verify:
+    - Handler completes normally when within timeout
+    - No exception is thrown
+
+- [ ] **TEST: When timeout policy attribute is configured**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Policies/`
+  - Test file: `When_timeout_policy_attribute_is_configured.cs`
+  - Test should verify:
+    - Timeout value is set correctly
+    - Step and order are configured
+    - GetHandlerType returns TimeoutPolicyHandler
+
+### 8.3 Logging Handlers (0% Coverage)
+
+- [ ] **TEST: When request logging handler async logs request**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Logging/`
+  - Test file: `When_request_logging_handler_async_logs_request.cs`
+  - Test should verify:
+    - Request is logged before handling
+    - Request is logged after handling
+    - Log level is appropriate
+
+- [ ] **TEST: When request logging async attribute is configured**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Logging/`
+  - Test file: `When_request_logging_async_attribute_is_configured.cs`
+  - Test should verify:
+    - Timing mode is set correctly
+    - Step and order are configured
+    - GetHandlerType returns RequestLoggingHandlerAsync
+
+### 8.4 Null Implementations (0% Coverage)
+
+- [ ] **TEST: When using null luggage store**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/ClaimCheck/`
+  - Test file: `When_using_null_luggage_store.cs`
+  - Test should verify:
+    - Store returns null for retrieve
+    - Store does not throw on store operations
+    - All methods are no-ops
+
+- [ ] **TEST: When using null outbox archive provider**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Archive/`
+  - Test file: `When_using_null_outbox_archive_provider.cs`
+  - Test should verify:
+    - Archive operations complete without error
+    - Provider does not actually store messages
+    - All methods are no-ops
+
+### 8.5 Transform Attributes (0% Coverage)
+
+- [ ] **TEST: When cloud events attribute is configured**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Transforms/Attributes/`
+  - Test file: `When_cloud_events_attribute_is_configured.cs`
+  - Test should verify CloudEventsAttribute configuration
+
+- [ ] **TEST: When compress attribute is configured**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Transforms/Attributes/`
+  - Test file: `When_compress_attribute_is_configured.cs`
+  - Test should verify:
+    - CompressionMethod is set
+    - Threshold is configurable
+    - GetHandlerType returns correct transform
+
+- [ ] **TEST: When decompress attribute is configured**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Transforms/Attributes/`
+  - Test file: `When_decompress_attribute_is_configured.cs`
+  - Test should verify DecompressAttribute configuration
+
+- [ ] **TEST: When read from cloud events attribute is configured**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Transforms/Attributes/`
+  - Test file: `When_read_from_cloud_events_attribute_is_configured.cs`
+  - Test should verify ReadFromCloudEventsAttribute configuration
+
+### 8.6 Empty Message Transforms (0% Coverage)
+
+- [ ] **TEST: When empty message transform wraps message**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Transforms/`
+  - Test file: `When_empty_message_transform_wraps_message.cs`
+  - Test should verify:
+    - EmptyMessageTransform.Wrap returns message unchanged
+    - EmptyMessageTransform.Unwrap returns message unchanged
+
+- [ ] **TEST: When empty message transform async wraps message**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Transforms/`
+  - Test file: `When_empty_message_transform_async_wraps_message.cs`
+  - Test should verify:
+    - EmptyMessageTransformAsync.WrapAsync returns message unchanged
+    - EmptyMessageTransformAsync.UnwrapAsync returns message unchanged
+
+### 8.7 Handler Collections (0% Coverage)
+
+- [ ] **TEST: When request handlers collection is enumerated**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Handlers/`
+  - Test file: `When_request_handlers_collection_is_enumerated.cs`
+  - Test should verify:
+    - RequestHandlers<T> can hold multiple handlers
+    - Enumeration returns handlers in order
+    - Count is accurate
+
+- [ ] **TEST: When async request handlers collection is enumerated**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Handlers/`
+  - Test file: `When_async_request_handlers_collection_is_enumerated.cs`
+  - Test should verify:
+    - AsyncRequestHandlers<T> can hold multiple handlers
+    - Enumeration returns handlers in order
+    - Count is accurate
+
+### 8.8 Other 0% Coverage Classes
+
+- [ ] **TEST: When channel name converter converts**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/JsonConverters/`
+  - Test file: `When_channel_name_converter_converts.cs`
+  - Test should verify ChannelNameConverter (System.Text.Json)
+
+- [ ] **TEST: When trace state converter converts**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/JsonConverters/`
+  - Test file: `When_trace_state_converter_converts.cs`
+  - Test should verify TraceStateConverter (System.Text.Json)
+
+- [ ] **TEST: When routing keys collection is used**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/ValueTypes/`
+  - Test file: `When_routing_keys_collection_is_used.cs`
+  - Test should verify:
+    - RoutingKeys can hold multiple keys
+    - Enumeration works correctly
+    - Add/Contains operations work
+
+- [ ] **TEST: When message telemetry extracts span info**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Observability/`
+  - Test file: `When_message_telemetry_extracts_span_info.cs`
+  - Test should verify MessageTelemetry span extraction
+
+- [ ] **TEST: When claim check span info is created**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/ClaimCheck/`
+  - Test file: `When_claim_check_span_info_is_created.cs`
+  - Test should verify ClaimCheckSpanInfo properties
+
+- [ ] **TEST: When producers configuration is set**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Configuration/`
+  - Test file: `When_producers_configuration_is_set.cs`
+  - Test should verify ProducersConfiguration
+
+- [ ] **TEST: When publication topic attribute is used**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Attributes/`
+  - Test file: `When_publication_topic_attribute_is_used.cs`
+  - Test should verify PublicationTopicAttribute
+
+---
+
+## Phase 9: Low Coverage Improvements (Priority 4 - Lower)
+
+These classes have some coverage but are below target levels. Tests should focus on uncovered branches and edge cases.
+
+### 9.1 ChannelName (27% Coverage → Target 80%)
+
+- [ ] **TEST: When channel name is created with valid string**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/ValueTypes/`
+  - Test file: `When_channel_name_is_created_with_valid_string.cs`
+  - Test should verify basic construction
+
+- [ ] **TEST: When channel name handles empty string**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/ValueTypes/`
+  - Test file: `When_channel_name_handles_empty_string.cs`
+  - Test should verify empty/null handling
+
+- [ ] **TEST: When channel names are compared for equality**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/ValueTypes/`
+  - Test file: `When_channel_names_are_compared_for_equality.cs`
+  - Test should verify Equals, ==, !=, GetHashCode
+
+### 9.2 TaskExtensions (14.8% Coverage → Target 70%)
+
+- [ ] **TEST: When task extension handles timeout**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Extensions/`
+  - Test file: `When_task_extension_handles_timeout.cs`
+  - Test should verify timeout scenarios
+
+- [ ] **TEST: When task extension handles cancellation**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Extensions/`
+  - Test file: `When_task_extension_handles_cancellation.cs`
+  - Test should verify cancellation token handling
+
+- [ ] **TEST: When task extension handles exceptions**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Extensions/`
+  - Test file: `When_task_extension_handles_exceptions.cs`
+  - Test should verify exception propagation
+
+### 9.3 BaggageConverter (47.1% Coverage → Target 80%)
+
+- [ ] **TEST: When baggage converter handles empty baggage**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Observability/`
+  - Test file: `When_baggage_converter_handles_empty_baggage.cs`
+  - Test should verify empty baggage handling
+
+- [ ] **TEST: When baggage converter handles special characters**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Observability/`
+  - Test file: `When_baggage_converter_handles_special_characters.cs`
+  - Test should verify encoding/decoding of special characters
+
+- [ ] **TEST: When baggage converter handles multiple items**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Observability/`
+  - Test file: `When_baggage_converter_handles_multiple_items.cs`
+  - Test should verify multiple baggage items
+
+### 9.4 DbSystemExtensions (8.6% Coverage → Target 60%)
+
+- [ ] **TEST: When db system extension maps known systems**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Extensions/`
+  - Test file: `When_db_system_extension_maps_known_systems.cs`
+  - Test should verify all known database system mappings
+
+- [ ] **TEST: When db system extension handles unknown system**
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Extensions/`
+  - Test file: `When_db_system_extension_handles_unknown_system.cs`
+  - Test should verify fallback behavior for unknown systems
+
+---
+
 ## Task Dependencies
 
 Phases can be worked on in parallel by different contributors, but within each phase tasks should generally be completed in order.
 
 ```
 Phase 1 (Core Value Types) ─────────────┐
-Phase 2 (Builders)          ────────────┼──→ All phases can run in parallel
+Phase 2 (Builders)          ────────────┤
 Phase 3 (Extensions)        ────────────┤
-Phase 4 (JSON Converters)   ────────────┤
+Phase 4 (JSON Converters)   ────────────┼──→ All phases can run in parallel
 Phase 5 (In-Memory)         ────────────┤
 Phase 6 (DI Extensions)     ────────────┤
-Phase 7 (Observability)     ────────────┘
+Phase 7 (Observability)     ────────────┤
+Phase 8 (Additional 0%)     ────────────┤
+Phase 9 (Low Coverage)      ────────────┘
 ```
 
 ## Effort Estimates
@@ -752,7 +1018,9 @@ Phase 7 (Observability)     ────────────┘
 | Phase 5 | 3-4 days | 18 |
 | Phase 6 | 2-3 days | 17 |
 | Phase 7 | 3-4 days | 22 |
-| **Total** | **17-24 days** | **102** |
+| Phase 8 | 4-5 days | 29 |
+| Phase 9 | 2-3 days | 11 |
+| **Total** | **23-32 days** | **142** |
 
 ## Risk Mitigation
 
