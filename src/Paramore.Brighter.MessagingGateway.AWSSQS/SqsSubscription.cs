@@ -34,12 +34,22 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// Validate = look for topic using routing key name, queue using channel name
 /// Assume = Assume Routing Key is Topic ARN, queue exists via channel name
 /// </summary>
-public class SqsSubscription : Subscription
+public class SqsSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
     /// <summary>
     /// The routing key type.
     /// </summary>
     public ChannelType ChannelType { get; }
+
+    /// <summary>
+    /// The routing key used for the Dead Letter Channel
+    /// </summary>
+    public RoutingKey? DeadLetterRoutingKey { get; set; }
+
+    /// <summary>
+    /// The routing key used for the Invalid Message Channel
+    /// </summary>
+    public RoutingKey? InvalidMessageRoutingKey { get; set; }
 
     /// <summary>
     /// Indicates how we should treat the <see cref="RoutingKey"/>
@@ -89,6 +99,8 @@ public class SqsSubscription : Subscription
     /// <param name="findQueueBy">Is the ChannelName is a queue url, or a name</param>
     /// <param name="queueAttributes">What are the <see cref="SqsAttributes"/> of the Sqs queue we use to receive messages</param>
     /// <param name="topicAttributes">What are the <see cref="SnsAttributes"/>  of the topic to which are queue subscribes, if we are <see cref="ChannelType.PubSub"/> </param>
+    /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ</param>
+    /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling</param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
     public SqsSubscription(
         SubscriptionName subscriptionName,
@@ -111,6 +123,8 @@ public class SqsSubscription : Subscription
         QueueFindBy findQueueBy = QueueFindBy.Name,
         SqsAttributes? queueAttributes = null,
         SnsAttributes? topicAttributes = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
         : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize, noOfPerformers, timeOut,
             requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels,
@@ -131,6 +145,8 @@ public class SqsSubscription : Subscription
         ChannelType = channelType;
         FindTopicBy = findTopicBy;
         FindQueueBy = findQueueBy;
+        DeadLetterRoutingKey = deadLetterRoutingKey;
+        InvalidMessageRoutingKey = invalidMessageRoutingKey;
     }
 }
 
@@ -165,6 +181,8 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
     /// <param name="findQueueBy">Is the ChannelName is a queue url, or a name. Default is by name</param>
     /// <param name="queueAttributes">What are the details of the <see cref="SqsAttributes"/> that exchanges requests</param>
     /// <param name="topicAttributes">What are the <see cref="SnsAttributes"/>  of the topic to which are queue subscribes, if we are <see cref="ChannelType.PubSub"/> </param>
+    /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ</param>
+    /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling</param>
     /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
     public SqsSubscription(
         SubscriptionName? subscriptionName = null,
@@ -186,6 +204,8 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         QueueFindBy findQueueBy = QueueFindBy.Name,
         SqsAttributes? queueAttributes = null,
         SnsAttributes? topicAttributes = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
         : base(
             subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
@@ -208,6 +228,8 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
             findQueueBy,
             queueAttributes,
             topicAttributes,
+            deadLetterRoutingKey,
+            invalidMessageRoutingKey,
             makeChannels)
     { }
 }
