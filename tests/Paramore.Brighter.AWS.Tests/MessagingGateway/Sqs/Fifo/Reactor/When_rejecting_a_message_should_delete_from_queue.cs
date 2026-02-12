@@ -2,17 +2,17 @@
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Paramore.Brighter.AWS.V4.Tests.Helpers;
-using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
+using Paramore.Brighter.AWS.Tests.Helpers;
+using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Fifo.Reactor;
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SqsMessageConsumerRequeueTests : IDisposable
+public class SqsMessageConsumerRejectTests : IDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
@@ -20,7 +20,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public SqsMessageConsumerRequeueTests()
+    public SqsMessageConsumerRejectTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -59,24 +59,19 @@ public class SqsMessageConsumerRequeueTests : IDisposable
     }
 
     [Fact]
-    public void When_rejecting_a_message_through_gateway_with_requeue()
+    public void When_rejecting_a_message_should_delete_from_queue()
     {
+        //Arrange
         _messageProducer.Send(_message);
-
         var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
+        //Act
         _channel.Reject(message);
 
-        // Let the timeout change
-        Task.Delay(TimeSpan.FromMilliseconds(3000)).GetAwaiter().GetResult();
-
-        // should requeue_the_message
+        //Assert - message should be deleted, not requeued
         message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
-        // clear the queue
-        _channel.Acknowledge(message);
-
-        Assert.Equal(_myCommand.Id, message.Id);
+        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
     }
 
     public void Dispose()

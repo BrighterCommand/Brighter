@@ -43,10 +43,13 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
+    private readonly AWSMessagingGatewayConnection _connection;
     private readonly AWSClientFactory _clientFactory;
     private readonly string _queueName;
     private readonly int _batchSize;
-    private readonly bool _hasDlq;
+    private readonly RoutingKey? _deadLetterRoutingKey;
+    private readonly RoutingKey? _invalidMessageRoutingKey;
+    private readonly OnMissingChannel _makeChannels;
     private readonly bool _rawMessageDelivery;
     private readonly Message _noopMessage = new Message();
     private string? _channelUrl;
@@ -57,26 +60,33 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// <param name="awsConnection">The awsConnection details used to connect to the SQS queue.</param>
     /// <param name="queueName">The name of the SQS Queue</param>
     /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
-    /// <param name="hasDlq">Do we have a DLQ attached to this queue?</param>
+    /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if configured</param>
+    /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if configured</param>
+    /// <param name="makeChannels">Should we create channels if they are missing?</param>
     /// <param name="isQueueUrl">Is the queue name a queue url?</param>
     /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
     public SqsMessageConsumer(
         AWSMessagingGatewayConnection awsConnection,
         string? queueName,
         int batchSize = 1,
-        bool hasDlq = false,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null,
+        OnMissingChannel makeChannels = OnMissingChannel.Create,
         bool isQueueUrl = false,
         bool rawMessageDelivery = true)
     {
         if (string.IsNullOrEmpty(queueName))
             throw new ConfigurationException("QueueName is mandatory");
 
+        _connection = awsConnection;
         _clientFactory = new AWSClientFactory(awsConnection);
         _queueName = queueName!;
         if (isQueueUrl)
             _channelUrl = queueName;
         _batchSize = batchSize;
-        _hasDlq = hasDlq;
+        _deadLetterRoutingKey = deadLetterRoutingKey;
+        _invalidMessageRoutingKey = invalidMessageRoutingKey;
+        _makeChannels = makeChannels;
         _rawMessageDelivery = rawMessageDelivery;
     }
 
@@ -147,7 +157,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
 
             using var client = _clientFactory.CreateSqsClient();
             await EnsureChannelUrl(client, cancellationToken);
-            if (_hasDlq)
+            if (_deadLetterRoutingKey != null)
             {
                 await client.ChangeMessageVisibilityAsync(
                     new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, 0),

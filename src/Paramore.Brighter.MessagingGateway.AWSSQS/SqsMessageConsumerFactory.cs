@@ -65,11 +65,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                queueName =queueName.ToValidSQSQueueName(sqsSubscription.QueueAttributes.Type == SqsType.Fifo);
             
             return new SqsMessageConsumer(
-                awsConnection: _awsConnection, 
-                queueName: queueName, 
-                isQueueUrl: (sqsSubscription.FindQueueBy == QueueFindBy.Url),   
+                awsConnection: _awsConnection,
+                queueName: queueName,
                 batchSize: subscription.BufferSize,
-                hasDlq: sqsSubscription.QueueAttributes.RedrivePolicy == null,
+                deadLetterRoutingKey: null,
+                invalidMessageRoutingKey: null,
+                makeChannels: sqsSubscription.MakeChannels,
+                isQueueUrl: (sqsSubscription.FindQueueBy == QueueFindBy.Url),
                 rawMessageDelivery: sqsSubscription.QueueAttributes.RawMessageDelivery
             );
         }
