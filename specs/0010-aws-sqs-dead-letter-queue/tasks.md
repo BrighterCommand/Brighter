@@ -16,7 +16,7 @@ Test projects:
 
 ## Prerequisites
 
-- [ ] **TIDY: Remove `_hasDlq` flag and prepare consumer for DLQ routing keys**
+- [x] **TIDY: Remove `_hasDlq` flag and prepare consumer for DLQ routing keys**
   - **USE COMMAND**: `/tidy-first Remove _hasDlq flag from SqsMessageConsumer and replace with routing key parameters`
   - This is a structural change — no behaviour change yet
   - In both `SqsMessageConsumer` constructors:
@@ -33,7 +33,7 @@ Test projects:
 
 ## Tasks
 
-- [ ] **TEST + IMPLEMENT: SqsSubscription exposes DLQ and invalid message routing keys**
+- [x] **TEST + IMPLEMENT: SqsSubscription exposes DLQ and invalid message routing keys**
   - **USE COMMAND**: `/test-first when creating SQS subscription with dead letter and invalid message routing keys should expose properties`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/`
   - Test file: `When_creating_sqs_subscription_with_dlq_routing_keys_should_expose_properties.cs`
