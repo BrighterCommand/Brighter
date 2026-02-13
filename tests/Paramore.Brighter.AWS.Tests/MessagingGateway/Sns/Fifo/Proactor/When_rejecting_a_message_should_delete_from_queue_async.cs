@@ -2,16 +2,16 @@
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Paramore.Brighter.AWS.V4.Tests.Helpers;
-using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
+using Paramore.Brighter.AWS.Tests.Helpers;
+using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Proactor;
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
+public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelAsync _channel;
@@ -19,7 +19,7 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public SqsMessageConsumerRequeueTestsAsync()
+    public SqsMessageConsumerRejectTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         var replyTo = new RoutingKey("http:\\queueUrl");
@@ -36,9 +36,9 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo), 
-            topicAttributes: topicAttributes, 
-            messagePumpType: MessagePumpType.Proactor, 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo),
+            topicAttributes: topicAttributes,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -55,31 +55,26 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, 
-                Topic = routingKey, 
+                MakeChannels = OnMissingChannel.Create,
+                Topic = routingKey,
                 TopicAttributes = topicAttributes
             });
     }
 
     [Fact]
-    public async Task When_rejecting_a_message_through_gateway_with_requeue_async()
+    public async Task When_rejecting_a_message_should_delete_from_queue_async()
     {
+        //Arrange
         await _messageProducer.SendAsync(_message);
-
         var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
+        //Act
         await _channel.RejectAsync(message);
 
-        // Let the timeout change
-        await Task.Delay(TimeSpan.FromMilliseconds(3000));
-
-        // should requeue_the_message
+        //Assert - message should be deleted, not requeued
         message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
-        // clear the queue
-        await _channel.AcknowledgeAsync(message);
-
-        Assert.Equal(_myCommand.Id, message.Id);
+        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
     }
 
     public void Dispose()

@@ -8,21 +8,21 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Proactor;
+namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
+public class SqsMessageConsumerRejectTests : IDisposable
 {
     private readonly Message _message;
-    private readonly IAmAChannelAsync _channel;
+    private readonly IAmAChannelSync _channel;
     private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public SqsMessageConsumerRequeueTestsAsync()
+    public SqsMessageConsumerRejectTests()
     {
-        _myCommand = new MyCommand { Value = "Test" };
+        _myCommand = new MyCommand{Value = "Test"};
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
@@ -35,43 +35,39 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create
-        );
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
-            new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
         );
 
+        //Must have credentials stored in the SDK Credentials store or shared credentials file
         var awsConnection = GatewayFactory.CreateFactory();
 
+        //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(awsConnection);
-        _channel = _channelFactory.CreateAsyncChannel(subscription);
+        _channel = _channelFactory.CreateSyncChannel(subscription);
 
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
     }
 
     [Fact]
-    public async Task When_rejecting_a_message_through_gateway_with_requeue_async()
+    public void When_rejecting_a_message_should_delete_from_queue()
     {
-        await _messageProducer.SendAsync(_message);
+        //Arrange
+        _messageProducer.Send(_message);
+        var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
-        var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        //Act
+        _channel.Reject(message);
 
-        await _channel.RejectAsync(message);
+        //Assert - message should be deleted, not requeued
+        message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
-        // Let the timeout change
-        await Task.Delay(TimeSpan.FromMilliseconds(3000));
-
-        // should requeue_the_message
-        message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
-
-        // clear the queue
-        await _channel.AcknowledgeAsync(message);
-
-        Assert.Equal(_myCommand.Id, message.Id);
+        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
     }
 
     public void Dispose()

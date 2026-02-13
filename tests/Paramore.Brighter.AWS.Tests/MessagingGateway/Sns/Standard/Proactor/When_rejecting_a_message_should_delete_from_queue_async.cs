@@ -12,7 +12,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
+public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelAsync _channel;
@@ -20,7 +20,7 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public SqsMessageConsumerRequeueTestsAsync()
+    public SqsMessageConsumerRejectTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -54,24 +54,19 @@ public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
     }
 
     [Fact]
-    public async Task When_rejecting_a_message_through_gateway_with_requeue_async()
+    public async Task When_rejecting_a_message_should_delete_from_queue_async()
     {
+        //Arrange
         await _messageProducer.SendAsync(_message);
-
         var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
+        //Act
         await _channel.RejectAsync(message);
 
-        // Let the timeout change
-        await Task.Delay(TimeSpan.FromMilliseconds(3000));
-
-        // should requeue_the_message
+        //Assert - message should be deleted, not requeued
         message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
-        // clear the queue
-        await _channel.AcknowledgeAsync(message);
-
-        Assert.Equal(_myCommand.Id, message.Id);
+        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
     }
 
     public void Dispose()
