@@ -16,7 +16,7 @@ set -euo pipefail
 TASKS_PER_RUN="${1:-1}"
 MAX_ITERATIONS="${2:-50}"
 COOLDOWN_SECONDS="${3:-5}"
-MODEL="${RALPH_MODEL:-anthropic/claude-sonnet-4-20250514}"
+MODEL="${RALPH_MODEL:-github-copilot/claude-sonnet-4}"
 VARIANT="${RALPH_VARIANT:-}"
 
 # Find repo root (where .git is)
@@ -46,7 +46,7 @@ ARGUMENTS:
 
 ENVIRONMENT:
     RALPH_MODEL       Model to use in provider/model format 
-                      (default: anthropic/claude-sonnet-4-20250514)
+                      (default: github-copilot/claude-sonnet-4)
     RALPH_VARIANT     Model variant for reasoning effort (optional)
                       e.g., high, max, minimal
 
@@ -193,11 +193,23 @@ while true; do
     log "─── Iteration $ITERATION/$MAX_ITERATIONS (remaining: $REMAINING) ───"
 
     # Build the opencode command with optional variant
+    # Note: Using message format instead of --command flag due to bug in OpenCode v1.1.53
+    # where --command causes "undefined is not an object (evaluating 'command3.agent')"
+    # Workaround: Read command file content and pass directly as the message
+    COMMAND_FILE="$REPO_ROOT/.opencode/commands/spec/ralph-implement.md"
+    if [[ ! -f "$COMMAND_FILE" ]]; then
+        log "Error: Command file not found at $COMMAND_FILE"
+        break
+    fi
+    # Read command file, skip frontmatter (first 5 lines), and substitute $ARGUMENTS
+    COMMAND_CONTENT=$(tail -n +6 "$COMMAND_FILE")
+    COMMAND_CONTENT="${COMMAND_CONTENT//\$ARGUMENTS/$TASKS_PER_RUN}"
+    
     OPENCODE_CMD=(opencode run --model "$MODEL" --print-logs)
     if [[ -n "$VARIANT" ]]; then
         OPENCODE_CMD+=(--variant "$VARIANT")
     fi
-    OPENCODE_CMD+=("--command" "/spec:ralph-implement" "$TASKS_PER_RUN")
+    OPENCODE_CMD+=("$COMMAND_CONTENT")
 
     # Run OpenCode
     OPENCODE_OUTPUT=$("${OPENCODE_CMD[@]}" 2>&1) || true
