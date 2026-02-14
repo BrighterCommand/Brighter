@@ -50,6 +50,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private readonly RoutingKey? _invalidMessageRoutingKey;
 
         private readonly Dictionary<string, string> _inflight = new();
+        private Lazy<RedisMessageProducer?>? _deadLetterProducer;
+        private Lazy<RedisMessageProducer?>? _invalidMessageProducer;
 
         /// <summary>
         /// Creates a consumer that reads from a List in Redis via a BLPOP (so will block).
@@ -71,6 +73,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             _configuration = redisMessagingGatewayConfiguration;
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
+
+            if (_deadLetterRoutingKey != null)
+                _deadLetterProducer = new Lazy<RedisMessageProducer?>(CreateDeadLetterProducer);
+            if (_invalidMessageRoutingKey != null)
+                _invalidMessageProducer = new Lazy<RedisMessageProducer?>(CreateInvalidMessageProducer);
        }
 
         /// <summary>
@@ -264,24 +271,127 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
 
         /// <summary>
-        /// This a 'do nothing operation' as we have already popped
+        /// Reject the message, routing it to a DLQ or invalid message channel if configured
         /// </summary>
         /// <param name="message">The message to reject</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
+            if (_deadLetterProducer == null && _invalidMessageProducer == null)
+            {
+                if (reason != null)
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+
+                _inflight.Remove(message.Id);
+                return true;
+            }
+
+            var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+
+            try
+            {
+                RefreshMetadata(message, reason);
+
+                var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
+                    rejectionReason, _invalidMessageProducer != null, _deadLetterProducer != null);
+
+                RedisMessageProducer? producer = null;
+                if (shouldRoute)
+                {
+                    message.Header.Topic = routingKey!;
+                    if (isFallingBackToDlq)
+                        Log.FallingBackToDlq(s_logger, message.Id);
+
+                    if (routingKey == _invalidMessageRoutingKey)
+                        producer = _invalidMessageProducer?.Value;
+                    else if (routingKey == _deadLetterRoutingKey)
+                        producer = _deadLetterProducer?.Value;
+                }
+
+                if (producer != null)
+                {
+                    producer.Send(message);
+                    Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+                }
+                else
+                {
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                // DLQ send failed — the message was already popped from Redis so we cannot
+                // requeue it. Remove from inflight to prevent blocking subsequent receives.
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+                _inflight.Remove(message.Id);
+                return true;
+            }
+
             _inflight.Remove(message.Id);
             return true;
         }
 
         /// <summary>
-        /// This a 'do nothing operation' as we have already popped
+        /// Reject the message asynchronously, routing it to a DLQ or invalid message channel if configured
         /// </summary>
         /// <param name="message">The message to reject</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         /// <param name="cancellationToken">The cancellation token</param>
-        public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
-            => Task.FromResult(Reject(message));
+        public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (_deadLetterProducer == null && _invalidMessageProducer == null)
+            {
+                if (reason != null)
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+
+                _inflight.Remove(message.Id);
+                return true;
+            }
+
+            var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+
+            try
+            {
+                RefreshMetadata(message, reason);
+
+                var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
+                    rejectionReason, _invalidMessageProducer != null, _deadLetterProducer != null);
+
+                RedisMessageProducer? producer = null;
+                if (shouldRoute)
+                {
+                    message.Header.Topic = routingKey!;
+                    if (isFallingBackToDlq)
+                        Log.FallingBackToDlq(s_logger, message.Id);
+
+                    if (routingKey == _invalidMessageRoutingKey)
+                        producer = _invalidMessageProducer?.Value;
+                    else if (routingKey == _deadLetterRoutingKey)
+                        producer = _deadLetterProducer?.Value;
+                }
+
+                if (producer != null)
+                {
+                    await producer.SendAsync(message, cancellationToken);
+                    Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+                }
+                else
+                {
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                // DLQ send failed — the message was already popped from Redis so we cannot
+                // requeue it. Remove from inflight to prevent blocking subsequent receives.
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+                _inflight.Remove(message.Id);
+                return true;
+            }
+
+            _inflight.Remove(message.Id);
+            return true;
+        }
 
         /// <summary>
         /// Requeues the specified message.
@@ -346,6 +456,74 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             } 
         }
         
+        private RedisMessageProducer? CreateDeadLetterProducer()
+        {
+            if (_deadLetterRoutingKey == null) return null;
+
+            try
+            {
+                return new RedisMessageProducer(_configuration,
+                    new RedisMessagePublication { Topic = _deadLetterRoutingKey });
+            }
+            catch (Exception e)
+            {
+                Log.ErrorCreatingDlqProducer(s_logger, e, _deadLetterRoutingKey.Value);
+                return null;
+            }
+        }
+
+        private RedisMessageProducer? CreateInvalidMessageProducer()
+        {
+            if (_invalidMessageRoutingKey == null) return null;
+
+            try
+            {
+                return new RedisMessageProducer(_configuration,
+                    new RedisMessagePublication { Topic = _invalidMessageRoutingKey });
+            }
+            catch (Exception e)
+            {
+                Log.ErrorCreatingInvalidMessageProducer(s_logger, e, _invalidMessageRoutingKey.Value);
+                return null;
+            }
+        }
+
+        private static void RefreshMetadata(Message message, MessageRejectionReason? reason)
+        {
+            message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
+            message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+            message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+
+            if (reason == null) return;
+
+            message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
+            if (!string.IsNullOrEmpty(reason.Description))
+                message.Header.Bag["rejectionMessage"] = reason.Description!;
+        }
+
+        private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(
+            RejectionReason rejectionReason,
+            bool hasInvalidProducer,
+            bool hasDeadLetterProducer)
+        {
+            switch (rejectionReason)
+            {
+                case RejectionReason.Unacceptable:
+                    if (hasInvalidProducer)
+                        return (_invalidMessageRoutingKey, true, false);
+                    if (hasDeadLetterProducer)
+                        return (_deadLetterRoutingKey, true, true);
+                    return (null, false, false);
+
+                case RejectionReason.DeliveryError:
+                case RejectionReason.None:
+                default:
+                    if (hasDeadLetterProducer)
+                        return (_deadLetterRoutingKey, true, false);
+                    return (null, false, false);
+            }
+        }
+
         // Virtual to allow testing to simulate client failure
         protected virtual IRedisClient? GetClient()
         {
@@ -479,6 +657,24 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             
             [LoggerMessage(LogLevel.Error, "Expected to find message id {MessageId} in-flight but was not")]
             public static partial void MessageNotFoundInFlight(ILogger logger, string messageId);
+
+            [LoggerMessage(LogLevel.Warning, "RedisMessageConsumer: No DLQ or invalid message channels configured for message {MessageId}, rejection reason: {RejectionReason}")]
+            public static partial void NoChannelsConfiguredForRejection(ILogger logger, string messageId, string rejectionReason);
+
+            [LoggerMessage(LogLevel.Information, "RedisMessageConsumer: Message {MessageId} sent to rejection channel, reason: {RejectionReason}")]
+            public static partial void MessageSentToRejectionChannel(ILogger logger, string messageId, string rejectionReason);
+
+            [LoggerMessage(LogLevel.Warning, "RedisMessageConsumer: Falling back to DLQ for message {MessageId}")]
+            public static partial void FallingBackToDlq(ILogger logger, string messageId);
+
+            [LoggerMessage(LogLevel.Error, "RedisMessageConsumer: Error sending message {MessageId} to rejection channel, reason: {RejectionReason}")]
+            public static partial void ErrorSendingToRejectionChannel(ILogger logger, Exception ex, string messageId, string rejectionReason);
+
+            [LoggerMessage(LogLevel.Error, "RedisMessageConsumer: Error creating DLQ producer for routing key {RoutingKey}")]
+            public static partial void ErrorCreatingDlqProducer(ILogger logger, Exception ex, string routingKey);
+
+            [LoggerMessage(LogLevel.Error, "RedisMessageConsumer: Error creating invalid message producer for routing key {RoutingKey}")]
+            public static partial void ErrorCreatingInvalidMessageProducer(ILogger logger, Exception ex, string routingKey);
         }
     }
 }
