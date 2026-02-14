@@ -33,7 +33,7 @@ namespace Paramore.Brighter.InMemory.Tests.Consumer;
 /// Tests that InMemoryMessageConsumer properly disposes the lazily-created producer
 /// when the consumer is disposed.
 /// </summary>
-public class When_disposing_consumer_should_dispose_lazily_created_producer
+public class AsyncInMemoryMessageConsumerDisposeTests
 {
     [Fact]
     public void Should_dispose_without_error_when_producer_was_never_created()
