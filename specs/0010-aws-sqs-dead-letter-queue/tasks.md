@@ -50,7 +50,7 @@ Test projects:
     - Apply identically to both AWSSQS and AWSSQS.V4 packages
   - Duplicate test for V4: `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/Sqs/`
 
-- [ ] **TEST + IMPLEMENT: Consumer factory passes DLQ routing keys from subscription to consumer**
+- [x] **TEST + IMPLEMENT: Consumer factory passes DLQ routing keys from subscription to consumer**
   - **USE COMMAND**: `/test-first when creating SQS consumer from subscription with DLQ routing keys should pass them to consumer`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/`
   - Test file: `When_creating_sqs_consumer_with_dlq_subscription_should_pass_routing_keys.cs`
@@ -65,7 +65,7 @@ Test projects:
     - Apply identically to both AWSSQS and AWSSQS.V4 packages
   - Duplicate test for V4: `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/Sqs/`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends it to the DLQ queue**
+- [x] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends it to the DLQ queue**
   - **USE COMMAND**: `/test-first when rejecting SQS message with delivery error should send to dead letter queue`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor/`
   - Test file: `When_rejecting_message_with_delivery_error_should_send_to_dlq.cs`
@@ -87,7 +87,7 @@ Test projects:
     - Apply identically to both AWSSQS and AWSSQS.V4 packages
   - Duplicate test for V4: `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/Sqs/Standard/Reactor/`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with Unacceptable reason sends it to the invalid message queue**
+- [x] **TEST + IMPLEMENT: Rejecting a message with Unacceptable reason sends it to the invalid message queue**
   - **USE COMMAND**: `/test-first when rejecting SQS message with unacceptable reason should send to invalid message queue`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor/`
   - Test file: `When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel.cs`
@@ -102,7 +102,7 @@ Test projects:
     - Apply identically to both AWSSQS and AWSSQS.V4 packages
   - Duplicate test for V4: `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/Sqs/Standard/Reactor/`
 
-- [ ] **TEST + IMPLEMENT: Rejecting with Unacceptable reason falls back to DLQ when no invalid message queue configured**
+- [x] **TEST + IMPLEMENT: Rejecting with Unacceptable reason falls back to DLQ when no invalid message queue configured**
   - **USE COMMAND**: `/test-first when rejecting SQS message with unacceptable reason and no invalid channel should fallback to dlq`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor/`
   - Test file: `When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq.cs`
@@ -117,7 +117,7 @@ Test projects:
     - Apply identically to both AWSSQS and AWSSQS.V4 packages
   - Duplicate test for V4: `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/Sqs/Standard/Reactor/`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with no DLQ or invalid message queue configured acknowledges and logs**
+- [x] **TEST + IMPLEMENT: Rejecting a message with no DLQ or invalid message queue configured acknowledges and logs**
   - **USE COMMAND**: `/test-first when rejecting SQS message with no channels configured should acknowledge and log warning`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor/`
   - Test file: `When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log.cs`
@@ -133,7 +133,7 @@ Test projects:
     - Apply identically to both AWSSQS and AWSSQS.V4 packages
   - Duplicate test for V4: `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/Sqs/Standard/Reactor/`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends to DLQ (async/Proactor)**
+- [x] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends to DLQ (async/Proactor)**
   - **USE COMMAND**: `/test-first when rejecting SQS message async with delivery error should send to dead letter queue`
   - Test location: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Proactor/`
   - Test file: `When_rejecting_message_with_delivery_error_should_send_to_dlq_async.cs`
@@ -149,7 +149,7 @@ Test projects:
 
 ## Verification
 
-- [ ] **Run full SQS test suite to verify no regressions**
+- [x] **Run full SQS test suite to verify no regressions**
   - Run all existing tests in `Paramore.Brighter.AWS.Tests` and `Paramore.Brighter.AWS.V4.Tests`
   - Verify existing requeue/redrive tests still pass
   - Verify new DLQ tests pass for both packages
