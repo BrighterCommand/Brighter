@@ -45,22 +45,32 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private const string QUEUES = "queues";
         
         private readonly ChannelName _queueName;
-        
+        private readonly RedisMessagingGatewayConfiguration _configuration;
+        private readonly RoutingKey? _deadLetterRoutingKey;
+        private readonly RoutingKey? _invalidMessageRoutingKey;
+
         private readonly Dictionary<string, string> _inflight = new();
- 
+
         /// <summary>
         /// Creates a consumer that reads from a List in Redis via a BLPOP (so will block).
         /// </summary>
         /// <param name="redisMessagingGatewayConfiguration">Configuration for our Redis client etc.</param>
         /// <param name="queueName">Key of the list in Redis we want to read from</param>
         /// <param name="topic">The topic that the list subscribes to</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling</param>
         public RedisMessageConsumer(
-            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
-            ChannelName queueName, 
-            RoutingKey topic)
+            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
+            ChannelName queueName,
+            RoutingKey topic,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
             :base(redisMessagingGatewayConfiguration, topic)
         {
             _queueName = queueName;
+            _configuration = redisMessagingGatewayConfiguration;
+            _deadLetterRoutingKey = deadLetterRoutingKey;
+            _invalidMessageRoutingKey = invalidMessageRoutingKey;
        }
 
         /// <summary>

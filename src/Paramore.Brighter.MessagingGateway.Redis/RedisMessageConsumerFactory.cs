@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
 
         /// <summary>
-        /// Create a consumer for the specified subscrciption
+        /// Create a consumer for the specified subscription
         /// </summary>
         /// <param name="subscription">The subscription to create a consumer for</param>
         /// <returns>IAmAMessageConsumerSync</returns>
@@ -46,7 +46,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             RequireQueueName(subscription);
 
-            return new RedisMessageConsumer(_configuration, subscription.ChannelName!, subscription.RoutingKey);
+            var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
+            var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
+
+            return new RedisMessageConsumer(
+                _configuration,
+                subscription.ChannelName!,
+                subscription.RoutingKey,
+                deadLetterRoutingKey,
+                invalidMessageRoutingKey);
         }
 
         private static void RequireQueueName(Subscription subscription)
@@ -56,15 +64,23 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
 
         /// <summary>
-        /// Create a consumer for the specified subscrciption
+        /// Create a consumer for the specified subscription
         /// </summary>
         /// <param name="subscription">The subscription to create a consumer for</param>
         /// <returns>IAmAMessageConsumerAsync</returns>
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         {
             RequireQueueName(subscription);
-            
-            return new RedisMessageConsumer(_configuration, subscription.ChannelName!, subscription.RoutingKey);
+
+            var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
+            var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
+
+            return new RedisMessageConsumer(
+                _configuration,
+                subscription.ChannelName!,
+                subscription.RoutingKey,
+                deadLetterRoutingKey,
+                invalidMessageRoutingKey);
         }
     }
 }
