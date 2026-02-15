@@ -14,10 +14,9 @@ public class RedisRequeueWithDelayTestsAsync : IClassFixture<RedisFixture>
 
     public RedisRequeueWithDelayTestsAsync(RedisFixture redisFixture)
     {
-        const string topic = "test";
         _redisFixture = redisFixture;
         _messageOne = new Message(
-            new MessageHeader(Id.Random(), new RoutingKey(topic), MessageType.MT_COMMAND),
+            new MessageHeader(Id.Random(), redisFixture.Topic, MessageType.MT_COMMAND),
             new MessageBody("test content")
         );
     }

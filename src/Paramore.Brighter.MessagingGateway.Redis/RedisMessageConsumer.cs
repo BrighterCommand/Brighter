@@ -306,9 +306,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             delay ??= TimeSpan.Zero;
 
-            if (delay > TimeSpan.Zero)
+            if (delay > TimeSpan.Zero && _scheduler != null)
             {
                 message.Header.UpdateHandledCount();
+                _inflight.Remove(message.Id);
                 EnsureRequeueProducer();
                 _requeueProducer!.SendWithDelay(message, delay);
                 return true;
@@ -345,9 +346,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             delay ??= TimeSpan.Zero;
 
-            if (delay > TimeSpan.Zero)
+            if (delay > TimeSpan.Zero && _scheduler != null)
             {
                 message.Header.UpdateHandledCount();
+                _inflight.Remove(message.Id);
                 EnsureRequeueProducer();
                 await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
                 return true;
