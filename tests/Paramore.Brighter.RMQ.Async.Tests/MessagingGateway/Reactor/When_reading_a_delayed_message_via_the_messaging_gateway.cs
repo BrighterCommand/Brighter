@@ -32,6 +32,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
 [Trait("Fragile", "CI")]
+[Collection("RMQ")]
 public class RmqMessageProducerDelayedMessageTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
