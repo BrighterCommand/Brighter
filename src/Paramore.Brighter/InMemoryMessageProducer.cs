@@ -172,7 +172,7 @@ namespace Paramore.Brighter
                 return;
             }
             
-            throw new ConfigurationException("No scheduler available, cannot send message without delay");
+            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
  
         }
   
@@ -202,7 +202,7 @@ namespace Paramore.Brighter
                 return;
             }
 
-            throw new ConfigurationException("No scheduler available, cannot send message with delay"); 
+            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
         }
     }
 }
