@@ -144,7 +144,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             if (delay > TimeSpan.Zero)
             {
-                message.Header.UpdateHandledCount();
                 EnsureRequeueProducer();
                 _requeueProducer!.SendWithDelay(message, delay);
                 return true;
@@ -170,7 +169,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             if (delay > TimeSpan.Zero)
             {
-                message.Header.UpdateHandledCount();
                 EnsureRequeueProducer();
                 await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
                 return true;

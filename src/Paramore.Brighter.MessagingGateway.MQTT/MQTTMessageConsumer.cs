@@ -209,7 +209,6 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <returns><c>true</c> if the message was successfully requeued.</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
-            message.Header.UpdateHandledCount();
             EnsureRequeueProducer();
             _requeueProducer!.SendWithDelay(message, delay);
             return true;
@@ -225,7 +224,6 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
             CancellationToken cancellationToken = default)
         {
-            message.Header.UpdateHandledCount();
             EnsureRequeueProducer();
             await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
             return true;
