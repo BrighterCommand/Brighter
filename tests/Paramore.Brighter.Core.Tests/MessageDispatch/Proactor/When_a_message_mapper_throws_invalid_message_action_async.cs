@@ -52,7 +52,7 @@ public class MessageDispatchInvalidMessageActionAsyncTests
             timeOut: TimeSpan.FromMilliseconds(1000),
             channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
             channelName: new ChannelName("myChannel"),
-            messagePumpType: MessagePumpType.Reactor,
+            messagePumpType: MessagePumpType.Proactor,
             routingKey: _routingKey
         );
 
