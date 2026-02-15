@@ -106,6 +106,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Not implemented Acknowledge Method.
         /// </summary>
         /// <param name="message"></param>
+        /// <param name="cancellationToken">Allows cancellation of the acknowledge operation</param>
         public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
@@ -247,15 +248,29 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 Password = _configuration.Password
             };
 
-            var publisher = new MqttMessagePublisher(producerConfig);
-            var newProducer = new MqttMessageProducer(publisher, new Publication())
+            MqttMessagePublisher? publisher = null;
+            MqttMessageProducer? newProducer = null;
+            try
             {
-                Scheduler = _scheduler
-            };
-            var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
-            if (original != null)
+                publisher = new MqttMessagePublisher(producerConfig);
+                newProducer = new MqttMessageProducer(publisher, new Publication())
+                {
+                    Scheduler = _scheduler
+                };
+                var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
+                if (original != null)
+                {
+                    // Dispose producer if we lost the race
+                    newProducer.Dispose();
+                    // publisher does not require disposal
+                }
+            }
+            catch
             {
-                newProducer.Dispose();
+                // If construction fails, ensure any created resources are disposed
+                newProducer?.Dispose();
+                // publisher does not require disposal
+                throw;
             }
         }
 
