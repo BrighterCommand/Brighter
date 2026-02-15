@@ -65,19 +65,17 @@ public class InMemoryScheduler(
     {
         var id = getOrCreateMessageSchedulerId(message);
 
-        // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
-        {
-            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-        }
-
-        // Use AddOrUpdate to atomically replace the timer, disposing the old one
+        // Use AddOrUpdate to atomically handle conflicts and timer replacement
         _timers.AddOrUpdate(
             id,
             _ => timeProvider.CreateTimer(Execute,
                 (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero),
-            (_, existingTimer) =>
+            (key, existingTimer) =>
             {
+                if (onConflict == OnSchedulerConflict.Throw)
+                {
+                    throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+                }
                 existingTimer.Dispose();
                 return timeProvider.CreateTimer(Execute,
                     (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
@@ -109,13 +107,7 @@ public class InMemoryScheduler(
 
         var id = getOrCreateRequestSchedulerId(request);
 
-        // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
-        {
-            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-        }
-
-        // Use AddOrUpdate to atomically replace the timer, disposing the old one
+        // Use AddOrUpdate to atomically handle conflicts and timer replacement
         _timers.AddOrUpdate(
             id,
             _ => timeProvider.CreateTimer(Execute,
@@ -128,8 +120,12 @@ public class InMemoryScheduler(
                         RequestType = typeof(TRequest).FullName!,
                         RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
                     }), delay, TimeSpan.Zero),
-            (_, existingTimer) =>
+            (key, existingTimer) =>
             {
+                if (onConflict == OnSchedulerConflict.Throw)
+                {
+                    throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+                }
                 existingTimer.Dispose();
                 return timeProvider.CreateTimer(Execute,
                     (processor,
@@ -206,21 +202,17 @@ public class InMemoryScheduler(
 
         var id = getOrCreateMessageSchedulerId(message);
 
-        // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
-        {
-            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-        }
-
-        // Use AddOrUpdate to atomically replace the timer, disposing the old one
-        // Note: Timer disposal is synchronous here as AddOrUpdate doesn't support async callbacks,
-        // but ITimer.Dispose() is safe to call synchronously
+        // Use AddOrUpdate to atomically handle conflicts and timer replacement
         _timers.AddOrUpdate(
             id,
             _ => timeProvider.CreateTimer(Execute,
                 (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero),
-            (_, existingTimer) =>
+            (key, existingTimer) =>
             {
+                if (onConflict == OnSchedulerConflict.Throw)
+                {
+                    throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+                }
                 existingTimer.Dispose();
                 return timeProvider.CreateTimer(Execute,
                     (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
@@ -253,15 +245,7 @@ public class InMemoryScheduler(
 
         var id = getOrCreateRequestSchedulerId(request);
 
-        // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
-        {
-            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-        }
-
-        // Use AddOrUpdate to atomically replace the timer, disposing the old one
-        // Note: Timer disposal is synchronous here as AddOrUpdate doesn't support async callbacks,
-        // but ITimer.Dispose() is safe to call synchronously
+        // Use AddOrUpdate to atomically handle conflicts and timer replacement
         _timers.AddOrUpdate(
             id,
             _ => timeProvider.CreateTimer(Execute,
@@ -274,8 +258,12 @@ public class InMemoryScheduler(
                         RequestType = typeof(TRequest).FullName!,
                         RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
                     }), delay, TimeSpan.Zero),
-            (_, existingTimer) =>
+            (key, existingTimer) =>
             {
+                if (onConflict == OnSchedulerConflict.Throw)
+                {
+                    throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+                }
                 existingTimer.Dispose();
                 return timeProvider.CreateTimer(Execute,
                     (processor,
