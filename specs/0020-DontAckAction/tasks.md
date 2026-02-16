@@ -107,7 +107,7 @@
 
 ### Phase 5: FeatureSwitch DontAck Integration
 
-- [ ] **TEST + IMPLEMENT: When a feature switch is off with dontAck true the handler throws DontAckAction instead of silently returning**
+- [x] **TEST + IMPLEMENT: When a feature switch is off with dontAck true the handler throws DontAckAction instead of silently returning**
   - **USE COMMAND**: `/test-first when a feature switch is off with dontAck true the handler throws DontAckAction instead of silently returning`
   - Test location: `tests/Paramore.Brighter.Core.Tests/FeatureSwitch/`
   - Test file: `When_A_Handler_Is_Feature_Switch_Off_With_DontAck.cs`
@@ -124,7 +124,7 @@
     - Update `FeatureSwitchHandler.Handle()`: when off and `_dontAck` is true, throw `DontAckAction`
     - Existing tests with `dontAck: false` (default) must continue to pass unchanged
 
-- [ ] **TEST + IMPLEMENT: When an async feature switch is off with dontAck true the handler throws DontAckAction instead of silently returning**
+- [x] **TEST + IMPLEMENT: When an async feature switch is off with dontAck true the handler throws DontAckAction instead of silently returning**
   - **USE COMMAND**: `/test-first when an async feature switch is off with dontAck true the handler throws DontAckAction instead of silently returning`
   - Test location: `tests/Paramore.Brighter.Core.Tests/FeatureSwitch/`
   - Test file: `When_A_Handler_Is_Feature_Switch_Off_With_DontAck_Async.cs`
@@ -143,6 +143,6 @@
 ## Verification
 
 After all tasks complete:
-- [ ] Run existing FeatureSwitch tests to confirm backward compatibility (dontAck defaults to false)
-- [ ] Run existing defer/reject message dispatch tests to confirm no regression
+- [x] Run existing FeatureSwitch tests to confirm backward compatibility (dontAck defaults to false)
+- [x] Run existing defer/reject message dispatch tests to confirm no regression
 - [ ] Run full test suite: `dotnet test`
