@@ -30,9 +30,15 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.Testing;
 
 /// <summary>
-/// A spy implementation of IAmACommandProcessor for testing.
+/// A spy implementation of <see cref="IAmACommandProcessor"/> for testing.
 /// Records all method calls for later verification.
 /// </summary>
+/// <remarks>
+/// This type is not thread-safe. It is intended for unit tests where the handler under test
+/// is invoked sequentially (including single-threaded async/await). If your handler spawns
+/// concurrent tasks that call the command processor in parallel, coordinate access externally
+/// or assert after all tasks have completed.
+/// </remarks>
 public class SpyCommandProcessor : IAmACommandProcessor
 {
     private readonly List<RecordedCall> _recordedCalls = new();
@@ -51,8 +57,10 @@ public class SpyCommandProcessor : IAmACommandProcessor
 
     /// <summary>
     /// Gets a read-only dictionary of requests deposited to the outbox, keyed by their Id.
-    /// Requests are added here when <see cref="DepositPost{TRequest}(TRequest, RequestContext?, Dictionary{string, object}?)"/> is called,
-    /// and moved to the observation queue when <see cref="ClearOutbox"/> is called.
+    /// Requests are added here when <see cref="DepositPost{TRequest}(TRequest, RequestContext?, Dictionary{string, object}?)"/> is called.
+    /// They remain in this dictionary for the lifetime of the spy (or until <see cref="Reset"/> is called).
+    /// When <see cref="ClearOutbox"/> is called, matching requests are also copied to the observation queue
+    /// and become available via <see cref="Observe{T}"/>.
     /// </summary>
     public IReadOnlyDictionary<Id, IRequest> DepositedRequests => _depositedRequests;
 
@@ -459,10 +467,23 @@ public class SpyCommandProcessor : IAmACommandProcessor
     }
 
     /// <summary>
-    /// Records a <see cref="CommandType.Call"/> and returns null.
-    /// The spy does not process request-reply pipelines. To return test responses,
-    /// subclass <see cref="SpyCommandProcessor"/> and override this method.
+    /// Records a <see cref="CommandType.Call"/> and returns <c>null</c>.
+    /// The spy does not process request-reply pipelines.
     /// </summary>
+    /// <remarks>
+    /// To provide canned responses, subclass <see cref="SpyCommandProcessor"/> and override this method:
+    /// <code>
+    /// class MyTestProcessor : SpyCommandProcessor
+    /// {
+    ///     public override TResponse? Call&lt;T, TResponse&gt;(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
+    ///     {
+    ///         base.Call&lt;T, TResponse&gt;(request, requestContext, timeOut);
+    ///         return new MyResponse(...) as TResponse;
+    ///     }
+    /// }
+    /// </code>
+    /// </remarks>
+    /// <returns>Always <c>null</c>. Override to return test responses.</returns>
     public virtual TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
         where T : class, ICall
         where TResponse : class, IResponse
