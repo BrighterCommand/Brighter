@@ -411,7 +411,12 @@ public class SpyCommandProcessor : IAmACommandProcessor
         return Task.FromResult(ids.ToArray());
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Records a <see cref="CommandType.Clear"/> call and moves previously deposited requests to the observation queue.
+    /// To verify clears in tests, use <see cref="WasCalled"/>(<see cref="CommandType.Clear"/>) or
+    /// <see cref="GetCalls"/>(<see cref="CommandType.Clear"/>). After clearing, deposited requests become
+    /// available via <see cref="Observe{T}"/>.
+    /// </summary>
     public virtual void ClearOutbox(Id[] ids, RequestContext? requestContext = null,
         Dictionary<string, object>? args = null)
     {
@@ -428,7 +433,12 @@ public class SpyCommandProcessor : IAmACommandProcessor
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Records a <see cref="CommandType.ClearAsync"/> call and moves previously deposited requests to the observation queue.
+    /// To verify clears in tests, use <see cref="WasCalled"/>(<see cref="CommandType.ClearAsync"/>) or
+    /// <see cref="GetCalls"/>(<see cref="CommandType.ClearAsync"/>). After clearing, deposited requests become
+    /// available via <see cref="Observe{T}"/>.
+    /// </summary>
     public virtual Task ClearOutboxAsync(IEnumerable<Id> posts, RequestContext? requestContext = null,
         Dictionary<string, object>? args = null, bool continueOnCapturedContext = true,
         CancellationToken cancellationToken = default)
@@ -448,7 +458,11 @@ public class SpyCommandProcessor : IAmACommandProcessor
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Records a <see cref="CommandType.Call"/> and returns null.
+    /// The spy does not process request-reply pipelines. To return test responses,
+    /// subclass <see cref="SpyCommandProcessor"/> and override this method.
+    /// </summary>
     public virtual TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
         where T : class, ICall
         where TResponse : class, IResponse
