@@ -1,6 +1,6 @@
 # Requirements: Testing Support for Command Processor Handlers
 
-**Spec:** 0002-testing-support-for-command-processor-handlers
+**Spec:** 0003-testing-support-for-command-processor-handlers
 **Created:** 2026-02-05
 **Status:** Draft
 

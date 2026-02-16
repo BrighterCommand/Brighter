@@ -1,6 +1,6 @@
 # Resume Prompt: Testing Support for Command Processor Handlers
 
-**Spec ID**: 0002-testing-support-for-command-processor-handlers
+**Spec ID**: 0003-testing-support-for-command-processor-handlers
 **Last Updated**: 2026-02-06
 
 ## Current Status
@@ -15,7 +15,7 @@
 ## Completed Work
 
 ### Requirements (Approved)
-- `specs/0002-testing-support-for-command-processor-handlers/requirements.md`
+- `specs/0003-testing-support-for-command-processor-handlers/requirements.md`
 
 ### ADRs (Both Accepted)
 
@@ -138,8 +138,8 @@ public record RecordedCall(CommandType Type, IRequest Request, DateTime Timestam
 
 | File | Purpose |
 |------|---------|
-| `specs/0002-.../tasks.md` | Full task list with TDD commands |
-| `specs/0002-.../requirements.md` | Requirements specification |
+| `specs/0003-.../tasks.md` | Full task list with TDD commands |
+| `specs/0003-.../requirements.md` | Requirements specification |
 | `src/Paramore.Brighter.Testing/SpyCommandProcessor.cs` | Main implementation |
 | `src/Paramore.Brighter.Testing/CommandType.cs` | Command type enum |
 | `src/Paramore.Brighter.Testing/RecordedCall.cs` | Recorded call record |

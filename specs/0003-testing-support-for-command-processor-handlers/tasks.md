@@ -1,6 +1,6 @@
 # Implementation Tasks: Testing Support for Command Processor Handlers
 
-**Spec:** 0002-testing-support-for-command-processor-handlers
+**Spec:** 0003-testing-support-for-command-processor-handlers
 **Created:** 2026-02-06
 **Status:** Draft
 
@@ -332,7 +332,7 @@ This task list implements the `Paramore.Brighter.Testing` assembly with `SpyComm
   - Verify all tests pass
 
 - [ ] **VERIFY: Update PROMPT.md for future sessions**
-  - Update `specs/0002-.../PROMPT.md` to reflect completed status
+  - Update `specs/0003-.../PROMPT.md` to reflect completed status
   - Document any deviations from original design
 
 ---

@@ -28,6 +28,8 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 | `/spec:approve` | Approve phases | `/spec:approve <phase> [adr-number]` |
 | `/spec:review` | Review phases | `/spec:review [phase] [adr-number]` |
 | `/spec:switch` | Switch to different spec | `/spec:switch <spec-name>` |
+| `/spec:ralph-tasks` | Generate unattended TDD tasks | `/spec:ralph-tasks` |
+| `/spec:ralph-implement` | Unattended TDD implementation | `/spec:ralph-implement [count]` |
 
 ## Quick Reference Card
 
@@ -62,6 +64,11 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
    /spec:implement [task]        → TDD implementation
    /spec:status                  → Show all specs
    /spec:approve <phase>         → Approve phase
+
+🔄 RALPH LOOP (UNATTENDED)
+   /spec:ralph-tasks              → Generate ralph tasks
+   /spec:ralph-implement [count]  → Unattended TDD
+   scripts/ralph.sh [n] [max]     → Run the loop
 ```
 
 ## Decision Tree: Which Skill Should I Use?
@@ -184,6 +191,27 @@ Each skill enforces specific practices from `.agent_instructions/`:
 
 # Output: Single commit
 #   - refactor: simplify nested conditionals in KafkaConsumer
+```
+
+### Workflow 5: Ralph Loop (Unattended)
+
+```bash
+# 1. Complete spec workflow up to approved tasks (Workflows 3 steps 1-4)
+
+# 2. Generate ralph-tasks from approved tasks
+/spec:ralph-tasks
+
+# 3. Review ralph-tasks.md in your IDE
+
+# 4. Run the unattended loop
+./scripts/ralph.sh              # 1 task/run, 50 max iterations
+./scripts/ralph.sh 2 20 10      # 2 tasks/run, 20 max, 10s cooldown
+
+# 5. Stop if needed
+touch RALPH_STOP
+
+# 6. Review results
+git log --oneline
 ```
 
 ## Benefits Summary
