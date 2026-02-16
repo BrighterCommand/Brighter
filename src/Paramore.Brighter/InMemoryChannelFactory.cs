@@ -85,16 +85,20 @@ namespace Paramore.Brighter
         public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
         {
             var deadLetterSupport = subscription as IUseBrighterDeadLetterSupport;
-            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey; 
-            
+            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey;
+
+            var invalidMessageSupport = subscription as IUseBrighterInvalidMessageSupport;
+            var invalidMessageKey = invalidMessageSupport?.InvalidMessageRoutingKey;
+
             return new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
                 new InMemoryMessageConsumer(
-                    subscription.RoutingKey, 
-                    _internalBus, 
-                    _timeProvider, 
+                    subscription.RoutingKey,
+                    _internalBus,
+                    _timeProvider,
                     deadLetterKey,
+                    invalidMessageKey,
                     ackTimeout: _ackTimeout),
                 subscription.BufferSize
             );
@@ -108,10 +112,22 @@ namespace Paramore.Brighter
         /// <returns>A task representing the asynchronous operation, with an asynchronous channel instance as the result.</returns>
         public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken cancellationToken = default)
         {
+            var deadLetterSupport = subscription as IUseBrighterDeadLetterSupport;
+            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey;
+
+            var invalidMessageSupport = subscription as IUseBrighterInvalidMessageSupport;
+            var invalidMessageKey = invalidMessageSupport?.InvalidMessageRoutingKey;
+
             IAmAChannelAsync channel = new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, ackTimeout: _ackTimeout),
+                new InMemoryMessageConsumer(
+                    subscription.RoutingKey,
+                    _internalBus,
+                    _timeProvider,
+                    deadLetterKey,
+                    invalidMessageKey,
+                    ackTimeout: _ackTimeout),
                 subscription.BufferSize
             );
             return Task.FromResult(channel);

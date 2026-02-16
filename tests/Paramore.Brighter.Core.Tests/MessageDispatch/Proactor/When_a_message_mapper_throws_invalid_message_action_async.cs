@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Extensions;
@@ -30,9 +30,9 @@ public class MessageDispatchInvalidMessageActionAsyncTests
         );
 
         // Use a mapper that throws InvalidMessageAction to simulate deserialization failure
-        var mapperFactory = new SimpleMessageMapperFactory((r) => new MyInvalidMessageMapper());
-        var messageMapperRegistry = new MessageMapperRegistry(mapperFactory, null, null, null);
-        messageMapperRegistry.Register<MyRejectedEvent, MyInvalidMessageMapper>();
+        var mapperFactory = new SimpleMessageMapperFactoryAsync((r) => new MyInvalidMessageMapper());
+        var messageMapperRegistry = new MessageMapperRegistry(null, mapperFactory, null, null);
+        messageMapperRegistry.RegisterAsync<MyRejectedEvent, MyInvalidMessageMapper>();
 
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
         resiliencePipelineRegistry.AddBrighterDefault();
@@ -61,7 +61,7 @@ public class MessageDispatchInvalidMessageActionAsyncTests
         _dispatcher = new Dispatcher(
             commandProcessor,
             new List<Subscription> { subscription },
-            messageMapperRegistry,
+            messageMapperRegistryAsync: messageMapperRegistry,
             requestContextFactory: new InMemoryRequestContextFactory()
         );
 
@@ -74,12 +74,16 @@ public class MessageDispatchInvalidMessageActionAsyncTests
     }
 
     [Fact]
-    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
-    public void When_a_message_mapper_throws_invalid_message_action()
+    public async Task When_a_message_mapper_throws_invalid_message_action()
     {
-        // Assert: The message should be removed from the source queue
-        _dispatcher.End().Wait();
+        // Allow time for the async message pump to process
+        await Task.Delay(5000);
 
+        _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
+
+        await _dispatcher.End();
+
+        // Assert: The message should be removed from the source queue
         Assert.Empty(_bus.Stream(_routingKey));
 
         // Assert: The message should appear in the invalid message channel

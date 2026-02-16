@@ -498,6 +498,11 @@ namespace Paramore.Brighter.ServiceActivator
                     throw innerException;
                 throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", innerException ?? tie);
             }
+            catch (Exception exception) when (exception is InvalidMessageAction or RejectMessageAction or DeferMessageAction)
+            {
+                // Re-throw action exceptions directly so they are handled by the message pump
+                throw;
+            }
             catch (Exception exception)
             {
                 throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", exception);
