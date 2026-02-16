@@ -76,7 +76,7 @@
 
 ### Phase 4: DontAckOnError Pipeline Attribute
 
-- [ ] **TEST + IMPLEMENT: When DontAckOnError attribute is applied and the handler throws an exception the exception is wrapped in DontAckAction**
+- [x] **TEST + IMPLEMENT: When DontAckOnError attribute is applied and the handler throws an exception the exception is wrapped in DontAckAction**
   - **USE COMMAND**: `/test-first when DontAckOnError attribute is applied and the handler throws the exception is wrapped in DontAckAction`
   - Test location: `tests/Paramore.Brighter.Core.Tests/DontAck/`
   - Test file: `When_handler_throws_exception_should_dont_ack_message.cs`
@@ -91,7 +91,7 @@
     - Create `DontAckOnErrorAttribute` in `src/Paramore.Brighter/DontAck/Attributes/DontAckOnErrorAttribute.cs` (follow `RejectMessageOnErrorAttribute` pattern)
     - Create `DontAckOnErrorHandler<TRequest>` in `src/Paramore.Brighter/DontAck/Handlers/DontAckOnErrorHandler.cs` (follow `RejectMessageOnErrorHandler` pattern — catch Exception, throw `new DontAckAction(ex.Message, ex)`)
 
-- [ ] **TEST + IMPLEMENT: When DontAckOnError async attribute is applied and the async handler throws an exception the exception is wrapped in DontAckAction**
+- [x] **TEST + IMPLEMENT: When DontAckOnError async attribute is applied and the async handler throws an exception the exception is wrapped in DontAckAction**
   - **USE COMMAND**: `/test-first when DontAckOnError async attribute is applied and the async handler throws the exception is wrapped in DontAckAction`
   - Test location: `tests/Paramore.Brighter.Core.Tests/DontAck/`
   - Test file: `When_async_handler_throws_exception_should_dont_ack_message.cs`
