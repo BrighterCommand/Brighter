@@ -290,9 +290,25 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="message">The message to requeue.</param>
         /// <param name="timeout">Time to delay delivery of the message.</param>
-        /// <returns>True if message deleted, false otherwise</returns>
+        /// <returns>True if the message was successfully requeued and the original acknowledged, false otherwise.</returns>
+        /// <remarks>
+        /// <para>
+        /// This operation is not atomic. The message is first published back to the queue, and only then 
+        /// is the original message acknowledged (removed from the queue). This ordering is intentional to 
+        /// minimize message loss risk:
+        /// </para>
+        /// <list type="bullet">
+        ///   <item>
+        ///     <description>If the publish fails, the original message remains on the queue (at-least-once delivery).</description>
+        ///   </item>
+        ///   <item>
+        ///     <description>If the ack fails after a successful publish, the message may be delivered twice 
+        ///     (duplicate risk, not loss). Consumers should be idempotent to handle this scenario.</description>
+        ///   </item>
+        /// </list>
+        /// </remarks>
         public bool Requeue(Message message, TimeSpan? timeout = null)
         {
             timeout ??= TimeSpan.Zero;
@@ -302,7 +318,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 Log.RequeueingMessage(s_logger, message.Id, timeout.Value.TotalMilliseconds);
                 EnsureBroker(_queueName);
 
-                //Ensure Broker will create a channel if it is not already created
+                // Step 1: Publish the message back to the queue first.
+                // This ordering ensures at-least-once delivery: if publish fails, the original remains unacked.
                 if (DelaySupported || timeout <= TimeSpan.Zero)
                 {
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection);
@@ -314,11 +331,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     _producer!.SendWithDelay(message, timeout);
                 }
 
-                //ack the original message to remove it from the queue
+                // Step 2: Ack the original message to remove it from the queue.
+                // If this fails after a successful publish, the message may be duplicated (not lost).
+                // Consumers should be idempotent to handle potential duplicates.
                 var deliveryTag = message.DeliveryTag;
                 Log.DeletingMessage(s_logger, message.Id, deliveryTag);
                 
-                //NOTE: Ensure Broker will create a channel if it is not already created
                 Channel!.BasicAck(deliveryTag, false);
 
                 return true;
