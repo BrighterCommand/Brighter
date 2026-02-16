@@ -92,6 +92,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
     internal sealed class SpyDontAckCommandProcessor : SpyCommandProcessor
     {
+        private readonly SemaphoreSlim _handled = new(0);
+
         public int SendCount { get; set; }
 
         public SpyDontAckCommandProcessor()
@@ -99,10 +101,25 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             SendCount = 0;
         }
 
+        public bool WaitForHandle(int timeoutMs = 5000) => _handled.Wait(timeoutMs);
+
         public override void Send<T>(T command, RequestContext? requestContext = null)
         {
             base.Send(command, requestContext);
             SendCount++;
+            _handled.Release();
+            throw new DontAckAction();
+        }
+
+        public override async Task SendAsync<T>(
+            T command,
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default)
+        {
+            await base.SendAsync(command, requestContext, continueOnCapturedContext, cancellationToken);
+            SendCount++;
+            _handled.Release();
             throw new DontAckAction();
         }
     }

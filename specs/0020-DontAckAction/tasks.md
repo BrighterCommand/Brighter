@@ -12,7 +12,7 @@
 
 ### Phase 1: Core Pump Behavior (Reactor)
 
-- [ ] **TEST + IMPLEMENT: When a handler throws DontAckAction the Reactor does not acknowledge the message and continues the loop**
+- [x] **TEST + IMPLEMENT: When a handler throws DontAckAction the Reactor does not acknowledge the message and continues the loop**
   - **USE COMMAND**: `/test-first when a handler throws DontAckAction the Reactor does not acknowledge the message and continues the loop`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/`
   - Test file: `When_a_handler_throws_dont_ack_action_should_not_acknowledge.cs`
@@ -31,7 +31,7 @@
 
 ### Phase 2: Core Pump Behavior (Proactor)
 
-- [ ] **TEST + IMPLEMENT: When a handler throws DontAckAction the Proactor does not acknowledge the message and continues the loop**
+- [x] **TEST + IMPLEMENT: When a handler throws DontAckAction the Proactor does not acknowledge the message and continues the loop**
   - **USE COMMAND**: `/test-first when a handler throws DontAckAction the Proactor does not acknowledge the message and continues the loop`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/`
   - Test file: `When_a_handler_throws_dont_ack_action_should_not_acknowledge_async.cs`
