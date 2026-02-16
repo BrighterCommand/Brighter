@@ -256,9 +256,17 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         if (_scheduler != null)
         {
             _lockedMessages.TryRemove(message.Id, out _);
-            EnsureProducer(message.Header.Topic);
-            _producer!.SendWithDelay(message, timeOut);
-            return true;
+            try
+            {
+                EnsureProducer(message.Header.Topic);
+                _producer!.SendWithDelay(message, timeOut);
+                return true;
+            }
+            catch
+            {
+                _lockedMessages.TryAdd(message.Id, new LockedMessage(message, _timeProvider.GetUtcNow()));
+                throw;
+            }
         }
 
         throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
@@ -288,9 +296,17 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         if (_scheduler != null)
         {
             _lockedMessages.TryRemove(message.Id, out _);
-            EnsureProducer(message.Header.Topic);
-            await _producer!.SendWithDelayAsync(message, timeOut, cancellationToken);
-            return true;
+            try
+            {
+                EnsureProducer(message.Header.Topic);
+                await _producer!.SendWithDelayAsync(message, timeOut, cancellationToken);
+                return true;
+            }
+            catch
+            {
+                _lockedMessages.TryAdd(message.Id, new LockedMessage(message, _timeProvider.GetUtcNow()));
+                throw;
+            }
         }
 
         throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
