@@ -1,4 +1,4 @@
-# 25. Scoping dependencies inline with lifetime scope
+# 39. Scoping dependencies inline with lifetime scope
 
 Date: 2025-01-03
 

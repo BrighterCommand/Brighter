@@ -1,4 +1,4 @@
-# 34. Provide a Dead Letter Channel Where Native Support is Missing
+# 45. Provide a Dead Letter Channel Where Native Support is Missing
 
 Date: 2025-11-25
 

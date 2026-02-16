@@ -1,4 +1,4 @@
-# 36. Message Rejection Routing Strategy
+# 47. Message Rejection Routing Strategy
 
 Date: 2026-01-11
 
@@ -350,8 +350,8 @@ Remove invalid message channel concept; use DLQ for everything.
 
 - Requirements: [specs/0001-kafka-dead-letter-queue/requirements.md](../../specs/0001-kafka-dead-letter-queue/requirements.md)
 - Related ADRs:
-  - [ADR 0034: Provide DLQ Where Missing](0034-provide-dlq-where-missing.md) - Establishes DLQ strategy and exception types
-  - [ADR 0035: Kafka DLQ Producer for Requeue](0035-kafka-dlq-producer-for-requeue.md) - Producer lifecycle and topic creation
+  - [ADR 0045: Provide DLQ Where Missing](0045-provide-dlq-where-missing.md) - Establishes DLQ strategy and exception types
+  - [ADR 0046: Kafka DLQ Producer for Requeue](0046-kafka-dlq-producer-for-requeue.md) - Producer lifecycle and topic creation
 - External references:
   - [Dead Letter Channel Pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/DeadLetterChannel.html)
   - [Invalid Message Channel Pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/InvalidMessageChannel.html)

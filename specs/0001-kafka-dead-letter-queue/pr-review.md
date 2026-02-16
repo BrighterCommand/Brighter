@@ -1,11 +1,11 @@
 PR Review: Add Universal Support for Dead Letter Channels
 Overview
 
-This PR adds comprehensive Dead Letter Channel (DLQ) and Invalid Message Channel support for transports that lack native DLQ capabilities. The implementation is well-designed and includes thorough documentation via ADR 0034.
+This PR adds comprehensive Dead Letter Channel (DLQ) and Invalid Message Channel support for transports that lack native DLQ capabilities. The implementation is well-designed and includes thorough documentation via ADR 0045.
 Strengths
 Architecture & Design
 
-    Excellent ADR: The ADR 0034 (docs/adr/0034-provide-dlq-where-missing.md:1) provides comprehensive rationale and design decisions
+    Excellent ADR: The ADR 0045 (docs/adr/0045-provide-dlq-where-missing.md:1) provides comprehensive rationale and design decisions
     Interface segregation: Using IUseBrighterDeadLetterSupport and IUseBrighterInvalidMessageSupport as marker interfaces follows the codebase's established patterns
     Opt-in design: The nullable RoutingKey? properties allow consumers to opt-out of DLQ support
     Clear separation: Distinguishing between transient failures (DeferMessageAction) and rejections (RejectMessageAction) is well thought out

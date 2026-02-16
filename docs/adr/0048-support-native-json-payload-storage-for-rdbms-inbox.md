@@ -1,6 +1,4 @@
-# ADR 00xx: Support Native JSON Payload Storage for RDBMS Inbox
-
-> **Note**: ADR number to be assigned on merge.
+# 48. Support Native JSON Payload Storage for RDBMS Inbox
 
 ## Status
 

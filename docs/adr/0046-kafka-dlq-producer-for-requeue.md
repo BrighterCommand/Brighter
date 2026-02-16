@@ -1,4 +1,4 @@
-# 35. Kafka DLQ Producer for Requeue
+# 46. Kafka DLQ Producer for Requeue
 
 Date: 2026-01-11
 
@@ -10,7 +10,7 @@ Approved
 
 **Parent Requirement**: [specs/0001-kafka-dead-letter-queue/requirements.md](../../specs/0001-kafka-dead-letter-queue/requirements.md)
 
-**Scope**: This ADR focuses specifically on how the Kafka transport implements the producer for dead letter queue and invalid message channel functionality. It builds on [ADR 0034: Provide DLQ Where Missing](0034-provide-dlq-where-missing.md), which established the high-level decision to use `IAmAMessageProducer` directly for DLQ publishing.
+**Scope**: This ADR focuses specifically on how the Kafka transport implements the producer for dead letter queue and invalid message channel functionality. It builds on [ADR 0045: Provide DLQ Where Missing](0045-provide-dlq-where-missing.md), which established the high-level decision to use `IAmAMessageProducer` directly for DLQ publishing.
 
 ### The Problem
 
@@ -396,7 +396,7 @@ If DLQ production fails, write message to local file for later replay.
 
 - Requirements: [specs/0001-kafka-dead-letter-queue/requirements.md](../../specs/0001-kafka-dead-letter-queue/requirements.md)
 - Related ADRs:
-  - [ADR 0034: Provide DLQ Where Missing](0034-provide-dlq-where-missing.md) - Establishes overall DLQ strategy
+  - [ADR 0045: Provide DLQ Where Missing](0045-provide-dlq-where-missing.md) - Establishes overall DLQ strategy
 - External references:
   - [Kafka Producer API](https://kafka.apache.org/documentation/#producerapi)
   - [Dead Letter Queue Pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/DeadLetterChannel.html)

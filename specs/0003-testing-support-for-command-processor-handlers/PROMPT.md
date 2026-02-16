@@ -21,8 +21,8 @@
 
 | ADR | File | Status |
 |-----|------|--------|
-| 0037 | `Docs/adr/0037-testing-assembly-structure.md` | **Accepted** |
-| 0038 | `Docs/adr/0038-spy-command-processor-api.md` | **Accepted** |
+| 0049 | `docs/adr/0049-testing-assembly-structure.md` | **Accepted** |
+| 0050 | `docs/adr/0050-spy-command-processor-api.md` | **Accepted** |
 
 ### Implementation Progress
 
@@ -143,6 +143,6 @@ public record RecordedCall(CommandType Type, IRequest Request, DateTime Timestam
 | `src/Paramore.Brighter.Testing/SpyCommandProcessor.cs` | Main implementation |
 | `src/Paramore.Brighter.Testing/CommandType.cs` | Command type enum |
 | `src/Paramore.Brighter.Testing/RecordedCall.cs` | Recorded call record |
-| `Docs/adr/0037-testing-assembly-structure.md` | Assembly design |
-| `Docs/adr/0038-spy-command-processor-api.md` | API design |
+| `docs/adr/0049-testing-assembly-structure.md` | Assembly design |
+| `docs/adr/0050-spy-command-processor-api.md` | API design |
 | `Docs/guides/testing-handlers.md` | Usage guide |

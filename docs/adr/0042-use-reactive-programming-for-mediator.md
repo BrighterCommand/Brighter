@@ -1,4 +1,4 @@
-# 25. Use Reactive Progamming For Mediator 
+# 42. Use Reactive Programming For Mediator
 
 Date: 2025-01-13
 
@@ -9,7 +9,7 @@ Accepted
 ## Context
 
 We have scenarios in any workflow where we need to split and then later merge. Our decision to handle the split in 
-[0024](./0024-add-parallel-split-to-mediator.md) led us on the path to seperating a scheduler and a runner - a 
+[0041](./0041-add-parallel-split-to-mediator.md) led us on the path to seperating a scheduler and a runner - a 
 classic producer and consumer pattern. We can use `Channels` (or a `BlockingCollection`) in dotnet to support the 
 implementation of an internal producer-consumer (as opposed to one using messaging.
 

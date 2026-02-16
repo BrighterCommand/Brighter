@@ -1,4 +1,4 @@
-# 38. Spy Command Processor API
+# 50. Spy Command Processor API
 
 Date: 2026-02-05
 
@@ -10,7 +10,7 @@ Proposed
 
 **Parent Requirement**: [specs/0002-testing-support-for-command-processor-handlers/requirements.md](../../specs/0002-testing-support-for-command-processor-handlers/requirements.md)
 
-**Scope**: This ADR focuses specifically on the public API design of `SpyCommandProcessor` - the methods users will call to verify handler interactions. See [ADR 0037](0037-testing-assembly-structure.md) for the overall assembly structure.
+**Scope**: This ADR focuses specifically on the public API design of `SpyCommandProcessor` - the methods users will call to verify handler interactions. See [ADR 0049](0049-testing-assembly-structure.md) for the overall assembly structure.
 
 ### Problem
 
@@ -290,7 +290,7 @@ var calls = spy.GetAllCalls();
 ## References
 
 - Requirements: [specs/0002-testing-support-for-command-processor-handlers/requirements.md](../../specs/0002-testing-support-for-command-processor-handlers/requirements.md)
-- Related ADRs: [ADR 0037: Testing Assembly Structure](0037-testing-assembly-structure.md)
+- Related ADRs: [ADR 0049: Testing Assembly Structure](0049-testing-assembly-structure.md)
 - IAmACommandProcessor: [src/Paramore.Brighter/IAmACommandProcessor.cs](../../src/Paramore.Brighter/IAmACommandProcessor.cs)
 - Moq verification patterns: https://github.com/moq/moq4
 - NSubstitute received calls: https://nsubstitute.github.io/help/received-calls/

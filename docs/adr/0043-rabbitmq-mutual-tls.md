@@ -1,6 +1,4 @@
-# ADR 00xx: Optional Mutual TLS (mTLS) Support for RabbitMQ Messaging Gateway
-
-> **Note**: ADR number to be assigned on merge.
+# 43. Optional Mutual TLS (mTLS) Support for RabbitMQ Messaging Gateway
 
 ## Status
 
