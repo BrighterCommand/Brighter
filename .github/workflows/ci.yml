@@ -298,16 +298,16 @@ jobs:
           SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
     steps:
-    - name: Install KafkaCat
+    - name: Install kcat
       run: |
-        sudo apt-get install -y kafkacat
+        sudo apt-get update && sudo apt-get install -y kcat
     - name: Wait for Kafka to be ready
       run: |
         echo "Waiting for Kafka to be ready..."
         max_attempts=30
         attempt=0
         while [ $attempt -lt $max_attempts ]; do
-          if kafkacat -b localhost:9092 -L > /dev/null 2>&1; then
+          if kcat -b localhost:9092 -L > /dev/null 2>&1; then
             echo "Kafka is ready!"
             break
           fi
@@ -315,7 +315,7 @@ jobs:
           echo "Attempt $attempt/$max_attempts: Kafka not ready yet, waiting 2 seconds..."
           sleep 2
         done
-        if [ $attempt -eq $max_attempts ] && ! kafkacat -b localhost:9092 -L > /dev/null 2>&1; then
+        if [ $attempt -eq $max_attempts ] && ! kcat -b localhost:9092 -L > /dev/null 2>&1; then
           echo "Kafka failed to become ready after $max_attempts attempts"
           exit 1
         fi
