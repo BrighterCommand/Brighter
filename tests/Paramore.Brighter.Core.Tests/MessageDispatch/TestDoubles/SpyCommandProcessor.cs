@@ -90,6 +90,23 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
     }
 
+    internal sealed class SpyDontAckCommandProcessor : SpyCommandProcessor
+    {
+        public int SendCount { get; set; }
+
+        public SpyDontAckCommandProcessor()
+        {
+            SendCount = 0;
+        }
+
+        public override void Send<T>(T command, RequestContext? requestContext = null)
+        {
+            base.Send(command, requestContext);
+            SendCount++;
+            throw new DontAckAction();
+        }
+    }
+
     internal sealed class SpyExceptionCommandProcessor : SpyCommandProcessor
     {
         public int SendCount { get; set; }

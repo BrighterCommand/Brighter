@@ -84,6 +84,12 @@ namespace Paramore.Brighter.ServiceActivator
         public TimeSpan ChannelFailureDelay { get; set; }
 
         /// <summary>
+        /// The delay to wait before the next pump iteration after a <see cref="Actions.DontAckAction"/>.
+        /// Prevents tight-loop CPU burn when a message is repeatedly not acknowledged.
+        /// </summary>
+        public TimeSpan DontAckDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+        /// <summary>
         /// The delay to wait when the channel is empty
         /// </summary>
         public TimeSpan EmptyChannelDelay { get; set; }
