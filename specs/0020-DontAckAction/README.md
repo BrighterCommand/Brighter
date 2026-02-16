@@ -1,13 +1,13 @@
 # DontAckAction
 
 **Created:** 2026-02-16
-**Status:** Design
+**Status:** Tasks
 
 ## Progress Checklist
 
 - [x] Requirements (`requirements.md`) - Use `/spec:requirements`
-- [ ] Design (`design.md`) - Use `/spec:design`
-  - [ ] [ADR 0038 - Don't Ack Action](../../docs/adr/0038-dont-ack-action.md)
+- [x] Design (`design.md`) - Use `/spec:design`
+  - [x] [ADR 0038 - Don't Ack Action](../../docs/adr/0038-dont-ack-action.md) — Accepted
 - [ ] Tasks (`tasks.md`) - Use `/spec:tasks`
 - [ ] Implementation - Use `/spec:implement`
 
