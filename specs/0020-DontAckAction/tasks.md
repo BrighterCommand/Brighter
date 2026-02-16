@@ -47,7 +47,7 @@
 
 ### Phase 3: AggregateException Handling
 
-- [ ] **TEST + IMPLEMENT: When an AggregateException containing DontAckAction is thrown the Reactor does not acknowledge the message**
+- [x] **TEST + IMPLEMENT: When an AggregateException containing DontAckAction is thrown the Reactor does not acknowledge the message**
   - **USE COMMAND**: `/test-first when an AggregateException containing DontAckAction is thrown the Reactor does not acknowledge the message`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/`
   - Test file: `When_aggregate_exception_containing_dont_ack_action_should_not_acknowledge.cs`
@@ -61,7 +61,7 @@
     - Add `DontAckAction` detection in the `AggregateException` handler in `Reactor.cs` (add `dontAck` flag alongside existing `defer`, `reject`, `invalidMessage` flags)
     - After the foreach loop, add `if (dontAck)` block that logs, increments count, applies delay, and continues
 
-- [ ] **TEST + IMPLEMENT: When an AggregateException containing DontAckAction is thrown the Proactor does not acknowledge the message**
+- [x] **TEST + IMPLEMENT: When an AggregateException containing DontAckAction is thrown the Proactor does not acknowledge the message**
   - **USE COMMAND**: `/test-first when an AggregateException containing DontAckAction is thrown the Proactor does not acknowledge the message`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/`
   - Test file: `When_aggregate_exception_containing_dont_ack_action_should_not_acknowledge_async.cs`

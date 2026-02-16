@@ -235,10 +235,11 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     var stop = false;
                     var defer = false;
+                    var dontAck = false;
                     var reject = false;
                     var invalidMessage = false;
-                    string? rejectReason = null; 
-  
+                    string? rejectReason = null;
+
                     foreach (var exception in aggregateException.InnerExceptions)
                     {
                         if (exception is ConfigurationException configurationException)
@@ -254,7 +255,13 @@ namespace Paramore.Brighter.ServiceActivator
                             defer = true;
                             continue;
                         }
-                        
+
+                        if (exception is DontAckAction)
+                        {
+                            dontAck = true;
+                            continue;
+                        }
+
                         if (exception is RejectMessageAction rejectMessageAction)
                         {
                             reject = true;
@@ -279,7 +286,16 @@ namespace Paramore.Brighter.ServiceActivator
                         if (await RequeueMessage(message))
                             continue;
                     }
-                    
+
+                    if (dontAck)
+                    {
+                        Log.NotAcknowledgingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                        span?.SetStatus(ActivityStatusCode.Error, $"Don't Ack Thrown. Not acknowledging message {message.Id}");
+                        IncrementUnacceptableMessageCount();
+                        await Task.Delay(DontAckDelay);
+                        continue;
+                    }
+
                     if (reject)
                     {
                         span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
