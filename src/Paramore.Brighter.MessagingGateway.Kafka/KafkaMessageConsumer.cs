@@ -847,7 +847,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (_requeueProducer != null) return;
 
             var newProducer = CreateProducer(Topic!);
-            if (newProducer == null) return;
+            if (newProducer == null)
+            {
+                throw new ConfigurationException(
+                    $"Failed to create requeue producer for topic {Topic}. Check broker connectivity and configuration.");
+            }
 
             newProducer.Scheduler = _scheduler;
             var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
