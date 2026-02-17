@@ -218,7 +218,7 @@
 - [x] Run full test suite: `dotnet test`
 
 ### Phase 6-8 (Transport Nack)
-- [ ] Run Phase 6 Reactor/Proactor nack tests
-- [ ] Run existing DontAckAction tests to confirm no regression (Phases 1-5 behavior preserved)
-- [ ] Run existing defer/reject message dispatch tests to confirm no regression
-- [ ] Run full test suite: `dotnet test`
+- [x] Run Phase 6 Reactor/Proactor nack tests
+- [x] Run existing DontAckAction tests to confirm no regression (Phases 1-5 behavior preserved)
+- [x] Run existing defer/reject message dispatch tests to confirm no regression
+- [x] Run full test suite: `dotnet test` (536 tests passed)
