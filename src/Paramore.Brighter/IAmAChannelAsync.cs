@@ -69,6 +69,18 @@ namespace Paramore.Brighter
         Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken));
         
         /// <summary>
+        /// Nacks the specified message, releasing it back to the transport for redelivery.
+        /// </summary>
+        /// <remarks>
+        /// For queue-based transports, this explicitly releases the transport's lock so the message
+        /// is immediately available to any consumer. For stream-based transports, this is a no-op
+        /// because not committing the offset is sufficient.
+        /// </remarks>
+        /// <param name="message">The <see cref="Message"/> to nack</param>
+        /// <param name="cancellationToken">Cancel the nack operation</param>
+        Task NackAsync(Message message, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>

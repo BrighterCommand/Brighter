@@ -79,8 +79,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             // which only happens if IncrementUnacceptableMessageCount was called for each DontAckAction
             Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status);
 
-            // Assert: messages were NOT requeued to the bus (unlike DeferMessageAction)
-            Assert.Empty(_bus.Stream(_routingKey));
+            // Assert: messages were nacked to the bus (available for redelivery)
+            Assert.NotEmpty(_bus.Stream(_routingKey));
         }
     }
 }

@@ -113,6 +113,28 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     }
   
     /// <summary>
+    /// Nacks the specified message, removing it from the locked messages and re-enqueuing it to the bus
+    /// so it is immediately available for redelivery.
+    /// </summary>
+    /// <param name="message">The <see cref="Message"/> to nack</param>
+    public void Nack(Message message)
+    {
+        _lockedMessages.TryRemove(message.Id, out _);
+        _bus.Enqueue(message);
+    }
+
+    /// <summary>
+    /// Nacks the specified message, removing it from the locked messages and re-enqueuing it to the bus
+    /// so it is immediately available for redelivery.
+    /// </summary>
+    /// <param name="message">The <see cref="Message"/> to nack</param>
+    /// <param name="cancellationToken">Cancel the nack operation</param>
+    public async Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        await Task.Run(() => Nack(message), cancellationToken);
+    }
+
+    /// <summary>
     /// Purges the specified queue name.
     /// </summary>
     public void Purge()
