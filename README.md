@@ -111,27 +111,37 @@ public class GreetingEvent : Event
 }
 ```
 
-**2. Configure External Bus and Publish**
+**2. Configure Producers and Post**
 
-> **Note:** Make sure you've installed a transport package like `Paramore.Brighter.MessagingGateway.RMQ`
+> **Note:** Make sure you've installed a transport package like `Paramore.Brighter.MessagingGateway.RMQ.Async`
 
 ```csharp
 var builder = Host.CreateApplicationBuilder();
+
+var rmqConnection = new RmqMessagingGatewayConnection
+{
+    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+    Exchange = new Exchange("paramore.brighter.exchange"),
+};
+
+var producerRegistry = new RmqProducerRegistryFactory(
+    rmqConnection,
+    [
+        new() { Topic = new RoutingKey("greeting.event"), RequestType = typeof(GreetingEvent) }
+    ]).Create();
+
 builder.Services.AddBrighter()
     .AutoFromAssemblies()
-    .UseExternalBus(bus =>
+    .AddProducers(configure =>
     {
-        bus.UseRabbitMQ(new RmqMessagingGatewayConfiguration
-        {
-            AmqpUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672"))
-        });
+        configure.ProducerRegistry = producerRegistry;
     });
 
 var host = builder.Build();
 var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 
-// Publish to external message broker
-await commandProcessor.PublishAsync(new GreetingEvent("World"));
+// Post to external message broker
+commandProcessor.Post(new GreetingEvent("World"));
 ```
 
 **3. Subscribe to Events**
@@ -146,17 +156,24 @@ public class GreetingEventHandler : RequestHandler<GreetingEvent>
     }
 }
 
-// Configure subscription (add to your builder configuration)
-builder.Services.AddServiceActivator()
-    .Subscriptions(s =>
-        s.Add<GreetingEvent>(
-            new Subscription<GreetingEvent>(
-                new SubscriptionName("greeting-subscription"),
-                new ChannelName("greeting.event"),
-                new RoutingKey("greeting.event")
-            )
-        )
-    );
+// Configure consumer subscriptions
+var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+
+builder.Services.AddConsumers(options =>
+{
+    options.Subscriptions =
+    [
+        new RmqSubscription<GreetingEvent>(
+            new SubscriptionName("greeting-subscription"),
+            new ChannelName("greeting.event"),
+            new RoutingKey("greeting.event"),
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create)
+    ];
+    options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+}).AutoFromAssemblies();
+
+builder.Services.AddHostedService<ServiceActivatorHostedService>();
 ```
 
 ## Key Features
@@ -168,23 +185,20 @@ Add cross-cutting concerns via attributes on your handlers:
 public class GreetingCommandHandler : RequestHandler<GreetingCommand>
 {
     [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-    [UsePolicy(policy: "MyRetryPolicy", step: 2)]
+    [UsePolicyAsync(policy: CommandProcessor.RETRYPOLICYASYNC, step: 2)]
     public override GreetingCommand Handle(GreetingCommand command)
     {
         Console.WriteLine($"Hello {command.Name}");
         return base.Handle(command);
     }
 }
-
-// Configure policies
-builder.Services.AddBrighter()
-    .AutoFromAssemblies()
-    .Policies(p => p.Add("MyRetryPolicy", Policy.Handle<Exception>().Retry(3)));
 ```
 
+Brighter provides default retry and circuit breaker policies. You can also register custom policies using `AddPolicies()`.
+
 **Available Middleware:**
-- **Logging**: `[RequestLogging]` - Log commands/events automatically
-- **Retry & Circuit Breaker**: `[UsePolicy]` - Integrates with Polly for resilience
+- **Logging**: `[RequestLogging]` / `[RequestLoggingAsync]` - Log commands/events automatically
+- **Retry & Circuit Breaker**: `[UsePolicy]` / `[UsePolicyAsync]` - Integrates with Polly for resilience
 - **Validation**: `[Validation]` - Validate requests before handling
 - **Custom middleware**: Create your own attributes
 
@@ -195,11 +209,15 @@ Brighter implements the Outbox pattern to guarantee message delivery in distribu
 ```csharp
 builder.Services.AddBrighter()
     .AutoFromAssemblies()
-    .UseExternalBus(/* configure transport */)
-    .UseOutbox(new PostgreSqlOutbox(/* configuration */));
+    .AddProducers(configure =>
+    {
+        configure.ProducerRegistry = producerRegistry;
+        configure.Outbox = new PostgreSqlOutbox(/* configuration */);
+        configure.TransactionProvider = typeof(/* your transaction provider */);
+    });
 ```
 
-The Outbox ensures that messages are written to the database atomically with your business logic, then reliably delivered to the message broker. This prevents message loss and ensures consistency.
+The Outbox ensures that messages are written to the database atomically with your business logic, then reliably delivered to the message broker. This prevents message loss and ensures consistency. Use `DepositPost`/`DepositPostAsync` to write messages to the Outbox within your transaction, and `ClearOutbox`/`ClearOutboxAsync` to dispatch them afterwards.
 
 **Supported Outbox Stores:** PostgreSQL, MySQL, MSSQL, SQLite, DynamoDB, MongoDB
 
@@ -242,6 +260,10 @@ Use Brighter's Service Activator to consume messages from queues and process the
 - Multiple database and transport configurations
 - CQRS patterns
 - Microservices architecture patterns
+
+## Related Projects
+
+- **[Darker](https://github.com/BrighterCommand/Darker)** - The query-side companion to Brighter. Implements the Query Processor pattern for CQRS architectures.
 
 ## Community & Support
 

@@ -31,8 +31,8 @@ Welcome! Here's how to get started:
 
 ### Quick Setup
 1. Fork and clone the repository
-2. Ensure you have .NET 8 SDK or later installed: `dotnet --version`
-3. Build the solution: `dotnet build Brighter.sln`
+2. Ensure you have .NET 10 SDK or later installed: `dotnet --version`
+3. Build the solution: `dotnet build Brighter.slnx`
 4. Run core tests (no external dependencies): `dotnet test tests/Paramore.Brighter.Core.Tests`
 
 ### Your First Contribution
