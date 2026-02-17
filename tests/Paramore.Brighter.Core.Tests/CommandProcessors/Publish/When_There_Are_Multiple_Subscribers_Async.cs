@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +14,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
     public class CommandProcessorPublishMultipleMatchesAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _receivedMessages = new ConcurrentDictionary<string, string>();
         private readonly MyEvent _myEvent = new();
         private Exception? _exception;
 
