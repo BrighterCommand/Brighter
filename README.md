@@ -9,7 +9,7 @@
 [![CodeScene Code Health](https://codescene.io/projects/32198/status-badges/code-health)](https://codescene.io/projects/32198)
 ![CodeScene System Mastery](https://codescene.io/projects/32198/status-badges/system-mastery)
 
-**Brighter is a Command Dispatcher and Command Processor framework for .NET**. It enables you to build loosely coupled, maintainable applications using the Command pattern and supports both in-process and out-of-process messaging for microservices architectures.
+**Brighter is a Command Dispatcher and Command Processor framework for .NET**. It enables you to build loosely coupled, maintainable applications using the Command pattern and supports both in-process and out-of-process messaging for microservices architectures. Its companion project, **[Darker](https://github.com/BrighterCommand/Darker)**, provides the query side for CQRS architectures.
 
 ## Why Brighter?
 
