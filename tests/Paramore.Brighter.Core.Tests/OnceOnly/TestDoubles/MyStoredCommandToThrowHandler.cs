@@ -33,11 +33,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
         public static bool CommandReceived { get; set; }
         
         [UseInbox(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Throw, contextKey: typeof(MyStoredCommandToThrowHandler))]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand myCommand)
         {
             CommandReceived = true;
 
-            return base.Handle(command);
+            return base.Handle(myCommand);
         }
 
         public static bool DidReceive(MyCommand command)

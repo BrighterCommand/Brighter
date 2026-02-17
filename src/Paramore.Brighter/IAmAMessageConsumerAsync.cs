@@ -43,10 +43,13 @@ namespace Paramore.Brighter
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="cancellationToken">Cancel the rejection</param>
+        /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
+        /// message channel, the message should be forwardedn to it
+        /// <param name="message">The <see cref="Message"/> to reject</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explaines why we rejected the message</param>
+        /// <param name="cancellationToken">Cancels the rejection</param>
         /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-        Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken));
+        Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Purges the specified queue name.

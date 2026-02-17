@@ -159,7 +159,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                      else if(useSchedulerAsync)
                      {
                          var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
-                         BrighterAsyncContext.Run(async () => await schedulerAsync.ScheduleAsync(message, delay.Value));
+                         BrighterAsyncContext.Run(() => schedulerAsync.ScheduleAsync(message, delay.Value));
                      }
                      else
                      {

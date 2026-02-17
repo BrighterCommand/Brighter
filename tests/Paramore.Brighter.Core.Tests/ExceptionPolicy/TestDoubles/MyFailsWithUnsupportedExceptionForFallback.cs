@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 
         /*Policy is mismatched - Fallback won't catch this exception, deliberate for testing*/
         [FallbackPolicy(false, true, 1)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand myCommand)
         {
             ReceivedCommand = true;
             throw new DivideByZeroException();

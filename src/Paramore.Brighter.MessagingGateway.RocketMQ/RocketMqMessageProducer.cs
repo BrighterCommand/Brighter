@@ -40,7 +40,7 @@ public class RocketMqMessageProducer(
     /// <inheritdoc />
     public void SendWithDelay(Message message, TimeSpan? delay)
     {
-        BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay, false));
+        BrighterAsyncContext.Run(() => SendWithDelayAsync(message, delay, false));
     }
 
     /// <inheritdoc />

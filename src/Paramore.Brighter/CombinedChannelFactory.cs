@@ -36,7 +36,7 @@ public class CombinedChannelFactory(IEnumerable<IAmAChannelFactory> factories) :
     }
 
     /// <inheritdoc />
-    public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,
+    public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,
         CancellationToken ct = default)
     {
         var factory = factories.FirstOrDefault(f => f.GetType() == subscription.ChannelFactoryType);
@@ -45,6 +45,6 @@ public class CombinedChannelFactory(IEnumerable<IAmAChannelFactory> factories) :
             throw new ConfigurationException($"No channel factory found for subscription {subscription.Name}");
         }
 
-        return await factory.CreateAsyncChannelAsync(subscription, ct);
+        return factory.CreateAsyncChannelAsync(subscription, ct);
     }
 }

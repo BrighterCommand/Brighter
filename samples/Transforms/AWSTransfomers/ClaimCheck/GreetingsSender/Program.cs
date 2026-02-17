@@ -63,8 +63,7 @@ namespace GreetingsSender
 
                 var producerRegistry = new SnsProducerRegistryFactory(
                     awsConnection,
-                    new SnsPublication[]
-                    {
+                    [
                         new()
                         {
                             Topic = topic,
@@ -72,7 +71,7 @@ namespace GreetingsSender
                             FindTopicBy = TopicFindBy.Convention,
                             MakeChannels = OnMissingChannel.Create
                         }
-                    }
+                    ]
                 ).Create();
                 
                 serviceCollection.AddBrighter()

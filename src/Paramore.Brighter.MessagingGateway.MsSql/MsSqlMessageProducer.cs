@@ -128,7 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                   
                 if (Scheduler is IAmAMessageSchedulerAsync async)
                 {
-                    BrighterAsyncContext.Run(async () => await async.ScheduleAsync(message, delay.Value));
+                    BrighterAsyncContext.Run(() => async.ScheduleAsync(message, delay.Value));
                     return;
                 } 
                   

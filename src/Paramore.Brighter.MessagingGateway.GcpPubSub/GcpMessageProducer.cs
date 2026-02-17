@@ -92,7 +92,7 @@ public class GcpMessageProducer(
     public void SendWithDelay(Message message, TimeSpan? delay)
     {
         // Execute the asynchronous send in a way that blocks the calling thread (synchronous wrapper)
-        BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
+        BrighterAsyncContext.Run(() => SendWithDelayAsync(message, delay));
     }
 
     /// <summary>

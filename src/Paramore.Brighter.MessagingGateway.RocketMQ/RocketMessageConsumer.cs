@@ -21,6 +21,10 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     /// <inheritdoc />
+    public void Acknowledge(Message message) 
+        => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));
+    
+    /// <inheritdoc />
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
@@ -32,8 +36,8 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
     }
     
     /// <inheritdoc />
-    public Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default) 
-        => Task.FromResult(Reject(message));
+    public void Purge() 
+        => BrighterAsyncContext.Run(() => PurgeAsync());
 
     /// <inheritdoc />
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
@@ -49,6 +53,10 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
             await messages.EachAsync(async message => await consumer.Ack(message));
         }
     }
+    
+    /// <inheritdoc />
+    public Message[] Receive(TimeSpan? timeOut = null)
+        => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
 
     /// <inheritdoc />
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
@@ -66,6 +74,26 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
         }
         
         return messages;
+    }
+    
+    /// <inheritdoc />
+    public bool Reject(Message message, MessageRejectionReason? reason) => Requeue(message);
+    
+    /// <inheritdoc />
+    public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default) 
+        => Task.FromResult(Reject(message, reason));
+    
+    /// <inheritdoc />
+    public bool Requeue(Message message, TimeSpan? delay = null)
+    {
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
+        {
+            return false;
+        }
+        
+        // Waiting for next RocketMQ C# version, due an issue on ChangeInvisibleDuration
+        // consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
+        return true;
     }
 
     /// <inheritdoc />
@@ -328,35 +356,6 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
 
             return baggage;
         }
-    }
-
-    /// <inheritdoc />
-    public void Acknowledge(Message message) 
-        => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
-
-    /// <inheritdoc />
-    public bool Reject(Message message) => Requeue(message);
-
-    /// <inheritdoc />
-    public void Purge() 
-        => BrighterAsyncContext.Run(async () => await PurgeAsync());
-
-    /// <inheritdoc />
-    public Message[] Receive(TimeSpan? timeOut = null)
-        => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
-
-    
-    /// <inheritdoc />
-    public bool Requeue(Message message, TimeSpan? delay = null)
-    {
-       if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
-       {
-           return false;
-       }
-        
-       // Waiting for next RocketMQ C# version, due an issue on ChangeInvisibleDuration
-       // consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
-       return true;
     }
 
     /// <inheritdoc />

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.ServiceActivator;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
@@ -23,7 +24,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             SpyExceptionCommandProcessor commandProcessor = new();
 
             InternalBus bus = new(); 
-            _channel = new Channel(new("myChannel"),_routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
+            _channel = new Channel(new("myChannel"),_routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),

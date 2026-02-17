@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Transactions;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;

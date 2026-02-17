@@ -68,7 +68,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
     /// <returns>An instance of <see cref="IAmAChannelSync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
     public IAmAChannelSync CreateSyncChannel(Subscription subscription) =>
-        BrighterAsyncContext.Run(async () => await CreateSyncChannelAsync(subscription));
+        BrighterAsyncContext.Run(() => CreateSyncChannelAsync(subscription));
 
     /// <summary>
     /// Creates the input channel.
@@ -80,7 +80,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
     /// <returns>An instance of <see cref="IAmAChannelAsync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription) =>
-        BrighterAsyncContext.Run(async () => await CreateAsyncChannelAsync(subscription));
+        BrighterAsyncContext.Run(() => CreateAsyncChannelAsync(subscription));
 
     /// <summary>
     /// Creates the input channel.

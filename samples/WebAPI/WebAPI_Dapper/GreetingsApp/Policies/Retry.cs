@@ -14,10 +14,10 @@ public static class Retry
 
     public static AsyncRetryPolicy GetSimpleHandlerRetryPolicy()
     {
-        return Policy.Handle<Exception>().WaitAndRetryAsync(new[]
-        {
+        return Policy.Handle<Exception>().WaitAndRetryAsync(
+        [
             TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
-        });
+        ]);
     }
 
     public static AsyncRetryPolicy GetExponentialHandlerRetryPolicy()
@@ -29,10 +29,10 @@ public static class Retry
     public static AsyncRetryPolicy GetDefaultRetryPolicy()
     {
         return Policy.Handle<Exception>()
-            .WaitAndRetryAsync(new[]
-            {
+            .WaitAndRetryAsync(
+            [
                 TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
-            });
+            ]);
     }
 
     public static AsyncCircuitBreakerPolicy GetDefaultCircuitBreakerPolicy()

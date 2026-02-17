@@ -1024,14 +1024,14 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        public async Task<Id> DepositPostAsync<TRequest>(
+        public Task<Id> DepositPostAsync<TRequest>(
             TRequest request,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            return await CallDepositPostAsync(request, null, requestContext, args,
+            return CallDepositPostAsync(request, null, requestContext, args,
                 continueOnCapturedContext, cancellationToken, null, _transactionType);
         }
 
@@ -1107,14 +1107,14 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        public async Task<Id[]> DepositPostAsync<TRequest>(
+        public Task<Id[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            return await CallBulkDepositPostAsync(requests, null, requestContext, args,
+            return CallBulkDepositPostAsync(requests, null, requestContext, args,
                 continueOnCapturedContext, cancellationToken, _transactionType);
         }
 

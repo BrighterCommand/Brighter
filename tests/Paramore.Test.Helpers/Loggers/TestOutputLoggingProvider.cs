@@ -49,10 +49,7 @@ namespace Paramore.Test.Helpers.Loggers
         /// <param name="options">The options to configure. Cannot be <see langword="null"/>.</param>
         private static CoreJsonConsoleFormatterOptions SetDefaultOptions(CoreJsonConsoleFormatterOptions options)
         {
-            if (options is null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
+            ArgumentNullException.ThrowIfNull(options);
 
             options.JsonWriterOptions = new JsonWriterOptions() { Indented = true, };
             options.IncludeScopes = true;

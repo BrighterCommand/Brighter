@@ -91,14 +91,13 @@ namespace GreetingsSender
 
                     var producerRegistry = new RedisProducerRegistryFactory(
                         redisConnection,
-                        new RedisMessagePublication[]
-                        {
+                        [
                             new()
                             {
                                 Topic = new RoutingKey("greeting.event"),
                                 RequestType = typeof(GreetingEvent)
                             }
-                        }
+                        ]
                     ).Create();
                     
                     collection.AddBrighter()

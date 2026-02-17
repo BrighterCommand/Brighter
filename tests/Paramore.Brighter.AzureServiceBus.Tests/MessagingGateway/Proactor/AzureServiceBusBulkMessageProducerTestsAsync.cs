@@ -247,7 +247,7 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
         _nameSpaceManagerWrapper.ResetState();
         _nameSpaceManagerWrapper.Topics.Add("topic", []);
 
-        IEnumerable<IAmAMessageBatch> batches = await _producer.CreateBatchesAsync(new[] { message1 }, default);
+        IEnumerable<IAmAMessageBatch> batches = await _producer.CreateBatchesAsync([message1], default);
         foreach (IAmAMessageBatch batch in batches)
             await _producer.SendAsync(batch, default);
 
@@ -288,7 +288,7 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
         _nameSpaceManagerWrapper.Topics.Add("topic", []);
 
         IEnumerable<IAmAMessageBatch> batches =
-            await _producer.CreateBatchesAsync(new[] { message1, message2, message3 }, default);
+            await _producer.CreateBatchesAsync([message1, message2, message3], default);
         foreach (IAmAMessageBatch batch in batches)
             await _producer.SendAsync(batch, default);
 

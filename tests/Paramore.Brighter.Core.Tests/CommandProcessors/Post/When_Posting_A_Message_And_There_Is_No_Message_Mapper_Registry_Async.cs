@@ -5,6 +5,7 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Xunit;
@@ -61,8 +62,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         [Fact]
         public async Task When_Posting_A_Message_And_There_Is_No_Message_Mapper_Factory_Async()
         {
-            var exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
-            Assert.IsType<ArgumentOutOfRangeException>(exception); 
+            var exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
+            Assert.IsType<ArgumentOutOfRangeException>(exception);
         }
 
         public void Dispose()

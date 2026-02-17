@@ -225,7 +225,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     public IEnumerable<Message> DispatchedMessages(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize = 100,
         int pageNumber = 1, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
-        return BrighterAsyncContext.Run(async () => await DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, outBoxTimeout, args));
+        return BrighterAsyncContext.Run(() => DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, outBoxTimeout, args));
     }
 
     /// <inheritdoc />
@@ -263,7 +263,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     /// <inheritdoc />
     public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
     {
-        return BrighterAsyncContext.Run(async () => await GetAsync(messageIds, requestContext, outBoxTimeout, args));
+        return BrighterAsyncContext.Run(() => GetAsync(messageIds, requestContext, outBoxTimeout, args));
     }
 
     /// <inheritdoc />
@@ -322,7 +322,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize = 100,
         int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null)
     {
-        return BrighterAsyncContext.Run(async () => await OutstandingMessagesAsync(dispatchedSince, requestContext ?? new RequestContext(), pageSize, pageNumber, trippedTopics, args));
+        return BrighterAsyncContext.Run(() => OutstandingMessagesAsync(dispatchedSince, requestContext ?? new RequestContext(), pageSize, pageNumber, trippedTopics, args));
     }
     
     /// <summary>

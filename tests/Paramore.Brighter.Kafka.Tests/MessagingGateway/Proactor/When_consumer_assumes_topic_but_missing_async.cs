@@ -26,16 +26,16 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
             },
             [
                 new KafkaPublication
-            {
-                Topic = new RoutingKey(_topic),
-                NumPartitions = 1,
-                ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests,
-                //your production values ought to be lower
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Assume
-            }
+                {
+                    Topic = new RoutingKey(_topic),
+                    NumPartitions = 1,
+                    ReplicationFactor = 1,
+                    //These timeouts support running on a container using the same host as the tests,
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Assume
+                }
             ]).Create();
     }
 

@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
         public ChannelAcknowledgeTests()
         {
-            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, TimeSpan.FromMilliseconds(1000)); 
+            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)); 
 
             _channel = new  Channel(new (ChannelName), new(Topic), gateway);
 

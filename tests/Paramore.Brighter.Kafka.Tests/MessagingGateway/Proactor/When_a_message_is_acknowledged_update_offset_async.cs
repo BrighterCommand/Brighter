@@ -26,8 +26,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration { Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" } },
-            new[]
-            {
+            [
                 new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
@@ -37,7 +36,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            }).Create();
+            ]).Create();
     }
 
     //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]

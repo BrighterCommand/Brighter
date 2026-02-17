@@ -26,6 +26,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
@@ -43,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             _timeProvider = new FakeTimeProvider();
-            Channel channel = new(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
+            Channel channel = new(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
                 null);

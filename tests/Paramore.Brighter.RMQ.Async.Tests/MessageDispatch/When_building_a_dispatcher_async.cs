@@ -28,12 +28,12 @@ public class DispatchBuilderTestsAsync : IDisposable
 
         var retryPolicy = Policy
             .Handle<Exception>()
-            .WaitAndRetry(new[]
-            {
+            .WaitAndRetry(
+            [
                 TimeSpan.FromMilliseconds(50),
                 TimeSpan.FromMilliseconds(100),
                 TimeSpan.FromMilliseconds(150)
-            });
+            ]);
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -62,8 +62,8 @@ public class DispatchBuilderTestsAsync : IDisposable
             )
             .MessageMappers(null, messageMapperRegistry, null, new EmptyMessageTransformerFactoryAsync())
             .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
-            .Subscriptions(new []
-            {
+            .Subscriptions(
+            [
                 new RmqSubscription<MyEvent>(
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
@@ -76,7 +76,7 @@ public class DispatchBuilderTestsAsync : IDisposable
                     new RoutingKey("simon"),
                     messagePumpType: MessagePumpType.Proactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
-            })
+            ])
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
                 

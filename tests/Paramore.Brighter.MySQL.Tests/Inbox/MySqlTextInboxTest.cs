@@ -8,8 +8,9 @@ public class MySqlTextInboxTest : RelationalDatabaseInboxTests
 {
     protected override string DefaultConnectingString => Const.DefaultConnectingString;
     protected override string TableNamePrefix => Const.TablePrefix;
-    protected override bool BinaryMessagePayload => false; 
-    
+    protected override bool BinaryMessagePayload => false;
+    protected override bool JsonMessagePayload => false;
+
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration) 
         => new MySqlInbox(configuration);
 
@@ -18,7 +19,7 @@ public class MySqlTextInboxTest : RelationalDatabaseInboxTests
         using var connection = new MySqlConnection(configuration.ConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = MySqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload);
+        command.CommandText = MySqlInboxBuilder.GetDDL(configuration.InBoxTableName, BinaryMessagePayload, JsonMessagePayload);
         command.ExecuteNonQuery();
     }
 

@@ -35,7 +35,7 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
         // We have no queues so we should throw
         // We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);
-        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => await _channelFactory.CreateAsyncChannelAsync(_subscription));
+        await Assert.ThrowsAsync<QueueDoesNotExistException>(() => _channelFactory.CreateAsyncChannelAsync(_subscription));
     }
 
     public async ValueTask DisposeAsync()

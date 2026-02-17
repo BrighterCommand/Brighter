@@ -39,7 +39,7 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
     /// <returns>A dictionary where the key is the topic/channel name and the value is the message producer.</returns>
     public Dictionary<ProducerKey, IAmAMessageProducer> Create()
     {
-        return BrighterAsyncContext.Run(async () => await CreateAsync());
+        return BrighterAsyncContext.Run(() => CreateAsync());
     }
 
     /// <summary>

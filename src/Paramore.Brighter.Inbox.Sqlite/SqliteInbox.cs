@@ -71,4 +71,9 @@ public class SqliteInbox : RelationalDatabaseInbox
     {
         return new SqliteParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
     }
+
+    protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
+    {
+        throw new ConfigurationException($"Sqlite does not support a Json type. However {nameof(IAmARelationalDatabaseConfiguration.JsonMessagePayload)} is set to true in {nameof(IAmARelationalDatabaseConfiguration)}.");
+    }
 }

@@ -32,8 +32,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             {
                 Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" }
             },
-            new[]
-            {
+            [
                 new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
@@ -45,7 +44,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            }).CreateAsync().Result;
+            ]).CreateAsync().Result;
 
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration

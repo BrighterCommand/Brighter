@@ -11,7 +11,8 @@ public class SpannerInboxAsyncTest : RelationalDatabaseInboxAsyncTests
     protected override string DefaultConnectingString => Const.ConnectionString;
     protected override string TableNamePrefix => Const.TablePrefix; 
     protected override bool BinaryMessagePayload => false;
-    
+    protected override bool JsonMessagePayload => false;
+
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
         return new SpannerInboxAsync(configuration);

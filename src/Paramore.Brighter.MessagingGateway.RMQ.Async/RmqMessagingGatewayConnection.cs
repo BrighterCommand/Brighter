@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Security.Cryptography.X509Certificates;
 using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async
@@ -67,6 +68,37 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         ///     <see cref="ConnectionFactory.ContinuationTimeout" /> for more information.
         /// </summary>
         public ushort ContinuationTimeout { get; set; } = 20;
+
+        /// <summary>
+        /// Gets or sets the client certificate for mutual TLS authentication.
+        /// Optional - if not provided, connection will not use client certificates.
+        /// Takes precedence over <see cref="ClientCertificatePath"/> if both are set.
+        /// </summary>
+        /// <value>The X509 client certificate.</value>
+        public X509Certificate2? ClientCertificate { get; set; }
+
+        /// <summary>
+        /// Gets or sets the file path to the client certificate for mutual TLS authentication.
+        /// Supports .pfx (PKCS#12) format.
+        /// Optional - if not provided, connection will not use client certificates.
+        /// </summary>
+        /// <value>The path to the certificate file.</value>
+        public string? ClientCertificatePath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the password for the client certificate file.
+        /// Only used when <see cref="ClientCertificatePath"/> is provided and the certificate is password-protected.
+        /// </summary>
+        /// <value>The certificate password.</value>
+        public string? ClientCertificatePassword { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether to trust self-signed server certificates during TLS handshake.
+        /// When true, certificate chain validation errors are ignored.
+        /// WARNING: Only use this in test/development environments. In production, use properly signed certificates.
+        /// </summary>
+        /// <value>True to trust self-signed certificates; otherwise false (default).</value>
+        public bool TrustServerSelfSignedCertificate { get; set; } = false;
     }
 
     /// <summary>
@@ -107,8 +139,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             if (_sanitizedUri != null) return _sanitizedUri;
 
             var uri = Uri.ToString();
+            var atIndex = uri.IndexOf('@');
+
+            // If there's no @ symbol, there's no username/password to sanitize (e.g., mTLS with client certificates)
+            if (atIndex == -1)
+            {
+                _sanitizedUri = uri;
+                return _sanitizedUri;
+            }
+
             var positionOfSlashSlash = uri.IndexOf("//", StringComparison.Ordinal) + 2;
-            var usernameAndPassword = uri.Substring(positionOfSlashSlash, uri.IndexOf('@') - positionOfSlashSlash);
+            var usernameAndPassword = uri.Substring(positionOfSlashSlash, atIndex - positionOfSlashSlash);
             _sanitizedUri = uri.Replace(usernameAndPassword, "*****");
 
             return _sanitizedUri;

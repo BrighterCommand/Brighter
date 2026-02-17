@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Observability;
 using Polly.Registry;

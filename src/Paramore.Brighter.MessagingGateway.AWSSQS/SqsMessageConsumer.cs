@@ -86,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message) => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
+        public void Acknowledge(Message message) => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -116,59 +116,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        /// <summary>
-        /// Rejects the specified message.
-        /// Sync over async
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-        public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
-
-        /// <summary>
-        /// Rejects the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="cancellationToken">Cancel the reject operation</param>
-        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-        public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
-                return false;
-
-            var receiptHandle = value.ToString();
-
-            try
-            {
-                Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName);
-
-                using var client = _clientFactory.CreateSqsClient();
-                await EnsureChannelUrl(client, cancellationToken);
-                if (_hasDlq)
-                {
-                    await client.ChangeMessageVisibilityAsync(
-                        new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, 0),
-                        cancellationToken
-                    );
-                }
-                else
-                {
-                    await client.DeleteMessageAsync(_channelUrl, receiptHandle, cancellationToken);
-                }
-            }
-            catch (Exception exception)
-            {
-                Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
-                throw;
-            }
-
-            return true;
-        }
-
-        /// <summary>
+         /// <summary>
         /// Purges the specified queue name.
         /// Sync over Async
         /// </summary>
-        public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
+        public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
         
         /// <summary>
         /// Purges the specified queue name.
@@ -197,7 +149,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over async 
         /// </summary>
         /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
-        public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+        public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
 
         /// <summary>
         /// Receives the specified queue name.
@@ -265,7 +217,66 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             return messages;
         }
+        
+        /// <summary>
+        /// Rejects the specified message.
+        /// Sync over async
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        public bool Reject(Message message, MessageRejectionReason? reason = null) => BrighterAsyncContext.Run(async () => await RejectAsync(message, reason));
 
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+        /// <param name="cancellationToken">Cancel the reject operation</param>
+        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
+                return false;
+
+            var receiptHandle = value.ToString();
+
+            try
+            {
+                var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
+                var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+
+                Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName, reasonString, description);
+
+                using var client = _clientFactory.CreateSqsClient();
+                await EnsureChannelUrl(client, cancellationToken);
+                if (_hasDlq)
+                {
+                    await client.ChangeMessageVisibilityAsync(
+                        new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, 0),
+                        cancellationToken
+                    );
+                }
+                else
+                {
+                    await client.DeleteMessageAsync(_channelUrl, receiptHandle, cancellationToken);
+                }
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
+                throw;
+            }
+
+            return true;
+        }
+        
+        /// <summary>
+        /// Re-queues the specified message. 
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delay">Time to delay delivery of the message. AWS uses seconds. 0s is immediate requeue. Default is 0ms</param>
+        /// <returns></returns>
         public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
 
         /// <summary>
@@ -341,8 +352,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
             public static partial void ErrorDeletingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
 
-            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
-            public static partial void RejectingMessage(ILogger logger, string id, string? receiptHandle, string channelName);
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName} due to {Reason} because of {Description}")]
+            public static partial void RejectingMessage(ILogger logger, string id, string? receiptHandle, string channelName, string? reason, string description);
 
             [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
             public static partial void ErrorRejectingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);

@@ -266,19 +266,19 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
     }
 
     /// <inheritdoc />
-    public void EnsureStoreExists() => BrighterAsyncContext.Run(async () => await EnsureStoreExistsAsync());
+    public void EnsureStoreExists() => BrighterAsyncContext.Run(() => EnsureStoreExistsAsync());
 
     /// <inheritdoc />
-    public void Delete(string claimCheck) => BrighterAsyncContext.Run(async () => await DeleteAsync(claimCheck));
+    public void Delete(string claimCheck) => BrighterAsyncContext.Run(() => DeleteAsync(claimCheck));
 
     /// <inheritdoc />
-    public Stream Retrieve(string claimCheck) => BrighterAsyncContext.Run(async () => await RetrieveAsync(claimCheck));
+    public Stream Retrieve(string claimCheck) => BrighterAsyncContext.Run(() => RetrieveAsync(claimCheck));
 
     /// <inheritdoc />
-    public bool HasClaim(string claimCheck) => BrighterAsyncContext.Run(async () => await HasClaimAsync(claimCheck));
+    public bool HasClaim(string claimCheck) => BrighterAsyncContext.Run(() => HasClaimAsync(claimCheck));
 
     /// <inheritdoc />
-    public string Store(Stream stream) => BrighterAsyncContext.Run(async () => await StoreAsync(stream));
+    public string Store(Stream stream) => BrighterAsyncContext.Run(() => StoreAsync(stream));
 
     private static async Task<bool> BucketExistsAsync(IHttpClientFactory httpClientFactory, 
         string accountId, 

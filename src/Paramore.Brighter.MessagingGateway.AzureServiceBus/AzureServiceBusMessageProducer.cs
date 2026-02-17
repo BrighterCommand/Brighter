@@ -197,7 +197,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// </summary>
     /// <param name="message">The message.</param>
     /// <param name="delay">Delay to delivery of the message.</param>
-    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
+    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => SendWithDelayAsync(message, delay));
        
     /// <summary>
     /// Send the specified message with specified delay

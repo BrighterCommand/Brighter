@@ -35,10 +35,7 @@ namespace Paramore.Test.Helpers.Extensions
         /// <returns>System.String.</returns>
         public static string GetDisplayFullName(this Type? type)
         {
-            if (type is null)
-            {
-                throw new ArgumentNullException(nameof(type));
-            }
+            ArgumentNullException.ThrowIfNull(type);
 
             if (type.GetTypeInfo().IsGenericType)
             {

@@ -48,7 +48,7 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
     public async Task When_queues_missing_assume_throws_async()
     {
         //we will try to get the queue url, and fail because it does not exist
-        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
+        await Assert.ThrowsAsync<QueueDoesNotExistException>(() => _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
     }
         
     public void Dispose()

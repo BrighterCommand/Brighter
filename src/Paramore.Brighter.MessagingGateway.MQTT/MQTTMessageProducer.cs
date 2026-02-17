@@ -115,10 +115,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             }
 
             // delay is not natively supported
-            if (message == null)
-            {
-                throw new ArgumentNullException(nameof(message));
-            }
+            ArgumentNullException.ThrowIfNull(message);
 
             _mqttMessagePublisher.PublishMessage(message);
         }
@@ -139,10 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 return;
             }
 
-            if (message == null)
-            {
-                throw new ArgumentNullException(nameof(message));
-            }
+            ArgumentNullException.ThrowIfNull(message);
 
             await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
         }

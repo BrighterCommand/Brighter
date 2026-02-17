@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         [Fact]
         public async Task When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async()
         {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PublishAsync(_myEvent));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
             //Should throw an aggregate exception
             Assert.IsType<AggregateException>(_exception);

@@ -53,8 +53,8 @@ public class DispatchBuilderTests : IDisposable
             )
             .MessageMappers(messageMapperRegistry, null, null, null)
             .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
-            .Subscriptions(new []
-            {
+            .Subscriptions(
+            [
                 new RmqSubscription<MyEvent>(
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
@@ -67,7 +67,7 @@ public class DispatchBuilderTests : IDisposable
                     new RoutingKey("simon"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
-            })
+            ])
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
 

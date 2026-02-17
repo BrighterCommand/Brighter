@@ -39,7 +39,7 @@ public class CommandProcessorMissingResiliencePipelineFromRegistryAsyncTests : I
     [Fact]
     public async Task When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async()
     {
-        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
+        _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
         //Should throw an exception
         Assert.IsType<ConfigurationException>(_exception);

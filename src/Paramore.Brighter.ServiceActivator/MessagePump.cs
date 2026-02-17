@@ -32,6 +32,26 @@ using Paramore.Brighter.Observability;
 namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
+    /// Used to determine the status of the message pump
+    /// </summary>
+    /// <remarks>
+    /// This is intended to make testing easier - how do we figure out how the message pump status, particularly if
+    /// we want to trace an error path
+    /// </remarks>
+    public enum MessagePumpStatus
+    {
+        /// <summary> The message pump has been started</summary>
+        MP_STARTED,
+        /// <summary> The message pump terminated because we sent it a quit message; normal shutdown </summary>
+        MP_STOPPED,
+        /// <summary> The message pump terminated via an unhandled exception </summary>
+        MP_ERROR,
+        /// <summary> The message pump terminated because the unacceptable message was breached within its window</summary>
+        MP_LIMIT_EXCEEDED,
+    }
+    
+    
+    /// <summary>
     /// The message pump is the heart of a consumer. It runs a loop that performs the following:
     ///  - Gets a message from a queue/stream
     ///  - Translates the message to the local type system
@@ -56,6 +76,7 @@ namespace Paramore.Brighter.ServiceActivator
         protected int UnacceptableMessageCount;
         protected readonly Dictionary<Type, MethodInfo> UnWrapPipelineFactoryCache = new();
         protected readonly Dictionary<Type, MethodInfo> DispatchMethodCache = new();
+        protected DateTimeOffset? UnacceptableMessageWindowOpenedA = null;
         
         /// <summary>
         /// The delay to wait when the channel has failed
@@ -71,6 +92,14 @@ namespace Paramore.Brighter.ServiceActivator
         /// The <see cref="MessagePumpType"/> of this message pump; indicates Reactor or Proactor
         /// </summary>
         public abstract MessagePumpType MessagePumpType { get; }
+        
+        /// <summary>
+        /// Sets the <see cref="TimeProvider"/> used by the pump. Defaults to TimeProviderSystem
+        /// </summary>
+        /// <remarks>
+        /// Allows you to override the time provider, intended for testing purposes. 
+        /// </remarks>
+        public TimeProvider PumpTimeProvider { get; set; }
   
         /// <summary>
         /// How many times to requeue a message before discarding it
@@ -83,15 +112,25 @@ namespace Paramore.Brighter.ServiceActivator
         public TimeSpan RequeueDelay { get; set; }
         
         /// <summary>
+        /// The <see cref="MessagePumpStatus"/> of the pump
+        /// </summary>
+        public MessagePumpStatus Status { get; set; }
+        
+        /// <summary>
         /// How long to wait for a message before timing out
         /// </summary>
         public TimeSpan TimeOut { get; set; }
-
 
         /// <summary>
         /// The number of unacceptable messages to receive before stopping the message pump
         /// </summary>
         public int UnacceptableMessageLimit { get; set; }
+        
+        /// <summary>
+        /// Gets the window in which we monitor the unacceptable message count. The count resets at the end of the window.
+        /// If null, the count never resets.
+        /// </summary>
+        public TimeSpan? UnacceptableMessageLimitWindow  { get; set; }
 
         /// <summary>
         /// Constructs a message pump. The message pump is the heart of a consumer. It runs a loop that performs the following:
@@ -105,25 +144,39 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="channel"></param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="Brighter.CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="timeProvider">Allows you to override the time provider, for testing purposes</param>
         protected MessagePump(
             IAmACommandProcessor commandProcessor, 
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            TimeProvider? timeProvider = null)
         {
             CommandProcessor = commandProcessor;
             RequestContextFactory = requestContextFactory;
             Tracer = tracer;
             InstrumentationOptions = instrumentationOptions;
+            PumpTimeProvider = timeProvider ?? TimeProvider.System;
         }
-        
+
+
         protected bool DiscardRequeuedMessagesEnabled()
         {
             return RequeueCount != -1;
         }
 
-        protected void IncrementUnacceptableMessageLimit()
+        protected void IncrementUnacceptableMessageCount()
         {
+            if (UnacceptableMessageWindowOpenedA is null)
+                UnacceptableMessageWindowOpenedA = PumpTimeProvider.GetUtcNow();
+            
+            var timeSinceWindowOpened = PumpTimeProvider.GetUtcNow() - UnacceptableMessageWindowOpenedA.Value;
+            if (UnacceptableMessageLimitWindow.HasValue && timeSinceWindowOpened > UnacceptableMessageLimitWindow)
+            {
+                UnacceptableMessageCount = 0;
+                UnacceptableMessageWindowOpenedA = PumpTimeProvider.GetUtcNow();
+            }
+
             UnacceptableMessageCount++;
         }
 

@@ -41,7 +41,7 @@ public class QuartzScheduler(
             .StartAt(at)
             .Build();
 
-        BrighterAsyncContext.Run(async () => await scheduler.ScheduleJob(job, trigger));
+        BrighterAsyncContext.Run(() => scheduler.ScheduleJob(job, trigger));
         return id;
     }
 
@@ -85,7 +85,7 @@ public class QuartzScheduler(
             .StartAt(at)
             .Build();
 
-        BrighterAsyncContext.Run(async () => await scheduler.ScheduleJob(job, trigger));
+        BrighterAsyncContext.Run(() => scheduler.ScheduleJob(job, trigger));
         return id;
     }
 
@@ -103,7 +103,7 @@ public class QuartzScheduler(
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)
-        => BrighterAsyncContext.Run(async () => await ReSchedulerAsync(schedulerId, at));
+        => BrighterAsyncContext.Run(() => ReSchedulerAsync(schedulerId, at));
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.TimeSpan)" />
     public bool ReScheduler(string schedulerId, TimeSpan delay)
@@ -118,7 +118,7 @@ public class QuartzScheduler(
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel"/>
     public void Cancel(string id)
-        => BrighterAsyncContext.Run(async () => await CancelAsync(id));
+        => BrighterAsyncContext.Run(() => CancelAsync(id));
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,

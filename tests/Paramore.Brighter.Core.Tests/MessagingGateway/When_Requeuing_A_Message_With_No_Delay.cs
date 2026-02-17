@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
         public ChannelRequeueWithoutDelayTest()
         {
-            var consumer = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, new FakeTimeProvider(), TimeSpan.FromMilliseconds(1000)); 
+            var consumer = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000)); 
 
             _channel = new Channel(new(ChannelName),new (_routingKey), consumer);
 

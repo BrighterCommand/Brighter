@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         [Fact]
         public async Task When_There_Are_No_Command_Handlers_Async()
         {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //Throw an exception when there are no handlers found
             Assert.IsType<ArgumentException>(_exception);

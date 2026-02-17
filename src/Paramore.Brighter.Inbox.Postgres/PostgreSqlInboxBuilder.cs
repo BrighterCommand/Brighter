@@ -55,6 +55,32 @@ namespace Paramore.Brighter.Inbox.Postgres
                 PRIMARY KEY (CommandId, ContextKey)
             );
             """;
+        
+        private const string JsonOutboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            (
+                CommandId VARCHAR(256) NOT NULL ,
+                CommandType VARCHAR(256) NULL ,
+                CommandBody JSON NULL ,
+                Timestamp timestamptz  NULL ,
+                ContextKey VARCHAR(256) NULL,
+                PRIMARY KEY (CommandId, ContextKey)
+            );
+            """;
+
+        private const string JsonbOutboxDDL =
+            """
+            CREATE TABLE IF NOT EXISTS {0}
+            (
+                CommandId VARCHAR(256) NOT NULL ,
+                CommandType VARCHAR(256) NULL ,
+                CommandBody JSONB NULL ,
+                Timestamp timestamptz  NULL ,
+                ContextKey VARCHAR(256) NULL,
+                PRIMARY KEY (CommandId, ContextKey)
+            );
+            """;
 
         private const string InboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{0}' AND TABLE_NAME = '{1}')";
 
@@ -63,14 +89,14 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// </summary>
         /// <param name="inboxTableName">The name you want to use for the table</param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false)
+        public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false, bool jsonMessagePayload = false)
         {
             if (binaryMessagePayload)
             {
-                return string.Format(BinaryOutboxDDL, inboxTableName);
+                return string.Format(jsonMessagePayload ? JsonbOutboxDDL : BinaryOutboxDDL, inboxTableName);
             }
 
-            return string.Format(TextOutboxDDL, inboxTableName);
+            return string.Format(jsonMessagePayload ? JsonOutboxDDL: TextOutboxDDL, inboxTableName);
         }
 
         /// <summary>
