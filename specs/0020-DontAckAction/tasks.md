@@ -142,7 +142,7 @@
 
 ### Phase 6: Core Nack Infrastructure
 
-- [ ] **TEST + IMPLEMENT: When the Reactor catches DontAckAction it nacks the message on the channel making it available for redelivery**
+- [x] **TEST + IMPLEMENT: When the Reactor catches DontAckAction it nacks the message on the channel making it available for redelivery**
   - **USE COMMAND**: `/test-first when the Reactor catches DontAckAction it nacks the message on the channel making it available for redelivery`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/`
   - Test file: `When_a_handler_throws_dont_ack_action_should_nack_the_message.cs`
