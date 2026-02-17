@@ -204,7 +204,20 @@ Brighter provides default retry and circuit breaker policies. You can also regis
 
 ### Outbox Pattern for Reliable Messaging
 
-Brighter implements the Outbox pattern to guarantee message delivery in distributed systems:
+Brighter implements the [Outbox pattern](https://brightercommand.gitbook.io/paramore-brighter-documentation/brighter-outbox-support) to guarantee message delivery in distributed systems. Instead of calling `Post` directly, use `DepositPost` to write messages to the Outbox within your database transaction, then `ClearOutbox` to dispatch them to the broker after the transaction commits:
+
+```csharp
+// In your handler - write message to Outbox in the same transaction as your business logic
+var id = await _postBox.DepositPostAsync(
+    new GreetingEvent("World"),
+    _transactionProvider,
+    cancellationToken: cancellationToken);
+
+// After committing the transaction, dispatch messages from the Outbox to the broker
+_postBox.ClearOutbox(id);
+```
+
+Configure the Outbox and a `TransactionProvider` when setting up producers. The `TransactionProvider` tells Brighter how to participate in your application's database transaction, so the Outbox write and your business data are committed atomically:
 
 ```csharp
 builder.Services.AddBrighter()
@@ -213,11 +226,11 @@ builder.Services.AddBrighter()
     {
         configure.ProducerRegistry = producerRegistry;
         configure.Outbox = new PostgreSqlOutbox(/* configuration */);
-        configure.TransactionProvider = typeof(/* your transaction provider */);
+        configure.TransactionProvider = typeof(PostgreSqlEntityFrameworkTransactionProvider<MyDbContext>);
     });
 ```
 
-The Outbox ensures that messages are written to the database atomically with your business logic, then reliably delivered to the message broker. This prevents message loss and ensures consistency. Use `DepositPost`/`DepositPostAsync` to write messages to the Outbox within your transaction, and `ClearOutbox`/`ClearOutboxAsync` to dispatch them afterwards.
+Brighter provides transaction providers for EF Core, Dapper, and DynamoDB. This ensures consistency between your database state and published messages.
 
 **Supported Outbox Stores:** PostgreSQL, MySQL, MSSQL, SQLite, DynamoDB, MongoDB
 
