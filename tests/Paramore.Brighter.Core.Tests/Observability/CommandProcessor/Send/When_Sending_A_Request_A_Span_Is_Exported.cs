@@ -156,7 +156,6 @@ public class CommandProcessorSendObservabilityTests
     {
         BrighterTracer tracer = new();
        
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
@@ -169,7 +168,6 @@ public class CommandProcessorSendObservabilityTests
         
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
         
-        Brighter.CommandProcessor.ClearServiceBus();
 
         return new Brighter.CommandProcessor(
             registry,

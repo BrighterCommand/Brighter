@@ -65,7 +65,6 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 .AddInMemoryExporter(_exportedActivities)
                 .Build();
         
-            Brighter.CommandProcessor.ClearServiceBus();
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();

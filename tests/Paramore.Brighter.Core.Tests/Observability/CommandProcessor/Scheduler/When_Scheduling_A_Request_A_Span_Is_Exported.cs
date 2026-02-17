@@ -41,7 +41,6 @@ public class CommandProcessorSchedulerObservabilityTests
         
         BrighterTracer tracer = new();
        
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
@@ -56,7 +55,6 @@ public class CommandProcessorSchedulerObservabilityTests
         
         };
         
-        Brighter.CommandProcessor.ClearServiceBus();
 
         _commandProcessor = new Brighter.CommandProcessor(
             registry,

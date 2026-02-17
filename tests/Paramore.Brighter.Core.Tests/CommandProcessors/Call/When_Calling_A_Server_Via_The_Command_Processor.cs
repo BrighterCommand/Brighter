@@ -13,8 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorCallTests : IDisposable
+    public class CommandProcessorCallTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
@@ -73,7 +72,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new FindPublicationByPublicationTopicOrRequestType(),
                 new InMemoryOutbox(timeProvider){Tracer = tracer});
         
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
@@ -114,11 +112,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             channel.Stop(_routingKey);
 
         }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-
    }
 }

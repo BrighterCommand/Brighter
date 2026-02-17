@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Logging
 {
-    public class CommandProcessorWithLoggingInPipelineAsyncTests : IDisposable
+    public class CommandProcessorWithLoggingInPipelineAsyncTests
     {
 
         private readonly ITestOutputHelper _output;
@@ -51,11 +51,6 @@ namespace Paramore.Brighter.Core.Tests.Logging
             var logEvents = TestCorrelator.GetLogEventsFromContextId(context.Id);
             Assert.Contains(logEvents, x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"));
             Assert.Equal($"\"{typeof(MyCommand)}\"", logEvents.First(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call")).Properties["1"].ToString());
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

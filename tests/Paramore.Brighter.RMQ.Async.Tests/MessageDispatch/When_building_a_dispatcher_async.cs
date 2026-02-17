@@ -13,8 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessageDispatch;
 
-[Collection("CommandProcessor")]
-public class DispatchBuilderTestsAsync : IDisposable
+public class DispatchBuilderTestsAsync
 {
     private readonly IAmADispatchBuilder _builder;
     private Dispatcher? _dispatcher;
@@ -101,12 +100,6 @@ public class DispatchBuilderTestsAsync : IDisposable
 
         await _dispatcher.End();
     }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
-    }
-
     private Subscription GetConnection(string name)
     {
         return _dispatcher.Subscriptions.SingleOrDefault(conn => conn.Name == name);

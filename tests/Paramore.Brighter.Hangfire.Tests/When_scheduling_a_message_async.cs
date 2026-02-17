@@ -90,7 +90,6 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
         });
         _scheduler = new HangfireMessageSchedulerFactory();
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

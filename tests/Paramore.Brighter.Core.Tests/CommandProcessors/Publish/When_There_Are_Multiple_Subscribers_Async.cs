@@ -10,8 +10,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPublishMultipleMatchesAsyncTests : IDisposable
+    public class CommandProcessorPublishMultipleMatchesAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
@@ -49,11 +48,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandlerAsync), _myEvent.Id), _receivedMessages);
             //Should publish the command to the second event handler
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandlerAsync), _myEvent.Id), _receivedMessages);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

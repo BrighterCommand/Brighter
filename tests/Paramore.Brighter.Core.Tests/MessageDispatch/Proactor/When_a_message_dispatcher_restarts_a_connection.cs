@@ -9,7 +9,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-    [Collection("CommandProcessor")]
     public class MessageDispatcherResetConnectionAsync : IDisposable
     {
         private readonly Dispatcher _dispatcher;

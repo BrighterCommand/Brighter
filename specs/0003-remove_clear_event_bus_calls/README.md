@@ -7,6 +7,6 @@
 
 - [x] Requirements (`requirements.md`)
 - [x] Design (`docs/adr/0038-remove-clear-service-bus.md`)
-- [ ] Tasks (`tasks.md`)
+- [x] Tasks (`tasks.md`)
 - [ ] Implementation
 - [ ] Review

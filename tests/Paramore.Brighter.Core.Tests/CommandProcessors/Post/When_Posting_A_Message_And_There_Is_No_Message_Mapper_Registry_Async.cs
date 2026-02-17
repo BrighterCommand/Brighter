@@ -12,8 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorNoMessageMapperAsyncTests : IDisposable
+    public class CommandProcessorNoMessageMapperAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
@@ -64,11 +63,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             var exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
             Assert.IsType<ArgumentOutOfRangeException>(exception);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

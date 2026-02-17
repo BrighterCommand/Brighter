@@ -16,8 +16,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
-[Collection("CommandProcessor")]
-public class PostCommandWithCustomPolicyTests : IDisposable
+public class PostCommandWithCustomPolicyTests
 {
     private readonly ResiliencePipelineRegistry<string> _resiliencePipeline;
     private readonly RoutingKey _routingKey = new("MyCommand");
@@ -93,12 +92,6 @@ public class PostCommandWithCustomPolicyTests : IDisposable
         Assert.Equal(_message, message);
         Assert.Equal(_resiliencePipeline, requestContext.ResiliencePipeline);
     }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
-    }
-
     internal sealed class EmptyHandlerFactorySync : IAmAHandlerFactorySync
     {
         public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)

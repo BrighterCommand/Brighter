@@ -42,7 +42,6 @@ public class CommandProcessorClearObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
 
-        Brighter.CommandProcessor.ClearServiceBus();
 
         _timeProvider = new FakeTimeProvider();
     }
@@ -241,7 +240,6 @@ public class CommandProcessorClearObservabilityTests
             instrumentationOptions
         );
 
-        Brighter.CommandProcessor.ClearServiceBus();
 
         var registry = new SubscriberRegistry();
 

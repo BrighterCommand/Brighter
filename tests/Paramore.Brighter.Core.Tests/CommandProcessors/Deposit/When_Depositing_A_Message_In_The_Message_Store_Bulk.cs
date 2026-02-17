@@ -13,8 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorBulkDepositPostTests : IDisposable
+    public class CommandProcessorBulkDepositPostTests
     {
         private readonly RoutingKey _commandTopic = new("MyCommand");
         private readonly RoutingKey _eventTopic = new("MyEvent");
@@ -99,7 +98,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -150,11 +148,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //message should be marked as outstanding if not sent
             var outstandingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
             Assert.Equal(3, outstandingMessages.Count());
-        }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

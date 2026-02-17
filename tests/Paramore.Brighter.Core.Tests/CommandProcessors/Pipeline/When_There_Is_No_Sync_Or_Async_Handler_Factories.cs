@@ -7,8 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline;
 
-[Collection("CommandProcessor")]
-public class CommandProcessorNoHandlerFactoriesTests : IDisposable
+public class CommandProcessorNoHandlerFactoriesTests
 {
     private Exception _exception;
 
@@ -54,11 +53,5 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
         Assert.NotNull(_exception);
         Assert.Contains("No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set", _exception.Message);
     }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
-    }
-
     sealed class DummyHandlerFactory : IAmAHandlerFactory;
 }

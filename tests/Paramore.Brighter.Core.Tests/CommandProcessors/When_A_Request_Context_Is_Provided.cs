@@ -11,7 +11,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors;
 
-[Collection("CommandProcessor")]
 public class RequestContextPresentTests : IDisposable
 {
     private readonly SpyContextFactory _requestContextFactory;
@@ -376,6 +375,5 @@ public class RequestContextPresentTests : IDisposable
         MyContextAwareCommandHandlerAsync.TestString = null;
         MyContextAwareEventHandler.TestString = null;
         MyContextAwareEventHandlerAsync.TestString = null;
-        CommandProcessor.ClearServiceBus();
     }
 }

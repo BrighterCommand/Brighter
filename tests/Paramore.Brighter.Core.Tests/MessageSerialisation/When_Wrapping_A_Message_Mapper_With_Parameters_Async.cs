@@ -6,7 +6,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-[Collection("CommandProcessor")]
 public class AsyncMessageWrapRequestWithAttributesTests
 {
     private WrapPipelineAsync<MyTransformableCommand> _transformPipeline;

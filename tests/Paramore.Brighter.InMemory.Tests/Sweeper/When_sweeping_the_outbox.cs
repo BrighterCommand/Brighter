@@ -56,7 +56,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outbox
             );
 
-            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -128,7 +127,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outbox
             );
 
-            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -199,7 +197,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outbox
             );
 
-            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -279,7 +276,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outbox
             );
 
-            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),

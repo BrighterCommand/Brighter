@@ -41,7 +41,6 @@ public class MessagePumpChannelFailureOberservabilityTests
                 .AddInMemoryExporter(_exportedActivities)
                 .Build();
         
-            Brighter.CommandProcessor.ClearServiceBus();
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();

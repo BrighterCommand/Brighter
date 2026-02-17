@@ -11,8 +11,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class PipelineGlobalInboxWhenUseInboxTests : IDisposable
+    public class PipelineGlobalInboxWhenUseInboxTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private Pipelines<MyCommand> _chainOfResponsibility;
@@ -79,12 +78,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             Assert.True(noException);
 
         }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-
         private PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();

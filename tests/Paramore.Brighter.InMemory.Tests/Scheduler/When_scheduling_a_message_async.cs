@@ -88,7 +88,6 @@ public class InMemorySchedulerMessageAsyncTests
             _outbox
         );
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

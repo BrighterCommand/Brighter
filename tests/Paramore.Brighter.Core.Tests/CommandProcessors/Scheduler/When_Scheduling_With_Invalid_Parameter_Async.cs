@@ -15,7 +15,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Scheduler;
 
-[Collection("CommandProcessor")]
 public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
 {
     private const string Topic = "MyCommand";
@@ -66,7 +65,6 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
             _outbox
         );
 
-        CommandProcessor.ClearServiceBus();
         _commandProcessor = new CommandProcessor(registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),

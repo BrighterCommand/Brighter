@@ -14,8 +14,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorDepositPostTestsAsync: IDisposable
+    public class CommandProcessorDepositPostTestsAsync
     {
         private readonly RoutingKey _routingKey = new("MyCommand");
 
@@ -65,7 +64,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -103,11 +101,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var outstandingMessages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
             var outstandingMessage = outstandingMessages.Single();
             Assert.Equal(_message.Id, outstandingMessage.Id);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
      }
 }

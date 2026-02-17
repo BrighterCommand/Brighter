@@ -93,7 +93,6 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
                scheduler);
             });
 
-            CommandProcessor.ClearServiceBus();
 
             ServiceProvider = _serviceCollection.BuildServiceProvider();
             Processor = ServiceProvider.GetRequiredService<IAmACommandProcessor>();
