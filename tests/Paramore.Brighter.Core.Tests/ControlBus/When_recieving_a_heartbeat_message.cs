@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using FakeItEasy;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _handler.Handle(_heartbeatRequest);
 
             // Should post back a heartbeat response
-            Assert.True(_spyCommandProcessor.ContainsCommand(CommandType.Post));
+            Assert.True(_spyCommandProcessor.WasCalled(CommandType.Post));
             // Should have diagnostic information in the response
             var heartbeatEvent = _spyCommandProcessor.Observe<HeartbeatReply>();
             Assert.Equal(_hostName, heartbeatEvent.HostName);

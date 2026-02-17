@@ -182,6 +182,7 @@
     <Project Path="tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Testing.Tests/Paramore.Brighter.Testing.Tests.csproj" />
     <Project Path="tests/Paramore.Test.Helpers/Paramore.Test.Helpers.csproj" />
   </Folder>
   <Folder Name="/tools/">
@@ -266,4 +267,5 @@
   <Project Path="src/Paramore.Brighter.Transformers.MassTransit/Paramore.Brighter.Transformers.MassTransit.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MongoGridFS/Paramore.Brighter.Transformers.MongoGridFS.csproj" />
   <Project Path="src/Paramore.Brighter/Paramore.Brighter.csproj" />
+  <Project Path="src/Paramore.Brighter.Testing/Paramore.Brighter.Testing.csproj" />
 </Solution>
