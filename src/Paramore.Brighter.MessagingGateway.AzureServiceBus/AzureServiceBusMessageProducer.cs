@@ -132,7 +132,6 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
     public async ValueTask<IEnumerable<IAmAMessageBatch>> CreateBatchesAsync(
         IEnumerable<Message> messages, CancellationToken cancellationToken)
     {
-        var batches = new List<IAmAMessageBatch>();
         var topics = messages.Select(m => m.Header.Topic).Distinct().ToArray();
         
         if (topics.Length != 1)
@@ -151,7 +150,7 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
             foreach (Message message in messages)
                 await azureServiceBusMessageBatches.AddMessageToBatch(message, cancellationToken);
 
-            Log.SendingMessagesInBatches(Logger, topic, batches.Count(), _bulkSendBatchSize);
+            Log.SendingMessagesInBatches(Logger, topic, azureServiceBusMessageBatches.Batches.Count(), _bulkSendBatchSize);
 
             return azureServiceBusMessageBatches.Batches;
         }

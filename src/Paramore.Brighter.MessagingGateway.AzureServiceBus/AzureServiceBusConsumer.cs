@@ -124,7 +124,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
                 HandleAsbException(asbException, message.Id);
             else
             {
-                Log.ErrorCompletingPeakLock(Logger, ex, message.Id);
+                Log.ErrorCompletingPeekLock(Logger, ex, message.Id);
                 throw;
             }
         }
@@ -134,7 +134,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         }
         catch (Exception ex)
         {
-            Log.ErrorCompletingPeakLock(Logger, ex, message.Id);
+            Log.ErrorCompletingPeekLock(Logger, ex, message.Id);
             throw;
         }
     }
@@ -321,10 +321,10 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     private void HandleAsbException(ServiceBusException ex, string messageId)
     {
         if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
-            Log.ErrorCompletingPeakLock(Logger, ex, messageId);
+            Log.ErrorCompletingPeekLock(Logger, ex, messageId);
         else
         {
-            Log.ErrorCompletingPeakLockWithReason(Logger, ex, messageId, ex.Reason);
+            Log.ErrorCompletingPeekLockWithReason(Logger, ex, messageId, ex.Reason);
         }
     }
 
@@ -333,8 +333,8 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         [LoggerMessage(LogLevel.Debug, "Acknowledging Message with Id {Id} Lock Token : {LockToken}")]
         public static partial void AcknowledgingMessage(ILogger logger, string id, string lockToken);
 
-        [LoggerMessage(LogLevel.Error, "Error completing peak lock on message with id {Id}")]
-        public static partial void ErrorCompletingPeakLock(ILogger logger, Exception e, string id);
+        [LoggerMessage(LogLevel.Error, "Error completing peek lock on message with id {Id}")]
+        public static partial void ErrorCompletingPeekLock(ILogger logger, Exception e, string id);
 
         [LoggerMessage(LogLevel.Debug, "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}")]
         public static partial void PreparingToRetrieveNextMessages(ILogger logger, string topic, string channelName, TimeSpan? timeout, int batchSize);
@@ -357,7 +357,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         [LoggerMessage(LogLevel.Information, "Requeuing message with topic {Topic} and id {Id}")]
         public static partial void RequeuingMessage(ILogger logger, RoutingKey topic, string id);
 
-        [LoggerMessage(LogLevel.Error, "Error completing peak lock on message with id {Id} Reason {ErrorReason}")]
-        public static partial void ErrorCompletingPeakLockWithReason(ILogger logger, Exception e, string id, ServiceBusFailureReason errorReason);
+        [LoggerMessage(LogLevel.Error, "Error completing peek lock on message with id {Id} Reason {ErrorReason}")]
+        public static partial void ErrorCompletingPeekLockWithReason(ILogger logger, Exception e, string id, ServiceBusFailureReason errorReason);
     }
 }
