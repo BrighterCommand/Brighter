@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// <summary>
 /// A Sync and Async Message Producer for Azure Service Bus.
 /// </summary>
-public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
+public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
 {
     private readonly IServiceBusSenderProvider _serviceBusSenderProvider;
     private readonly InstrumentationOptions _options;
@@ -137,7 +137,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         
         if (topics.Length != 1)
         {
-            Logger.LogError("Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested", topics.Length);
+            Log.CannotBulkSendForMultipleTopics(Logger, topics.Length);
             throw new Exception($"Cannot Bulk send for Multiple Topics, {topics.Length} Topics Requested");
         }
 
@@ -151,7 +151,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
             foreach (Message message in messages)
                 await azureServiceBusMessageBatches.AddMessageToBatch(message, cancellationToken);
 
-            Logger.LogInformation("Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}", topic, batches.Count(), _bulkSendBatchSize);
+            Log.SendingMessagesInBatches(Logger, topic, batches.Count(), _bulkSendBatchSize);
 
             return azureServiceBusMessageBatches.Batches;
         }
@@ -169,7 +169,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         var messageCount = batch.Ids().Count();
         var serviceBusSenderWrapper = await GetSenderAsync(topic);
 
-        Logger.LogInformation("Sending Batch of size {BatchSize} of Messages for {TopicName}", messageCount, topic);
+        Log.SendingBatch(Logger, messageCount, topic);
         
         try
         {
@@ -207,7 +207,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// <param name="cancellationToken">Cancel the in-flight send operation</param>
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
     {
-        Logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
+        Log.PreparingToSendMessage(Logger, message.Header.Topic);
             
         delay ??= TimeSpan.Zero;
 
@@ -217,9 +217,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
 
         try
         {
-            Logger.LogDebug(
-                "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}",
-                message.Header.Topic, delay, message.Body.Value, message.Id);
+            Log.PublishingMessage(Logger, message.Header.Topic, delay, message.Body.Value, message.Id);
 
             BrighterTracer.WriteProducerEvent(Span, "azure_service_bus", message, _options);
             var azureServiceBusMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
@@ -233,12 +231,11 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
                 await serviceBusSenderWrapper.ScheduleMessageAsync(azureServiceBusMessage, dateTimeOffset, cancellationToken);
             }
 
-            Logger.LogDebug(
-                "Published message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}", message.Header.Topic, delay, message.Body.Value, message.Id);
+            Log.PublishedMessage(Logger, message.Header.Topic, delay, message.Body.Value, message.Id);
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Failed to publish message to topic {Topic} with id {Id}, message will not be retried", message.Header.Topic, message.Id);
+            Log.FailedToPublishMessage(Logger, e, message.Header.Topic, message.Id);
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", e);
         }
         finally
@@ -257,8 +254,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
                 .Handle<Exception>()
                 .Retry(TopicConnectionRetryCount, (exception, retryNumber) =>
                     {
-                        Logger.LogError(exception, "Failed to connect to topic {Topic}, retrying...",
-                            topic);
+                        Log.FailedToConnectRetrying(Logger, exception, topic);
 
                         Thread.Sleep(TimeSpan.FromMilliseconds(TopicConnectionSleepBetweenRetriesInMilliseconds));
                     }
@@ -268,10 +264,40 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Failed to connect to topic {Topic}, aborting.", topic);
+            Log.FailedToConnectAborting(Logger, e, topic);
             throw;
         }
     }
 
     protected abstract Task EnsureChannelExistsAsync(string channelName);
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Error, "Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested")]
+        public static partial void CannotBulkSendForMultipleTopics(ILogger logger, int numberOfTopics);
+
+        [LoggerMessage(LogLevel.Information, "Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}")]
+        public static partial void SendingMessagesInBatches(ILogger logger, RoutingKey topicName, int numberOfBatches, int batchSize);
+
+        [LoggerMessage(LogLevel.Information, "Sending Batch of size {BatchSize} of Messages for {TopicName}")]
+        public static partial void SendingBatch(ILogger logger, int batchSize, RoutingKey topicName);
+
+        [LoggerMessage(LogLevel.Debug, "Preparing to send message on topic {Topic}")]
+        public static partial void PreparingToSendMessage(ILogger logger, RoutingKey topic);
+
+        [LoggerMessage(LogLevel.Debug, "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}")]
+        public static partial void PublishingMessage(ILogger logger, RoutingKey topic, TimeSpan? delay, string request, string id);
+
+        [LoggerMessage(LogLevel.Debug, "Published message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}")]
+        public static partial void PublishedMessage(ILogger logger, RoutingKey topic, TimeSpan? delay, string request, string id);
+
+        [LoggerMessage(LogLevel.Error, "Failed to publish message to topic {Topic} with id {Id}, message will not be retried")]
+        public static partial void FailedToPublishMessage(ILogger logger, Exception e, RoutingKey topic, string id);
+
+        [LoggerMessage(LogLevel.Error, "Failed to connect to topic {Topic}, retrying...")]
+        public static partial void FailedToConnectRetrying(ILogger logger, Exception e, string topic);
+
+        [LoggerMessage(LogLevel.Error, "Failed to connect to topic {Topic}, aborting.")]
+        public static partial void FailedToConnectAborting(ILogger logger, Exception e, string topic);
+    }
 }
