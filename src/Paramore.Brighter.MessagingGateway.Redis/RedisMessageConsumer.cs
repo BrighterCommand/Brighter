@@ -103,6 +103,27 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
 
         /// <summary>
+        /// Nacks the specified message. For Redis (LPOP-based), this is a no-op because the message
+        /// has already been destructively removed from the list and cannot be returned.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Nack(Message message)
+        {
+            // No-op for Redis: LPOP is destructive, cannot un-pop
+        }
+
+        /// <summary>
+        /// Nacks the specified message. For Redis (LPOP-based), this is a no-op because the message
+        /// has already been destructively removed from the list and cannot be returned.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Cancel the nack operation</param>
+        public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Dispose of the Redis consumer
         /// </summary>
         /// <remarks>

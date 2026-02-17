@@ -203,7 +203,7 @@
 
 ### Phase 8: Stream/Other Transport Nack Implementations (No-op)
 
-- [ ] **IMPLEMENT: Stream and pub/sub transport consumers implement Nack as no-op**
+- [x] **IMPLEMENT: Stream and pub/sub transport consumers implement Nack as no-op**
   - All these transports implement `Nack` / `NackAsync` as empty methods (no-op):
     - `src/Paramore.Brighter.MessagingGateway.Kafka/KafkaMessageConsumer.cs` — stream; don't commit offset is sufficient
     - `src/Paramore.Brighter.MessagingGateway.Redis/RedisMessageConsumer.cs` — LPOP is destructive; cannot un-pop

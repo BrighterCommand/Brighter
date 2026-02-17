@@ -102,6 +102,25 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Nacks the specified message. For MQTT (pub/sub), this is a no-op because there is
+        /// no acknowledgment concept in the MQTT protocol.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Nack(Message message)
+        {
+        }
+
+        /// <summary>
+        /// Nacks the specified message. For MQTT (pub/sub), this is a no-op because there is
+        /// no acknowledgment concept in the MQTT protocol.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Cancel the nack operation</param>
+        public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
 
         public void Dispose()
         {

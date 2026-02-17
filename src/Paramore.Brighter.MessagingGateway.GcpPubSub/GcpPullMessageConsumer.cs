@@ -70,7 +70,27 @@ public partial class GcpPullMessageConsumer(
         }
     }
 
- 
+    /// <summary>
+    /// Nacks the specified message. For GCP Pub/Sub pull subscriptions, this is a no-op because not
+    /// acknowledging the message is sufficient to allow redelivery after the ack deadline.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    public void Nack(Message message)
+    {
+        // No-op for GCP Pub/Sub: not acknowledging is sufficient for redelivery
+    }
+
+    /// <summary>
+    /// Nacks the specified message. For GCP Pub/Sub pull subscriptions, this is a no-op because not
+    /// acknowledging the message is sufficient to allow redelivery after the ack deadline.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancel the nack operation</param>
+    public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
     /// <inheritdoc/>
     public void Purge()
     {
