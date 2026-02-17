@@ -228,6 +228,59 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     }
                
     /// <summary>
+    /// Nacks the specified message, abandoning the lock so it is available for redelivery.
+    /// Sync over Async
+    /// </summary>
+    /// <param name="message">The message.</param>
+    public void Nack(Message message) => BrighterAsyncContext.Run(async () => await NackAsync(message));
+
+    /// <summary>
+    /// Nacks the specified message, abandoning the lock so it is available for redelivery.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancel the nack operation</param>
+    public async Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await EnsureChannelAsync();
+            var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
+
+            if (string.IsNullOrEmpty(lockToken))
+                throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+
+            Logger.LogDebug("Nacking (abandoning) Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+
+            if (ServiceBusReceiver == null)
+                await GetMessageReceiverProviderAsync();
+
+            await ServiceBusReceiver!.AbandonAsync(lockToken);
+
+            if (SubscriptionConfiguration.RequireSession)
+                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+        }
+        catch (AggregateException ex)
+        {
+            if (ex.InnerException is ServiceBusException asbException)
+                HandleAsbException(asbException, message.Id);
+            else
+            {
+                Logger.LogError(ex, "Error abandoning message with id {Id}", message.Id);
+                throw;
+            }
+        }
+        catch (ServiceBusException ex)
+        {
+            HandleAsbException(ex, message.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error abandoning message with id {Id}", message.Id);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Rejects the specified message.
     /// Sync over Async
     /// </summary>

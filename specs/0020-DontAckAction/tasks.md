@@ -166,7 +166,7 @@
     - Update `Reactor.cs` DontAckAction catch block: add `Channel.Nack(message)` before the delay
     - Update `Reactor.cs` AggregateException DontAckAction handling: add `Channel.Nack(message)` before the delay
 
-- [ ] **TEST + IMPLEMENT: When the Proactor catches DontAckAction it nacks the message on the channel making it available for redelivery**
+- [x] **TEST + IMPLEMENT: When the Proactor catches DontAckAction it nacks the message on the channel making it available for redelivery**
   - **USE COMMAND**: `/test-first when the Proactor catches DontAckAction it nacks the message on the channel making it available for redelivery`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/`
   - Test file: `When_a_handler_throws_dont_ack_action_should_nack_the_message_async.cs`
@@ -184,19 +184,19 @@
 
 ### Phase 7: Queue Transport Nack Implementations
 
-- [ ] **IMPLEMENT: RabbitMQ consumer Nack calls BasicNack with requeue true**
+- [x] **IMPLEMENT: RabbitMQ consumer Nack calls BasicNack with requeue true**
   - Sync consumer: `src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageConsumer.cs`
     - `Nack(Message message)`: call `Channel.BasicNack(message.DeliveryTag, multiple: false, requeue: true)`
   - Async consumer: `src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs`
     - `NackAsync(Message message, CancellationToken ct)`: call `Channel.BasicNackAsync(message.DeliveryTag, multiple: false, requeue: true)`
   - Note: `BasicNack` is already used in `PullConsumer.cs` for shutdown; this follows the same pattern
 
-- [ ] **IMPLEMENT: SQS consumer Nack sets visibility timeout to zero**
+- [x] **IMPLEMENT: SQS consumer Nack sets visibility timeout to zero**
   - Consumer: `src/Paramore.Brighter.MessagingGateway.AWSSQS/SqsMessageConsumer.cs`
     - `NackAsync(Message message, CancellationToken ct)`: call `ChangeMessageVisibilityAsync` with `VisibilityTimeout = 0` using the receipt handle from `message.Header.Bag["ReceiptHandle"]`
     - `Nack(Message message)`: call async version synchronously (following existing pattern in the consumer)
 
-- [ ] **IMPLEMENT: Azure Service Bus consumer Nack calls AbandonMessageAsync**
+- [x] **IMPLEMENT: Azure Service Bus consumer Nack calls AbandonMessageAsync**
   - Consumer: `src/Paramore.Brighter.MessagingGateway.AzureServiceBus/AzureServiceBusConsumer.cs`
     - `NackAsync(Message message, CancellationToken ct)`: call `ServiceBusReceiver.AbandonMessageAsync(lockToken)` using the lock token from `message.Header.Bag`
     - `Nack(Message message)`: call async version synchronously (following existing pattern in the consumer)

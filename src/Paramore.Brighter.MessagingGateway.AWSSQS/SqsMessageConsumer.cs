@@ -272,7 +272,48 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
         
         /// <summary>
-        /// Re-queues the specified message. 
+        /// Nacks the specified message, setting its visibility timeout to zero so it is immediately
+        /// available for redelivery.
+        /// Sync over async
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Nack(Message message) => BrighterAsyncContext.Run(() => NackAsync(message));
+
+        /// <summary>
+        /// Nacks the specified message, setting its visibility timeout to zero so it is immediately
+        /// available for redelivery.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Cancel the nack operation</param>
+        public async Task NackAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
+                return;
+
+            var receiptHandle = value.ToString();
+
+            try
+            {
+                Log.NackingMessage(s_logger, message.Id, receiptHandle, _queueName);
+
+                using var client = _clientFactory.CreateSqsClient();
+                await EnsureChannelUrl(client, cancellationToken);
+                await client.ChangeMessageVisibilityAsync(
+                    new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, 0),
+                    cancellationToken
+                );
+
+                Log.NackedMessage(s_logger, message.Id, receiptHandle, _channelUrl!);
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorNackingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Re-queues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Time to delay delivery of the message. AWS uses seconds. 0s is immediate requeue. Default is 0ms</param>
@@ -381,6 +422,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Received message from queue {ChannelName}, message: {NewLine}{Request}")]
             public static partial void ReceivedMessageFromQueue(ILogger logger, string channelName, string newLine, string request);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Nacking message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} for redelivery")]
+            public static partial void NackingMessage(ILogger logger, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Nacked message {Id} with receipt handle {ReceiptHandle} on queue {Url}")]
+            public static partial void NackedMessage(ILogger logger, string id, string? receiptHandle, string url);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error nacking message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName}")]
+            public static partial void ErrorNackingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
 
             [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: re-queueing the message {Id}")]
             public static partial void RequeueingMessage(ILogger logger, string id);
