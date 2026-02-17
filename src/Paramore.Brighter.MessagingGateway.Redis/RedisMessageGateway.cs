@@ -66,17 +66,21 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         protected virtual void DisposePool()
         {
-            if (s_pool is { IsValueCreated: true })
-                s_pool.Value.Dispose();
+            var pool = s_pool;
+            s_pool = null;
+            if (pool is { IsValueCreated: true })
+                pool.Value.Dispose();
         }
-        
+
         /// <summary>
         /// Dispose of the pool of connections to Redis
         /// </summary>
         protected virtual async ValueTask DisposePoolAsync()
         {
-            if (s_pool is { IsValueCreated: true })
-                await ((IAsyncDisposable)s_pool.Value).DisposeAsync();
+            var pool = s_pool;
+            s_pool = null;
+            if (pool is { IsValueCreated: true })
+                await ((IAsyncDisposable)pool.Value).DisposeAsync();
         }
         
         /// <summary>

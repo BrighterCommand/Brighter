@@ -408,6 +408,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 throw new ChannelFailureException("RedisMessagingGateway: Error on getting client from pool", re);
             }
+            catch(ObjectDisposedException ode)
+            {
+                throw new ChannelFailureException("RedisMessagingGateway: Connection pool has been disposed", ode);
+            }
         }
 
         // Virtual to allow testing to simulate client failure
@@ -427,6 +431,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             catch(RedisException re)
             {
                 throw new ChannelFailureException("RedisMessagingGateway: Error on getting client from pool", re);
+            }
+            catch(ObjectDisposedException ode)
+            {
+                throw new ChannelFailureException("RedisMessagingGateway: Connection pool has been disposed", ode);
             }
         }
             
