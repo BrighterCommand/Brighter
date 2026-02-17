@@ -4,7 +4,7 @@ Date: 2026-02-16
 
 ## Status
 
-Accepted
+Accepted. Amended 2026-02-17 to add Transport Nack (see Decision §6).
 
 ## Context
 
@@ -58,7 +58,7 @@ public class DontAckAction : Exception
 
 Both `Reactor` and `Proactor` catch `DontAckAction` in their exception handling chain. The behavior on catch:
 
-1. **Do not acknowledge** the message — the catch block executes `continue`, skipping the `AcknowledgeMessage`/`Acknowledge` call that follows the try/catch/finally
+1. **Nack the message** — call `Channel.Nack(message)` (Reactor) or `await Channel.NackAsync(message, ct)` (Proactor) to explicitly release the message back to the transport (see §6)
 2. **Increment unacceptable message count** — via existing `IncrementUnacceptableMessageCount()`
 3. **Log inner exception** — if `DontAckAction.InnerException` is present, log it at Warning level
 4. **Apply delay** — `Thread.Sleep(DontAckDelay)` (Reactor) or `await Task.Delay(DontAckDelay, ct)` (Proactor) before continuing the loop
@@ -221,6 +221,83 @@ public override MyMessage Handle(MyMessage message)
 }
 ```
 
+### 6. Transport Nack (Amendment 2026-02-17)
+
+The initial design (§2) relied on simply skipping the `AcknowledgeMessage` call. While this works, it has a significant drawback on queue-based transports: the message remains invisible to other consumers until the transport's visibility timeout expires. For RabbitMQ this could be the consumer timeout (30 minutes by default); for SQS, the visibility timeout (30 seconds default); for Azure Service Bus, the lock duration (30 seconds to 5 minutes).
+
+An explicit nack tells the transport to **immediately release** the message so another consumer can pick it up. This is the correct semantic for queue-based transports. For stream-based transports (Kafka, etc.), nack is a no-op because the existing behavior (not committing the offset) is already sufficient.
+
+#### Nack vs Reject vs Requeue
+
+| Operation | Semantics | Message State After |
+|-----------|-----------|---------------------|
+| **Acknowledge** | Consumed successfully | Removed from queue/offset committed |
+| **Reject** | Consumed as failed | Routed to DLQ (removed from main queue) |
+| **Requeue** | Re-enqueue with delay | Original acked, new copy enqueued |
+| **Nack** | Release without consuming | Immediately available to any consumer |
+
+Nack is the only operation that neither consumes nor copies the message. It simply releases the transport's lock, returning the message to its original state.
+
+#### Interface Changes
+
+Add `Nack` to the consumer and channel interfaces:
+
+```csharp
+// IAmAMessageConsumerSync
+void Nack(Message message);
+
+// IAmAMessageConsumerAsync
+Task NackAsync(Message message, CancellationToken cancellationToken = default);
+
+// IAmAChannelSync
+void Nack(Message message);
+
+// IAmAChannelAsync
+Task NackAsync(Message message, CancellationToken cancellationToken = default);
+```
+
+`Channel` and `ChannelAsync` delegate to their respective consumer, following the same pattern as `Acknowledge`, `Reject`, and `Requeue`.
+
+#### Transport Implementations
+
+| Transport | Type | Nack Implementation |
+|-----------|------|---------------------|
+| **RabbitMQ** | Queue | `BasicNack(deliveryTag, multiple: false, requeue: true)` |
+| **AWS SQS** | Queue | `ChangeMessageVisibility(receiptHandle, visibilityTimeout: 0)` |
+| **Azure Service Bus** | Queue | `AbandonMessageAsync(lockToken)` |
+| **Kafka** | Stream | No-op (don't commit offset) |
+| **Redis** | Queue-like | No-op (LPOP is destructive; cannot un-pop) |
+| **MQTT** | Pub/Sub | No-op (no acknowledgment concept) |
+| **GCP Pub/Sub** | Stream | No-op (don't acknowledge) |
+| **InMemoryMessageConsumer** | Queue | Remove from `_lockedMessages` and re-enqueue to bus |
+
+The InMemoryMessageConsumer behaves as a queue: nack removes the message from `_lockedMessages` and re-enqueues it to the `InternalBus`, making it immediately available.
+
+#### Pump Integration
+
+The `DontAckAction` catch block in both Reactor and Proactor is updated to call `Channel.Nack(message)` / `await Channel.NackAsync(message, ct)` before the delay and continue:
+
+```csharp
+// Reactor
+catch (DontAckAction dontAckAction)
+{
+    Log.NotAcknowledgingMessage(...);
+    if (dontAckAction.InnerException != null)
+        Log.DontAckActionInnerException(...);
+    span?.SetStatus(ActivityStatusCode.Error, ...);
+    Channel.Nack(message);
+    IncrementUnacceptableMessageCount();
+    Task.Delay(DontAckDelay).GetAwaiter().GetResult();
+    continue;
+}
+```
+
+The delay still applies to the *current* consumer to prevent tight loops. However, the message is immediately available to *other* consumers after the nack.
+
+#### Why This Amends the Original Decision
+
+The original decision (§2) rejected "Nack via Channel" (see Alternatives §1) because not all transports support nack with requeue. This amendment resolves that concern by making Nack a **no-op for streams** where the existing behavior is sufficient, while providing **active unlock for queues** where waiting for visibility timeout is suboptimal. The interface is uniform; the semantics vary by transport type.
+
 ### Architecture Overview
 
 ```
@@ -256,6 +333,7 @@ Message Pump Loop (Reactor/Proactor)
   Exception Handling ◄─────────────────────────────────┘
     catch (DontAckAction dontAckAction)
     {
+      Channel.Nack(message);           ─── releases message to transport
       IncrementUnacceptableMessageCount();
       Log inner exception (if any);
       Sleep/Delay(DontAckDelay);
@@ -276,8 +354,10 @@ Message Pump Loop (Reactor/Proactor)
 | Component | Role | Responsibilities |
 |-----------|------|------------------|
 | `DontAckAction` | Signal | **Knowing**: reason, inner exception |
-| `Reactor` / `Proactor` | Controller | **Deciding**: skip ack, apply delay, continue loop. **Doing**: increment count, log |
+| `Reactor` / `Proactor` | Controller | **Deciding**: nack + delay + continue loop. **Doing**: increment count, log |
 | `MessagePump` (base) | Information Holder | **Knowing**: `DontAckDelay` configuration |
+| `Channel` / `ChannelAsync` | Interfacer | **Doing**: delegate Nack to consumer |
+| `IAmAMessageConsumer*` | Service Provider | **Doing**: transport-specific nack (unlock/release or no-op) |
 | `FeatureSwitchHandler` | Service Provider | **Deciding**: throw `DontAckAction` when off + dontAck, else skip silently |
 | `DontAckOnErrorHandler` | Service Provider | **Doing**: catch exceptions, wrap in `DontAckAction` |
 | `FeatureSwitchAttribute` | Interfacer | **Knowing**: handler type, status, dontAck flag |
@@ -296,14 +376,33 @@ Following existing conventions:
 - `src/Paramore.Brighter/DontAck/Handlers/DontAckOnErrorHandler.cs`
 - `src/Paramore.Brighter/DontAck/Handlers/DontAckOnErrorHandlerAsync.cs`
 
-**Modified files:**
+**Modified interfaces (Nack):**
+- `src/Paramore.Brighter/IAmAMessageConsumerSync.cs` (add `Nack`)
+- `src/Paramore.Brighter/IAmAMessageConsumerAsync.cs` (add `NackAsync`)
+- `src/Paramore.Brighter/IAmAChannelSync.cs` (add `Nack`)
+- `src/Paramore.Brighter/IAmAChannelAsync.cs` (add `NackAsync`)
+- `src/Paramore.Brighter/Channel.cs` (delegate to consumer)
+- `src/Paramore.Brighter/ChannelAsync.cs` (delegate to consumer)
+- `src/Paramore.Brighter/InMemoryMessageConsumer.cs` (unlock + re-enqueue)
+
+**Modified transport consumers (Nack):**
+- `src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageConsumer.cs` (BasicNack)
+- `src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs` (BasicNackAsync)
+- `src/Paramore.Brighter.MessagingGateway.AWSSQS/SqsMessageConsumer.cs` (ChangeMessageVisibility)
+- `src/Paramore.Brighter.MessagingGateway.AzureServiceBus/AzureServiceBusConsumer.cs` (AbandonMessage)
+- `src/Paramore.Brighter.MessagingGateway.Kafka/KafkaMessageConsumer.cs` (no-op)
+- `src/Paramore.Brighter.MessagingGateway.Redis/RedisMessageConsumer.cs` (no-op)
+- `src/Paramore.Brighter.MessagingGateway.MQTT/MQTTMessageConsumer.cs` (no-op)
+- `src/Paramore.Brighter.MessagingGateway.GcpPubSub/GcpPubSubStreamMessageConsumer.cs` (no-op)
+
+**Modified files (original phases):**
 - `src/Paramore.Brighter/FeatureSwitch/Attributes/FeatureSwitchAttribute.cs`
 - `src/Paramore.Brighter/FeatureSwitch/Attributes/FeatureSwitchAsyncAttribute.cs`
 - `src/Paramore.Brighter/FeatureSwitch/Handlers/FeatureSwitchHandler.cs`
 - `src/Paramore.Brighter/FeatureSwitch/Handlers/FeatureSwitchHandlerAsync.cs`
 - `src/Paramore.Brighter.ServiceActivator/MessagePump.cs` (DontAckDelay property)
-- `src/Paramore.Brighter.ServiceActivator/Reactor.cs` (catch block + AggregateException + TranslateMessage)
-- `src/Paramore.Brighter.ServiceActivator/Proactor.cs` (catch block + AggregateException + TranslateMessageAsync)
+- `src/Paramore.Brighter.ServiceActivator/Reactor.cs` (catch block calls Nack + AggregateException + TranslateMessage)
+- `src/Paramore.Brighter.ServiceActivator/Proactor.cs` (catch block calls NackAsync + AggregateException + TranslateMessageAsync)
 
 **Tests:**
 - `tests/Paramore.Brighter.Core.Tests/DontAck/` (DontAckOnError handler tests)
@@ -323,9 +422,9 @@ Following existing conventions:
 
 ### Negative
 
-- **Transport-dependent semantics**: The behavior of an unacknowledged message varies by transport (RabbitMQ redelivers after timeout, Kafka holds offset, SQS redelivers after visibility timeout). Users must understand their transport's behavior.
 - **Potential for stuck consumers**: A message that always triggers `DontAckAction` with the limit disabled (`<= 0`) will block that consumer forever. This is by design for the feature switch use case but could be surprising in error scenarios.
 - **FeatureSwitchAttribute parameter growth**: Adding `dontAck` to the constructor increases parameter count. This is acceptable given the attribute already has 4 parameters and `dontAck` defaults to `false`.
+- **Interface expansion**: Adding `Nack`/`NackAsync` to consumer and channel interfaces requires implementation across all transports. Mitigated by the fact that most stream transports are no-ops, and the queue transport implementations are trivial (1-3 lines each).
 
 ### Risks and Mitigations
 
@@ -333,8 +432,9 @@ Following existing conventions:
 |------|------------|
 | Tight-loop CPU burn | `DontAckDelay` with 1s default; logged at Warning level for operator visibility |
 | Permanently stuck consumer | Unacceptable message limit acts as safety valve; set to -1 only deliberately |
-| Transport redelivery conflicts with pump delay | Document that pump delay is additive to transport behavior |
 | Breaking change to FeatureSwitchAttribute constructor | `dontAck` defaults to `false`; existing call sites unaffected |
+| Nack not supported by transport | Stream/pub-sub transports implement Nack as no-op; only queue transports perform active unlock |
+| Message ping-pong (rapid redelivery after nack) | Pump delay on current consumer prevents tight loop; other consumers apply their own processing/delay |
 
 ## Alternatives Considered
 
@@ -342,7 +442,9 @@ Following existing conventions:
 
 Call `Channel.Nack(message)` or `Channel.Reject(message, requeue: true)` explicitly.
 
-**Rejected because**: Not all transports support nack with requeue. The pump-level approach (just don't ack) works uniformly across all transports. Each transport already defines what happens to unacknowledged messages.
+**Originally rejected because**: Not all transports support nack with requeue. The pump-level approach (just don't ack) works uniformly across all transports.
+
+**Reconsidered and adopted (Amendment §6)**: The concern about non-uniform support is resolved by making Nack a no-op for stream transports. Queue transports benefit significantly from explicit nack (immediate redelivery vs waiting for visibility timeout). The interface is uniform; only the semantics vary by transport type.
 
 ### 2. Reuse DeferMessageAction with special configuration
 

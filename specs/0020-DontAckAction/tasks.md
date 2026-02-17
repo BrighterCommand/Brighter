@@ -140,9 +140,85 @@
     - Update `FeatureSwitchHandlerAsync.InitializeFromAttributeParams()` to read the dontAck flag
     - Update `FeatureSwitchHandlerAsync.HandleAsync()`: when off and `_dontAck` is true, throw `DontAckAction`
 
+### Phase 6: Core Nack Infrastructure
+
+- [ ] **TEST + IMPLEMENT: When the Reactor catches DontAckAction it nacks the message on the channel making it available for redelivery**
+  - **USE COMMAND**: `/test-first when the Reactor catches DontAckAction it nacks the message on the channel making it available for redelivery`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/`
+  - Test file: `When_a_handler_throws_dont_ack_action_should_nack_the_message.cs`
+  - Test should verify:
+    - Handler throws `DontAckAction`
+    - `Channel.Nack(message)` is called (message is nacked)
+    - Message is NOT acknowledged
+    - Message is re-enqueued to the bus (available for redelivery)
+    - Unacceptable message count is incremented
+    - Pump continues running (processes subsequent quit message)
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Add `void Nack(Message message)` to `IAmAMessageConsumerSync`
+    - Add `Task NackAsync(Message message, CancellationToken cancellationToken = default)` to `IAmAMessageConsumerAsync`
+    - Add `void Nack(Message message)` to `IAmAChannelSync`
+    - Add `Task NackAsync(Message message, CancellationToken cancellationToken = default)` to `IAmAChannelAsync`
+    - Implement `Nack` in `Channel` (delegate to `_messageConsumer.Nack(message)`)
+    - Implement `NackAsync` in `ChannelAsync` (delegate to `_messageConsumer.NackAsync(message, ct)`)
+    - Implement `Nack` in `InMemoryMessageConsumer`: remove from `_lockedMessages`, re-enqueue to `_bus`
+    - Implement `NackAsync` in `InMemoryMessageConsumer`: call sync `Nack` (in-memory is not truly async)
+    - Update `Reactor.cs` DontAckAction catch block: add `Channel.Nack(message)` before the delay
+    - Update `Reactor.cs` AggregateException DontAckAction handling: add `Channel.Nack(message)` before the delay
+
+- [ ] **TEST + IMPLEMENT: When the Proactor catches DontAckAction it nacks the message on the channel making it available for redelivery**
+  - **USE COMMAND**: `/test-first when the Proactor catches DontAckAction it nacks the message on the channel making it available for redelivery`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/`
+  - Test file: `When_a_handler_throws_dont_ack_action_should_nack_the_message_async.cs`
+  - Test should verify:
+    - Async handler throws `DontAckAction`
+    - `Channel.NackAsync(message)` is called (message is nacked)
+    - Message is NOT acknowledged
+    - Message is re-enqueued to the bus (available for redelivery)
+    - Unacceptable message count is incremented
+    - Pump continues running (processes subsequent quit message)
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Update `Proactor.cs` DontAckAction catch block: add `await Channel.NackAsync(message, ct)` before the delay
+    - Update `Proactor.cs` AggregateException DontAckAction handling: add `await Channel.NackAsync(message, ct)` before the delay
+
+### Phase 7: Queue Transport Nack Implementations
+
+- [ ] **IMPLEMENT: RabbitMQ consumer Nack calls BasicNack with requeue true**
+  - Sync consumer: `src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageConsumer.cs`
+    - `Nack(Message message)`: call `Channel.BasicNack(message.DeliveryTag, multiple: false, requeue: true)`
+  - Async consumer: `src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs`
+    - `NackAsync(Message message, CancellationToken ct)`: call `Channel.BasicNackAsync(message.DeliveryTag, multiple: false, requeue: true)`
+  - Note: `BasicNack` is already used in `PullConsumer.cs` for shutdown; this follows the same pattern
+
+- [ ] **IMPLEMENT: SQS consumer Nack sets visibility timeout to zero**
+  - Consumer: `src/Paramore.Brighter.MessagingGateway.AWSSQS/SqsMessageConsumer.cs`
+    - `NackAsync(Message message, CancellationToken ct)`: call `ChangeMessageVisibilityAsync` with `VisibilityTimeout = 0` using the receipt handle from `message.Header.Bag["ReceiptHandle"]`
+    - `Nack(Message message)`: call async version synchronously (following existing pattern in the consumer)
+
+- [ ] **IMPLEMENT: Azure Service Bus consumer Nack calls AbandonMessageAsync**
+  - Consumer: `src/Paramore.Brighter.MessagingGateway.AzureServiceBus/AzureServiceBusConsumer.cs`
+    - `NackAsync(Message message, CancellationToken ct)`: call `ServiceBusReceiver.AbandonMessageAsync(lockToken)` using the lock token from `message.Header.Bag`
+    - `Nack(Message message)`: call async version synchronously (following existing pattern in the consumer)
+
+### Phase 8: Stream/Other Transport Nack Implementations (No-op)
+
+- [ ] **IMPLEMENT: Stream and pub/sub transport consumers implement Nack as no-op**
+  - All these transports implement `Nack` / `NackAsync` as empty methods (no-op):
+    - `src/Paramore.Brighter.MessagingGateway.Kafka/KafkaMessageConsumer.cs` — stream; don't commit offset is sufficient
+    - `src/Paramore.Brighter.MessagingGateway.Redis/RedisMessageConsumer.cs` — LPOP is destructive; cannot un-pop
+    - `src/Paramore.Brighter.MessagingGateway.MQTT/MQTTMessageConsumer.cs` — pub/sub; no acknowledgment concept
+    - `src/Paramore.Brighter.MessagingGateway.GcpPubSub/GcpPubSubStreamMessageConsumer.cs` — stream; don't ack is sufficient
+
 ## Verification
 
-After all tasks complete:
+### Phases 1-5 (Complete)
 - [x] Run existing FeatureSwitch tests to confirm backward compatibility (dontAck defaults to false)
 - [x] Run existing defer/reject message dispatch tests to confirm no regression
 - [x] Run full test suite: `dotnet test`
+
+### Phase 6-8 (Transport Nack)
+- [ ] Run Phase 6 Reactor/Proactor nack tests
+- [ ] Run existing DontAckAction tests to confirm no regression (Phases 1-5 behavior preserved)
+- [ ] Run existing defer/reject message dispatch tests to confirm no regression
+- [ ] Run full test suite: `dotnet test`

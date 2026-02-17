@@ -19,6 +19,8 @@ Brighter already supports actions that change this flow (e.g., `DeferMessageActi
 
 2. **Stream Processing / Blocking**: In stream processing scenarios, the user wants to block indefinitely on a message that cannot currently be processed, retrying forever rather than consuming it.
 
+3. **Queue Nack / Immediate Redelivery**: On queue-based transports (RabbitMQ, SQS, Azure Service Bus), simply not acknowledging a message leaves it invisible until the transport's visibility timeout expires (which could be 30 seconds to 30 minutes). The user wants an explicit nack that immediately unlocks the message so another consumer can pick it up, rather than waiting for the timeout.
+
 ## Proposed Solution
 
 Add a new `DontAckAction` exception that signals the message pump (both Reactor and Proactor) to **not acknowledge** the current message, increment the unacceptable message count, log any inner exception, and continue the pump loop. The message stays on the channel and will be presented again on the next iteration.
@@ -58,6 +60,24 @@ Additionally, provide two convenience mechanisms for common use cases:
 
 9. **FR-9: TranslateMessage unwrapping** — When a `DontAckAction` is thrown during message translation (wrapped in `TargetInvocationException`), it should be unwrapped and rethrown (following the existing pattern).
 
+10. **FR-10: Channel Nack operation** — Add a `Nack(Message)` method to `IAmAChannelSync` and `NackAsync(Message, CancellationToken)` to `IAmAChannelAsync`. The Channel delegates to the consumer, following the same pattern as Acknowledge, Reject, and Requeue.
+
+11. **FR-11: Consumer Nack operation** — Add a `Nack(Message)` method to `IAmAMessageConsumerSync` and `NackAsync(Message, CancellationToken)` to `IAmAMessageConsumerAsync`. The semantics are:
+    - **Queue transports**: Unlock/release the message so it is immediately available to other consumers. This is distinct from Reject (which routes to DLQ) and Requeue (which re-enqueues with a delay).
+    - **Stream transports**: No-op. The existing behavior of not committing the offset is sufficient.
+    - **InMemoryMessageConsumer**: Behaves as a queue — remove from locked messages and re-enqueue to the bus.
+
+12. **FR-12: Pump calls Nack on DontAckAction** — When the Reactor or Proactor catches a `DontAckAction`, it should call `Channel.Nack(message)` (or `NackAsync`) before continuing the loop. This replaces the current behavior of simply skipping the Acknowledge call. The delay, logging, and unacceptable message count behavior remain unchanged.
+
+13. **FR-13: Transport Nack implementations** — Each transport consumer must implement the Nack method:
+    - **RabbitMQ**: `BasicNack(deliveryTag, multiple: false, requeue: true)` — immediately requeues the message
+    - **AWS SQS**: `ChangeMessageVisibility(receiptHandle, timeout: 0)` — makes the message immediately visible
+    - **Azure Service Bus**: `AbandonMessageAsync(lockToken)` — releases the message lock
+    - **Kafka**: No-op — offset is simply not committed
+    - **Redis**: No-op — LPOP is destructive, message cannot be un-popped
+    - **MQTT**: No-op — no acknowledgment concept
+    - **GCP Pub/Sub**: No-op — don't acknowledge
+
 ### Non-functional Requirements
 
 - **NFR-1: No tight loops** — The delay mechanism must prevent CPU-burning tight loops when a message is repeatedly not acknowledged.
@@ -66,16 +86,17 @@ Additionally, provide two convenience mechanisms for common use cases:
 
 ### Constraints and Assumptions
 
-- The `DontAckAction` relies on the underlying transport's behavior when a message is not acknowledged. For most transports (RabbitMQ, SQS, Kafka), an unacknowledged message will be re-delivered after a visibility timeout or on the next poll.
-- The delay in the pump is in addition to any transport-level redelivery delay.
+- For queue transports, Nack provides explicit unlock/requeue so the message is immediately available to other consumers. For stream transports, Nack is a no-op because not committing the offset is sufficient.
+- The pump delay (`DontAckDelay`) is still applied after calling Nack, preventing tight-loop CPU burn on the current consumer. However, the message is available to *other* consumers immediately.
 - The unacceptable message count mechanism already supports disabling limits (limit <= 0 returns false for limit reached), so infinite blocking is already supported without code changes to the limit check.
+- Nack is distinct from Requeue: Requeue acknowledges the original and creates a new delivery (potentially with delay). Nack releases the lock on the original message without acknowledging it.
 
 ### Out of Scope
 
-- Transport-specific nack/reject semantics (each transport already has its own acknowledgment behavior)
 - Changes to the requeue mechanism (`DeferMessageAction` continues to handle requeue-with-delay)
 - Changes to DLQ routing (handled by `RejectMessageAction`)
 - Backpressure or rate-limiting mechanisms beyond the simple configurable delay
+- Transport-specific nack configuration (e.g., configurable redelivery counts) — each transport uses its native nack with default behavior
 
 ## Acceptance Criteria
 
@@ -88,6 +109,14 @@ Additionally, provide two convenience mechanisms for common use cases:
 7. **AC-7**: Both Reactor and Proactor handle `DontAckAction` identically (sync vs async).
 8. **AC-8**: The pump eventually terminates if unacceptable message limit is reached (unless limit is disabled).
 9. **AC-9**: `DontAckAction` within `AggregateException` is handled correctly.
+10. **AC-10**: `IAmAChannelSync` and `IAmAChannelAsync` expose a Nack/NackAsync method.
+11. **AC-11**: `IAmAMessageConsumerSync` and `IAmAMessageConsumerAsync` expose a Nack/NackAsync method.
+12. **AC-12**: The Reactor and Proactor call `Channel.Nack(message)` / `Channel.NackAsync(message)` in the `DontAckAction` catch block.
+13. **AC-13**: On RabbitMQ, Nack calls `BasicNack` with `requeue: true`, making the message immediately available.
+14. **AC-14**: On SQS, Nack sets visibility timeout to 0, making the message immediately visible.
+15. **AC-15**: On Azure Service Bus, Nack calls `AbandonMessageAsync`, releasing the message lock.
+16. **AC-16**: On stream transports (Kafka, Redis, MQTT, GCP Pub/Sub), Nack is a no-op.
+17. **AC-17**: On InMemoryMessageConsumer, Nack removes from locked messages and re-enqueues to the bus.
 
 ## Additional Context
 
@@ -98,7 +127,7 @@ Additionally, provide two convenience mechanisms for common use cases:
 | `DeferMessageAction` | Requeue with delay | Yes (requeued) |
 | `RejectMessageAction` | Move to DLQ | Yes (rejected) |
 | `InvalidMessageAction` | Move to DLQ/invalid channel | Yes (rejected) |
-| **`DontAckAction` (new)** | **Stay on channel, loop** | **No** |
+| **`DontAckAction` (new)** | **Nack + stay on channel, loop** | **No (Nack)** |
 
 ### Current Acknowledgement Flow
 
