@@ -145,4 +145,4 @@
 After all tasks complete:
 - [x] Run existing FeatureSwitch tests to confirm backward compatibility (dontAck defaults to false)
 - [x] Run existing defer/reject message dispatch tests to confirm no regression
-- [ ] Run full test suite: `dotnet test`
+- [x] Run full test suite: `dotnet test`
