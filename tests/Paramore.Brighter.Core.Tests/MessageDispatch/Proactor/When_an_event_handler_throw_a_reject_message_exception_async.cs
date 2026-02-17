@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -78,7 +79,7 @@ public class MessageDispatchRejectMessageExceptionTestsAsync
     public async Task When_an_event_handler_throw_a_reject_message_exception()
     {
         // Allow time for async message processing to complete before stopping
-        await Task.Delay(1000);
+        await Task.Delay(1000); // slopwatch:suppress SW004 - message pump runs on background thread with no sync point
 
         await _dispatcher.End();
         
