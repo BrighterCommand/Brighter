@@ -30,6 +30,11 @@ public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
     {
         using var connection = new SqliteConnection(_configuration.ConnectionString);
         connection.Open();
+        using (var walCommand = connection.CreateCommand())
+        {
+            walCommand.CommandText = "PRAGMA journal_mode=WAL;";
+            walCommand.ExecuteNonQuery();
+        }
         using var command = connection.CreateCommand();
         command.CommandText = SqliteOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
         command.ExecuteNonQuery();
@@ -39,6 +44,11 @@ public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
     {
         using var connection = new SqliteConnection(_configuration.ConnectionString);
         await connection.OpenAsync();
+        await using (var walCommand = connection.CreateCommand())
+        {
+            walCommand.CommandText = "PRAGMA journal_mode=WAL;";
+            await walCommand.ExecuteNonQueryAsync();
+        }
         using var command = connection.CreateCommand();
         command.CommandText = SqliteOutboxBuilder.GetDDL(_configuration.OutBoxTableName);
         await command.ExecuteNonQueryAsync();
