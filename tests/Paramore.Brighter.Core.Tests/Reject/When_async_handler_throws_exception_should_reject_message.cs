@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Reject
 {
-    public class When_async_handler_throws_exception_should_reject_message : IDisposable
+    public class When_async_handler_throws_exception_should_reject_message
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _command = new();
@@ -76,11 +76,6 @@ namespace Paramore.Brighter.Core.Tests.Reject
             Assert.Equal(MyFailingRejectHandlerAsync.EXCEPTION_MESSAGE, exception.Message); // Preserves original message
             Assert.IsType<InvalidOperationException>(exception.InnerException); // Preserves original exception type
             Assert.Equal(MyFailingRejectHandlerAsync.EXCEPTION_MESSAGE, exception.InnerException.Message); // Inner has same message
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

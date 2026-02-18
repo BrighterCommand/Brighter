@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.Reject
     /// Tests that RejectMessageOnError at step 0 (outermost) catches exceptions that propagate
     /// through inner handlers in the pipeline.
     /// </summary>
-    public class When_reject_handler_at_step_zero_catches_inner_exceptions : IDisposable
+    public class When_reject_handler_at_step_zero_catches_inner_exceptions
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _command = new();
@@ -81,11 +81,6 @@ namespace Paramore.Brighter.Core.Tests.Reject
             Assert.True(MyMultiStepFailingHandler.HandlerCalled); // Handler was invoked through the pipeline
             Assert.Equal(MyMultiStepFailingHandler.EXCEPTION_MESSAGE, exception.Message); // Caught the inner exception
             Assert.IsType<InvalidOperationException>(exception.InnerException); // Preserves original exception type
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

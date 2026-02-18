@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Reject
 {
-    public class When_handler_succeeds_should_not_reject_message : IDisposable
+    public class When_handler_succeeds_should_not_reject_message
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _command = new();
@@ -72,11 +72,6 @@ namespace Paramore.Brighter.Core.Tests.Reject
             //Assert
             Assert.Null(exception); // No exception thrown
             Assert.True(MySucceedingRejectHandler.HandlerCalled); // Handler was invoked
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

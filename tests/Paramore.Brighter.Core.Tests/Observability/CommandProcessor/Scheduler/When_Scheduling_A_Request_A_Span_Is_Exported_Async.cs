@@ -29,8 +29,10 @@ public class CommandProcessorSchedulerObservabilityAsyncTests
 
     public CommandProcessorSchedulerObservabilityAsyncTests()
     {
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+
         _timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
-        
+
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
 
@@ -42,7 +44,6 @@ public class CommandProcessorSchedulerObservabilityAsyncTests
         
         BrighterTracer tracer = new();
        
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -64,7 +65,6 @@ public class CommandProcessorSchedulerObservabilityAsyncTests
         
         };
         
-        Brighter.CommandProcessor.ClearServiceBus();
 
         _commandProcessor = new Brighter.CommandProcessor(
             registry,

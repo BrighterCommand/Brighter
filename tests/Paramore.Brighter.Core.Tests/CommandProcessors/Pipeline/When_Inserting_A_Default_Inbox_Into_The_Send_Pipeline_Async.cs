@@ -12,8 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-     public class CommandProcessorBuildDefaultInboxSendAsyncTests : IDisposable
+     public class CommandProcessorBuildDefaultInboxSendAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly InMemoryInbox _inbox = new(new FakeTimeProvider());
@@ -71,11 +70,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             //assert we are in, and auto-context added us under our name
             var boxed = await _inbox.ExistsAsync<MyCommand>(command.Id, typeof(MyCommandHandlerAsync).FullName, null, 100);
             Assert.True(boxed);
-        }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
  }
 }

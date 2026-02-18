@@ -12,8 +12,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorWithFeatureSwitchOffByConfigInPipelineTests : IDisposable
+    public class CommandProcessorWithFeatureSwitchOffByConfigInPipelineTests
     {
         private readonly MyCommand _myCommand = new();
         private readonly MyCommandAsync _myAsyncCommand = new();
@@ -69,11 +68,6 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             await _commandProcessor.SendAsync(_myAsyncCommand);
 
             Assert.False(_provider.GetService<MyFeatureSwitchedConfigHandlerAsync>()!.DidReceive());
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

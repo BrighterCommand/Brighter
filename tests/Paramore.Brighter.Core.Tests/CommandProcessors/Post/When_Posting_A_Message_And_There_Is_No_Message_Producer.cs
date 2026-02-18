@@ -10,8 +10,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPostMissingMessageProducerTests : IDisposable
+    public class CommandProcessorPostMissingMessageProducerTests
     {
         private readonly MyCommand _myCommand = new();
         private readonly InMemoryOutbox _outbox;
@@ -49,11 +48,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );               
 
             Assert.IsType<ConfigurationException>(exception);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

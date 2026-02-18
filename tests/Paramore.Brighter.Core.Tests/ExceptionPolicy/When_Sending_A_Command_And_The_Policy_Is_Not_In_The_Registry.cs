@@ -11,7 +11,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorMissingPolicyFromRegistryTests : IDisposable
+    public class CommandProcessorMissingPolicyFromRegistryTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -48,11 +48,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             Assert.IsType<KeyNotFoundException>(innerException);
             //Should give the name of the missing policy
             Assert.Contains("The given key 'MyDivideByZeroPolicy' was not present in the dictionary.", innerException.Message);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

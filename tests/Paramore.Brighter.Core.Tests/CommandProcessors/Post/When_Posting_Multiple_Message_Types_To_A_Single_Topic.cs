@@ -16,8 +16,7 @@ using MyCommand = Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyC
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPostCommandMultiChannelTopicTests : IDisposable
+    public class CommandProcessorPostCommandMultiChannelTopicTests
     {
         private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
@@ -40,7 +39,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             var messageProducer = new InMemoryMessageProducer(
                 _internalBus, 
-                timeProvider, 
                 new Publication
                 {
                     Topic = routingKey, 
@@ -52,7 +50,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             //This producer is for a different command type, but the same topic
             var otherMessageProducer = new InMemoryMessageProducer(
                 _internalBus, 
-                timeProvider, 
                 new Publication
                 {
                     Topic = routingKey, 
@@ -103,7 +100,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -129,11 +125,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             Assert.Equal(_message, message);
             Assert.Equal(_messageTwo, otherMessage);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

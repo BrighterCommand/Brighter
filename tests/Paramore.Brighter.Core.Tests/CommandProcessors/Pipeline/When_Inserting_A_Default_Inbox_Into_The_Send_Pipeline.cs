@@ -12,8 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorBuildDefaultInboxSendTests : IDisposable
+    public class CommandProcessorBuildDefaultInboxSendTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly ServiceProvider _provider;
@@ -75,11 +74,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             Assert.NotNull(inbox);
             var boxed = inbox.Exists<MyCommand>(command.Id, typeof(MyCommandHandler).FullName, null, 100);
             Assert.True(boxed);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

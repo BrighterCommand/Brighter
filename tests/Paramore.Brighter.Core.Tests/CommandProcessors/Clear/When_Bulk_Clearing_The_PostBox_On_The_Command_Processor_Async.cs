@@ -15,8 +15,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 {
     [Trait("Fragile", "CI")]
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPostBoxBulkClearAsyncTests : IDisposable
+    public class CommandProcessorPostBoxBulkClearAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _messageOne;
@@ -34,10 +33,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var routingKey = new RoutingKey("MyCommand");
 
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication{Topic = routingKey, RequestType = typeof(MyCommand)});
+            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication{Topic = routingKey, RequestType = typeof(MyCommand)});
 
             var routingKeyTwo = new RoutingKey("MyCommand2"); 
-            InMemoryMessageProducer messageProducerTwo = new(_internalBus, timeProvider, new Publication {Topic = routingKeyTwo, RequestType = typeof(MyCommand)});
+            InMemoryMessageProducer messageProducerTwo = new(_internalBus, new Publication {Topic = routingKeyTwo, RequestType = typeof(MyCommand)});
 
             _messageOne = new Message(
                 new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND),
@@ -77,7 +76,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -117,11 +115,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             Assert.Equal(_messageTwo.Id, sentMessage2.Id);
             Assert.Equal(_messageTwo.Header.Topic, sentMessage2.Header.Topic);
             Assert.Equal(_messageTwo.Body.Value, sentMessage2.Body.Value);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }
