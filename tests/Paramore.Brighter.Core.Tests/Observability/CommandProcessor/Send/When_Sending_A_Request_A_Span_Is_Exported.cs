@@ -23,6 +23,8 @@ public class CommandProcessorSendObservabilityTests
 
     public CommandProcessorSendObservabilityTests()
     {
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
 

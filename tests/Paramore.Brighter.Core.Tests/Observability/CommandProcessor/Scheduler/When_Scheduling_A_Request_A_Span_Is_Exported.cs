@@ -28,8 +28,10 @@ public class CommandProcessorSchedulerObservabilityTests
 
     public CommandProcessorSchedulerObservabilityTests()
     {
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+
         _timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
-        
+
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
 
