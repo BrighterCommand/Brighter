@@ -89,10 +89,22 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
                 sentMessages.Add(message);
             }
 
-            Message[] receivedMessages = MessageConsumerSync.Receive(TimeSpan.FromMilliseconds(100));
+            //Collect messages, retrying if not all have arrived yet
+            List<Message> receivedMessages = [];
+            int retries = 0;
+            while (receivedMessages.Count < messageCount && retries < 20)
+            {
+                Message[] batch = MessageConsumerSync.Receive(TimeSpan.FromMilliseconds(100));
+                foreach (var msg in batch)
+                {
+                    if (msg.Header.MessageType != MessageType.MT_NONE)
+                        receivedMessages.Add(msg);
+                }
+                retries++;
+            }
 
             Assert.NotEmpty(receivedMessages);
-            Assert.Equal(messageCount, receivedMessages.Length);
+            Assert.Equal(messageCount, receivedMessages.Count);
             Assert.Equal(sentMessages, receivedMessages);
         }
     }
