@@ -102,9 +102,13 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
         //This should trigger a sweeper run (can be fragile when non scheduled in containers etc)
         consumedMessages.Add(await ReadMessageAsync());
             
-        //Let the sweeper run, can be slow in CI environments to run the thread
-        //Let the sweeper run, can be slow in CI environments to run the thread
-        await Task.Delay(10000);
+        //Poll for the sweeper to commit offsets - can be slow in CI environments
+        int sweepRetries = 0;
+        while (_consumer.StoredOffsets() > 0 && sweepRetries < 20)
+        {
+            await Task.Delay(1000);
+            sweepRetries++;
+        }
 
         //Sweeper will commit these
         Assert.Equal(0, _consumer.StoredOffsets());
