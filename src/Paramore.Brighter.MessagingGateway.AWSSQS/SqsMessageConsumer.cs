@@ -121,21 +121,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 return;
 
             var receiptHandle = value.ToString();
-
-            try
-            {
-                using var client = _clientFactory.CreateSqsClient();
-                await EnsureChannelUrl(client, cancellationToken);
-                await client.DeleteMessageAsync(new DeleteMessageRequest(_channelUrl, receiptHandle),
-                    cancellationToken);
-
-                Log.DeletedMessage(s_logger, message.Id, receiptHandle, _channelUrl!);
-            }
-            catch (Exception exception)
-            {
-                Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
-                throw;
-            }
+            await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
         }
 
          /// <summary>
@@ -313,14 +299,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (Exception ex)
             {
-                // Sending to DLQ failed — acknowledge the original to prevent infinite
+                // Sending to DLQ failed — delete the original to prevent infinite
                 // reprocessing. The message is lost rather than stuck in a retry loop.
                 Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
-                await AcknowledgeAsync(message, cancellationToken);
+                await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
                 return true;
             }
 
-            await AcknowledgeAsync(message, cancellationToken);
+            await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
             return true;
         }
         
@@ -454,6 +440,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (!string.IsNullOrEmpty(reason.Description))
             {
                 message.Header.Bag["rejectionMessage"] = reason.Description!;
+            }
+        }
+
+        private async Task DeleteSourceMessageAsync(string receiptHandle, string messageId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                using var client = _clientFactory.CreateSqsClient();
+                await EnsureChannelUrl(client, cancellationToken);
+                await client.DeleteMessageAsync(new DeleteMessageRequest(_channelUrl, receiptHandle),
+                    cancellationToken);
+
+                Log.DeletedMessage(s_logger, messageId, receiptHandle, _channelUrl!);
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorDeletingMessage(s_logger, exception, messageId, receiptHandle, _queueName);
+                throw;
             }
         }
 
