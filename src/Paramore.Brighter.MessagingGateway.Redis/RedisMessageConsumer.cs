@@ -308,10 +308,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             if (delay > TimeSpan.Zero && _scheduler != null)
             {
+                _inflight.TryGetValue(message.Id, out string? removedMsgId);
                 _inflight.Remove(message.Id);
-                EnsureRequeueProducer();
-                _requeueProducer!.SendWithDelay(message, delay);
-                return true;
+                try
+                {
+                    EnsureRequeueProducer();
+                    _requeueProducer!.SendWithDelay(message, delay);
+                    return true;
+                }
+                catch
+                {
+                    if (removedMsgId != null)
+                        _inflight[message.Id] = removedMsgId;
+                    throw;
+                }
             }
 
             message.Header.HandledCount++;
@@ -347,10 +357,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             if (delay > TimeSpan.Zero && _scheduler != null)
             {
+                _inflight.TryGetValue(message.Id, out string? removedMsgId);
                 _inflight.Remove(message.Id);
-                EnsureRequeueProducer();
-                await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
-                return true;
+                try
+                {
+                    EnsureRequeueProducer();
+                    await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
+                    return true;
+                }
+                catch
+                {
+                    if (removedMsgId != null)
+                        _inflight[message.Id] = removedMsgId;
+                    throw;
+                }
             }
 
             message.Header.HandledCount++;
