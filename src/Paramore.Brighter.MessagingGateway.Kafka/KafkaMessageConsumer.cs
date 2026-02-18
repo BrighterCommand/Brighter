@@ -675,6 +675,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             EnsureRequeueProducer();
             CleanBagForResend(message);
             await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
+            _requeueProducer.Flush(cancellationToken);
             return true;
         }
         

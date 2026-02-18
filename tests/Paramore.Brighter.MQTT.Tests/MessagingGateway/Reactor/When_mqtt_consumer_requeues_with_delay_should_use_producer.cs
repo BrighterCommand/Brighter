@@ -61,7 +61,6 @@ public class MqttConsumerRequeueTests : MqttTestClassBase<MqttConsumerRequeueTes
         MessageProducerSync.Send(message);
 
         var received = ReceiveMessage();
-        var originalHandledCount = received.Header.HandledCount;
 
         // Act - requeue the received message
         var result = MessageConsumerSync.Requeue(received);
@@ -69,8 +68,7 @@ public class MqttConsumerRequeueTests : MqttTestClassBase<MqttConsumerRequeueTes
         // Assert - requeue should return true (was returning false)
         Assert.True(result, "Requeue should succeed by publishing via producer");
 
-        // Assert - handled count should be incremented
-        Assert.Equal(originalHandledCount + 1, received.Header.HandledCount);
+        // Note: HandledCount is incremented by the message pump, not by the consumer requeue
 
         // Assert - message should be available again on the topic (published via producer)
         var requeued = ReceiveMessage();

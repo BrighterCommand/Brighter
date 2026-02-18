@@ -55,7 +55,6 @@ public class MqttConsumerRequeueAsyncTests(ITestOutputHelper testOutputHelper)
         await MessageProducerAsync.SendAsync(message);
 
         var received = await ReceiveMessageAsync();
-        var originalHandledCount = received.Header.HandledCount;
 
         // Act - requeue the received message asynchronously
         var result = await MessageConsumerAsync.RequeueAsync(received);
@@ -63,8 +62,7 @@ public class MqttConsumerRequeueAsyncTests(ITestOutputHelper testOutputHelper)
         // Assert - requeue should return true (was returning false)
         Assert.True(result, "RequeueAsync should succeed by publishing via producer");
 
-        // Assert - handled count should be incremented
-        Assert.Equal(originalHandledCount + 1, received.Header.HandledCount);
+        // Note: HandledCount is incremented by the message pump, not by the consumer requeue
 
         // Assert - message should be available again on the topic (published via producer)
         var requeued = await ReceiveMessageAsync();

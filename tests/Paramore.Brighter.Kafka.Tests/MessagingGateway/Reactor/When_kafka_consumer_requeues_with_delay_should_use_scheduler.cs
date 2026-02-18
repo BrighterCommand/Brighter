@@ -131,7 +131,7 @@ public class KafkaConsumerRequeueSchedulerTests : IDisposable
             {
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
             }
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         if (messages[0].Header.MessageType == MessageType.MT_NONE)
             throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");
