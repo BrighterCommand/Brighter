@@ -40,8 +40,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Scheduler;
 
-[Collection("CommandProcessor")]
-public class CommandProcessorSchedulerCommandTests : IDisposable
+public class CommandProcessorSchedulerCommandTests
 {
     private const string Topic = "MyCommand";
     private readonly CommandProcessor _commandProcessor;
@@ -71,7 +70,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryMessageProducer(_internalBus, _timeProvider, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+        var producer = new InMemoryMessageProducer(_internalBus, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
             .AddBrighterDefault();
@@ -93,7 +92,6 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             _outbox
         );
 
-        CommandProcessor.ClearServiceBus();
         _commandProcessor = new CommandProcessor(registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),
@@ -215,10 +213,5 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
         Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
         Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
         Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
-    }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
     }
 }

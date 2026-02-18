@@ -44,7 +44,6 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
 
-        Brighter.CommandProcessor.ClearServiceBus();
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
         _publication = new Publication
@@ -55,7 +54,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             Type = type,
         };
 
-        var producer = new InMemoryMessageProducer(internalBus, _timeProvider, _publication);
+        var producer = new InMemoryMessageProducer(internalBus, _publication);
 
         var producerRegistry =
             new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, type), producer } });

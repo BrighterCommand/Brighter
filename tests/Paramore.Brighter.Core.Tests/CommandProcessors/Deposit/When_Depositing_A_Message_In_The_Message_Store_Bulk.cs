@@ -13,8 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorBulkDepositPostTests : IDisposable
+    public class CommandProcessorBulkDepositPostTests
     {
         private readonly RoutingKey _commandTopic = new("MyCommand");
         private readonly RoutingKey _eventTopic = new("MyEvent");
@@ -36,13 +35,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myEvent.Data = 3;
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer commandMessageProducer = new(_bus, timeProvider, new Publication 
+            InMemoryMessageProducer commandMessageProducer = new(_bus, new Publication 
             { 
                 Topic = new RoutingKey(_commandTopic), 
                 RequestType = typeof(MyCommand) 
             });
 
-            InMemoryMessageProducer eventMessageProducer = new(_bus, timeProvider,  new Publication 
+            InMemoryMessageProducer eventMessageProducer = new(_bus, new Publication 
             { 
                 Topic = new RoutingKey(_eventTopic), 
                 RequestType = typeof(MyEvent) 
@@ -99,7 +98,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -150,11 +148,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //message should be marked as outstanding if not sent
             var outstandingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
             Assert.Equal(3, outstandingMessages.Count());
-        }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

@@ -36,7 +36,7 @@ using Paramore.Brighter.Policies.Handlers;
 namespace Paramore.Brighter.Core.Tests.Timeout
 {
     [Trait("Fragile", "CI")]
-    public class TimeoutHandlerFailsCheckTests : IDisposable
+    public class TimeoutHandlerFailsCheckTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -69,11 +69,6 @@ namespace Paramore.Brighter.Core.Tests.Timeout
             Assert.True(_myCommand.WasCancelled);
             //_should_not_run_to_completion
             Assert.False(_myCommand.TaskCompleted);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

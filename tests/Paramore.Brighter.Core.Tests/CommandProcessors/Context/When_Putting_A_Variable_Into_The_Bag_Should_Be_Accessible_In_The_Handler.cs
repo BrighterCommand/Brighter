@@ -5,8 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Context
 {
-    [Collection("CommandProcessor")]
-    public class ContextBagVisibilityTests : IDisposable
+    public class ContextBagVisibilityTests
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
         private readonly CommandProcessor _commandProcessor;
@@ -34,11 +33,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Context
 
             Assert.Equal(I_AM_A_TEST_OF_THE_CONTEXT_BAG, MyContextAwareCommandHandler.TestString);
             Assert.Equal("I was called and set the context", requestContext.Bag["MyContextAwareCommandHandler"]);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

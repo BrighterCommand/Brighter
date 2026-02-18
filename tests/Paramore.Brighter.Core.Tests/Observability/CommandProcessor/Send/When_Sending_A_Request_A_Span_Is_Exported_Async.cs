@@ -161,7 +161,6 @@ public class AsyncCommandProcessorSendObservabilityTests
     {
         BrighterTracer tracer = new();
        
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -175,7 +174,6 @@ public class AsyncCommandProcessorSendObservabilityTests
         
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
         
-        Brighter.CommandProcessor.ClearServiceBus();
 
         return new Brighter.CommandProcessor(
             registry,

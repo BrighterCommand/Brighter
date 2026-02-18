@@ -11,7 +11,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors;
 
-[Collection("CommandProcessor")]
 public class RequestContextFromFactoryTests : IDisposable
 {
     private readonly SpyContextFactory _requestContextFactory;
@@ -125,7 +124,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
                 }
             });
 
@@ -173,7 +172,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
                 },
             });
 
@@ -221,7 +220,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, instrumentationOptions:InstrumentationOptions.All)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions:InstrumentationOptions.All)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -275,7 +274,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, instrumentationOptions:InstrumentationOptions.All)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions:InstrumentationOptions.All)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -321,6 +320,5 @@ public class RequestContextFromFactoryTests : IDisposable
         MyContextAwareCommandHandlerAsync.TestString = null;
         MyContextAwareEventHandler.TestString = null;
         MyContextAwareEventHandlerAsync.TestString = null;
-        CommandProcessor.ClearServiceBus();
     }
 }

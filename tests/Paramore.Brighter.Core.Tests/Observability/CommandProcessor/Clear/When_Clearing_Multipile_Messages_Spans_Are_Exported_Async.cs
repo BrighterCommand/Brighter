@@ -40,7 +40,6 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
         
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
 
@@ -64,7 +63,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         var routingKey = new RoutingKey(_topic);
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+        InMemoryMessageProducer messageProducer = new(_internalBus, 
             new Publication
             {
                 Source = new Uri("http://localhost"),

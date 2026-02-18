@@ -16,6 +16,7 @@
     - Use a single blank line to separate using directives.
   - DO NOT use Microsoft's Framework Design Guidelines. They are not idiomatic and outdated.
 - Prefer expression-bodied members for simple properties and methods.
+- Prefer primary constructors where possible, especially for simple classes and records.
 - Use readonly for fields that do not change after construction.
 - Enable nullable on projects:
   - `<Nullable>enable</Nullable>` should be set in the project file, and that new code should use nullable reference types.

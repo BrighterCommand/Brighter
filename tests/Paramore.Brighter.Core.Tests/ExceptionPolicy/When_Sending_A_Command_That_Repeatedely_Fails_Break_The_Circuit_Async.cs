@@ -13,7 +13,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorWithCircuitBreakerAsyncTests : IDisposable
+    public class CommandProcessorWithCircuitBreakerAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -67,11 +67,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             Assert.IsType<DivideByZeroException>(_secondException);
             // Should break the circuit after two fails
             Assert.IsType<BrokenCircuitException>(_thirdException);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }
