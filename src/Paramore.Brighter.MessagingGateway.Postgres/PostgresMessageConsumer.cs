@@ -165,6 +165,19 @@ public partial class PostgresMessageConsumer(
     }
     
     /// <inheritdoc />
+    public void Nack(Message message)
+    {
+        // No-op: visibility timeout will expire and message will become available for redelivery
+    }
+
+    /// <inheritdoc />
+    public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        // No-op: visibility timeout will expire and message will become available for redelivery
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))

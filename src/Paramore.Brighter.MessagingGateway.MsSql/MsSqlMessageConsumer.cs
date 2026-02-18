@@ -41,6 +41,20 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             return Task.CompletedTask;
         }
+
+        /// <summary>
+        /// Nacks the specified message.
+        /// </summary>
+        /// <remarks>
+        /// No implementation required because of atomic 'read-and-delete'
+        /// </remarks>
+        /// <param name="message">The message.</param>
+        public void Nack(Message message) {}
+
+        public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
         
         /// <summary>
         /// Purges the specified queue name.
