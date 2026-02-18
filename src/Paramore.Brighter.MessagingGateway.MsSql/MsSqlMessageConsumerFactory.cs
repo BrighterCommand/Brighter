@@ -18,17 +18,23 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
          public IAmAMessageConsumerSync Create(Subscription subscription)
         {
             if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
-            
+
+            var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
+            var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
+
             Log.MsSqlMessageConsumerFactoryCreate(s_logger, subscription.ChannelName);
-            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!);
+            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!, deadLetterRoutingKey, invalidMessageRoutingKey);
         }
 
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         {
             if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
-            
+
+            var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
+            var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
+
             Log.MsSqlMessageConsumerFactoryCreateAsync(s_logger, subscription.ChannelName);
-            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!);
+            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!, deadLetterRoutingKey, invalidMessageRoutingKey);
         }
 
         private static partial class Log

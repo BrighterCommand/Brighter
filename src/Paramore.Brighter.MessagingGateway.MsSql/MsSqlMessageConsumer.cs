@@ -13,19 +13,28 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private readonly string _topic;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumer>();
         private readonly MsSqlMessageQueue<Message> _sqlMessageQueue;
+        private readonly RoutingKey? _deadLetterRoutingKey;
+        private readonly RoutingKey? _invalidMessageRoutingKey;
 
         public MsSqlMessageConsumer(
-            RelationalDatabaseConfiguration msSqlConfiguration, 
-            string topic, 
-            RelationalDbConnectionProvider connectionProvider
-            )
+            RelationalDatabaseConfiguration msSqlConfiguration,
+            string topic,
+            RelationalDbConnectionProvider connectionProvider,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
             _sqlMessageQueue = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
+            _deadLetterRoutingKey = deadLetterRoutingKey;
+            _invalidMessageRoutingKey = invalidMessageRoutingKey;
         }
 
-        public MsSqlMessageConsumer(RelationalDatabaseConfiguration msSqlConfiguration, string topic) 
-            : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration))
+        public MsSqlMessageConsumer(
+            RelationalDatabaseConfiguration msSqlConfiguration,
+            string topic,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
+            : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration), deadLetterRoutingKey, invalidMessageRoutingKey)
         {}
 
         /// <summary>
