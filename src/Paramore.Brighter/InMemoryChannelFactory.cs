@@ -36,6 +36,7 @@ namespace Paramore.Brighter
         private readonly InternalBus _internalBus;
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan? _ackTimeout;
+        private readonly IAmAMessageScheduler? _scheduler;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryChannelFactory"/> class.
@@ -43,11 +44,13 @@ namespace Paramore.Brighter
         /// <param name="internalBus">The internal bus for message routing.</param>
         /// <param name="timeProvider">The time provider for managing time-related operations.</param>
         /// <param name="ackTimeout">Optional acknowledgment timeout.</param>
-        public InMemoryChannelFactory(InternalBus internalBus, TimeProvider timeProvider, TimeSpan? ackTimeout = null)
+        /// <param name="scheduler">Optional scheduler for delayed requeue operations.</param>
+        public InMemoryChannelFactory(InternalBus internalBus, TimeProvider timeProvider, TimeSpan? ackTimeout = null, IAmAMessageScheduler? scheduler = null)
         {
             _internalBus = internalBus;
             _timeProvider = timeProvider;
             _ackTimeout = ackTimeout;
+            _scheduler = scheduler;
         }
 
         /// <summary>
@@ -72,7 +75,8 @@ namespace Paramore.Brighter
                     _timeProvider,
                     deadLetterKey,  
                     invalidMessageKey,
-                    ackTimeout: _ackTimeout),
+                    ackTimeout: _ackTimeout,
+                    scheduler: _scheduler),
                 subscription.BufferSize
             );
         }
@@ -99,7 +103,8 @@ namespace Paramore.Brighter
                     _timeProvider,
                     deadLetterKey,
                     invalidMessageKey,
-                    ackTimeout: _ackTimeout),
+                    ackTimeout: _ackTimeout,
+                    scheduler: _scheduler),
                 subscription.BufferSize
             );
         }
@@ -127,7 +132,8 @@ namespace Paramore.Brighter
                     _timeProvider,
                     deadLetterKey,
                     invalidMessageKey,
-                    ackTimeout: _ackTimeout),
+                    ackTimeout: _ackTimeout,
+                    scheduler: _scheduler),
                 subscription.BufferSize
             );
             return Task.FromResult(channel);
