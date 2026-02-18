@@ -113,7 +113,7 @@ public class KafkaConsumerDeclareTests : IDisposable
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
             }
 
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         return messages[0];
     }

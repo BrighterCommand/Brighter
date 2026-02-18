@@ -108,7 +108,7 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
             }
 
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         Assert.Single(messages);
         Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);

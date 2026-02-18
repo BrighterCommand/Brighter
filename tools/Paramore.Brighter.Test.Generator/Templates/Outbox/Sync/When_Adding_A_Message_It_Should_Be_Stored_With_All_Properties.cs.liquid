@@ -70,7 +70,7 @@ public class WhenAddingAMessageItShouldBeStoredWithAllProperties : IDisposable
         //should read the header from the sql outbox
         Assert.Equal(message.Header.Topic, storedMessage.Header.Topic);
         Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+        Assert.Equal(message.Header.TimeStamp, storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1));
         Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);

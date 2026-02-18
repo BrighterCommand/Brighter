@@ -170,7 +170,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
             }
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         return messages[0];
     }
