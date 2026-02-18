@@ -17,8 +17,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Scheduler;
 
-[Collection("CommandProcessor")]
-public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
+public class CommandProcessorSchedulerCommandAsyncTests
 {
     private const string Topic = "MyCommand";
     private readonly CommandProcessor _commandProcessor;
@@ -73,7 +72,6 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
             _outbox
         );
 
-        CommandProcessor.ClearServiceBus();
         _commandProcessor = new CommandProcessor(registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),
@@ -196,10 +194,5 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
         Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
         Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
         
-    }
-    
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
     }
 }

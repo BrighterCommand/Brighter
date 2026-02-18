@@ -80,7 +80,6 @@ public class QuartzSchedulerMessageTests
 
         _scheduler = new QuartzSchedulerFactory(scheduler);
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

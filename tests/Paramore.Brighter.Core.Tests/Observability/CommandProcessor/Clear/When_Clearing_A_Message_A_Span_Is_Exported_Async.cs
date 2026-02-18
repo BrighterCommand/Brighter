@@ -39,7 +39,6 @@ public class AsyncCommandProcessorClearObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
         
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
 

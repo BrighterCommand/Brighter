@@ -7,8 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPublishEventAgreementAsyncTests : IDisposable
+    public class CommandProcessorPublishEventAgreementAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
@@ -42,11 +41,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
            //Should publish the command to the first event handler
            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandlerAsync), myEvent.Id), _receivedMessages);
 
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

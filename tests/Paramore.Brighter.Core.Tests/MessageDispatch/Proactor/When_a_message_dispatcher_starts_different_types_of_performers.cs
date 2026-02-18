@@ -13,7 +13,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-    [Collection("CommandProcessor")]
     public class MessageDispatcherMultipleConnectionTestsAsync : IDisposable
     {
         private readonly Dispatcher _dispatcher;

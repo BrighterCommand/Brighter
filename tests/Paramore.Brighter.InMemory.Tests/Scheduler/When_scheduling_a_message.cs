@@ -79,7 +79,6 @@ public class InMemorySchedulerMessageTests
             _outbox
         );
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

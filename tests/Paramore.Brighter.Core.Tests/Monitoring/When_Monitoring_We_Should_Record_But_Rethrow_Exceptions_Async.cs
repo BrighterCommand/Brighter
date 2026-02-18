@@ -40,7 +40,7 @@ using Paramore.Brighter.JsonConverters;
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerMustObserveButRethrowTests  : IDisposable
+    public class MonitorHandlerMustObserveButRethrowTests
     {
         private readonly MyCommand _command;
         private readonly SpyControlBusSender _controlBusSender;
@@ -98,11 +98,6 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             Assert.Equal(_originalRequestAsJson, _afterEvent.RequestBody);
             //should_post_the_time_of_the_request_after
             Assert.True((_afterEvent.EventTime.ToUniversalTime()) > (_at.ToUniversalTime()));
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

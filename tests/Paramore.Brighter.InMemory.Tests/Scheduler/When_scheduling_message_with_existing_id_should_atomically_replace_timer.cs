@@ -114,7 +114,6 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
             outbox
         );
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

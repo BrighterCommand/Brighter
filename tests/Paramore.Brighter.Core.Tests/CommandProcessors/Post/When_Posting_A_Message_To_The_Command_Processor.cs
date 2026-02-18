@@ -15,8 +15,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPostCommandTests : IDisposable
+    public class CommandProcessorPostCommandTests
     {
         private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
@@ -93,7 +92,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -124,11 +122,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             Assert.NotNull(message);
             
             Assert.Equal(_expectedMessage, message);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

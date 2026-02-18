@@ -13,8 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorBulkDepositPostWithTransactionTestsAsync : IDisposable
+    public class CommandProcessorBulkDepositPostWithTransactionTestsAsync
     {
         private readonly RoutingKey _commandTopic = new("MyCommand");
         private readonly RoutingKey _eventTopic = new("MyEvent");
@@ -94,7 +93,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 _spyOutbox
             );
 
-            CommandProcessor.ClearServiceBus();
             var scheduler = new InMemorySchedulerFactory();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -138,11 +136,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 Assert.Equal(_messages[i].Header.Topic, messages[i]?.Header.Topic);
                 Assert.Equal(_messages[i].Header.MessageType, messages[i]?.Header.MessageType);
             }
-        }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

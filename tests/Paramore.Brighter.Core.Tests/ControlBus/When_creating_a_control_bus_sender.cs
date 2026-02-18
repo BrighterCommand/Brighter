@@ -6,8 +6,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    [Collection("CommandProcessor")]
-    public class ControlBusSenderFactoryTests : IDisposable
+    public class ControlBusSenderFactoryTests
     {
         private IAmAControlBusSender? _sender;
         private readonly IAmAControlBusSenderFactory _senderFactory;
@@ -34,11 +33,6 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
                 tracer: new BrighterTracer());
 
             Assert.NotNull(_sender);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

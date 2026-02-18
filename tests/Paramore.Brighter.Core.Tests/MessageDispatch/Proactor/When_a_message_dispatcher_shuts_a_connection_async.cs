@@ -10,7 +10,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-    [Collection("CommandProcessor")]
     public class MessageDispatcherShutConnectionTests : IDisposable
     {
         private const string Topic = "fakekey";

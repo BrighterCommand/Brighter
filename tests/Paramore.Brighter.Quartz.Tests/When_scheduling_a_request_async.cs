@@ -90,7 +90,6 @@ public class QuartzSchedulerRequestAsyncTests
 
         _scheduler = new QuartzSchedulerFactory(scheduler);
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

@@ -18,7 +18,7 @@ using Xunit;
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
     [Collection("CommandProcess")]
-    public class SweeperTestsWithCircuitBreaker : IDisposable
+    public class SweeperTestsWithCircuitBreaker
     {
         private readonly Message _messageOne;
         private readonly RoutingKey _routingKeyOne = new RoutingKey("routingKey1.MyEvent1");
@@ -108,7 +108,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outboxCircuitBreaker: _circuitBreaker
             );
 
-            CommandProcessor.ClearServiceBus();
         }
 
 
@@ -185,11 +184,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             Assert.Equal(_messageTwo.Id, sentMessage2.Id);
             Assert.Equal(_messageTwo.Header.Topic, sentMessage2.Header.Topic);
             Assert.Equal(_messageTwo.Body.Value, sentMessage2.Body.Value);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

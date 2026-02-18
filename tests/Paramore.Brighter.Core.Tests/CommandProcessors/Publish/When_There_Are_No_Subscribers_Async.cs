@@ -32,8 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorNoMatchingSubcribersAsyncTests : IDisposable
+    public class CommandProcessorNoMatchingSubcribersAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
@@ -57,11 +56,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 
             //_should_not_throw_an_exception
             Assert.Null(_exception);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

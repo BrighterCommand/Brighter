@@ -6,8 +6,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class PipelineForCommandTests : IDisposable
+    public class PipelineForCommandTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private IHandleRequests<MyCommand> _chainOfResponsibility;
@@ -30,11 +29,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             Assert.NotNull(_chainOfResponsibility.Context);
             Assert.Same(_requestContext, _chainOfResponsibility.Context);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

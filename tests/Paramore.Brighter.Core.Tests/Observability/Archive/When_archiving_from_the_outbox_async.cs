@@ -44,7 +44,6 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
 
-        Brighter.CommandProcessor.ClearServiceBus();
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
         _publication = new Publication

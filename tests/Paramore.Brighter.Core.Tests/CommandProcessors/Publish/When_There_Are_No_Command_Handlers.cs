@@ -32,8 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorNoHandlersMatchTests : IDisposable
+    public class CommandProcessorNoHandlersMatchTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -64,11 +63,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             //Should have an error message that tells you why
             Assert.NotNull(_exception);
             Assert.Contains("No command handler was found", _exception.Message);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

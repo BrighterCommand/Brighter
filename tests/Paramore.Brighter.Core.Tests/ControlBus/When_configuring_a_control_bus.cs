@@ -8,8 +8,7 @@ using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    [Collection("CommandProcessor")]
-    public class ControlBusBuilderTests : IDisposable
+    public class ControlBusBuilderTests
     {
         private Dispatcher _controlBus;
         private readonly ControlBusReceiverBuilder _busReceiverBuilder;
@@ -38,11 +37,6 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             Assert.Contains(_controlBus.Subscriptions, cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.CONFIGURATION}");
             Assert.Contains(_controlBus.Subscriptions, cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.HEARTBEAT}");
             Assert.NotNull(_controlBus.CommandProcessor);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

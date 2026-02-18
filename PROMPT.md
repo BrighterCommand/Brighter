@@ -60,9 +60,6 @@ MQTT previously returned `false` for requeue (not implemented). Now implementing
 | 3 | InMemoryConsumer producer delegation | 4 | ✅ Complete |
 | 4 | Consumer scheduler injection | 1 | ✅ Complete |
 | 5 | InMemory integration tests | 2 | ✅ Complete |
-| 6 | RabbitMQ consumer updates | 5 | ✅ Complete |
-| 7 | Kafka consumer updates | 3 | ✅ Complete |
-| 8 | MQTT consumer updates | 3 | 🔧 1/3 Complete |
 | 9 | MsSql consumer updates | 4 | Pending |
 | 10 | Redis consumer updates | 4 | Pending |
 | 11 | Postgres verification | 1 | Pending |
@@ -145,4 +142,18 @@ dotnet test Brighter.sln
 
 # Run specific test project
 dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj
+
+# Run InMemory tests (Producer + Consumer + Scheduler)
+dotnet test tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "FullyQualifiedName~Producer|FullyQualifiedName~Consumer|FullyQualifiedName~Scheduler"
 ```
+
+## Recent Commits (Phases 2-5)
+
+- `823eeafd6` - test: add Phase 5 InMemory integration tests for scheduler delay
+- `851363a8c` - test: verify consumer zero-delay requeue and producer disposal
+- `600048c1d` - feat: InMemoryMessageConsumer.RequeueAsync delegates to producer when scheduler configured
+- `2adabd4e2` - feat: InMemoryMessageConsumer.Requeue delegates to producer when scheduler configured
+- `a44772523` - test: verify timer fallback when no scheduler configured
+- `b5ffa2d9a` - feat: SendWithDelay sends immediately when delay is zero
+- `d5ec98daa` - feat: InMemoryMessageProducer.SendWithDelayAsync uses scheduler when configured
+- `c734dfd64` - feat: InMemoryMessageProducer.SendWithDelay uses scheduler when configured
