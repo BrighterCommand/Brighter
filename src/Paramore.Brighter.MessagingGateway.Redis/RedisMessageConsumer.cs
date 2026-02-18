@@ -324,7 +324,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 }
             }
 
-            message.Header.HandledCount++;
             using var client = GetClient();
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
@@ -373,7 +372,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 }
             }
 
-            message.Header.HandledCount++;
             var client = await GetClientAsync(cancellationToken);
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
