@@ -20,7 +20,7 @@ public class ServiceBusMessageStoreArchiverTests
         _timeProvider = new FakeTimeProvider();
 
         var tracer = new BrighterTracer();
-        _outbox = new InMemoryOutbox(_timeProvider){Tracer = tracer};
+        _outbox = new InMemoryOutbox(_timeProvider){Tracer = tracer, EntryTimeToLive = TimeSpan.FromMinutes(30)};
         _archiveProvider = new InMemoryArchiveProvider();
 
         _archiver = new OutboxArchiver<Message, CommittableTransaction>(
