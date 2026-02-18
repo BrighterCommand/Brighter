@@ -151,7 +151,7 @@ namespace Paramore.Brighter
         /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
         /// When delay is zero or null, the message is sent immediately.
         /// When a scheduler is configured and delay is greater than zero, the scheduler is used.
-        /// Otherwise, the delay is simulated by the <see cref="TimeProvider"/>.
+        /// Otherwise, a <see cref="ConfigurationException"/> is thrown.
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
@@ -180,7 +180,7 @@ namespace Paramore.Brighter
         /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
         /// When delay is zero or null, the message is sent immediately.
         /// When an async scheduler is configured and delay is greater than zero, the scheduler is used.
-        /// Otherwise, the delay is simulated by the <see cref="TimeProvider"/>.
+        /// Otherwise, a <see cref="ConfigurationException"/> is thrown.
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
