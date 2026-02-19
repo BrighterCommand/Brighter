@@ -46,7 +46,7 @@ These tasks establish the core infrastructure that all subsequent transport task
 
 Each task updates one consumer factory to accept and pass the scheduler. These tasks are independent and can be done in any order.
 
-- [ ] **TEST + IMPLEMENT: RMQ Async consumer factory passes scheduler to consumer**
+- [x] **TEST + IMPLEMENT: RMQ Async consumer factory passes scheduler to consumer**
   - **USE COMMAND**: `/test-first when RMQ async consumer factory creates consumer should pass scheduler`
   - Test location: "tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway"
   - Test file: `When_rmq_async_consumer_factory_creates_consumer_should_pass_scheduler.cs`
