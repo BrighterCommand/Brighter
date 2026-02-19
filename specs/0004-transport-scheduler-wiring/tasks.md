@@ -36,7 +36,7 @@ These tasks establish the core infrastructure that all subsequent transport task
     - Verify that `AddSingleton` in `UseScheduler`/`UseMessageScheduler` takes precedence over `TryAddSingleton` default
     - May require adjusting registration order if `TryAddSingleton` runs after `UseScheduler`
 
-- [ ] **IMPLEMENT: Add `IAmAChannelFactoryWithScheduler` interface**
+- [x] **IMPLEMENT: Add `IAmAChannelFactoryWithScheduler` interface**
   - File: `src/Paramore.Brighter/IAmAChannelFactoryWithScheduler.cs`
   - Interface with single property: `IAmAMessageScheduler? Scheduler { get; set; }`
   - Follows the `IAmA*` naming convention for role interfaces
