@@ -35,6 +35,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 /// it should delegate to the lazily-created producer's SendWithDelayAsync rather than
 /// adding it back to the list immediately.
 /// </summary>
+[Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
 public class When_redis_consumer_requeues_async_with_delay_should_use_producer : IAsyncDisposable
 {

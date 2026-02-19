@@ -92,7 +92,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
             //Collect messages, retrying if not all have arrived yet
             List<Message> receivedMessages = [];
             int retries = 0;
-            while (receivedMessages.Count < messageCount && retries < 20)
+            while (receivedMessages.Count < messageCount && retries < 50)
             {
                 Message[] batch = MessageConsumerSync.Receive(TimeSpan.FromMilliseconds(100));
                 foreach (var msg in batch)

@@ -33,6 +33,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 /// direct Redis list operations rather than creating a producer. This preserves existing
 /// behavior and ensures immediate requeue without scheduler overhead.
 /// </summary>
+[Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
 public class When_redis_consumer_requeues_with_zero_delay_should_use_direct_list : IDisposable
 {

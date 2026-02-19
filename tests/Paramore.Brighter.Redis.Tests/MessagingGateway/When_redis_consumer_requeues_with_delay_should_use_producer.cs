@@ -33,6 +33,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 /// to a lazily-created producer's SendWithDelay rather than adding it back to the list immediately.
 /// This ensures the delay is respected via the scheduler instead of being ignored.
 /// </summary>
+[Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
 public class When_redis_consumer_requeues_with_delay_should_use_producer : IDisposable
 {
