@@ -49,6 +49,9 @@ namespace GreetingsReceiver
                         options.Subscriptions = subscriptions;
                         options.DefaultChannelFactory = new ChannelFactory(redisConsumerFactory);
                     })
+                    // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+                    // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+                    .UseScheduler(new InMemorySchedulerFactory())
                     .AutoFromAssemblies();
 
 

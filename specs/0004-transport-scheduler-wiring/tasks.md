@@ -237,7 +237,7 @@ Each task updates one transport's channel factory to accept scheduler and implem
 
 Depends on Phase 0 (default registration) and Phase 3 (channel factories implement `IAmAChannelFactoryWithScheduler`).
 
-- [ ] **TEST + IMPLEMENT: BuildDispatcher sets scheduler on channel factory from DI**
+- [x] **TEST + IMPLEMENT: BuildDispatcher sets scheduler on channel factory from DI**
   - **USE COMMAND**: `/test-first when BuildDispatcher creates dispatcher should set scheduler on channel factory from DI`
   - Test location: "tests/Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.Tests"
   - Test file: `When_building_dispatcher_should_set_scheduler_on_channel_factory.cs`
@@ -252,7 +252,7 @@ Depends on Phase 0 (default registration) and Phase 3 (channel factories impleme
     - Check if `options.DefaultChannelFactory` (or fallback `InMemoryChannelFactory`) implements `IAmAChannelFactoryWithScheduler`
     - If so, set `Scheduler` property to the resolved scheduler
 
-- [ ] **TEST + IMPLEMENT: BuildDispatcher works with channel factory that does not implement IAmAChannelFactoryWithScheduler**
+- [x] **TEST + IMPLEMENT: BuildDispatcher works with channel factory that does not implement IAmAChannelFactoryWithScheduler**
   - **USE COMMAND**: `/test-first when BuildDispatcher has channel factory without scheduler interface should still work`
   - Test location: "tests/Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.Tests"
   - Test file: `When_building_dispatcher_with_non_scheduler_channel_factory_should_work.cs`
@@ -268,7 +268,7 @@ Depends on Phase 0 (default registration) and Phase 3 (channel factories impleme
 
 Update the TaskQueue samples to explicitly register `InMemorySchedulerFactory` via `UseScheduler()`. While this is a no-op (it's the default), it demonstrates to users how to configure a scheduler and makes the samples self-documenting.
 
-- [ ] **IMPLEMENT: Update RMQ TaskQueue samples to explicitly register InMemoryScheduler**
+- [x] **IMPLEMENT: Update RMQ TaskQueue samples to explicitly register InMemoryScheduler**
   - Files:
     - `samples/TaskQueue/RMQTaskQueue/GreetingsSender/Program.cs`
     - `samples/TaskQueue/RMQTaskQueue/GreetingsReceiverConsole/Program.cs`
@@ -278,7 +278,7 @@ Update the TaskQueue samples to explicitly register `InMemorySchedulerFactory` v
   - Add comment: `// InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration. Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.`
   - No test needed — samples are not tested
 
-- [ ] **IMPLEMENT: Update Kafka TaskQueue samples to explicitly register InMemoryScheduler**
+- [x] **IMPLEMENT: Update Kafka TaskQueue samples to explicitly register InMemoryScheduler**
   - Files:
     - `samples/TaskQueue/KafkaTaskQueue/GreetingsSender/Program.cs`
     - `samples/TaskQueue/KafkaTaskQueue/GreetingsReceiverConsole/Program.cs`
@@ -293,7 +293,7 @@ Update the TaskQueue samples to explicitly register `InMemorySchedulerFactory` v
   - Add comment: `// InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration. Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.`
   - No test needed — samples are not tested
 
-- [ ] **IMPLEMENT: Update MsSql TaskQueue samples to explicitly register InMemoryScheduler**
+- [x] **IMPLEMENT: Update MsSql TaskQueue samples to explicitly register InMemoryScheduler**
   - Files:
     - `samples/TaskQueue/MsSqlMessagingGateway/GreetingsSender/Program.cs`
     - `samples/TaskQueue/MsSqlMessagingGateway/GreetingsReceiverConsole/Program.cs`
@@ -303,7 +303,7 @@ Update the TaskQueue samples to explicitly register `InMemorySchedulerFactory` v
   - Add comment: `// InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration. Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.`
   - No test needed — samples are not tested
 
-- [ ] **IMPLEMENT: Update Redis TaskQueue samples to explicitly register InMemoryScheduler**
+- [x] **IMPLEMENT: Update Redis TaskQueue samples to explicitly register InMemoryScheduler**
   - Files:
     - `samples/TaskQueue/RedisTaskQueue/GreetingsSender/Program.cs`
     - `samples/TaskQueue/RedisTaskQueue/GreetingsReceiver/Program.cs`
@@ -311,7 +311,7 @@ Update the TaskQueue samples to explicitly register `InMemorySchedulerFactory` v
   - Add comment: `// InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration. Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.`
   - No test needed — samples are not tested
 
-- [ ] **IMPLEMENT: Update MultiBus TaskQueue samples to explicitly register InMemoryScheduler**
+- [x] **IMPLEMENT: Update MultiBus TaskQueue samples to explicitly register InMemoryScheduler**
   - Files:
     - `samples/TaskQueue/MultiBus/GreetingsSender/Program.cs`
     - `samples/TaskQueue/MultiBus/GreetingsReceiverConsole/Program.cs`
