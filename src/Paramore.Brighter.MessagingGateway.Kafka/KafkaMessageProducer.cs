@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -227,11 +228,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
-                schedulerSync.Schedule(message, delay.Value);
-                return;
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    BrighterAsyncContext.Run(() => async.ScheduleAsync(message, delay.Value));
+                    return;
+                }
+
+                Log.NoSchedulerConfigured(s_logger);
             }
-            
+
             if (message is null)
                 throw new ArgumentNullException(nameof(message));
 
@@ -289,17 +300,27 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
              delay ??= TimeSpan.Zero;
              if (delay != TimeSpan.Zero)
              {
-                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
-                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
-                return;
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                Log.NoSchedulerConfigured(s_logger);
              }
-                        
+
              if (message is null)
                  throw new ArgumentNullException(nameof(message));
 
              if (_publisher is null)
                  throw new InvalidOperationException("The publisher cannot be null");
-             
+
              if (_hasFatalProducerError)
                  throw new ChannelFailureException("Producer is in unrecoverable state");
               
@@ -377,6 +398,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             [LoggerMessage(LogLevel.Error, "KafkaMessageProducer: There was an error sending to topic {Topic})")]
             public static partial void KafkaExceptionError(ILogger logger, Exception exception, string topic);
 
+            [LoggerMessage(LogLevel.Warning, "KafkaMessageProducer: no scheduler configured, message will be sent immediately")]
+            public static partial void NoSchedulerConfigured(ILogger logger);
         }
     }
 }

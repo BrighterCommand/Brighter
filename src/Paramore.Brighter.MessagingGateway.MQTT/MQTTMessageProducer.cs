@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
@@ -109,12 +110,21 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
-                schedulerSync.Schedule(message, delay.Value);
-                return;
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    BrighterAsyncContext.Run(() => async.ScheduleAsync(message, delay.Value));
+                    return;
+                }
+
+                Log.NoSchedulerConfigured(s_logger);
             }
 
-            // delay is not natively supported
             ArgumentNullException.ThrowIfNull(message);
 
             _mqttMessagePublisher.PublishMessage(message);
@@ -131,14 +141,30 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
-                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
-                return;
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                Log.NoSchedulerConfigured(s_logger);
             }
 
             ArgumentNullException.ThrowIfNull(message);
 
             await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "MqttMessageProducer: no scheduler configured, message will be sent immediately")]
+            public static partial void NoSchedulerConfigured(ILogger logger);
         }
     }
 }

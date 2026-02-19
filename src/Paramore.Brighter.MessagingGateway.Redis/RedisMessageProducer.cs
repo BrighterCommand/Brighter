@@ -30,6 +30,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
@@ -128,11 +129,21 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
-                schedulerSync.Schedule(message, delay.Value);
-                return;
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    BrighterAsyncContext.Run(() => async.ScheduleAsync(message, delay.Value));
+                    return;
+                }
+
+                Log.NoSchedulerConfigured(s_logger);
             }
-           
+
             using var client = s_pool.Value.GetClient();
             Topic = message.Header.Topic;
 
@@ -171,9 +182,19 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
-                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
-                return;
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                Log.NoSchedulerConfigured(s_logger);
             }
 
             await using var client = await s_pool.Value.GetClientAsync(token: cancellationToken);
@@ -244,6 +265,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             
             [LoggerMessage(LogLevel.Debug, "RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {Queues}")]
             public static partial void PublishedMessage(ILogger logger, string topic, string id, string request, string queues);
+
+            [LoggerMessage(LogLevel.Warning, "RedisMessageProducer: no scheduler configured, message will be sent immediately")]
+            public static partial void NoSchedulerConfigured(ILogger logger);
         }
     }
 }
