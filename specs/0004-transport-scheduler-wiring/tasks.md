@@ -61,7 +61,7 @@ Each task updates one consumer factory to accept and pass the scheduler. These t
     - Store as `_scheduler` field
     - Pass `scheduler: _scheduler` when constructing `RmqMessageConsumer` in both `Create()` and `CreateAsync()`
 
-- [ ] **TEST + IMPLEMENT: RMQ Sync consumer factory passes scheduler to consumer**
+- [x] **TEST + IMPLEMENT: RMQ Sync consumer factory passes scheduler to consumer**
   - **USE COMMAND**: `/test-first when RMQ sync consumer factory creates consumer should pass scheduler`
   - Test location: "tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway"
   - Test file: `When_rmq_sync_consumer_factory_creates_consumer_should_pass_scheduler.cs`
@@ -75,7 +75,7 @@ Each task updates one consumer factory to accept and pass the scheduler. These t
     - Store as `_scheduler` field
     - Pass `scheduler: _scheduler` when constructing `RmqMessageConsumer` in `Create()`
 
-- [ ] **TEST + IMPLEMENT: Kafka consumer factory passes scheduler to consumer**
+- [x] **TEST + IMPLEMENT: Kafka consumer factory passes scheduler to consumer**
   - **USE COMMAND**: `/test-first when Kafka consumer factory creates consumer should pass scheduler`
   - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway"
   - Test file: `When_kafka_consumer_factory_creates_consumer_should_pass_scheduler.cs`
@@ -89,7 +89,7 @@ Each task updates one consumer factory to accept and pass the scheduler. These t
     - Store as `_scheduler` field
     - Pass `scheduler: _scheduler` when constructing `KafkaMessageConsumer` in `Create()` and `CreateAsync()`
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer factory passes scheduler to consumer**
+- [x] **TEST + IMPLEMENT: MsSql consumer factory passes scheduler to consumer**
   - **USE COMMAND**: `/test-first when MsSql consumer factory creates consumer should pass scheduler`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/MessagingGateway"
   - Test file: `When_mssql_consumer_factory_creates_consumer_should_pass_scheduler.cs`
@@ -103,7 +103,7 @@ Each task updates one consumer factory to accept and pass the scheduler. These t
     - Store as `_scheduler` field
     - Pass `scheduler: _scheduler` when constructing `MsSqlMessageConsumer` in `Create()` and `CreateAsync()`
 
-- [ ] **TEST + IMPLEMENT: Redis consumer factory passes scheduler to consumer**
+- [x] **TEST + IMPLEMENT: Redis consumer factory passes scheduler to consumer**
   - **USE COMMAND**: `/test-first when Redis consumer factory creates consumer should pass scheduler`
   - Test location: "tests/Paramore.Brighter.Redis.Tests/MessagingGateway"
   - Test file: `When_redis_consumer_factory_creates_consumer_should_pass_scheduler.cs`
