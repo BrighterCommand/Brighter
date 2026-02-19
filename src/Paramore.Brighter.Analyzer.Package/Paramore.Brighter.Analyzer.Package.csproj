@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>Paramore.Brighter.Analyzer</PackageId>
     <Authors>AboubakrNasef</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>Paramore.Brighter.Analyzer</Description>
