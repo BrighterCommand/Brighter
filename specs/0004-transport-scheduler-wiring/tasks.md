@@ -122,7 +122,7 @@ Each task updates one consumer factory to accept and pass the scheduler. These t
 
 MQTT currently has no consumer factory or channel factory. These tasks create them.
 
-- [ ] **TEST + IMPLEMENT: MQTT consumer factory creates consumer with configuration and scheduler**
+- [x] **TEST + IMPLEMENT: MQTT consumer factory creates consumer with configuration and scheduler**
   - **USE COMMAND**: `/test-first when MQTT consumer factory creates consumer should pass configuration and scheduler`
   - Test location: "tests/Paramore.Brighter.MQTT.Tests/MessagingGateway"
   - Test file: `When_mqtt_consumer_factory_creates_consumer_should_pass_scheduler.cs`
@@ -138,7 +138,7 @@ MQTT currently has no consumer factory or channel factory. These tasks create th
     - Constructor takes `MqttMessagingGatewayConsumerConfiguration` and `IAmAMessageScheduler? scheduler = null`
     - `Create()` and `CreateAsync()` return `new MqttMessageConsumer(configuration, _scheduler)`
 
-- [ ] **TEST + IMPLEMENT: MQTT channel factory creates channels via consumer factory**
+- [x] **TEST + IMPLEMENT: MQTT channel factory creates channels via consumer factory**
   - **USE COMMAND**: `/test-first when MQTT channel factory creates channel should use consumer factory and pass scheduler`
   - Test location: "tests/Paramore.Brighter.MQTT.Tests/MessagingGateway"
   - Test file: `When_mqtt_channel_factory_creates_channel_should_use_consumer_factory.cs`
