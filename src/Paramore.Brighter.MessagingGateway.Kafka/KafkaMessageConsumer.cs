@@ -540,6 +540,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               }
 
               var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+              var partitionOffset = ExtractPartitionOffset(message);
 
               try
               {
@@ -576,7 +577,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
               }
 
-              Acknowledge(message);
+              AcknowledgeOffset(partitionOffset);
               return true;
         }
 
@@ -604,6 +605,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
 
             var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+            var partitionOffset = ExtractPartitionOffset(message);
 
             try
             {
@@ -640,7 +642,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
             }
 
-            await AcknowledgeAsync(message, cancellationToken);
+            AcknowledgeOffset(partitionOffset);
             return true;
         }
 
@@ -655,9 +657,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
             EnsureRequeueProducer();
+            var partitionOffset = ExtractPartitionOffset(message);
             CleanBagForResend(message);
             _requeueProducer!.SendWithDelay(message, delay);
             _requeueProducer.Flush();
+            AcknowledgeOffset(partitionOffset);
             return true;
         }
 
@@ -673,9 +677,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             EnsureRequeueProducer();
+            var partitionOffset = ExtractPartitionOffset(message);
             CleanBagForResend(message);
             await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
             _requeueProducer.Flush(cancellationToken);
+            AcknowledgeOffset(partitionOffset);
             return true;
         }
         
@@ -896,6 +902,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return null;
         }
         
+        /// <summary>
+        /// Extracts the <see cref="TopicPartitionOffset"/> from the message bag before it is cleaned for resend.
+        /// </summary>
+        private static TopicPartitionOffset? ExtractPartitionOffset(Message message)
+        {
+            if (message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
+                return bagData as TopicPartitionOffset;
+            return null;
+        }
+
+        /// <summary>
+        /// Commits a previously extracted partition offset. Use this after <see cref="CleanBagForResend"/>
+        /// has removed the offset from the message bag.
+        /// </summary>
+        private void AcknowledgeOffset(TopicPartitionOffset? partitionOffset)
+        {
+            if (partitionOffset == null) return;
+
+            var offset = new TopicPartitionOffset(partitionOffset.TopicPartition, new Offset(partitionOffset.Offset + 1));
+
+            Log.StoringOffset(s_logger, new Offset(partitionOffset.Offset + 1).Value, partitionOffset.TopicPartition.Topic, partitionOffset.TopicPartition.Partition.Value);
+            _offsetStorage.Add(offset);
+
+            if (_offsetStorage.Count % _maxBatchSize == 0)
+                FlushOffsets();
+        }
+
         private static void CleanBagForResend(Message message)
         {
             //remove headers that will be reset by send as set from message properties
