@@ -27,13 +27,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     public class RedisMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly RedisMessagingGatewayConfiguration _configuration;
+        private readonly IAmAMessageScheduler? _scheduler;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
+        /// Initializes a new instance of the <see cref="RedisMessageConsumerFactory"/> class.
         /// </summary>
-        public RedisMessageConsumerFactory(RedisMessagingGatewayConfiguration configuration)
+        /// <param name="configuration">The Redis messaging gateway configuration</param>
+        /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
+        public RedisMessageConsumerFactory(RedisMessagingGatewayConfiguration configuration, IAmAMessageScheduler? scheduler = null)
         {
             _configuration = configuration;
+            _scheduler = scheduler;
         }
 
 
@@ -46,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             RequireQueueName(subscription);
 
-            return new RedisMessageConsumer(_configuration, subscription.ChannelName!, subscription.RoutingKey);
+            return new RedisMessageConsumer(_configuration, subscription.ChannelName!, subscription.RoutingKey, _scheduler);
         }
 
         private static void RequireQueueName(Subscription subscription)
@@ -63,8 +67,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         {
             RequireQueueName(subscription);
-            
-            return new RedisMessageConsumer(_configuration, subscription.ChannelName!, subscription.RoutingKey);
+
+            return new RedisMessageConsumer(_configuration, subscription.ChannelName!, subscription.RoutingKey, _scheduler);
         }
     }
 }
