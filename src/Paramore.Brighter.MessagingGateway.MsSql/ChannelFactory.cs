@@ -9,10 +9,15 @@ namespace Paramore.Brighter.MessagingGateway.MsSql;
 /// <summary>
 /// Factory class for creating MS SQL channels.
 /// </summary>
-public partial class ChannelFactory : IAmAChannelFactory
+public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ChannelFactory>();
     private readonly MsSqlMessageConsumerFactory _msSqlMessageConsumerFactory;
+
+    /// <summary>
+    /// Gets or sets the message scheduler for delayed requeue support.
+    /// </summary>
+    public IAmAMessageScheduler? Scheduler { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.

@@ -31,9 +31,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     /// Class RMQInputChannelFactory.
     /// Creates instances of <see cref="IAmAChannelSync"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
-    public class ChannelFactory : IAmAChannelFactory
+    public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
     {
         private readonly RedisMessageConsumerFactory _messageConsumerFactory;
+
+        /// <summary>
+        /// Gets or sets the message scheduler for delayed requeue support.
+        /// </summary>
+        public IAmAMessageScheduler? Scheduler { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.

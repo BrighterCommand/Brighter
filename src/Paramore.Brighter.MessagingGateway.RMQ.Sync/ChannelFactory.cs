@@ -29,9 +29,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync;
 /// <summary>
 /// Factory class for creating RabbitMQ channels.
 /// </summary>
-public class ChannelFactory : IAmAChannelFactory
+public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
 {
     private readonly RmqMessageConsumerFactory _messageConsumerFactory;
+
+    /// <summary>
+    /// Gets or sets the message scheduler for delayed requeue support.
+    /// </summary>
+    public IAmAMessageScheduler? Scheduler { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.

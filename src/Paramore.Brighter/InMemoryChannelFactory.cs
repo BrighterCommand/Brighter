@@ -31,12 +31,21 @@ namespace Paramore.Brighter
     /// <summary>
     /// Factory class for creating in-memory channels.
     /// </summary>
-    public class InMemoryChannelFactory : IAmAChannelFactory
+    public class InMemoryChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
     {
         private readonly InternalBus _internalBus;
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan? _ackTimeout;
-        private readonly IAmAMessageScheduler? _scheduler;
+        private IAmAMessageScheduler? _scheduler;
+
+        /// <summary>
+        /// Gets or sets the message scheduler for delayed requeue support.
+        /// </summary>
+        public IAmAMessageScheduler? Scheduler
+        {
+            get => _scheduler;
+            set => _scheduler = value;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryChannelFactory"/> class.

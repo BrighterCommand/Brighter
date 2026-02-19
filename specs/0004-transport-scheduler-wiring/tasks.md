@@ -157,7 +157,7 @@ MQTT currently has no consumer factory or channel factory. These tasks create th
 
 Each task updates one transport's channel factory to accept scheduler and implement `IAmAChannelFactoryWithScheduler`. Depends on Phase 1 (consumer factories must accept scheduler first).
 
-- [ ] **TEST + IMPLEMENT: RMQ Async channel factory implements IAmAChannelFactoryWithScheduler**
+- [x] **TEST + IMPLEMENT: RMQ Async channel factory implements IAmAChannelFactoryWithScheduler**
   - **USE COMMAND**: `/test-first when RMQ async channel factory has scheduler set should pass it to consumers`
   - Test location: "tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway"
   - Test file: `When_rmq_async_channel_factory_has_scheduler_should_pass_to_consumers.cs`
@@ -171,7 +171,7 @@ Each task updates one transport's channel factory to accept scheduler and implem
     - Implement `IAmAChannelFactoryWithScheduler`
     - Add `Scheduler` property; pass it to consumer factory when creating consumers
 
-- [ ] **TEST + IMPLEMENT: RMQ Sync channel factory implements IAmAChannelFactoryWithScheduler**
+- [x] **TEST + IMPLEMENT: RMQ Sync channel factory implements IAmAChannelFactoryWithScheduler**
   - **USE COMMAND**: `/test-first when RMQ sync channel factory has scheduler set should pass it to consumers`
   - Test location: "tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway"
   - Test file: `When_rmq_sync_channel_factory_has_scheduler_should_pass_to_consumers.cs`
@@ -185,7 +185,7 @@ Each task updates one transport's channel factory to accept scheduler and implem
     - Implement `IAmAChannelFactoryWithScheduler`
     - Add `Scheduler` property; pass it to consumer factory when creating consumers
 
-- [ ] **TEST + IMPLEMENT: Kafka channel factory implements IAmAChannelFactoryWithScheduler**
+- [x] **TEST + IMPLEMENT: Kafka channel factory implements IAmAChannelFactoryWithScheduler**
   - **USE COMMAND**: `/test-first when Kafka channel factory has scheduler set should pass it to consumers`
   - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway"
   - Test file: `When_kafka_channel_factory_has_scheduler_should_pass_to_consumers.cs`
@@ -199,7 +199,7 @@ Each task updates one transport's channel factory to accept scheduler and implem
     - Implement `IAmAChannelFactoryWithScheduler`
     - Add `Scheduler` property; pass it to consumer factory when creating consumers
 
-- [ ] **TEST + IMPLEMENT: MsSql channel factory implements IAmAChannelFactoryWithScheduler**
+- [x] **TEST + IMPLEMENT: MsSql channel factory implements IAmAChannelFactoryWithScheduler**
   - **USE COMMAND**: `/test-first when MsSql channel factory has scheduler set should pass it to consumers`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/MessagingGateway"
   - Test file: `When_mssql_channel_factory_has_scheduler_should_pass_to_consumers.cs`
@@ -213,7 +213,7 @@ Each task updates one transport's channel factory to accept scheduler and implem
     - Implement `IAmAChannelFactoryWithScheduler`
     - Add `Scheduler` property; pass it to consumer factory when creating consumers
 
-- [ ] **TEST + IMPLEMENT: Redis channel factory implements IAmAChannelFactoryWithScheduler**
+- [x] **TEST + IMPLEMENT: Redis channel factory implements IAmAChannelFactoryWithScheduler**
   - **USE COMMAND**: `/test-first when Redis channel factory has scheduler set should pass it to consumers`
   - Test location: "tests/Paramore.Brighter.Redis.Tests/MessagingGateway"
   - Test file: `When_redis_channel_factory_has_scheduler_should_pass_to_consumers.cs`
@@ -227,7 +227,7 @@ Each task updates one transport's channel factory to accept scheduler and implem
     - Implement `IAmAChannelFactoryWithScheduler`
     - Add `Scheduler` property; pass it to consumer factory when creating consumers
 
-- [ ] **IMPLEMENT: Update InMemoryChannelFactory to implement IAmAChannelFactoryWithScheduler**
+- [x] **IMPLEMENT: Update InMemoryChannelFactory to implement IAmAChannelFactoryWithScheduler**
   - Update `src/Paramore.Brighter/InMemoryChannelFactory.cs`
   - Add `IAmAChannelFactoryWithScheduler` to the implements list
   - The existing `_scheduler` field and constructor parameter already provide the backing — add a `Scheduler` property that gets/sets the field

@@ -29,9 +29,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka;
 /// <summary>
 /// Factory class for creating Kafka channels.
 /// </summary>
-public class ChannelFactory : IAmAChannelFactory
+public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
 {
     private readonly KafkaMessageConsumerFactory _kafkaMessageConsumerFactory;
+
+    /// <summary>
+    /// Gets or sets the message scheduler for delayed requeue support.
+    /// </summary>
+    public IAmAMessageScheduler? Scheduler { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
