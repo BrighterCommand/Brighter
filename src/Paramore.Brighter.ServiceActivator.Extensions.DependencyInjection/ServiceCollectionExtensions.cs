@@ -144,10 +144,17 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             var messageTransformFactoryAsync = ServiceCollectionExtensions.TransformFactoryAsync(serviceProvider);
             
             var tracer = serviceProvider.GetService<IAmABrighterTracer>();
-            
+
+            var channelFactory = options.DefaultChannelFactory ?? new InMemoryChannelFactory(new InternalBus(), TimeProvider.System);
+            if (channelFactory is IAmAChannelFactoryWithScheduler schedulerAwareFactory)
+            {
+                var scheduler = serviceProvider.GetService<IAmAMessageScheduler>();
+                schedulerAwareFactory.Scheduler = scheduler;
+            }
+
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
-                .ChannelFactory(options.DefaultChannelFactory ?? new InMemoryChannelFactory(new InternalBus(), TimeProvider.System) )
+                .ChannelFactory(channelFactory)
                 .Subscriptions(options.Subscriptions)
                 .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
                 .Build();
