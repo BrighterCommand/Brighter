@@ -66,6 +66,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly Lazy<KafkaMessageProducer?>? _invalidMessageProducer;
         private readonly IAmAMessageScheduler? _scheduler;
         private KafkaMessageProducer? _requeueProducer;
+        private bool _requeueProducerInitialized;
+        private object? _requeueProducerLock;
 
 
         /// <summary>
@@ -851,21 +853,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         
         private void EnsureRequeueProducer()
         {
-            if (_requeueProducer != null) return;
-
-            var newProducer = CreateProducer(Topic!);
-            if (newProducer == null)
-            {
-                throw new ConfigurationException(
-                    $"Failed to create requeue producer for topic {Topic}. Check broker connectivity and configuration.");
-            }
-
-            newProducer.Scheduler = _scheduler;
-            var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
-            if (original != null)
-            {
-                newProducer.Dispose();
-            }
+            LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+                ref _requeueProducerLock, () =>
+                {
+                    var producer = CreateProducer(Topic!)
+                        ?? throw new ConfigurationException(
+                            $"Failed to create requeue producer for topic {Topic}. Check broker connectivity and configuration.");
+                    producer.Scheduler = _scheduler;
+                    return producer;
+                });
         }
 
         private KafkaMessageProducer? CreateProducer(RoutingKey topic, Action<ILogger, Exception>? logError = null)

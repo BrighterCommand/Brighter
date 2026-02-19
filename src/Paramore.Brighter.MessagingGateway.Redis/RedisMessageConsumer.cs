@@ -48,6 +48,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private readonly RedisMessagingGatewayConfiguration _redisConfiguration;
         private readonly IAmAMessageScheduler? _scheduler;
         private RedisMessageProducer? _requeueProducer;
+        private bool _requeueProducerInitialized;
+        private object? _requeueProducerLock;
 
         private readonly Dictionary<string, string> _inflight = new();
 
@@ -393,19 +395,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private void EnsureRequeueProducer()
         {
-            if (_requeueProducer != null) return;
-
-            var newProducer = new RedisMessageProducer(
-                _redisConfiguration,
-                new RedisMessagePublication { Topic = Topic })
-            {
-                Scheduler = _scheduler
-            };
-            var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
-            if (original != null)
-            {
-                newProducer.Dispose();
-            }
+            LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+                ref _requeueProducerLock, () => new RedisMessageProducer(
+                    _redisConfiguration,
+                    new RedisMessagePublication { Topic = Topic })
+                {
+                    Scheduler = _scheduler
+                });
         }
 
         // Virtual to allow testing to simulate client failure

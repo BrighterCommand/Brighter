@@ -16,6 +16,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private readonly IAmAMessageScheduler? _scheduler;
         private MsSqlMessageProducer? _requeueProducer;
+        private bool _requeueProducerInitialized;
+        private object? _requeueProducerLock;
 
         public MsSqlMessageConsumer(
             RelationalDatabaseConfiguration msSqlConfiguration,
@@ -196,17 +198,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         private void EnsureRequeueProducer()
         {
-            if (_requeueProducer != null) return;
-
-            var newProducer = new MsSqlMessageProducer(_msSqlConfiguration)
-            {
-                Scheduler = _scheduler
-            };
-            var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
-            if (original != null)
-            {
-                newProducer.Dispose();
-            }
+            LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+                ref _requeueProducerLock, () => new MsSqlMessageProducer(_msSqlConfiguration)
+                {
+                    Scheduler = _scheduler
+                });
         }
 
         private static partial class Log

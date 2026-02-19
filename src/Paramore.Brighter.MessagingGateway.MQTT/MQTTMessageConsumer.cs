@@ -29,6 +29,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private readonly MqttClientOptions _mqttClientOptions;
         private readonly IAmAMessageScheduler? _scheduler;
         private MqttMessageProducer? _requeueProducer;
+        private bool _requeueProducerInitialized;
+        private object? _requeueProducerLock;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttMessageConsumer"/> class.
@@ -232,46 +234,27 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         /// <summary>
         /// Ensures a requeue producer exists, creating one lazily on first use.
-        /// Uses <see cref="Interlocked.CompareExchange{T}"/> for thread-safe initialization.
+        /// Uses <see cref="LazyInitializer.EnsureInitialized{T}(ref T, ref bool, ref object, Func{T})"/> for thread-safe initialization.
         /// </summary>
         private void EnsureRequeueProducer()
         {
-            if (_requeueProducer != null) return;
-
-            var producerConfig = new MqttMessagingGatewayProducerConfiguration
-            {
-                Hostname = _configuration.Hostname,
-                Port = _configuration.Port,
-                TopicPrefix = _configuration.TopicPrefix,
-                CleanSession = _configuration.CleanSession,
-                Username = _configuration.Username,
-                Password = _configuration.Password
-            };
-
-            MqttMessagePublisher? publisher = null;
-            MqttMessageProducer? newProducer = null;
-            try
-            {
-                publisher = new MqttMessagePublisher(producerConfig);
-                newProducer = new MqttMessageProducer(publisher, new Publication())
+            LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+                ref _requeueProducerLock, () =>
                 {
-                    Scheduler = _scheduler
-                };
-                var original = Interlocked.CompareExchange(ref _requeueProducer, newProducer, null);
-                if (original != null)
-                {
-                    // Dispose producer if we lost the race
-                    newProducer.Dispose();
-                    // publisher does not require disposal
-                }
-            }
-            catch
-            {
-                // If construction fails, ensure any created resources are disposed
-                newProducer?.Dispose();
-                // publisher does not require disposal
-                throw;
-            }
+                    var publisher = new MqttMessagePublisher(new MqttMessagingGatewayProducerConfiguration
+                    {
+                        Hostname = _configuration.Hostname,
+                        Port = _configuration.Port,
+                        TopicPrefix = _configuration.TopicPrefix,
+                        CleanSession = _configuration.CleanSession,
+                        Username = _configuration.Username,
+                        Password = _configuration.Password
+                    });
+                    return new MqttMessageProducer(publisher, new Publication())
+                    {
+                        Scheduler = _scheduler
+                    };
+                });
         }
 
         private async Task Connect(int connectionAttempts)
