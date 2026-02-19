@@ -23,7 +23,7 @@ These tasks establish the core infrastructure that all subsequent transport task
     - Add matching `TryAddSingleton` registrations for `IAmAMessageScheduler`, `IAmAMessageSchedulerSync`, `IAmAMessageSchedulerAsync` (mirroring the pattern in `UseMessageScheduler`)
     - `UseScheduler()` / `UseMessageScheduler()` still override the default via `AddSingleton`
 
-- [ ] **TEST + IMPLEMENT: User-configured scheduler overrides InMemorySchedulerFactory default**
+- [x] **TEST + IMPLEMENT: User-configured scheduler overrides InMemorySchedulerFactory default**
   - **USE COMMAND**: `/test-first when scheduler explicitly configured should override default InMemorySchedulerFactory`
   - Test location: "tests/Paramore.Brighter.Extensions.DependencyInjection.Tests"
   - Test file: `When_scheduler_explicitly_configured_should_override_default.cs`
