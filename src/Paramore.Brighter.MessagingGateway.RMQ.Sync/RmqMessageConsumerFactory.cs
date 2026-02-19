@@ -27,14 +27,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly RmqMessagingGatewayConnection _rmqConnection;
+        private readonly IAmAMessageScheduler? _scheduler;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
-        /// <param name="rmqConnection">The subscription to the broker hosting the queue</param>
         /// </summary>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection  rmqConnection)
+        /// <param name="rmqConnection">The subscription to the broker hosting the queue</param>
+        /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
+        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, IAmAMessageScheduler? scheduler = null)
         {
             _rmqConnection = rmqConnection;
+            _scheduler = scheduler;
         }
 
         /// <summary>
@@ -49,17 +52,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
             
             return new RmqMessageConsumer(
-                _rmqConnection, 
-                rmqSubscription.ChannelName, //RMQ Queue Name 
-                rmqSubscription.RoutingKey, 
-                rmqSubscription.IsDurable, 
+                _rmqConnection,
+                rmqSubscription.ChannelName, //RMQ Queue Name
+                rmqSubscription.RoutingKey,
+                rmqSubscription.IsDurable,
                 rmqSubscription.HighAvailability,
                 rmqSubscription.BufferSize,
                 rmqSubscription.DeadLetterChannelName,
                 rmqSubscription.DeadLetterRoutingKey,
                 rmqSubscription.Ttl,
                 rmqSubscription.MaxQueueLength,
-                subscription.MakeChannels);
+                subscription.MakeChannels,
+                scheduler: _scheduler);
         }
 
         /// <summary>
