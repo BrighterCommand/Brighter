@@ -83,7 +83,6 @@ public class DispatcherResolutionScopedDependencyTests
                     {
                         {
                             new ProducerKey("in-memory"), new InMemoryMessageProducer(bus,
-                                new FakeTimeProvider(),
                                 new Publication { Topic = "test" })
                         }
                     });

@@ -10,7 +10,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorWithExceptionPolicyNothingThrowTests : IDisposable
+    public class CommandProcessorWithExceptionPolicyNothingThrowTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -58,11 +58,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             Assert.True(MyDoesNotFailPolicyHandler.Shouldreceive(_myCommand));
             // Should not retry
             Assert.Equal(0, _retryCount);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

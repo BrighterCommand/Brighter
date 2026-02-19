@@ -12,7 +12,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy;
 
-public class CommandProcessorWithCircuitBreakerAndResiliencePipelineTests : IDisposable
+public class CommandProcessorWithCircuitBreakerAndResiliencePipelineTests
 {
     private readonly CommandProcessor _commandProcessor;
     private readonly MyCommand _myCommand = new MyCommand();
@@ -67,10 +67,5 @@ public class CommandProcessorWithCircuitBreakerAndResiliencePipelineTests : IDis
         Assert.IsType<DivideByZeroException>(_secondException);
         // Should break the circuit after two fails
         Assert.IsType<BrokenCircuitException>(_thirdException);
-    }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
     }
 }

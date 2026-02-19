@@ -7,8 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorSendViaAgreementAsyncTests : IDisposable
+    public class CommandProcessorSendViaAgreementAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand; 
@@ -44,11 +43,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
 
             Assert.True(_myCommandHandler.ShouldReceive(_myCommand));
 
-        }
-
-        public void Dispose()
-        {
-           CommandProcessor.ClearServiceBus(); 
         }
     }
 }

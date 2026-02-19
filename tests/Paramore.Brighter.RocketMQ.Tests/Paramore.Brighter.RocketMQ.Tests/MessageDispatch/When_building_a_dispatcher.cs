@@ -12,8 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;
 
-[Collection("CommandProcessor")]
-public class DispatchBuilderTests : IDisposable
+public class DispatchBuilderTests
 {
     private readonly IAmADispatchBuilder _builder;
     private Dispatcher? _dispatcher;
@@ -88,12 +87,6 @@ public class DispatchBuilderTests : IDisposable
             
         Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
     }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
-    }
-
     private Subscription? GetConnection(string name)
     {
         return _dispatcher!.Subscriptions.SingleOrDefault(conn => conn.Name == name);

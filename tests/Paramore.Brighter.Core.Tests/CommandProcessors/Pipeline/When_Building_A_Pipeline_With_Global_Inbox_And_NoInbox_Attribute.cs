@@ -8,8 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class PipelineGlobalInboxNoInboxAttributeTests : IDisposable
+    public class PipelineGlobalInboxNoInboxAttributeTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private Pipelines<MyCommand> _chainOfResponsibility;
@@ -48,12 +47,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var tracer = TracePipeline(_chainOfResponsibility.First());
             Assert.DoesNotContain("UseInboxHandler", tracer.ToString());
         }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-        
         private PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();

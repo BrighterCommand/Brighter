@@ -4,12 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
-    [Collection("CommandProcessor")]
     public class DispatcherAddNewConnectionTests : IDisposable
     {
         private readonly Dispatcher _dispatcher;

@@ -7,8 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPipelineStepsTests : IDisposable
+    public class CommandProcessorPipelineStepsTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -40,11 +39,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
             Assert.True(MyStepsPreAndPostDecoratedHandler.ShouldReceive(_myCommand));
             // Should call the post validation handler
             Assert.True(MyStepsLoggingHandler<MyCommand>.ShouldReceive(_myCommand));
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

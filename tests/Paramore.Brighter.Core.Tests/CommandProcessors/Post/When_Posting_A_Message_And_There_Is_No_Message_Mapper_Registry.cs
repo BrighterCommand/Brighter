@@ -11,8 +11,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorNoMessageMapperTests : IDisposable
+    public class CommandProcessorNoMessageMapperTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
@@ -24,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var timeProvider = new FakeTimeProvider();
             InMemoryMessageProducer messageProducer =
-                new(new InternalBus(), timeProvider, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+                new(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -52,7 +51,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 outbox
             );
         
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 new DefaultPolicy(),
@@ -67,11 +65,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             var exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
             Assert.IsType<ArgumentOutOfRangeException>(exception); 
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

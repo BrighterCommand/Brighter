@@ -1496,10 +1496,7 @@ namespace Paramore.Brighter
         [Obsolete("No longer needed - each CommandProcessor instance has its own mediator. Will be removed in next major version.")]
         public static void ClearServiceBus()
         {
-            s_boundDepositCalls.Clear();
-            s_boundDepositCallsAsync.Clear();
-            s_boundBulkDepositCalls.Clear();
-            s_boundBulkDepositCallsAsync.Clear();
+            // No-op: reflection caches are stateless and safe to share. Mediator state is instance-based since ADR 0034.
         }
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest

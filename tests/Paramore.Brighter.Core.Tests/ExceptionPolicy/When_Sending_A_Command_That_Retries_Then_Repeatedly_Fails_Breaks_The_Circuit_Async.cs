@@ -12,8 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    [Collection("CommandProcessor")]
-     public class CommandProcessorWithBothRetryAndCircuitBreakerAsync : IDisposable
+     public class CommandProcessorWithBothRetryAndCircuitBreakerAsync
     {
         private readonly CommandProcessor _commandProcessor;
         private Exception? _thirdException;
@@ -95,11 +94,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             Assert.IsType<DivideByZeroException>(_secondException);
             // Should bubble up the circuit breaker exception
             Assert.IsType<BrokenCircuitException>(_thirdException);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

@@ -4,6 +4,11 @@
       "ruleId": "SW002",
       "pattern": "**/Generated/**",
       "justification": "Generated code from protobuf/gRPC compiler - cannot be modified"
+    },
+    {
+      "ruleId": "SW004",
+      "pattern": "**/Task.Delay/**",
+      "justification": "Message Oriented Middleware integration tests often require a delay to wait for message to reach the queue or stream" 
     }
   ],
   "globalSuppressions": []

@@ -15,7 +15,6 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
     [Trait("Fragile", "CI")]
-    [Collection("CommandProcessor")]
      public class ControlBusSenderPostMessageAsyncTests : IDisposable
     {
         private readonly RoutingKey _routingKey = new("MyCommand");
@@ -32,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -60,7 +59,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -94,7 +92,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         public void Dispose()
         {
             _controlBusSender.Dispose();
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

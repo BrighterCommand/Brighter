@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -33,11 +34,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPublishMultipleMatchesAgreementTests : IDisposable
+    public class CommandProcessorPublishMultipleMatchesAgreementTests
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _receivedMessages = new ConcurrentDictionary<string, string>();
         private Exception? _exception;
 
         public CommandProcessorPublishMultipleMatchesAgreementTests()
@@ -88,11 +88,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandler), myEvent.Id), _receivedMessages);
             //Should publish the command to the second event handler
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandler), myEvent.Id), _receivedMessages);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

@@ -188,6 +188,72 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
         
         /// <summary>
+        /// Receives the specified queue name.
+        /// </summary>
+        /// <param name="timeOut">The timeout in milliseconds. We retry on timeout 5 ms intervals, with a min of 5ms
+        /// until the timeout value is reached. </param>
+        /// <returns>Message.</returns>
+        public Message[] Receive(TimeSpan? timeOut = null)
+        {
+           
+            if (Connection.Exchange is null)
+                throw new InvalidOperationException("RmqMessageConsumer.Receive - value of Connection.Exchange cannot be null");
+            
+            if (Connection.AmpqUri is null)
+                throw new InvalidOperationException("RmqMessageConsumer.Receive - value of Connection.AmpqUri cannot be null");
+
+            Log.PreparingToRetrieveMessage(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+            
+            timeOut ??= TimeSpan.FromMilliseconds(5);
+
+            try
+            {
+                EnsureChannel();
+
+                //NOTE: EnsureChannel means that _consumer cannot be null
+                var (resultCount, results) = _consumer!.DeQueue(timeOut.Value, _batchSize);
+
+                if (results != null && results.Length != 0)
+                {
+                    var messages = new Message[resultCount];
+                    for (var i = 0; i < resultCount; i++)
+                    {
+                        var message = RmqMessageCreator.CreateMessage(results[i]);
+                        messages[i] = message;
+
+                        Log.ReceivedMessage(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
+                    }
+
+                    return messages;
+                }
+                else
+                {
+                    
+                    return [_noopMessage];
+                }
+            }
+            catch (Exception exception) when (exception is BrokerUnreachableException ||
+                                              exception is AlreadyClosedException ||
+                                              exception is TimeoutException)
+            {
+                HandleException(exception, true);
+            }
+            catch (Exception exception) when (exception is EndOfStreamException ||
+                                              exception is OperationInterruptedException ||
+                                              exception is NotSupportedException ||
+                                              exception is BrokenCircuitException)
+            {
+                HandleException(exception);
+            }
+            catch (Exception exception)
+            {
+                HandleException(exception);
+            }
+
+            return [_noopMessage]; // Default return in case of exception
+        }
+        
+        /// <summary>
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -257,71 +323,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
 
 
-        /// <summary>
-        /// Receives the specified queue name.
-        /// </summary>
-        /// <param name="timeOut">The timeout in milliseconds. We retry on timeout 5 ms intervals, with a min of 5ms
-        /// until the timeout value is reached. </param>
-        /// <returns>Message.</returns>
-        public Message[] Receive(TimeSpan? timeOut = null)
-        {
-           
-            if (Connection.Exchange is null)
-                throw new InvalidOperationException("RmqMessageConsumer.Receive - value of Connection.Exchange cannot be null");
-            
-            if (Connection.AmpqUri is null)
-                throw new InvalidOperationException("RmqMessageConsumer.Receive - value of Connection.AmpqUri cannot be null");
-
-            Log.PreparingToRetrieveMessage(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
-            
-            timeOut ??= TimeSpan.FromMilliseconds(5);
-
-            try
-            {
-                EnsureChannel();
-
-                //NOTE: EnsureChannel means that _consumer cannot be null
-                var (resultCount, results) = _consumer!.DeQueue(timeOut.Value, _batchSize);
-
-                if (results != null && results.Length != 0)
-                {
-                    var messages = new Message[resultCount];
-                    for (var i = 0; i < resultCount; i++)
-                    {
-                        var message = RmqMessageCreator.CreateMessage(results[i]);
-                        messages[i] = message;
-
-                        Log.ReceivedMessage(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
-                    }
-
-                    return messages;
-                }
-                else
-                {
-                    
-                    return [_noopMessage];
-                }
-            }
-            catch (Exception exception) when (exception is BrokerUnreachableException ||
-                                              exception is AlreadyClosedException ||
-                                              exception is TimeoutException)
-            {
-                HandleException(exception, true);
-            }
-            catch (Exception exception) when (exception is EndOfStreamException ||
-                                              exception is OperationInterruptedException ||
-                                              exception is NotSupportedException ||
-                                              exception is BrokenCircuitException)
-            {
-                HandleException(exception);
-            }
-            catch (Exception exception)
-            {
-                HandleException(exception);
-            }
-
-            return [_noopMessage]; // Default return in case of exception
-        }
+  
 
         protected virtual void EnsureChannel()
         {

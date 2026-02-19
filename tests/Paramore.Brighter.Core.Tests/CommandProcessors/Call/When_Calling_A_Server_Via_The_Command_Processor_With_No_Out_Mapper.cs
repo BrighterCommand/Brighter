@@ -13,8 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorMissingOutMapperTests : IDisposable
+    public class CommandProcessorMissingOutMapperTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new MyRequest();
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var routingKey = new RoutingKey("MyRequest");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, new Publication{Topic =routingKey } ) },
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{Topic =routingKey } ) },
             });
 
             var tracer = new BrighterTracer(timeProvider);
@@ -57,7 +56,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new InMemoryOutbox(timeProvider){Tracer = tracer}
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
@@ -80,11 +78,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             //should throw an exception as we require a mapper for the outgoing request
             Assert.IsType<ConfigurationException>(exception);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
   }
 }

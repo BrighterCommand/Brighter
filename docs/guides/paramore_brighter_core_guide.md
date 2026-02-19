@@ -952,6 +952,8 @@ Assert.Contains("MyBusinessHandler", pipelineDescription);
 
 ### Testing Strategies
 
+> For a comprehensive guide to testing handlers that depend on `IAmACommandProcessor`, including the `SpyCommandProcessor` test double from the `Paramore.Brighter.Testing` package, see [Testing Handlers Guide](testing-handlers.md).
+
 #### 1. Unit Testing Handlers
 Test individual handlers in isolation:
 
