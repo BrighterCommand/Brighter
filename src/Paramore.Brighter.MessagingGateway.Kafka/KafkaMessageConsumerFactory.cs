@@ -31,7 +31,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
-        private readonly IAmAMessageScheduler? _scheduler;
+        private IAmAMessageScheduler? _scheduler;
+
+        /// <summary>
+        /// Gets or sets the message scheduler for delayed requeue support.
+        /// Can be set after construction to allow channel factories to forward the scheduler from DI.
+        /// </summary>
+        public IAmAMessageScheduler? Scheduler
+        {
+            get => _scheduler;
+            set => _scheduler = value;
+        }
 
         /// <summary>
         /// Initializes a factory with the <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to a Kafka Broker

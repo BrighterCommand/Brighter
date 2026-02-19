@@ -9,7 +9,17 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumerFactory>();
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
-        private readonly IAmAMessageScheduler? _scheduler;
+        private IAmAMessageScheduler? _scheduler;
+
+        /// <summary>
+        /// Gets or sets the message scheduler for delayed requeue support.
+        /// Can be set after construction to allow channel factories to forward the scheduler from DI.
+        /// </summary>
+        public IAmAMessageScheduler? Scheduler
+        {
+            get => _scheduler;
+            set => _scheduler = value;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MsSqlMessageConsumerFactory"/> class.
