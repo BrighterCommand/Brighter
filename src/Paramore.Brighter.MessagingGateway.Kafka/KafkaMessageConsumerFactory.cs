@@ -31,16 +31,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
+        private readonly IAmAMessageScheduler? _scheduler;
 
         /// <summary>
         /// Initializes a factory with the <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to a Kafka Broker
         /// </summary>
         /// <param name="configuration">The <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to the Broker</param>
+        /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
         public KafkaMessageConsumerFactory(
-            KafkaMessagingGatewayConfiguration configuration
+            KafkaMessagingGatewayConfiguration configuration,
+            IAmAMessageScheduler? scheduler = null
             )
         {
             _configuration = configuration;
+            _scheduler = scheduler;
         }
 
         /// <summary>
@@ -87,7 +91,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 configHook: kafkaSubscription.ConfigHook,
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
-                timeProvider: kafkaSubscription.TimeProvider
+                timeProvider: kafkaSubscription.TimeProvider,
+                scheduler: _scheduler
                 );
         }
 
