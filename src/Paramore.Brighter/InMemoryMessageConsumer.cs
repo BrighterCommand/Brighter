@@ -59,7 +59,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// and requeues them if they have been locked for longer than the timeout.
     /// </summary>
     /// <remarks>
-    /// If an <see cref="invalidMessageTopic"/> is not provided but a <see cref="deadLetterTopic"/> is, tnen we will treat
+    /// If an <see cref="invalidMessageTopic"/> is not provided but a <see cref="deadLetterTopic"/> is, then we will treat
     /// the <see cref="deadLetterTopic"/> as the topic for invalid messages
     /// </remarks>
     /// <param name="topic">The <see cref="Paramore.Brighter.RoutingKey"/> that we want to consume from</param>
