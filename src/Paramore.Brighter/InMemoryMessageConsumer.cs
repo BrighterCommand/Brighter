@@ -228,7 +228,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// Rejects the specified message.
     /// </summary>
     /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
-    /// message channel, the message should be forwardedn to it
+    /// message channel, the message should be forwarded to it
     /// <param name="message">The <see cref="Message"/> to reject</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">Cancels the rejection</param>
