@@ -15,11 +15,24 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// RocketMQ message consumer implementation for Brighter.
 /// Integrates RocketMQ's consumer group pattern and message filtering capabilities.
 /// </summary>
-public class RocketMessageConsumer(SimpleConsumer consumer, 
-    int bufferSize, 
-    TimeSpan invisibilityTimeout)
+/// <param name="consumer">The underlying RocketMQ simple consumer.</param>
+/// <param name="bufferSize">The number of messages to retrieve per receive call.</param>
+/// <param name="invisibilityTimeout">How long messages remain invisible after being received.</param>
+/// <param name="connection">The gateway connection configuration, used for lazy DLQ producer creation.</param>
+/// <param name="deadLetterRoutingKey">The routing key for the dead letter queue topic.</param>
+/// <param name="invalidMessageRoutingKey">The routing key for the invalid message topic.</param>
+public class RocketMessageConsumer(SimpleConsumer consumer,
+    int bufferSize,
+    TimeSpan invisibilityTimeout,
+    RocketMessagingGatewayConnection? connection = null,
+    RoutingKey? deadLetterRoutingKey = null,
+    RoutingKey? invalidMessageRoutingKey = null)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
+    private readonly RocketMessagingGatewayConnection? _connection = connection;
+    private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
+    private readonly RoutingKey? _invalidMessageRoutingKey = invalidMessageRoutingKey;
+
     /// <inheritdoc />
     public void Acknowledge(Message message) 
         => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));

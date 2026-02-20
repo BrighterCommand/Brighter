@@ -36,8 +36,11 @@ public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection conne
                 [rocketSubscription.RoutingKey] = rocketSubscription.Filter
             });
 
+        var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
+        var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
+
         var consumer = await builder.Build();
         return new RocketMessageConsumer(consumer, rocketSubscription.BufferSize,
-            rocketSubscription.InvisibilityTimeout);
+            rocketSubscription.InvisibilityTimeout, connection, deadLetterRoutingKey, invalidMessageRoutingKey);
     }
 }
