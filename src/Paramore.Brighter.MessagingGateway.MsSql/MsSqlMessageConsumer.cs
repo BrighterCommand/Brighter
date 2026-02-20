@@ -189,11 +189,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             GC.SuppressFinalize(this);
         }
 
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            _requeueProducer?.Dispose();
+            if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
             GC.SuppressFinalize(this);
-            return new ValueTask(Task.CompletedTask);
         }
 
         private void EnsureRequeueProducer()
