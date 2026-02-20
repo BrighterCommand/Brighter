@@ -122,11 +122,11 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         }
 
 
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            _requeueProducer?.Dispose();
+            if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
+            // IMqttClient only implements IDisposable, not IAsyncDisposable (MQTTnet 4.3)
             _mqttClient.Dispose();
-            return new ValueTask(Task.CompletedTask);
         }
 
         /// <summary>
