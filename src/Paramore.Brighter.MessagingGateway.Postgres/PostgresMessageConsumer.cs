@@ -20,16 +20,21 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// </summary>
 public partial class PostgresMessageConsumer(
     RelationalDatabaseConfiguration configuration,
-    PostgresSubscription subscription 
+    PostgresSubscription subscription,
+    RoutingKey? deadLetterRoutingKey = null,
+    RoutingKey? invalidMessageRoutingKey = null
     ) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageConsumer>();
+    private readonly RelationalDatabaseConfiguration _configuration = configuration;
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
+    private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
+    private readonly RoutingKey? _invalidMessageRoutingKey = invalidMessageRoutingKey;
 
-    private string SchemaName => subscription.SchemaName ?? configuration.SchemaName ?? "public";
-    private string TableName => subscription.QueueStoreTable ?? configuration.QueueStoreTable;
+    private string SchemaName => subscription.SchemaName ?? _configuration.SchemaName ?? "public";
+    private string TableName => subscription.QueueStoreTable ?? _configuration.QueueStoreTable;
     private string QueueName => subscription.ChannelName.Value;
-    private bool BinaryMessagePayload => subscription.BinaryMessagePayload ?? configuration.BinaryMessagePayload;
+    private bool BinaryMessagePayload => subscription.BinaryMessagePayload ?? _configuration.BinaryMessagePayload;
     private int BufferSize => subscription.BufferSize;
     private TimeSpan VisibleTimeout => subscription.VisibleTimeout;
     private bool HasLargeMessage => subscription.TableWithLargeMessage;
