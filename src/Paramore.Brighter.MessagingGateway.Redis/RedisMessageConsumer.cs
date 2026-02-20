@@ -516,10 +516,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private static partial class Log
         {
-            [LoggerMessage(LogLevel.Information, "RmqMessageConsumer: Acknowledging message {Id}")]
+            [LoggerMessage(LogLevel.Information, "RedisMessageConsumer: Acknowledging message {Id}")]
             public static partial void AcknowledgingMessage(ILogger logger, string id);
 
-            [LoggerMessage(LogLevel.Debug, "RmqMessageConsumer: Purging channel {ChannelName}")]
+            [LoggerMessage(LogLevel.Debug, "RedisMessageConsumer: Purging channel {ChannelName}")]
             public static partial void PurgingChannel(ILogger logger, ChannelName channelName);
             
             [LoggerMessage(LogLevel.Debug, "RedisMessageConsumer: Preparing to retrieve next message from queue {ChannelName} with routing key {Topic}")]
@@ -540,7 +540,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             [LoggerMessage(LogLevel.Information, "Redis: Received message from queue {ChannelName} with routing key {Topic}, message: {Request}")]
             public static partial void ReceivedMessageFromQueue(ILogger logger, ChannelName channelName, RoutingKey topic, string request);
             
-            [LoggerMessage(LogLevel.Debug, "RmqMessageConsumer: Time out without receiving message from queue {ChannelName} with routing key {Topic}")]
+            [LoggerMessage(LogLevel.Debug, "RedisMessageConsumer: Time out without receiving message from queue {ChannelName} with routing key {Topic}")]
             public static partial void TimeoutWithoutReceivingMessage(ILogger logger, ChannelName channelName, RoutingKey topic);
             
             [LoggerMessage(LogLevel.Error, "Expected to find message id {MessageId} in-flight but was not")]
