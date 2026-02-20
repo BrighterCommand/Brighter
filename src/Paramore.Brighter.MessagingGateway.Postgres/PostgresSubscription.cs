@@ -7,7 +7,7 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// This class extends the base <see cref="Subscription"/> class with PostgreSQL-specific
 /// configuration options for consuming messages.
 /// </summary>
-public class PostgresSubscription : Subscription
+public class PostgresSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PostgresSubscription"/> class.
@@ -33,6 +33,8 @@ public class PostgresSubscription : Subscription
     /// <param name="visibleTimeout">The duration for which a retrieved message is hidden from other consumers.</param>
     /// <param name="tableWithLargeMessage">A flag indicating whether the queue table is configured to handle large messages stored as streams.</param>
     /// <param name="binaryMessagePayload">A flag indicating whether the message payload is stored as binary JSON (JSONB) in the database.</param>
+    /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue. When set, rejected messages with <see cref="MessageRejectionReason.DeliveryError"/> are forwarded to this topic.</param>
+    /// <param name="invalidMessageRoutingKey">The routing key for the invalid message channel. When set, rejected messages with <see cref="MessageRejectionReason.Unacceptable"/> are forwarded to this topic.</param>
     public PostgresSubscription(SubscriptionName subscriptionName,
         ChannelName channelName,
         RoutingKey routingKey,
@@ -53,7 +55,9 @@ public class PostgresSubscription : Subscription
         string? queueStoreTable = null,
         TimeSpan? visibleTimeout = null,
         bool tableWithLargeMessage = false,
-        bool? binaryMessagePayload = null) 
+        bool? binaryMessagePayload = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
         : base(subscriptionName, channelName, routingKey, dataType, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
     {
         SchemaName = schemaName;
@@ -61,6 +65,8 @@ public class PostgresSubscription : Subscription
         VisibleTimeout = visibleTimeout ?? TimeSpan.FromSeconds(30);
         TableWithLargeMessage = tableWithLargeMessage;
         BinaryMessagePayload = binaryMessagePayload;
+        DeadLetterRoutingKey = deadLetterRoutingKey;
+        InvalidMessageRoutingKey = invalidMessageRoutingKey;
     }
     
     /// <summary>
@@ -94,6 +100,12 @@ public class PostgresSubscription : Subscription
     /// <see cref="PostgresMessagingGatewayConnection"/> will be used.
     /// </summary>
     public bool? BinaryMessagePayload { get; }
+
+    /// <inheritdoc />
+    public RoutingKey? DeadLetterRoutingKey { get; set; }
+
+    /// <inheritdoc />
+    public RoutingKey? InvalidMessageRoutingKey { get; set; }
 }
 
 /// <summary>
@@ -128,49 +140,55 @@ public class PostgresSubscription<T> : PostgresSubscription
     /// <param name="visibleTimeout">The duration for which a retrieved message is hidden from other consumers.</param>
     /// <param name="tableWithLargeMessage">A flag indicating whether the queue table is configured to handle large messages stored as streams.</param>
     /// <param name="binaryMessagePayload">A flag indicating whether the message payload is stored as binary JSON (JSONB) in the database.</param>
+    /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue. When set, rejected messages with <see cref="MessageRejectionReason.DeliveryError"/> are forwarded to this topic.</param>
+    /// <param name="invalidMessageRoutingKey">The routing key for the invalid message channel. When set, rejected messages with <see cref="MessageRejectionReason.Unacceptable"/> are forwarded to this topic.</param>
     public PostgresSubscription(
-        SubscriptionName? subscriptionName = null, 
-        ChannelName? channelName = null, 
+        SubscriptionName? subscriptionName = null,
+        ChannelName? channelName = null,
         RoutingKey? routingKey = null,
         Func<Message, Type>? getRequestType = null,
         int bufferSize = 1,
-        int noOfPerformers = 1, 
+        int noOfPerformers = 1,
         TimeSpan? timeOut = null,
-        int requeueCount = -1, 
-        TimeSpan? requeueDelay = null, 
+        int requeueCount = -1,
+        TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
         MessagePumpType messagePumpType = MessagePumpType.Unknown,
-        IAmAChannelFactory? channelFactory = null, 
-        OnMissingChannel makeChannels = OnMissingChannel.Create, 
-        TimeSpan? emptyChannelDelay = null, 
-        TimeSpan? channelFailureDelay = null, 
+        IAmAChannelFactory? channelFactory = null,
+        OnMissingChannel makeChannels = OnMissingChannel.Create,
+        TimeSpan? emptyChannelDelay = null,
+        TimeSpan? channelFailureDelay = null,
         string? schemaName = null,
         string? queueStoreTable = null,
         TimeSpan? visibleTimeout = null,
         bool tableWithLargeMessage = false,
-        bool? binaryMessagePayload = null) 
+        bool? binaryMessagePayload = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
         : base(
             subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
-            channelName ?? new ChannelName(typeof(T).FullName!), 
-            routingKey ?? new RoutingKey(typeof(T).FullName!), 
-            typeof(T), 
-            getRequestType, 
-            bufferSize, 
-            noOfPerformers, 
-            timeOut, 
-            requeueCount, 
-            requeueDelay, 
-            unacceptableMessageLimit, 
-            messagePumpType, 
-            channelFactory, 
-            makeChannels, 
-            emptyChannelDelay, 
+            channelName ?? new ChannelName(typeof(T).FullName!),
+            routingKey ?? new RoutingKey(typeof(T).FullName!),
+            typeof(T),
+            getRequestType,
+            bufferSize,
+            noOfPerformers,
+            timeOut,
+            requeueCount,
+            requeueDelay,
+            unacceptableMessageLimit,
+            messagePumpType,
+            channelFactory,
+            makeChannels,
+            emptyChannelDelay,
             channelFailureDelay,
-            schemaName, 
-            queueStoreTable, 
-            visibleTimeout, 
-            tableWithLargeMessage, 
-            binaryMessagePayload)
+            schemaName,
+            queueStoreTable,
+            visibleTimeout,
+            tableWithLargeMessage,
+            binaryMessagePayload,
+            deadLetterRoutingKey,
+            invalidMessageRoutingKey)
     {
     }
 }
