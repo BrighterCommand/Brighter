@@ -51,6 +51,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     private PullConsumer? _consumer;
     private RmqMessageProducer? _producer;
+    private bool _producerInitialized;
+    private object? _producerLock;
     private readonly IAmAMessageScheduler? _scheduler;
     private readonly ChannelName _queueName;
     private readonly RoutingKeys _routingKeys;
@@ -607,17 +609,11 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     private void EnsureProducer()
     {
-        if (_producer != null) return;
-
-        var newProducer = new RmqMessageProducer(Connection)
-        {
-            Scheduler = _scheduler
-        };
-        var original = Interlocked.CompareExchange(ref _producer, newProducer, null);
-        if (original != null)
-        {
-            newProducer.Dispose();
-        }
+        LazyInitializer.EnsureInitialized(ref _producer, ref _producerInitialized,
+            ref _producerLock, () => new RmqMessageProducer(Connection)
+            {
+                Scheduler = _scheduler
+            });
     }
 
     private string GetDeadletterExchangeName()

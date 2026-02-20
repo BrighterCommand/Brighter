@@ -48,6 +48,8 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private readonly ITimer _lockTimer;
     private readonly IAmAMessageScheduler? _scheduler;
     private InMemoryMessageProducer? _producer;
+    private bool _producerInitialized;
+    private object? _producerLock;
 
     /// <summary>
     /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
@@ -355,19 +357,11 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
 
     private void EnsureProducer(RoutingKey topic)
     {
-        if (_producer != null) return;
-
-        var newProducer = new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
-        {
-            Scheduler = _scheduler
-        };
-        // Thread-safe lazy initialization
-        var original = Interlocked.CompareExchange(ref _producer, newProducer, null);
-        if (original != null)
-        {
-            // Another thread set _producer, dispose the one we created
-            newProducer.Dispose();
-        }
+        LazyInitializer.EnsureInitialized(ref _producer, ref _producerInitialized,
+            ref _producerLock, () => new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
+            {
+                Scheduler = _scheduler
+            });
     }
     
     private bool RequeueNoDelay(Message message)
