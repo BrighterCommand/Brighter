@@ -12,9 +12,9 @@ Add Brighter-managed dead letter queue support to the RocketMQ messaging gateway
 ## Workflow Status
 
 - [x] Requirements defined
-- [ ] Requirements approved
-- [ ] ADRs created (may not need new ADR - covered by ADR 0034)
-- [ ] Tasks created
+- [x] Requirements approved
+- [x] ADRs created
+- [x] Tasks created
 - [ ] Tasks approved
 - [ ] Implementation complete
 - [ ] Tests passing
@@ -23,11 +23,13 @@ Add Brighter-managed dead letter queue support to the RocketMQ messaging gateway
 ## Files
 
 - `requirements.md` - User requirements and problem statement
+- `tasks.md` - Implementation task list
 
 ## ADRs
 
 - [ADR 0034: Provide DLQ Where Missing](../../docs/adr/0034-provide-dlq-where-missing.md) - High-level DLQ strategy (existing)
 - [ADR 0036: Message Rejection Routing Strategy](../../docs/adr/0036-message-rejection-routing-strategy.md) - Routing logic (existing)
+- [ADR 0042: RocketMQ DLQ Brighter-Managed](../../docs/adr/0042-rocketmq-dlq-brighter-managed.md) - RocketMQ-specific design (async producer, Ack-based cleanup)
 
 ## Scope
 
