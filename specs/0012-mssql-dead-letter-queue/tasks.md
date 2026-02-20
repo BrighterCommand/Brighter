@@ -109,7 +109,7 @@ Test project:
   - Implementation should:
     - In `Reject()`/`RejectAsync()`, when both producers are null, log warning and return `true`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends to DLQ (async/Proactor)**
+- [x] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends to DLQ (async/Proactor)**
   - **USE COMMAND**: `/test-first when rejecting MsSql message async with delivery error should send to dead letter queue`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/MessagingGateway/`
   - Test file: `When_rejecting_message_with_delivery_error_should_send_to_dlq_async.cs`
@@ -123,7 +123,7 @@ Test project:
 
 ## Verification
 
-- [ ] **Run full MsSql test suite to verify no regressions**
+- [x] **Run full MsSql test suite to verify no regressions**
   - Run all existing tests in `Paramore.Brighter.MSSQL.Tests`
   - Verify existing requeue/post/order tests still pass
   - Verify new DLQ tests pass
