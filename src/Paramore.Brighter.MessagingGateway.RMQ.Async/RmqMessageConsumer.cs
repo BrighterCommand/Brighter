@@ -639,7 +639,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     public override async ValueTask DisposeAsync()
     {
         await CancelConsumerAsync(CancellationToken.None);
-        _producer?.Dispose();
+        if (_producer != null) await _producer.DisposeAsync();
         Dispose(true);
         GC.SuppressFinalize(this);
     }
