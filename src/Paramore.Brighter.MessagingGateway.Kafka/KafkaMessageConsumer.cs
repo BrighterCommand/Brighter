@@ -662,7 +662,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var partitionOffset = ExtractPartitionOffset(message);
             CleanBagForResend(message);
             _requeueProducer!.SendWithDelay(message, delay);
-            _requeueProducer.Flush();
+            if (delay is null or { Ticks: 0 })
+                _requeueProducer.Flush();
             AcknowledgeOffset(partitionOffset);
             return true;
         }
@@ -682,7 +683,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var partitionOffset = ExtractPartitionOffset(message);
             CleanBagForResend(message);
             await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
-            _requeueProducer.Flush(cancellationToken);
+            if (delay is null or { Ticks: 0 })
+                _requeueProducer.Flush(cancellationToken);
             AcknowledgeOffset(partitionOffset);
             return true;
         }
