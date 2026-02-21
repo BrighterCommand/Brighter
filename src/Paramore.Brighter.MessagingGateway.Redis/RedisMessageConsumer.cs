@@ -170,10 +170,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         { 
             Log.PurgingChannel(s_logger, _queueName);
             
-            var client = await GetClientAsync(cancellationToken);
+            await using var client = await GetClientAsync(cancellationToken);
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
-            
+
             //This kills the queue, not the messages, which we assume expire
             await client.RemoveAllFromListAsync(_queueName, token: cancellationToken);
         }
@@ -386,7 +386,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 }
             }
 
-            var client = await GetClientAsync(cancellationToken);
+            await using var client = await GetClientAsync(cancellationToken);
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
 

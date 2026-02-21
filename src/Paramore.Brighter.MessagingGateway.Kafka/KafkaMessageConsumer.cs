@@ -978,7 +978,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             // Add rejection metadata
             message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = message.Header.Topic.Value;
-            message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = DateTimeOffset.UtcNow.ToString("o");
+            message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = _timeProvider.GetUtcNow().ToString("o");
             message.Header.Bag[HeaderNames.ORIGINAL_TYPE] = message.Header.MessageType.ToString();
 
             CleanBagForResend(message);

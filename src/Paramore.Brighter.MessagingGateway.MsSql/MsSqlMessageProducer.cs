@@ -136,7 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     $"MsSqlMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
               
-            BrighterTracer.WriteProducerEvent(Span, "microsft_sql_server", message, _instrumentation);
+            BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
             Log.SendMessage(s_logger, topic, message.Id);
@@ -173,7 +173,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     $"MsSqlMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
-            BrighterTracer.WriteProducerEvent(Span, "microsft_sql_server", message, _instrumentation);
+            BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
             Log.SendMessageAsync(s_logger, topic, message.Id);

@@ -58,7 +58,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             _configuration = configuration;
             _scheduler = scheduler;
-            _topic = $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
+            ArgumentNullException.ThrowIfNull(configuration.TopicPrefix, nameof(configuration.TopicPrefix));
+            _topic = $"{configuration.TopicPrefix}/#";
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
                .WithTcpServer(configuration.Hostname)

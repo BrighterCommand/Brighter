@@ -96,11 +96,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             cancellationToken.ThrowIfCancellationRequested();
             
-            var ct = new CancellationTokenSource();
-            ct.CancelAfter(timeOut ?? TimeSpan.FromMilliseconds(300) );    
-            var operationCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct.Token).Token;
-            
-            var rc = await _sqlMessageQueue.TryReceiveAsync(_topic, operationCancellationToken);
+            using var ct = new CancellationTokenSource(timeOut ?? TimeSpan.FromMilliseconds(300));
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct.Token);
+
+            var rc = await _sqlMessageQueue.TryReceiveAsync(_topic, linked.Token);
             var message = !rc.IsDataValid ? new Message() : rc.Message;
             return [message!];
         }

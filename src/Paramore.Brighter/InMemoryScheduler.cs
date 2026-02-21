@@ -51,7 +51,7 @@ public class InMemoryScheduler(
     Func<IRequest, string> getOrCreateRequestSchedulerId,
     Func<Message, string> getOrCreateMessageSchedulerId,
     OnSchedulerConflict onConflict)
-    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync
+    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync, IDisposable, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, ITimer> _timers = new();
     private static readonly ILogger Logger = ApplicationLogging.CreateLogger<InMemoryScheduler>();
@@ -63,6 +63,11 @@ public class InMemoryScheduler(
     /// <inheritdoc />
     public string Schedule(Message message, TimeSpan delay)
     {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
+        }
+
         var id = getOrCreateMessageSchedulerId(message);
 
         if (onConflict == OnSchedulerConflict.Throw)
@@ -391,5 +396,27 @@ public class InMemoryScheduler(
         }
 
         Logger.LogError("Invalid input during executing scheduler {Data}", state);
+    }
+
+    /// <summary>
+    /// Disposes all active timers held by this scheduler.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var kvp in _timers)
+            kvp.Value.Dispose();
+        _timers.Clear();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Asynchronously disposes all active timers held by this scheduler.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var kvp in _timers)
+            await kvp.Value.DisposeAsync();
+        _timers.Clear();
+        GC.SuppressFinalize(this);
     }
 }

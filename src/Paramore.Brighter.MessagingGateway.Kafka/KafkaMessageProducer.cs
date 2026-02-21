@@ -225,6 +225,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="delay">The delay to use</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
+            if (message is null)
+                throw new ArgumentNullException(nameof(message));
+
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
@@ -243,9 +246,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ConfigurationException(
                     $"KafkaMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
-
-            if (message is null)
-                throw new ArgumentNullException(nameof(message));
 
             if (_publisher is null)
                 throw new InvalidOperationException("The publisher cannot be null");
@@ -298,6 +298,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="cancellationToken">Cancels the send operation</param>
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
+             if (message is null)
+                 throw new ArgumentNullException(nameof(message));
+
              delay ??= TimeSpan.Zero;
              if (delay != TimeSpan.Zero)
              {
@@ -316,9 +319,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ConfigurationException(
                     $"KafkaMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
              }
-
-             if (message is null)
-                 throw new ArgumentNullException(nameof(message));
 
              if (_publisher is null)
                  throw new InvalidOperationException("The publisher cannot be null");

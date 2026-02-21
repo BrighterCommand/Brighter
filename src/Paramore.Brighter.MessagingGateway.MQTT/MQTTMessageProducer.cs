@@ -65,15 +65,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <summary>
         /// Disposes of the producer
         /// </summary>
-        public void Dispose() { }
+        public void Dispose()
+        {
+            _mqttMessagePublisher.Dispose();
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         /// Disposes of the producer
         /// </summary>
         /// <returns></returns>
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            return new ValueTask(Task.CompletedTask);
+            await _mqttMessagePublisher.DisposeAsync();
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>

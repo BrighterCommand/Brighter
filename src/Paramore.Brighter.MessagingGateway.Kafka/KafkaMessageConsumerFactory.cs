@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             KafkaSubscription? kafkaSubscription = subscription as KafkaSubscription;  
             if (kafkaSubscription == null)
-                throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
+                throw new ConfigurationException("We expect a KafkaSubscription or KafkaSubscription<T> as a parameter");
             
             // Extract DLQ and invalid message routing keys if subscription supports them
             RoutingKey? deadLetterRoutingKey = null;
