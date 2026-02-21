@@ -4,6 +4,7 @@ services:
   # RocketMQ Nameserver (Service Discovery)
   nameserver:
     image: apache/rocketmq
+    platform: linux/amd64
     container_name: rocketmq-nameserver
     ports:
       - "9876:9876"  # Nameserver port
@@ -14,11 +15,12 @@ services:
       timeout: 10s
       retries: 10
     environment:
-      - JAVA_OPT_EXT=-Xms512m -Xmx512m -Xmn256m -Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG # JVM memory settings
+      - JAVA_OPT_EXT=-Xms128m -Xmx128m -Xmn64m -XX:MaxDirectMemorySize=128m
 
   # RocketMQ Broker (Message Storage)
   broker:
     image: apache/rocketmq
+    platform: linux/amd64
     container_name: rocketmq-broker
     ports:
       - "10909:10909"  # Broker HA port
@@ -30,7 +32,7 @@ services:
       - BROKER_NAME=broker-a
       - BROKER_ID=0
       - AUTO_CREATE_TOPIC_ENABLE=true  # Auto-create topics
-      - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
+      - JAVA_OPT_EXT=-Xms256m -Xmx256m -Xmn128m -XX:MaxDirectMemorySize=256m
     command: sh mqbroker
     depends_on:
       - nameserver
@@ -42,6 +44,7 @@ services:
   
   proxy:
     image: apache/rocketmq
+    platform: linux/amd64
     container_name: rmqproxy
     depends_on:
       - broker
@@ -51,7 +54,7 @@ services:
       - "9877:9877"   # gRPC endpoint (for clients)
     environment:
       - NAMESRV_ADDR=nameserver:9876
-      - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
+      - JAVA_OPT_EXT=-Xms128m -Xmx128m -Xmn64m -XX:MaxDirectMemorySize=128m
     command: sh mqproxy
     healthcheck: 
       test: [ "CMD", "sh", "-c", "netstat -an | grep 8081" ]
@@ -62,6 +65,7 @@ services:
   # Service to create the RocketMQ topic
   create-topic:
     image: apache/rocketmq # Use the same RocketMQ image to get mqadmin tool
+    platform: linux/amd64
     command: > # Multi-line command to create the topic
       sh -c "
             echo 'Waiting for broker to be healthy...' &&
@@ -97,6 +101,7 @@ services:
   # RocketMQ Dashboard (Web UI - Optional)
   dashboard:
     image: apacherocketmq/rocketmq-dashboard
+    platform: linux/amd64
     container_name: rocketmq-dashboard
     ports:
       - "8080:8080"  # Dashboard UI port
