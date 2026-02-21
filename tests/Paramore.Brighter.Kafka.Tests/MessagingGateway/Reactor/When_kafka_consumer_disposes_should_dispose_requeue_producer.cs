@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -135,6 +136,7 @@ public class KafkaConsumerDisposesRequeueProducerTests : IDisposable
             catch (ChannelFailureException cfx)
             {
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
         } while (maxTries <= 10);
 

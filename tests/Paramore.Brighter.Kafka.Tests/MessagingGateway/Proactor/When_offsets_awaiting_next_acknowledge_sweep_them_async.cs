@@ -9,7 +9,6 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposable
 {
@@ -102,8 +101,13 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
         //This should trigger a sweeper run (can be fragile when non-scheduled in containers etc)
         consumedMessages.Add(await ReadMessageAsync());
 
-        //Let the sweeper run, can be slow in CI environments to run the thread
-        await Task.Delay(10000);
+        //Poll for the sweeper to commit offsets - can be slow in CI environments
+        int sweepRetries = 0;
+        while (_consumer.StoredOffsets() > 0 && sweepRetries < 20)
+        {
+            await Task.Delay(1000);
+            sweepRetries++;
+        }
 
         //Sweeper will commit these
         Assert.Equal(0,_consumer.StoredOffsets());
@@ -137,6 +141,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                 {
                     //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                    await Task.Delay(1000);
                 }
             } while (maxTries <= 10);
 

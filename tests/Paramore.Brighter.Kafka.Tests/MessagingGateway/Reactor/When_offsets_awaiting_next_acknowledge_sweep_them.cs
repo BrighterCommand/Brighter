@@ -136,6 +136,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                 {
                     //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                    await Task.Delay(1000);
                 }
             } while (maxTries <= 10);
 

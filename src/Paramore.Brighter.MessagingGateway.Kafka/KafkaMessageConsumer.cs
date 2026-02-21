@@ -54,7 +54,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = [];
         private readonly long _maxBatchSize;
         private readonly TimeSpan _readCommittedOffsetsTimeout;
-        private DateTime _lastFlushAt = DateTime.UtcNow;
+        private DateTime _lastFlushAt;
+        private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new(1, 1);
         private readonly ITimer _sweeperTimer;
@@ -204,6 +205,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _readCommittedOffsetsTimeout = readCommittedOffsetsTimeout.Value;
 
             timeProvider ??= TimeProvider.System;
+            _timeProvider = timeProvider;
+            _lastFlushAt = _timeProvider.GetUtcNow().UtcDateTime;
             _sweeperTimer = timeProvider.CreateTimer(_ =>
             {
                 if (_isClosed)
@@ -353,7 +356,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 _flushToken.Wait(TimeSpan.Zero);
                 //this will release the semaphore
-               CommitAllOffsets(DateTime.UtcNow); 
+               CommitAllOffsets(_timeProvider.GetUtcNow().UtcDateTime);
             }
             catch (Exception ex)
             {
@@ -998,7 +1001,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         // The batch size has been exceeded, so flush our offsets
         private void FlushOffsets()
         {
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             if (_flushToken.Wait(TimeSpan.Zero))
             {
                 //This is expensive, so use a background thread
@@ -1018,7 +1021,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         //If it is has been too long since we flushed, flush now to prevent offsets accumulating 
         private void SweepOffsets()
         {
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             if (now - _lastFlushAt < _sweepUncommittedInterval)
             {
@@ -1035,7 +1038,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 
                 //This is expensive, so use a background thread
                 Task.Factory.StartNew(
-                    action: state => CommitAllOffsets(state is not null ? (DateTime) state : DateTime.UtcNow),
+                    action: state => CommitAllOffsets(state is not null ? (DateTime) state : _timeProvider.GetUtcNow().UtcDateTime),
                     state: now,
                     cancellationToken: CancellationToken.None,
                     creationOptions: TaskCreationOptions.DenyChildAttach,

@@ -193,6 +193,7 @@ public class KafkaMessageConsumerInvalidMessageFallbackTests : IDisposable
             catch (ChannelFailureException cfx)
             {
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
         } while (maxTries <= 10);
 

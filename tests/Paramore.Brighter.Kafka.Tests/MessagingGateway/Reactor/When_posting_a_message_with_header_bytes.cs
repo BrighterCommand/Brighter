@@ -156,6 +156,7 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
 
         } while (maxTries <= 10);

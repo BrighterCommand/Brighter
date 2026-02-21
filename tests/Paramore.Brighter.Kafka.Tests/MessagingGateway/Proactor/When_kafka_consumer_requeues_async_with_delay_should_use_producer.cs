@@ -135,6 +135,7 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
             catch (ChannelFailureException cfx)
             {
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
         } while (maxTries <= 10);
 

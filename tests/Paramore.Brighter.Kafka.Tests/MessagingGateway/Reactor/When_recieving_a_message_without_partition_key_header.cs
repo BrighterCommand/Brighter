@@ -121,11 +121,15 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
                     _consumer.Acknowledge(messages[0]);
                     break;
                 }
+
+                //wait before retry - allow consumer group join to complete
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
             catch (ChannelFailureException cfx)
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
         } while (maxTries <= 10);
 
