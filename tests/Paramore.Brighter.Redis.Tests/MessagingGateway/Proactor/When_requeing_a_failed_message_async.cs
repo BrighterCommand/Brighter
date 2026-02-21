@@ -7,7 +7,6 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
 
 [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
-[Trait("Fragile", "CI")]
 public class RedisRequeueMessageTestsAsync : IClassFixture<RedisFixture>, IAsyncDisposable
 {
     private readonly RedisFixture _redisFixture;

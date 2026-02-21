@@ -36,7 +36,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
-    [Trait("Fragile", "CI")]
     public class OnceOnlyAttributeWithThrowExceptionAsyncTests
     {
         private readonly MyCommand _command;
