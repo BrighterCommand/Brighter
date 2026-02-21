@@ -84,6 +84,9 @@ services:
             /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_source -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_target -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_invalid -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             echo 'done'
         "
     depends_on: # Ensure broker is healthy before attempting topic creation
