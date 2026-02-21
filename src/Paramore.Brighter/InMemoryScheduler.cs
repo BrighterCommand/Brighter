@@ -65,23 +65,32 @@ public class InMemoryScheduler(
     {
         var id = getOrCreateMessageSchedulerId(message);
 
-        // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
+        if (onConflict == OnSchedulerConflict.Throw)
         {
-            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-        }
-
-        // Use AddOrUpdate to atomically replace the timer, disposing the old one
-        _timers.AddOrUpdate(
-            id,
-            _ => timeProvider.CreateTimer(Execute,
-                (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero),
-            (_, existingTimer) =>
+            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
+            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
+            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
+            var timer = timeProvider.CreateTimer(Execute,
+                (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
+            if (!_timers.TryAdd(id, timer))
             {
-                existingTimer.Dispose();
-                return timeProvider.CreateTimer(Execute,
-                    (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
-            });
+                timer.Dispose();
+                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+            }
+        }
+        else
+        {
+            _timers.AddOrUpdate(
+                id,
+                _ => timeProvider.CreateTimer(Execute,
+                    (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero),
+                (_, existingTimer) =>
+                {
+                    existingTimer.Dispose();
+                    return timeProvider.CreateTimer(Execute,
+                        (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
+                });
+        }
 
         return id;
     }
@@ -109,16 +118,12 @@ public class InMemoryScheduler(
 
         var id = getOrCreateRequestSchedulerId(request);
 
-        // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
+        if (onConflict == OnSchedulerConflict.Throw)
         {
-            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-        }
-
-        // Use AddOrUpdate to atomically replace the timer, disposing the old one
-        _timers.AddOrUpdate(
-            id,
-            _ => timeProvider.CreateTimer(Execute,
+            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
+            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
+            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
+            var timer = timeProvider.CreateTimer(Execute,
                 (processor,
                     new FireSchedulerRequest
                     {
@@ -127,11 +132,18 @@ public class InMemoryScheduler(
                         SchedulerType = type,
                         RequestType = typeof(TRequest).FullName!,
                         RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                    }), delay, TimeSpan.Zero),
-            (_, existingTimer) =>
+                    }), delay, TimeSpan.Zero);
+            if (!_timers.TryAdd(id, timer))
             {
-                existingTimer.Dispose();
-                return timeProvider.CreateTimer(Execute,
+                timer.Dispose();
+                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+            }
+        }
+        else
+        {
+            _timers.AddOrUpdate(
+                id,
+                _ => timeProvider.CreateTimer(Execute,
                     (processor,
                         new FireSchedulerRequest
                         {
@@ -140,8 +152,22 @@ public class InMemoryScheduler(
                             SchedulerType = type,
                             RequestType = typeof(TRequest).FullName!,
                             RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                        }), delay, TimeSpan.Zero);
-            });
+                        }), delay, TimeSpan.Zero),
+                (_, existingTimer) =>
+                {
+                    existingTimer.Dispose();
+                    return timeProvider.CreateTimer(Execute,
+                        (processor,
+                            new FireSchedulerRequest
+                            {
+                                Id = id,
+                                Async = false,
+                                SchedulerType = type,
+                                RequestType = typeof(TRequest).FullName!,
+                                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                            }), delay, TimeSpan.Zero);
+                });
+        }
 
         return id;
     }
@@ -206,23 +232,32 @@ public class InMemoryScheduler(
 
         var id = getOrCreateMessageSchedulerId(message);
 
-        // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
+        if (onConflict == OnSchedulerConflict.Throw)
         {
-            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-        }
-
-        // Use AddOrUpdate to atomically replace the timer, disposing the old one
-        _timers.AddOrUpdate(
-            id,
-            _ => timeProvider.CreateTimer(Execute,
-                (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero),
-            (_, existingTimer) =>
+            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
+            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
+            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
+            var timer = timeProvider.CreateTimer(Execute,
+                (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
+            if (!_timers.TryAdd(id, timer))
             {
-                existingTimer.Dispose();
-                return timeProvider.CreateTimer(Execute,
-                    (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
-            });
+                timer.Dispose();
+                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+            }
+        }
+        else
+        {
+            _timers.AddOrUpdate(
+                id,
+                _ => timeProvider.CreateTimer(Execute,
+                    (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero),
+                (_, existingTimer) =>
+                {
+                    existingTimer.Dispose();
+                    return timeProvider.CreateTimer(Execute,
+                        (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
+                });
+        }
 
         return Task.FromResult(id);
     }
@@ -251,16 +286,12 @@ public class InMemoryScheduler(
 
         var id = getOrCreateRequestSchedulerId(request);
 
-        // Check for conflict before attempting atomic update
-        if (onConflict == OnSchedulerConflict.Throw && _timers.ContainsKey(id))
+        if (onConflict == OnSchedulerConflict.Throw)
         {
-            throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-        }
-
-        // Use AddOrUpdate to atomically replace the timer, disposing the old one
-        _timers.AddOrUpdate(
-            id,
-            _ => timeProvider.CreateTimer(Execute,
+            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
+            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
+            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
+            var timer = timeProvider.CreateTimer(Execute,
                 (processor,
                     new FireSchedulerRequest
                     {
@@ -269,11 +300,18 @@ public class InMemoryScheduler(
                         SchedulerType = type,
                         RequestType = typeof(TRequest).FullName!,
                         RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                    }), delay, TimeSpan.Zero),
-            (_, existingTimer) =>
+                    }), delay, TimeSpan.Zero);
+            if (!_timers.TryAdd(id, timer))
             {
-                existingTimer.Dispose();
-                return timeProvider.CreateTimer(Execute,
+                timer.Dispose();
+                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+            }
+        }
+        else
+        {
+            _timers.AddOrUpdate(
+                id,
+                _ => timeProvider.CreateTimer(Execute,
                     (processor,
                         new FireSchedulerRequest
                         {
@@ -282,8 +320,22 @@ public class InMemoryScheduler(
                             SchedulerType = type,
                             RequestType = typeof(TRequest).FullName!,
                             RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                        }), delay, TimeSpan.Zero);
-            });
+                        }), delay, TimeSpan.Zero),
+                (_, existingTimer) =>
+                {
+                    existingTimer.Dispose();
+                    return timeProvider.CreateTimer(Execute,
+                        (processor,
+                            new FireSchedulerRequest
+                            {
+                                Id = id,
+                                Async = true,
+                                SchedulerType = type,
+                                RequestType = typeof(TRequest).FullName!,
+                                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                            }), delay, TimeSpan.Zero);
+                });
+        }
 
         return Task.FromResult(id);
     }

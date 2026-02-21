@@ -132,7 +132,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     return;
                 } 
                   
-                Log.NoSchedulerConfigured(s_logger);
+                throw new ConfigurationException(
+                    $"MsSqlMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
               
             BrighterTracer.WriteProducerEvent(Span, "microsft_sql_server", message, _instrumentation);
@@ -168,7 +169,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     return;
                 }
                 
-                Log.NoSchedulerConfigured(s_logger);
+                throw new ConfigurationException(
+                    $"MsSqlMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
             BrighterTracer.WriteProducerEvent(Span, "microsft_sql_server", message, _instrumentation);
@@ -191,9 +193,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         private static partial class Log
         {
-            [LoggerMessage(LogLevel.Warning, "MsSqlMessageProducer: no scheduler configured, message will be sent immediately")]
-            public static partial void NoSchedulerConfigured(ILogger logger);
-
             [LoggerMessage(LogLevel.Debug, "MsSqlMessageProducer: send message with topic {Topic} and id {Id}")]
             public static partial void SendMessage(ILogger logger, string topic, string id);
             

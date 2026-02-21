@@ -74,7 +74,7 @@ public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync : IA
         var outbox = _outboxProvider.CreateOutboxAsync();
         await outbox.AddAsync([earliest, dispatched, undispatched], context);
         await outbox.MarkDispatchedAsync(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await outbox.MarkDispatchedAsync(dispatched.Id, context);
+        await outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
         
         // Act
         var message = await outbox.GetAsync(dispatched.Id, context);

@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -14,10 +12,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// The <see cref="MqttMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles subscription establishment, request sending and error handling
     /// </summary>
-    public partial class MqttMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync
+    public class MqttMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageProducer>();
-
         private readonly MqttMessagePublisher _mqttMessagePublisher;
 
         /// <summary>
@@ -122,7 +118,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     return;
                 }
 
-                Log.NoSchedulerConfigured(s_logger);
+                throw new ConfigurationException(
+                    $"MQTTMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
             ArgumentNullException.ThrowIfNull(message);
@@ -153,18 +150,13 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     return;
                 }
 
-                Log.NoSchedulerConfigured(s_logger);
+                throw new ConfigurationException(
+                    $"MQTTMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
             ArgumentNullException.ThrowIfNull(message);
 
             await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
-        }
-
-        private static partial class Log
-        {
-            [LoggerMessage(LogLevel.Warning, "MqttMessageProducer: no scheduler configured, message will be sent immediately")]
-            public static partial void NoSchedulerConfigured(ILogger logger);
         }
     }
 }

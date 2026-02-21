@@ -65,7 +65,7 @@ public class WhenRetrievingOutstandingMessagesItShouldFilterByAge : IDisposable
         var outbox = _outboxProvider.CreateOutbox();
         outbox.Add([earliest, dispatched, undispatched], context);
         outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        outbox.MarkDispatched(dispatched.Id, context);
+        outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
         
         // Act
         var allDispatched = outbox.DispatchedMessages(TimeSpan.Zero, context).ToArray();

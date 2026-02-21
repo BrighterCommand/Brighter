@@ -152,8 +152,8 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
-        
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var messages = (await GetAllMessagesAsync()).ToArray();
 
@@ -175,8 +175,8 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
-        
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var messages = (await Outbox
             .GetAsync([earliest.Id, undispatched.Id], context))
@@ -200,8 +200,8 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
-        
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var message = await Outbox.GetAsync(dispatched.Id, context);
 
@@ -221,7 +221,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTimeOffset.UtcNow.AddHours(-3));
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
         
         // Act
         var allDispatched = (await Outbox.DispatchedMessagesAsync(TimeSpan.Zero, context)).ToArray();
@@ -255,8 +255,8 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var undispatched = CreateRandomMessage();
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
-        
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         await Task.Delay(TimeSpan.FromSeconds(10));
         
         // Act

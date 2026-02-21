@@ -308,8 +308,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             delay ??= TimeSpan.Zero;
 
-            if (delay > TimeSpan.Zero && _scheduler != null)
+            if (delay > TimeSpan.Zero)
             {
+                if (_scheduler == null)
+                {
+                    throw new ConfigurationException(
+                        $"RedisMessageConsumer: delay of {delay} was requested for requeue but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
+                }
+
                 _inflight.TryGetValue(message.Id, out string? removedMsgId);
                 _inflight.Remove(message.Id);
                 try
@@ -356,8 +362,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             delay ??= TimeSpan.Zero;
 
-            if (delay > TimeSpan.Zero && _scheduler != null)
+            if (delay > TimeSpan.Zero)
             {
+                if (_scheduler == null)
+                {
+                    throw new ConfigurationException(
+                        $"RedisMessageConsumer: delay of {delay} was requested for requeue but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
+                }
+
                 _inflight.TryGetValue(message.Id, out string? removedMsgId);
                 _inflight.Remove(message.Id);
                 try

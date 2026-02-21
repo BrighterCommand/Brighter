@@ -144,8 +144,8 @@ public abstract class OutboxTest<TTransaction> : IDisposable
         
         Outbox.Add([earliest, dispatched, undispatched], context);
         Outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var messages = GetAllMessages().ToArray();
 
@@ -167,8 +167,8 @@ public abstract class OutboxTest<TTransaction> : IDisposable
         
         Outbox.Add([earliest, dispatched, undispatched], context);
         Outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var messages =  Outbox
             .Get([earliest.Id, undispatched.Id], context)
@@ -192,8 +192,8 @@ public abstract class OutboxTest<TTransaction> : IDisposable
         
         Outbox.Add([earliest, dispatched, undispatched], context);
         Outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var message = Outbox.Get(dispatched.Id, context);
 
@@ -213,8 +213,8 @@ public abstract class OutboxTest<TTransaction> : IDisposable
         
         Outbox.Add([earliest, dispatched, undispatched], context);
         Outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var allDispatched = Outbox.DispatchedMessages(TimeSpan.Zero, context).ToArray();
         var messagesOverAnHour  = Outbox.DispatchedMessages(TimeSpan.FromHours(1), context).ToArray();
@@ -247,8 +247,8 @@ public abstract class OutboxTest<TTransaction> : IDisposable
         var undispatched = CreateRandomMessage();
         
         Outbox.Add([earliest, dispatched, undispatched], context);
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var allUndispatched = Outbox.OutstandingMessages(TimeSpan.Zero, context).ToArray();
         var messagesOverAnHour = Outbox.OutstandingMessages(TimeSpan.FromHours(1), context).ToArray();

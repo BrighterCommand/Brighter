@@ -43,7 +43,7 @@ public class RedisRequeueMessageTests : IClassFixture<RedisFixture>
         var sentMessageOne = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
 
         //now requeue the first message
-        _redisFixture.MessageConsumer.Requeue(_messageOne, TimeSpan.FromMilliseconds(300));
+        _redisFixture.MessageConsumer.Requeue(_messageOne);
 
         //try receiving again; messageTwo should come first
         var sentMessageTwo = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();

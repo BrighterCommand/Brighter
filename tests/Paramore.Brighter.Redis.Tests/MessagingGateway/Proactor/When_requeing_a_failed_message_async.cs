@@ -44,7 +44,7 @@ public class RedisRequeueMessageTestsAsync : IClassFixture<RedisFixture>, IAsync
         var sentMessageOne = (await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
 
         // Now requeue the first message
-        await _redisFixture.MessageConsumer.RequeueAsync(_messageOne, TimeSpan.FromMilliseconds(300));
+        await _redisFixture.MessageConsumer.RequeueAsync(_messageOne);
 
         // Try receiving again; messageTwo should come first
         var sentMessageTwo = (await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();

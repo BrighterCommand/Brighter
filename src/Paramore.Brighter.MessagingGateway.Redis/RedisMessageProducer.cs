@@ -141,7 +141,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return;
                 }
 
-                Log.NoSchedulerConfigured(s_logger);
+                throw new ConfigurationException(
+                    $"RedisMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
             using var client = s_pool.Value.GetClient();
@@ -194,7 +195,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return;
                 }
 
-                Log.NoSchedulerConfigured(s_logger);
+                throw new ConfigurationException(
+                    $"RedisMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
             await using var client = await s_pool.Value.GetClientAsync(token: cancellationToken);
@@ -265,9 +267,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             
             [LoggerMessage(LogLevel.Debug, "RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {Queues}")]
             public static partial void PublishedMessage(ILogger logger, string topic, string id, string request, string queues);
-
-            [LoggerMessage(LogLevel.Warning, "RedisMessageProducer: no scheduler configured, message will be sent immediately")]
-            public static partial void NoSchedulerConfigured(ILogger logger);
         }
     }
 }

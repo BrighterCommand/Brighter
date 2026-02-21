@@ -240,7 +240,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     return;
                 }
 
-                Log.NoSchedulerConfigured(s_logger);
+                throw new ConfigurationException(
+                    $"KafkaMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
             if (message is null)
@@ -251,7 +252,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             if (_hasFatalProducerError)
                 throw new ChannelFailureException("Producer is in unrecoverable state");
-            
+
             try
             {
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
@@ -267,21 +268,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 Log.ErrorSendingMessageToKafka(s_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
-            
+
             }
             catch (ArgumentException ae)
             {
                 Log.ErrorSendingMessageToKafka(s_logger, ae, _producerConfig.BootstrapServers, ae.Message);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
-                           
+
             }
             catch (KafkaException kafkaException)
             {
                 Log.KafkaExceptionError(s_logger, kafkaException, Topic ?? RoutingKey.Empty);
-                            
+
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
-                            
+
                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);
             }
         }
@@ -312,7 +313,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     return;
                 }
 
-                Log.NoSchedulerConfigured(s_logger);
+                throw new ConfigurationException(
+                    $"KafkaMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
              }
 
              if (message is null)
@@ -397,9 +399,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             [LoggerMessage(LogLevel.Error, "KafkaMessageProducer: There was an error sending to topic {Topic})")]
             public static partial void KafkaExceptionError(ILogger logger, Exception exception, string topic);
-
-            [LoggerMessage(LogLevel.Warning, "KafkaMessageProducer: no scheduler configured, message will be sent immediately")]
-            public static partial void NoSchedulerConfigured(ILogger logger);
         }
     }
 }
