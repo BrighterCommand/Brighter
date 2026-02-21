@@ -655,18 +655,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Requeues the specified message. Kafka streams are immutable, so requeue publishes a new
         /// message to the same topic via a lazily-created producer. When a delay is specified and a
         /// scheduler is configured, the producer delegates to the scheduler for delayed redelivery.
+        /// For immediate requeue (zero or null delay) the message is produced directly and flushed.
         /// </summary>
         /// <param name="message">The message to requeue.</param>
         /// <param name="delay">Delay before the message should be redelivered.</param>
         /// <returns>True if the message was successfully requeued.</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
-            EnsureRequeueProducer();
+            delay ??= TimeSpan.Zero;
             var partitionOffset = ExtractPartitionOffset(message);
             CleanBagForResend(message);
-            _requeueProducer!.SendWithDelay(message, delay);
-            if (delay is null or { Ticks: 0 })
+
+            if (delay > TimeSpan.Zero)
+            {
+                EnsureRequeueProducer();
+                _requeueProducer!.SendWithDelay(message, delay);
+            }
+            else
+            {
+                // Kafka streams are immutable — immediate requeue must produce a new message
+                EnsureRequeueProducer();
+                _requeueProducer!.Send(message);
                 _requeueProducer.Flush();
+            }
+
             AcknowledgeOffset(partitionOffset);
             return true;
         }
@@ -675,6 +687,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Requeues the specified message. Kafka streams are immutable, so requeue publishes a new
         /// message to the same topic via a lazily-created producer. When a delay is specified and a
         /// scheduler is configured, the producer delegates to the scheduler for delayed redelivery.
+        /// For immediate requeue (zero or null delay) the message is produced directly and flushed.
         /// </summary>
         /// <param name="message">The message to requeue.</param>
         /// <param name="delay">Delay before the message should be redelivered.</param>
@@ -682,12 +695,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>True if the message was successfully requeued.</returns>
         public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            EnsureRequeueProducer();
+            delay ??= TimeSpan.Zero;
             var partitionOffset = ExtractPartitionOffset(message);
             CleanBagForResend(message);
-            await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
-            if (delay is null or { Ticks: 0 })
+
+            if (delay > TimeSpan.Zero)
+            {
+                EnsureRequeueProducer();
+                await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
+            }
+            else
+            {
+                // Kafka streams are immutable — immediate requeue must produce a new message
+                EnsureRequeueProducer();
+                await _requeueProducer!.SendAsync(message, cancellationToken);
                 _requeueProducer.Flush(cancellationToken);
+            }
+
             AcknowledgeOffset(partitionOffset);
             return true;
         }
