@@ -885,7 +885,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
                 ref _requeueProducerLock, () =>
                 {
-                    var producer = CreateProducer(Topic!)
+                    if (Topic is null)
+                        throw new ConfigurationException("Cannot create requeue producer: Topic is not configured.");
+
+                    var producer = CreateProducer(Topic)
                         ?? throw new ConfigurationException(
                             $"Failed to create requeue producer for topic {Topic}. Check broker connectivity and configuration.");
                     producer.Scheduler = _scheduler;
