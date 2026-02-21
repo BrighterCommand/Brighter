@@ -49,7 +49,7 @@ public class KafkaConsumerRequeueTests : IDisposable
 
     public KafkaConsumerRequeueTests(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Consumer Requeue Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
 
         _message = new Message(

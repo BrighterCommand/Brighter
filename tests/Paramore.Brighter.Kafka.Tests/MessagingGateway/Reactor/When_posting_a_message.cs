@@ -26,7 +26,7 @@ public class KafkaMessageProducerSendTests : IDisposable
 
     public KafkaMessageProducerSendTests(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Send Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration { Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" } },

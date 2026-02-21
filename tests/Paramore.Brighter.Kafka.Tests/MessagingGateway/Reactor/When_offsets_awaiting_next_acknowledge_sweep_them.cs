@@ -21,7 +21,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
 
     public KafkaMessageConsumerSweepOffsets(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Sweep Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration

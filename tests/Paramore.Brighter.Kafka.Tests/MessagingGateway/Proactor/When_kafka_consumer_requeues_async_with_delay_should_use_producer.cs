@@ -49,7 +49,7 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
 
     public KafkaConsumerRequeueAsyncTests(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Consumer Requeue Async Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
 
         _message = new Message(

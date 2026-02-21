@@ -24,7 +24,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
 
     public KafkaMessageProducerMissingHeaderTestsAsync(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Missing Header Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
 
         var clientConfig = new ClientConfig

@@ -47,7 +47,7 @@ public class KafkaConsumerDisposesRequeueProducerTests : IDisposable
 
     public KafkaConsumerDisposesRequeueProducerTests(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Consumer Dispose Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
 
         _producerRegistry = new KafkaProducerRegistryFactory(

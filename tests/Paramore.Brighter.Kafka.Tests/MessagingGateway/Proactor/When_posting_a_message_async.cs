@@ -24,7 +24,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
 
     public KafkaMessageProducerSendTestsAsync(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Send Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration

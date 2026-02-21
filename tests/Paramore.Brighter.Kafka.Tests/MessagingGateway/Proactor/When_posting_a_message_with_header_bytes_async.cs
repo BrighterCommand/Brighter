@@ -29,7 +29,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
 
     public KafkaMessageProducerHeaderBytesSendTestsAsync(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Header Bytes Send Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
