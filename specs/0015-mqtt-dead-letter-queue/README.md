@@ -3,7 +3,7 @@
 **Feature Name**: MQTT Dead Letter Queue
 **Spec ID**: 0015
 **Created**: 2026-02-10
-**Status**: Requirements Draft
+**Status**: Design
 
 ## Overview
 
@@ -12,8 +12,8 @@ Add Brighter-managed dead letter queue support to the MQTT messaging gateway. MQ
 ## Workflow Status
 
 - [x] Requirements defined
-- [ ] Requirements approved
-- [ ] ADRs created (may not need new ADR - covered by ADR 0034)
+- [x] Requirements approved
+- [ ] ADRs created
 - [ ] Tasks created
 - [ ] Tasks approved
 - [ ] Implementation complete
@@ -28,6 +28,7 @@ Add Brighter-managed dead letter queue support to the MQTT messaging gateway. MQ
 
 - [ADR 0034: Provide DLQ Where Missing](../../docs/adr/0034-provide-dlq-where-missing.md) - High-level DLQ strategy (existing)
 - [ADR 0036: Message Rejection Routing Strategy](../../docs/adr/0036-message-rejection-routing-strategy.md) - Routing logic (existing)
+- [ADR 0043: MQTT DLQ Brighter-Managed](../../docs/adr/0043-mqtt-dlq-brighter-managed.md) - MQTT-specific design
 
 ## Scope
 
@@ -36,8 +37,5 @@ Add Brighter-managed dead letter queue support to the MQTT messaging gateway. MQ
 
 ### Key Files
 - `MQTTMessageConsumer.cs` - Implement Reject()/RejectAsync() with DLQ routing
-- May need MQTT subscription class and consumer factory (currently missing)
-
-### Design Considerations
-- MQTT does not have a dedicated subscription class or consumer factory
-- Design phase should determine whether to create these or use an alternative approach
+- `MqttSubscription.cs` - New subscription class with DLQ interfaces (ADR 0043)
+- `MqttMessageConsumerFactory.cs` - New consumer factory (ADR 0043)

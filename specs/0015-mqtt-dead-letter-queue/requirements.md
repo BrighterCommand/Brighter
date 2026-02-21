@@ -17,8 +17,8 @@ Note: MQTT does not currently have a dedicated subscription class or consumer fa
 
 Add Brighter-managed DLQ support following the Kafka pattern:
 
-- Create or extend an MQTT subscription class that implements `IUseBrighterDeadLetterSupport` and `IUseBrighterInvalidMessageSupport`
-- Create or extend an MQTT consumer factory that extracts routing keys and passes them to the consumer
+- Create an `MqttSubscription` class that implements `IUseBrighterDeadLetterSupport` and `IUseBrighterInvalidMessageSupport` (MQTT currently has no subscription class)
+- Create an `MqttMessageConsumerFactory` that extracts routing keys and passes them to the consumer (MQTT currently has no consumer factory)
 - `MqttMessageConsumer.Reject()` and `RejectAsync()` send messages to DLQ/Invalid Message channels using a lazy `IAmAMessageProducer` (publishing to a separate MQTT topic)
 - Messages are enriched with metadata before being sent to DLQ
 
@@ -46,7 +46,6 @@ Add Brighter-managed DLQ support following the Kafka pattern:
 
 - Automatic replay/retry from DLQ
 - DLQ message format transformation
-- Creating MQTT subscription/factory classes if they don't exist (may need to be part of design phase)
 
 ## Acceptance Criteria
 
