@@ -372,12 +372,12 @@ jobs:
 
     services:
       sqlserver:
-        image: mcr.microsoft.com/mssql/server
-        ports: 
+        image: mcr.microsoft.com/azure-sql-edge
+        ports:
           - 11433:1433
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: Password123!
+          MSSQL_SA_PASSWORD: Password123!
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet 
