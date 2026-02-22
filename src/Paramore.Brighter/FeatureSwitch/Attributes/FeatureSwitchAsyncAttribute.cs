@@ -55,7 +55,7 @@ namespace Paramore.Brighter.FeatureSwitch.Attributes
         }
 
         /// <summary>
-        /// Initialises the paramers
+        /// Initialises the parameters
         /// </summary>
         /// <returns>System.Object[]</returns>
         public override object[] InitializerParams()
