@@ -54,7 +54,7 @@ public class InMemoryScheduler(
     : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync, IDisposable, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, ITimer> _timers = new();
-    private static readonly ILogger Logger = ApplicationLogging.CreateLogger<InMemoryScheduler>();
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryScheduler>();
 
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
@@ -284,7 +284,7 @@ public class InMemoryScheduler(
             return;
         }
 
-        Logger.LogError("Invalid input during executing scheduler {Data}", state);
+        s_logger.LogError("Invalid input during executing scheduler {Data}", state);
     }
 
     /// <summary>
