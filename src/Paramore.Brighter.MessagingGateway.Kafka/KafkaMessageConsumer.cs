@@ -1109,11 +1109,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Disposes of the consumer, async
         /// </summary>
         /// <returns>A value task that manages the disposal</returns>
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            Dispose(true);
+            await _sweeperTimer.DisposeAsync();
+
+            Close();
+            _consumer?.Dispose();
+            _flushToken?.Dispose();
+
+            if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value != null)
+                await _deadLetterProducer.Value.DisposeAsync();
+
+            if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value != null)
+                await _invalidMessageProducer.Value.DisposeAsync();
+
+            if (_requeueProducer != null)
+                await _requeueProducer.DisposeAsync();
+
             GC.SuppressFinalize(this);
-            return new ValueTask(Task.CompletedTask);
         }
         
         private static partial class Log
