@@ -1,0 +1,10 @@
+{
+  "suppressions": [
+    {
+      "ruleId": "SW004",
+      "pattern": "**/tests/**",
+      "justification": "Message Oriented Middleware integration tests often require delays to wait for messages to reach the queue or stream"
+    }
+  ],
+  "globalSuppressions": []
+}
