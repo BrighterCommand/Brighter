@@ -78,13 +78,11 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Dispose of the producer
-        /// Clears the associated timer 
         /// </summary>
         public void Dispose() {}
         
         /// <summary>
         /// Dispose of the producer
-        /// Clears the associated timer 
         /// </summary> 
         public ValueTask DisposeAsync() {return new ValueTask();}
 

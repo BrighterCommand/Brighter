@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private PullConsumer? _consumer;
         private RmqMessageProducer? _producer;
-        private bool _producerInitialized;
+        private volatile bool _producerInitialized;
         private object? _producerLock;
         private readonly IAmAMessageScheduler? _scheduler;
         private readonly ChannelName _queueName;

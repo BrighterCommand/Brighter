@@ -48,7 +48,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private readonly ITimer _lockTimer;
     private readonly IAmAMessageScheduler? _scheduler;
     private InMemoryMessageProducer? _producer;
-    private bool _producerInitialized;
+    private volatile bool _producerInitialized;
     private object? _producerLock;
 
     /// <summary>
