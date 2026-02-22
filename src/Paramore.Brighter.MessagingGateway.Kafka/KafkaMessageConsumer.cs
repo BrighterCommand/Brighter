@@ -450,19 +450,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     CheckHasPartitions();
                     
                     Log.NoMessagesAvailable(s_logger);
-                    return new[] {new Message()};
+                    return [new Message()];
                 }
 
                 if (consumeResult.IsPartitionEOF)
                 {
                     Log.EndOfPartition(s_logger, _consumer.MemberId);
-                    return new[] {new Message()};
+                    return [new Message()];
                 }
 
                 Log.UsableMessageRetrieved(s_logger, consumeResult.Message.Value);
                 Log.PartitionOffsetValue(s_logger, consumeResult.Partition, consumeResult.Offset, consumeResult.Message.Value);
 
-                return new[] {_creator.CreateMessage(consumeResult)};
+                return [_creator.CreateMessage(consumeResult)];
             }
             catch (ConsumeException consumeException)
             {
@@ -533,7 +533,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>True if the message has been removed from the channel, false otherwise</returns>
         public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
-             // If no reason provided or no channels configured, just acknowledge
+              // If no reason provided or no channels configured, just acknowledge
               if (_deadLetterProducer == null && _invalidMessageProducer == null)
               {
                   if (reason != null)
