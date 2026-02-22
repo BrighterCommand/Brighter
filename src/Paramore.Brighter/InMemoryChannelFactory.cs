@@ -36,16 +36,10 @@ namespace Paramore.Brighter
         private readonly InternalBus _internalBus;
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan? _ackTimeout;
-        private IAmAMessageScheduler? _scheduler;
-
         /// <summary>
         /// Gets or sets the message scheduler for delayed requeue support.
         /// </summary>
-        public IAmAMessageScheduler? Scheduler
-        {
-            get => _scheduler;
-            set => _scheduler = value;
-        }
+        public IAmAMessageScheduler? Scheduler { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryChannelFactory"/> class.
@@ -59,7 +53,7 @@ namespace Paramore.Brighter
             _internalBus = internalBus;
             _timeProvider = timeProvider;
             _ackTimeout = ackTimeout;
-            _scheduler = scheduler;
+            Scheduler = scheduler;
         }
 
         /// <summary>
@@ -85,7 +79,7 @@ namespace Paramore.Brighter
                     deadLetterKey,  
                     invalidMessageKey,
                     ackTimeout: _ackTimeout,
-                    scheduler: _scheduler),
+                    scheduler: Scheduler),
                 subscription.BufferSize
             );
         }
@@ -113,7 +107,7 @@ namespace Paramore.Brighter
                     deadLetterKey,
                     invalidMessageKey,
                     ackTimeout: _ackTimeout,
-                    scheduler: _scheduler),
+                    scheduler: Scheduler),
                 subscription.BufferSize
             );
         }
@@ -142,7 +136,7 @@ namespace Paramore.Brighter
                     deadLetterKey,
                     invalidMessageKey,
                     ackTimeout: _ackTimeout,
-                    scheduler: _scheduler),
+                    scheduler: Scheduler),
                 subscription.BufferSize
             );
             return Task.FromResult(channel);
