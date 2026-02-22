@@ -6,6 +6,9 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/samples/" />
+  <Folder Name="/samples/Analyzer/">
+    <Project Path="samples/Analyzer/AnalyzerSamples/AnalyzerSamples.csproj" />
+  </Folder>
   <Folder Name="/samples/CommandProcessor/">
     <Project Path="samples/CommandProcessor/HelloWorld/HelloWorld.csproj" />
     <Project Path="samples/CommandProcessor/HelloWorldAsync/HelloWorldAsync.csproj" />
@@ -153,6 +156,7 @@
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests/README.md" />
+    <Project Path="tests/Paramore.Brighter.Analyzer.Tests/Paramore.Brighter.Analyzer.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj" />
@@ -180,20 +184,25 @@
     <Project Path="tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Testing.Tests/Paramore.Brighter.Testing.Tests.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
     <Project Path="tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj" />
-    <Project Path="tests/Paramore.Brighter.Testing.Tests/Paramore.Brighter.Testing.Tests.csproj" />
     <Project Path="tests/Paramore.Test.Helpers/Paramore.Test.Helpers.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/Paramore.Brighter.Test.Generator/Paramore.Brighter.Test.Generator.csproj" />
   </Folder>
+  <Project Path="src/Paramore.Brighter.Analyzer.Package/Paramore.Brighter.Analyzer.Package.csproj" />
+  <Project Path="src/Paramore.Brighter.Analyzer/Paramore.Brighter.Analyzer.csproj" />
   <Project Path="src/Paramore.Brighter.Archive.Azure/Paramore.Brighter.Archive.Azure.csproj" />
   <Project Path="src/Paramore.Brighter.Dapper/Paramore.Brighter.Dapper.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb.V4/Paramore.Brighter.DynamoDb.V4.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb/Paramore.Brighter.DynamoDb.csproj" />
   <Project Path="src/Paramore.Brighter.Extensions.DependencyInjection/Paramore.Brighter.Extensions.DependencyInjection.csproj" />
   <Project Path="src/Paramore.Brighter.Extensions.Diagnostics/Paramore.Brighter.Extensions.Diagnostics.csproj" />
+  <Project Path="src/Paramore.Brighter.Extensions.OpenTelemetry/Paramore.Brighter.Extensions.OpenTelemetry.csproj" />
   <Project Path="src/Paramore.Brighter.Firestore/Paramore.Brighter.Firestore.csproj" />
   <Project Path="src/Paramore.Brighter.Inbox.DynamoDB.V4/Paramore.Brighter.Inbox.DynamoDB.V4.csproj" />
   <Project Path="src/Paramore.Brighter.Inbox.DynamoDB/Paramore.Brighter.Inbox.DynamoDB.csproj" />
@@ -259,6 +268,7 @@
   <Project Path="src/Paramore.Brighter.Spanner/Paramore.Brighter.Spanner.csproj" />
   <Project Path="src/Paramore.Brighter.Sqlite.EntityFrameworkCore/Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj" />
   <Project Path="src/Paramore.Brighter.Sqlite/Paramore.Brighter.Sqlite.csproj" />
+  <Project Path="src/Paramore.Brighter.Testing/Paramore.Brighter.Testing.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.AWS.V4/Paramore.Brighter.Transformers.AWS.V4.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.AWS/Paramore.Brighter.Transformers.AWS.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.Azure/Paramore.Brighter.Transformers.Azure.csproj" />
@@ -267,5 +277,4 @@
   <Project Path="src/Paramore.Brighter.Transformers.MassTransit/Paramore.Brighter.Transformers.MassTransit.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MongoGridFS/Paramore.Brighter.Transformers.MongoGridFS.csproj" />
   <Project Path="src/Paramore.Brighter/Paramore.Brighter.csproj" />
-  <Project Path="src/Paramore.Brighter.Testing/Paramore.Brighter.Testing.csproj" />
 </Solution>

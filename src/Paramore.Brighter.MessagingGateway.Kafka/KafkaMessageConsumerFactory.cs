@@ -31,16 +31,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
+        private IAmAMessageScheduler? _scheduler;
+
+        /// <summary>
+        /// Gets or sets the message scheduler for delayed requeue support.
+        /// Can be set after construction to allow channel factories to forward the scheduler from DI.
+        /// </summary>
+        public IAmAMessageScheduler? Scheduler
+        {
+            get => _scheduler;
+            set => _scheduler = value;
+        }
 
         /// <summary>
         /// Initializes a factory with the <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to a Kafka Broker
         /// </summary>
         /// <param name="configuration">The <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to the Broker</param>
+        /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
         public KafkaMessageConsumerFactory(
-            KafkaMessagingGatewayConfiguration configuration
+            KafkaMessagingGatewayConfiguration configuration,
+            IAmAMessageScheduler? scheduler = null
             )
         {
             _configuration = configuration;
+            _scheduler = scheduler;
         }
 
         /// <summary>
@@ -52,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             KafkaSubscription? kafkaSubscription = subscription as KafkaSubscription;  
             if (kafkaSubscription == null)
-                throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
+                throw new ConfigurationException("We expect a KafkaSubscription or KafkaSubscription<T> as a parameter");
             
             // Extract DLQ and invalid message routing keys if subscription supports them
             RoutingKey? deadLetterRoutingKey = null;
@@ -87,7 +101,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 configHook: kafkaSubscription.ConfigHook,
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
-                timeProvider: kafkaSubscription.TimeProvider
+                timeProvider: kafkaSubscription.TimeProvider,
+                scheduler: _scheduler
                 );
         }
 

@@ -35,7 +35,6 @@ using Paramore.Brighter.Policies.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.Timeout
 {
-    [Trait("Fragile", "CI")]
     public class TimeoutHandlerFailsCheckTests
     {
         private readonly CommandProcessor _commandProcessor;

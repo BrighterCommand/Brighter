@@ -1,9 +1,9 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2020 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +12,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -26,10 +26,22 @@ using System;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class MsSqlSubscription : Subscription
+    public class MsSqlSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
     {
         /// <inheritdoc />
         public override Type ChannelFactoryType => typeof(ChannelFactory);
+
+        /// <summary>
+        /// The routing key for the dead letter channel. When set, rejected messages with
+        /// <see cref="RejectionReason.DeliveryError"/> will be forwarded to this channel.
+        /// </summary>
+        public RoutingKey? DeadLetterRoutingKey { get; set; }
+
+        /// <summary>
+        /// The routing key for the invalid message channel. When set, rejected messages with
+        /// <see cref="RejectionReason.Unacceptable"/> will be forwarded to this channel.
+        /// </summary>
+        public RoutingKey? InvalidMessageRoutingKey { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -50,6 +62,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter channel</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message channel</param>
         public MsSqlSubscription(SubscriptionName subscriptionName,
             ChannelName channelName,
             RoutingKey routingKey,
@@ -65,11 +79,16 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
-            TimeSpan? channelFailureDelay = null)
+            TimeSpan? channelFailureDelay = null,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
             : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
                 noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit,
                 messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
-        { }
+        {
+            DeadLetterRoutingKey = deadLetterRoutingKey;
+            InvalidMessageRoutingKey = invalidMessageRoutingKey;
+        }
     }
 
     public class MsSqlSubscription<T> : MsSqlSubscription where T : IRequest
@@ -92,6 +111,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter channel</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message channel</param>
         public MsSqlSubscription(SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
@@ -106,26 +127,30 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
-            TimeSpan? channelFailureDelay = null)
+            TimeSpan? channelFailureDelay = null,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
             : base(
-                subscriptionName ?? new SubscriptionName(typeof(T).FullName!), 
-                channelName ?? new ChannelName(typeof(T).FullName!), 
-                routingKey ?? new RoutingKey(typeof(T).FullName!), 
-                typeof(T), 
-                getRequestType, 
-                bufferSize, 
+                subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
+                channelName ?? new ChannelName(typeof(T).FullName!),
+                routingKey ?? new RoutingKey(typeof(T).FullName!),
+                typeof(T),
+                getRequestType,
+                bufferSize,
                 noOfPerformers,
-                timeOut, 
-                requeueCount, 
-                requeueDelay, 
-                unacceptableMessageLimit, 
-                messagePumpType, 
-                channelFactory, 
-                makeChannels, 
-                emptyChannelDelay, 
-                channelFailureDelay)
+                timeOut,
+                requeueCount,
+                requeueDelay,
+                unacceptableMessageLimit,
+                messagePumpType,
+                channelFactory,
+                makeChannels,
+                emptyChannelDelay,
+                channelFailureDelay,
+                deadLetterRoutingKey,
+                invalidMessageRoutingKey)
         {
         }
-       
+
     }
 }

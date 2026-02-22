@@ -14,7 +14,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Trait("Fragile", "CI")]
      public class ControlBusSenderPostMessageAsyncTests : IDisposable
     {
         private readonly RoutingKey _routingKey = new("MyCommand");

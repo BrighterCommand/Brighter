@@ -29,6 +29,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
@@ -84,6 +85,9 @@ namespace GreetingsReceiverConsole
                         options.Subscriptions = subscriptions;
                         options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     })
+                    // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+                    // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+                    .UseScheduler(new InMemorySchedulerFactory())
                     .AutoFromAssemblies();
 
                     

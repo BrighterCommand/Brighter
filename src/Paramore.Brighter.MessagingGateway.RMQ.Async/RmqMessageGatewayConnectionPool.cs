@@ -66,28 +66,23 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     {
         var connectionId = GetConnectionId(connectionFactory);
 
-        var connectionFound = s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection);
-
-        if (connectionFound && pooledConnection!.Connection.IsOpen)
-            return pooledConnection.Connection;
-
         await s_lock.WaitAsync(cancellationToken);
-        
+
         try
         {
-            connectionFound = s_connectionPool.TryGetValue(connectionId, out pooledConnection);
+            var connectionFound = s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection);
 
             if (connectionFound == false || pooledConnection!.Connection.IsOpen == false)
             {
                 pooledConnection = await CreateConnectionAsync(connectionFactory, cancellationToken);
             }
+
+            return pooledConnection.Connection;
         }
         finally
         {
             s_lock.Release();
         }
-
-        return pooledConnection.Connection;
     }
 
       public async Task ResetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>OpenTelemetry integration for Paramore.Brighter Command Processor. Provides a single-call extension to configure distributed tracing and metrics instrumentation.</Description>
+    <Authors>Ian Cooper</Authors>
+    <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>OpenTelemetry;Observability;Tracing;Metrics;Command Processor;Brighter</PackageTags>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+  </ItemGroup>
+
+</Project>

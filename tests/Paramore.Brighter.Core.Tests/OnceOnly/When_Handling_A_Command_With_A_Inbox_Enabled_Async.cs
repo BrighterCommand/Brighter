@@ -12,7 +12,6 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
-    [Trait("Fragile", "CI")]
     public class CommandProcessorUsingInboxAsyncTests
     {
         private readonly MyCommand _command;

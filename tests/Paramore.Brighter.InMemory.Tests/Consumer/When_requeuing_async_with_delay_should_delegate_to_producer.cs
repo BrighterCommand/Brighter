@@ -34,7 +34,7 @@ namespace Paramore.Brighter.InMemory.Tests.Consumer;
 /// Tests that InMemoryMessageConsumer.RequeueAsync with delay delegates to producer's SendWithDelayAsync,
 /// which enables the use of a configured async scheduler for delayed requeue.
 /// </summary>
-public class When_requeuing_async_with_delay_should_delegate_to_producer
+public class AsyncInMemoryConsumerRequeueWithDelayTests
 {
     private readonly InternalBus _bus;
     private readonly FakeTimeProvider _timeProvider;
@@ -44,7 +44,7 @@ public class When_requeuing_async_with_delay_should_delegate_to_producer
     private readonly Message _message;
     private readonly TimeSpan _delay;
 
-    public When_requeuing_async_with_delay_should_delegate_to_producer()
+    public AsyncInMemoryConsumerRequeueWithDelayTests()
     {
         // Arrange
         _bus = new InternalBus();

@@ -7,8 +7,20 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// Represents a RocketMQ subscription configuration for Brighter integration.
 /// Implements RocketMQ's consumer group model and message visibility controls.
 /// </summary>
-public class RocketSubscription : Subscription
+public class RocketSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
+    /// <summary>
+    /// Gets or sets the routing key for the dead letter queue topic.
+    /// When set, rejected messages with <see cref="RejectionReason.DeliveryError"/> are forwarded to this topic.
+    /// </summary>
+    public RoutingKey? DeadLetterRoutingKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the routing key for the invalid message topic.
+    /// When set, rejected messages with <see cref="RejectionReason.Unacceptable"/> are forwarded to this topic.
+    /// </summary>
+    public RoutingKey? InvalidMessageRoutingKey { get; set; }
+
     /// <summary>
     /// Gets the consumer group name for RocketMQ message consumption.
     /// Identifies a group of consumers working as a cluster for parallel processing.
@@ -60,6 +72,8 @@ public class RocketSubscription : Subscription
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     /// <param name="receiveMessageTimeout">How long it will wait to receive a message.</param>
     /// <param name="invisibilityTimeout">How long the RocketMQ should wait before retry.</param>
+    /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue topic. When set, rejected messages are forwarded to this topic.</param>
+    /// <param name="invalidMessageRoutingKey">The routing key for the invalid message topic. When set, unacceptable messages are forwarded to this topic.</param>
     public RocketSubscription(SubscriptionName subscriptionName,
         ChannelName channelName,
         RoutingKey routingKey,
@@ -79,7 +93,9 @@ public class RocketSubscription : Subscription
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null,
         TimeSpan? receiveMessageTimeout = null,
-        TimeSpan? invisibilityTimeout = null) : base(subscriptionName, channelName, routingKey, requestType, getRequestType,
+        TimeSpan? invisibilityTimeout = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null) : base(subscriptionName, channelName, routingKey, requestType, getRequestType,
         bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
         makeChannels, emptyChannelDelay, channelFailureDelay)
     {
@@ -87,6 +103,8 @@ public class RocketSubscription : Subscription
         ReceiveMessageTimeout = receiveMessageTimeout ?? TimeSpan.FromMinutes(1);
         InvisibilityTimeout = invisibilityTimeout ?? TimeSpan.FromSeconds(30);
         Filter = filter ?? new FilterExpression("*");
+        DeadLetterRoutingKey = deadLetterRoutingKey;
+        InvalidMessageRoutingKey = invalidMessageRoutingKey;
     }
 }
 
@@ -120,6 +138,8 @@ public class RocketMqSubscription<T> : RocketSubscription
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
     /// <param name="receiveMessageTimeout">How long it will wait to receive a message.</param>
     /// <param name="invisibilityTimeout">How long the RocketMQ should wait before retry.</param>
+    /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue topic. When set, rejected messages are forwarded to this topic.</param>
+    /// <param name="invalidMessageRoutingKey">The routing key for the invalid message topic. When set, unacceptable messages are forwarded to this topic.</param>
     public RocketMqSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey,
         Func<Message, Type>? getRequestType = null, string? consumerGroup = null, int bufferSize = 1, int noOfPerformers = 1,
         TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
@@ -127,10 +147,12 @@ public class RocketMqSubscription<T> : RocketSubscription
         IAmAChannelFactory? channelFactory = null, OnMissingChannel makeChannels = OnMissingChannel.Create,
         FilterExpression? filter = null, TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null, TimeSpan? receiveMessageTimeout = null,
-        TimeSpan? invisibilityTimeout = null) : base(subscriptionName, channelName, routingKey, typeof(T),  getRequestType,
+        TimeSpan? invisibilityTimeout = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null) : base(subscriptionName, channelName, routingKey, typeof(T),  getRequestType,
         consumerGroup, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit,
         messagePumpType, channelFactory, makeChannels, filter, emptyChannelDelay, channelFailureDelay, receiveMessageTimeout,
-        invisibilityTimeout)
+        invisibilityTimeout, deadLetterRoutingKey, invalidMessageRoutingKey)
     {
     }
 }

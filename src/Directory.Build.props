@@ -29,6 +29,7 @@
     <Version>10.0.0</Version>
     
     <!--  The .NET Version used in all projects -->
+    <BrighterNetStandardTargetFrameworks>netstandard2.0;</BrighterNetStandardTargetFrameworks>
     <BrighterTargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</BrighterTargetFrameworks>
     <BrighterFrameworkAndCoreTargetFrameworks>net462;net8.0;net9.0;net10.0</BrighterFrameworkAndCoreTargetFrameworks>
     <BrighterCoreTargetFrameworks>net8.0;net9.0;net10.0</BrighterCoreTargetFrameworks>

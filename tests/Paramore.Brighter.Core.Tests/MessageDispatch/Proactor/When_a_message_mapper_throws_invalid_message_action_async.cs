@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
@@ -31,9 +32,9 @@ public class MessageDispatchInvalidMessageActionAsyncTests
         );
 
         // Use a mapper that throws InvalidMessageAction to simulate deserialization failure
-        var mapperFactory = new SimpleMessageMapperFactory((r) => new MyInvalidMessageMapper());
-        var messageMapperRegistry = new MessageMapperRegistry(mapperFactory, null, null, null);
-        messageMapperRegistry.Register<MyRejectedEvent, MyInvalidMessageMapper>();
+        var mapperFactory = new SimpleMessageMapperFactoryAsync((r) => new MyInvalidMessageMapper());
+        var messageMapperRegistry = new MessageMapperRegistry(null, mapperFactory, null, null);
+        messageMapperRegistry.RegisterAsync<MyRejectedEvent, MyInvalidMessageMapper>();
 
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
         resiliencePipelineRegistry.AddBrighterDefault();
@@ -53,7 +54,7 @@ public class MessageDispatchInvalidMessageActionAsyncTests
             timeOut: TimeSpan.FromMilliseconds(1000),
             channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
             channelName: new ChannelName("myChannel"),
-            messagePumpType: MessagePumpType.Reactor,
+            messagePumpType: MessagePumpType.Proactor,
             routingKey: _routingKey
         );
 
@@ -62,7 +63,7 @@ public class MessageDispatchInvalidMessageActionAsyncTests
         _dispatcher = new Dispatcher(
             commandProcessor,
             new List<Subscription> { subscription },
-            messageMapperRegistry,
+            messageMapperRegistryAsync: messageMapperRegistry,
             requestContextFactory: new InMemoryRequestContextFactory()
         );
 
@@ -77,9 +78,17 @@ public class MessageDispatchInvalidMessageActionAsyncTests
     [Fact]
     public async Task When_a_message_mapper_throws_invalid_message_action()
     {
-        // Assert: The message should be removed from the source queue
+        // Wait for the message to be processed (moved to invalid message topic) before stopping
+        // Without this, End() can enqueue a QUIT message that the pump reads before the data message
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!_bus.Stream(_invalidMessageRoutingKey).Any() && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50);
+        }
+
         await _dispatcher.End();
 
+        // Assert: The message should be removed from the source queue
         Assert.Empty(_bus.Stream(_routingKey));
 
         // Assert: The message should appear in the invalid message channel

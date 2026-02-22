@@ -1,0 +1,159 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
+
+namespace Paramore.Brighter.MessagingGateway.MQTT
+{
+    /// <summary>
+    /// Represents a subscription to an MQTT topic with optional Brighter-managed dead letter queue support.
+    /// </summary>
+    public class MqttSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
+    {
+        /// <inheritdoc />
+        public override Type ChannelFactoryType => typeof(MqttMessageConsumerFactory);
+
+        /// <summary>
+        /// The routing key used for the Dead Letter Channel
+        /// </summary>
+        public RoutingKey? DeadLetterRoutingKey { get; set; }
+
+        /// <summary>
+        /// The routing key used for the Invalid Message Channel
+        /// </summary>
+        public RoutingKey? InvalidMessageRoutingKey { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MqttSubscription"/> class.
+        /// </summary>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="requestType">Type of the data.</param>
+        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="requestType"/> if null</param>
+        /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
+        /// <param name="noOfPerformers">The no of threads reading this channel.</param>
+        /// <param name="timeOut">The timeout</param>
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelay">Delay the delivery of a requeue message. 0 is no delay. Defaults to zero.</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling</param>
+        public MqttSubscription(SubscriptionName subscriptionName,
+            ChannelName channelName,
+            RoutingKey routingKey,
+            Type? requestType = null,
+            Func<Message, Type>? getRequestType = null,
+            int bufferSize = 1,
+            int noOfPerformers = 1,
+            TimeSpan? timeOut = null,
+            int requeueCount = -1,
+            TimeSpan? requeueDelay = null,
+            int unacceptableMessageLimit = 0,
+            MessagePumpType messagePumpType = MessagePumpType.Unknown,
+            IAmAChannelFactory? channelFactory = null,
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
+            : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
+                noOfPerformers, timeOut ?? TimeSpan.FromSeconds(1), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+        {
+            DeadLetterRoutingKey = deadLetterRoutingKey;
+            InvalidMessageRoutingKey = invalidMessageRoutingKey;
+        }
+    }
+
+    /// <summary>
+    /// A generic version of <see cref="MqttSubscription"/> that is strongly typed to a specific <see cref="IRequest"/> type.
+    /// </summary>
+    /// <typeparam name="T">The type of <see cref="IRequest"/> that this subscription handles.</typeparam>
+    public class MqttSubscription<T> : MqttSubscription where T : IRequest
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MqttSubscription{T}"/> class.
+        /// </summary>
+        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
+        /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
+        /// <param name="noOfPerformers">The no of threads reading this channel.</param>
+        /// <param name="timeOut">The timeout in milliseconds.</param>
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelay">The period to delay adding a requeue</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling</param>
+        public MqttSubscription(SubscriptionName? subscriptionName = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
+            Func<Message, Type>? getRequestType = null,
+            int bufferSize = 1,
+            int noOfPerformers = 1,
+            TimeSpan? timeOut = null,
+            int requeueCount = -1,
+            TimeSpan? requeueDelay = null,
+            int unacceptableMessageLimit = 0,
+            MessagePumpType messagePumpType = MessagePumpType.Proactor,
+            IAmAChannelFactory? channelFactory = null,
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
+            : base(
+                subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
+                channelName ?? new ChannelName(typeof(T).FullName!),
+                routingKey ?? new RoutingKey(typeof(T).FullName!),
+                typeof(T),
+                getRequestType,
+                bufferSize,
+                noOfPerformers,
+                timeOut,
+                requeueCount,
+                requeueDelay,
+                unacceptableMessageLimit,
+                messagePumpType,
+                channelFactory,
+                makeChannels,
+                emptyChannelDelay,
+                channelFailureDelay,
+                deadLetterRoutingKey,
+                invalidMessageRoutingKey)
+        {
+        }
+    }
+}

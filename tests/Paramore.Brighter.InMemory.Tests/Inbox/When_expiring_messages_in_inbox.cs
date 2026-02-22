@@ -8,7 +8,6 @@ using Xunit;
 namespace Paramore.Brighter.InMemory.Tests.Inbox
 {
     [Trait("Category", "InMemory")]
-    [Trait("Fragile", "CI")]
     public class InboxEntryTimeToLiveTests
     {
         [Fact]
@@ -75,10 +74,16 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             
             //expire these and allow another expiration to run
             timeProvider.Advance(TimeSpan.FromSeconds(5));
-            
+
             inbox.ClearExpiredMessages();
-            
-            await Task.Delay(500); //Give the sweep time to run
+
+            //Wait for background sweep to actually complete rather than using a fixed delay
+            var timeout = TimeSpan.FromSeconds(5);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (inbox.EntryCount > 0 && sw.Elapsed < timeout)
+            {
+                await Task.Delay(50);
+            }
 
             //add live entries
             var lateCommands = new[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};

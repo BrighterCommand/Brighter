@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
@@ -77,7 +78,14 @@ public class MessageDispatchInvalidMessageActionTests
     [Fact]
     public async Task When_a_message_mapper_throws_invalid_message_action()
     {
-        // Assert: The message should be removed from the source queue
+        // Wait for the message to be processed (moved to invalid message topic) before stopping
+        // Without this, End() can enqueue a QUIT message that the pump reads before the data message
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!_bus.Stream(_invalidMessageRoutingKey).Any() && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50);
+        }
+
         await _dispatcher.End();
 
         Assert.Empty(_bus.Stream(_routingKey));

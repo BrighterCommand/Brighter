@@ -7,7 +7,6 @@ using Xunit;
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
 
 [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
-[Trait("Fragile", "CI")]
 [Trait("Category", "Redis")]
 public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
 {
@@ -30,7 +29,7 @@ public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
 
     public RedisMessageProducerSendTests(RedisFixture redisFixture)
     {
-        _topic = "test";
+        _topic = redisFixture.Topic;
         _messageId = Guid.NewGuid().ToString();
         _timestamp = DateTime.UtcNow;
         _correlationId = Guid.NewGuid().ToString();
@@ -71,6 +70,9 @@ public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
     [Fact]
     public void When_posting_a_message_via_the_messaging_gateway()
     {
+        //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
+        _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000));
+
         _redisFixture.MessageProducer.Send(_message);
         var sentMessage = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
         _redisFixture.MessageConsumer.Acknowledge(sentMessage);

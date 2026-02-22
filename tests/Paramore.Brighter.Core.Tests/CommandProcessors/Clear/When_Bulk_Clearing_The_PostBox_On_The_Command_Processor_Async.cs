@@ -14,7 +14,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 {
-    [Trait("Fragile", "CI")]
     public class CommandProcessorPostBoxBulkClearAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;

@@ -6,6 +6,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
+[Collection("RMQ")]
 public class RmqMessageProducerSendPersistentMessageTests : IDisposable
 {
     private IAmAMessageProducerSync _messageProducer;
