@@ -315,7 +315,7 @@ namespace Paramore.Brighter.ServiceActivator
                     span?.SetStatus(ActivityStatusCode.Error, $"Don't Ack Thrown. Not acknowledging message {message.Id}");
                     Channel.Nack(message);
                     IncrementUnacceptableMessageCount();
-                    Task.Delay(DontAckDelay).GetAwaiter().GetResult();
+                    Thread.Sleep(DontAckDelay);
                     continue;
                 }
                 catch (RejectMessageAction rejectMessageAction)
