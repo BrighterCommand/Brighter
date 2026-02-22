@@ -258,9 +258,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         // Use producer delegation when scheduler is configured
         if (_scheduler != null)
         {
-            _lockedMessages.TryRemove(message.Id, out _);
             try
             {
+                _lockedMessages.TryRemove(message.Id, out _);
                 EnsureProducer(message.Header.Topic);
                 _producer!.SendWithDelay(message, timeOut);
                 return true;
@@ -272,7 +272,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             }
         }
 
-        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
+        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration.");
 
     }
 
@@ -290,7 +290,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        
+
         timeOut ??= TimeSpan.Zero;
 
         if (timeOut <= TimeSpan.Zero)
@@ -299,9 +299,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         // Use producer delegation when scheduler is configured
         if (_scheduler != null)
         {
-            _lockedMessages.TryRemove(message.Id, out _);
             try
             {
+                _lockedMessages.TryRemove(message.Id, out _);
                 EnsureProducer(message.Header.Topic);
                 await _producer!.SendWithDelayAsync(message, timeOut, cancellationToken);
                 return true;
