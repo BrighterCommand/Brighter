@@ -52,6 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly RoutingKey? _invalidMessageRoutingKey;
         private readonly OnMissingChannel _makeChannels;
         private readonly bool _rawMessageDelivery;
+        private readonly SqsAttributes _queueAttributes;
         private readonly Message _noopMessage = new Message();
         private readonly Lazy<SqsMessageProducer?>? _deadLetterProducer;
         private readonly Lazy<SqsMessageProducer?>? _invalidMessageProducer;
@@ -68,6 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="makeChannels">Should we create channels if they are missing?</param>
         /// <param name="isQueueUrl">Is the queue name a queue url?</param>
         /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
+        /// <param name="queueAttributes">The <see cref="SqsAttributes"/> for the queue (used by DLQ producers for FIFO support)</param>
         public SqsMessageConsumer(
             AWSMessagingGatewayConnection awsConnection,
             string? queueName,
@@ -76,7 +78,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             RoutingKey? invalidMessageRoutingKey = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool isQueueUrl = false,
-            bool rawMessageDelivery = true)
+            bool rawMessageDelivery = true,
+            SqsAttributes? queueAttributes = null)
         {
             if (string.IsNullOrEmpty(queueName))
                 throw new ConfigurationException("QueueName is mandatory");
@@ -91,6 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
             _makeChannels = makeChannels;
             _rawMessageDelivery = rawMessageDelivery;
+            _queueAttributes = queueAttributes ?? SqsAttributes.Empty;
 
             if (_deadLetterRoutingKey != null)
             {
@@ -392,6 +396,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             var publication = new SqsPublication(
                 channelName: new ChannelName(_deadLetterRoutingKey!.Value),
+                queueAttributes: _queueAttributes,
                 makeChannels: _makeChannels);
 
             try
@@ -413,6 +418,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             var publication = new SqsPublication(
                 channelName: new ChannelName(_invalidMessageRoutingKey!.Value),
+                queueAttributes: _queueAttributes,
                 makeChannels: _makeChannels);
 
             try
