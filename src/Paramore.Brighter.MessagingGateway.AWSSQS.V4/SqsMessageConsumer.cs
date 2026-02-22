@@ -95,14 +95,17 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         _rawMessageDelivery = rawMessageDelivery;
         _queueAttributes = queueAttributes ?? SqsAttributes.Empty;
 
+        // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
+        // thread-safety mode is needed. None does not cache exceptions, allowing the factory
+        // to retry on the next .Value access after a transient failure.
         if (_deadLetterRoutingKey != null)
         {
-            _deadLetterProducer = new Lazy<SqsMessageProducer?>(CreateDeadLetterProducer);
+            _deadLetterProducer = new Lazy<SqsMessageProducer?>(CreateDeadLetterProducer, LazyThreadSafetyMode.None);
         }
 
         if (_invalidMessageRoutingKey != null)
         {
-            _invalidMessageProducer = new Lazy<SqsMessageProducer?>(CreateInvalidMessageProducer);
+            _invalidMessageProducer = new Lazy<SqsMessageProducer?>(CreateInvalidMessageProducer, LazyThreadSafetyMode.None);
         }
     }
 

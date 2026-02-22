@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "ask": [],
     "deny": [
       "Read(./.env*)",
       "Read(./secrets/**)",
@@ -12,7 +11,8 @@
       "Bash(curl:*)",
       "Bash(wget:*)",
       "Bash(ssh:*)"
-    ]
+    ],
+    "ask": []
   },
   "hooks": {
     "PostToolUse": [
@@ -27,5 +27,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "commit-commands@claude-plugins-official": true
   }
 }

@@ -80,10 +80,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
 
+            // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
+            // thread-safety mode is needed. None does not cache exceptions, allowing the factory
+            // to retry on the next .Value access after a transient failure.
             if (_deadLetterRoutingKey != null)
-                _deadLetterProducer = new Lazy<RedisMessageProducer?>(CreateDeadLetterProducer);
+                _deadLetterProducer = new Lazy<RedisMessageProducer?>(CreateDeadLetterProducer, LazyThreadSafetyMode.None);
             if (_invalidMessageRoutingKey != null)
-                _invalidMessageProducer = new Lazy<RedisMessageProducer?>(CreateInvalidMessageProducer);
+                _invalidMessageProducer = new Lazy<RedisMessageProducer?>(CreateInvalidMessageProducer, LazyThreadSafetyMode.None);
         }
 
         /// <summary>

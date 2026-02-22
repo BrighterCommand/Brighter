@@ -30,10 +30,13 @@ public partial class PostgresMessageConsumer(
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
     private readonly RoutingKey? _invalidMessageRoutingKey = invalidMessageRoutingKey;
+    // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
+    // thread-safety mode is needed. None does not cache exceptions, allowing the factory
+    // to retry on the next .Value access after a transient failure.
     private readonly Lazy<PostgresMessageProducer?>? _deadLetterProducer =
-        deadLetterRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, deadLetterRoutingKey)) : null;
+        deadLetterRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, deadLetterRoutingKey), LazyThreadSafetyMode.None) : null;
     private readonly Lazy<PostgresMessageProducer?>? _invalidMessageProducer =
-        invalidMessageRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, invalidMessageRoutingKey)) : null;
+        invalidMessageRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, invalidMessageRoutingKey), LazyThreadSafetyMode.None) : null;
 
     private string SchemaName => subscription.SchemaName ?? _configuration.SchemaName ?? "public";
     private string TableName => subscription.QueueStoreTable ?? _configuration.QueueStoreTable;

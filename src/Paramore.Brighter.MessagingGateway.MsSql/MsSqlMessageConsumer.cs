@@ -38,10 +38,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
 
+            // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
+            // thread-safety mode is needed. None does not cache exceptions, allowing the factory
+            // to retry on the next .Value access after a transient failure.
             if (_deadLetterRoutingKey != null)
-                _deadLetterProducer = new Lazy<MsSqlMessageProducer?>(CreateDeadLetterProducer);
+                _deadLetterProducer = new Lazy<MsSqlMessageProducer?>(CreateDeadLetterProducer, LazyThreadSafetyMode.None);
             if (_invalidMessageRoutingKey != null)
-                _invalidMessageProducer = new Lazy<MsSqlMessageProducer?>(CreateInvalidMessageProducer);
+                _invalidMessageProducer = new Lazy<MsSqlMessageProducer?>(CreateInvalidMessageProducer, LazyThreadSafetyMode.None);
         }
 
         public MsSqlMessageConsumer(

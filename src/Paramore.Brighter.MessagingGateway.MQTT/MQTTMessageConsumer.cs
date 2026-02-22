@@ -74,10 +74,13 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             ArgumentNullException.ThrowIfNull(configuration.TopicPrefix, nameof(configuration.TopicPrefix));
             _topic = $"{configuration.TopicPrefix}/#";
 
+            // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
+            // thread-safety mode is needed. None does not cache exceptions, allowing the factory
+            // to retry on the next .Value access after a transient failure.
             if (_deadLetterRoutingKey != null)
-                _deadLetterProducer = new Lazy<MqttMessageProducer?>(CreateDeadLetterProducer);
+                _deadLetterProducer = new Lazy<MqttMessageProducer?>(CreateDeadLetterProducer, LazyThreadSafetyMode.None);
             if (_invalidMessageRoutingKey != null)
-                _invalidMessageProducer = new Lazy<MqttMessageProducer?>(CreateInvalidMessageProducer);
+                _invalidMessageProducer = new Lazy<MqttMessageProducer?>(CreateInvalidMessageProducer, LazyThreadSafetyMode.None);
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
                .WithTcpServer(configuration.Hostname)

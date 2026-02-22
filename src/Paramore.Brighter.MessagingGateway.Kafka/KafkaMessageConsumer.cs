@@ -140,16 +140,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
+            // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
+            // thread-safety mode is needed. None does not cache exceptions, allowing the factory
+            // to retry on the next .Value access after a transient failure.
             if (_deadLetterRoutingKey != null)
             {
                 _deadLetterProducer = new Lazy<KafkaMessageProducer?>(
-                    () => CreateProducer(_deadLetterRoutingKey, Log.ErrorCreatingDLQ));
+                    () => CreateProducer(_deadLetterRoutingKey, Log.ErrorCreatingDLQ), LazyThreadSafetyMode.None);
             }
 
             if (_invalidMessageRoutingKey != null)
             {
                 _invalidMessageProducer = new Lazy<KafkaMessageProducer?>(
-                    () => CreateProducer(_invalidMessageRoutingKey, Log.ErrorCreatingInvalidMessage));
+                    () => CreateProducer(_invalidMessageRoutingKey, Log.ErrorCreatingInvalidMessage), LazyThreadSafetyMode.None);
             }
             
             sessionTimeout ??= TimeSpan.FromSeconds(10);
