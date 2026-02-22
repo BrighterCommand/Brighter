@@ -524,7 +524,7 @@ public partial class PostgresMessageConsumer(
 
         message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
         if (!string.IsNullOrEmpty(reason.Description))
-            message.Header.Bag["rejectionMessage"] = reason.Description!;
+            message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
     }
 
     private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(

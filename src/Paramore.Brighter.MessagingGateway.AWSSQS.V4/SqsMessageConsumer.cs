@@ -435,7 +435,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
         if (!string.IsNullOrEmpty(reason.Description))
         {
-            message.Header.Bag["rejectionMessage"] = reason.Description!;
+            message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
         }
     }
 

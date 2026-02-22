@@ -374,7 +374,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
-                message.Header.Bag["rejectionMessage"] = reason.Description!;
+                message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
         }
 
         private (RoutingKey? routingKey, bool hasProducer, bool isFallingBackToDlq) DetermineRejectionRoute(

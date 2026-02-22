@@ -442,7 +442,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
             {
-                message.Header.Bag["rejectionMessage"] = reason.Description!;
+                message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
             }
         }
 

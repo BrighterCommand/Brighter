@@ -988,7 +988,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             message.Header.Bag[HeaderNames.REJECTION_REASON] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
             {
-                message.Header.Bag[HeaderNames.REJECTION_MESSAGE] = reason.Description!;
+                message.Header.Bag[HeaderNames.REJECTION_MESSAGE] = reason.Description ?? string.Empty;
             }
         }
 
