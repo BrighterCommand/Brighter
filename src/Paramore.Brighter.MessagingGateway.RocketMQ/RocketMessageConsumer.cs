@@ -36,6 +36,8 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     private readonly RocketMessagingGatewayConnection? _connection = connection;
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
     private readonly RoutingKey? _invalidMessageRoutingKey = invalidMessageRoutingKey;
+    // Thread-safe: message pumps are single-threaded per consumer, so null-coalescing
+    // assignment in GetProducerForRouteAsync() cannot race.
     private RocketMqMessageProducer? _deadLetterProducer;
     private RocketMqMessageProducer? _invalidMessageProducer;
 
@@ -153,17 +155,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         }
         finally
         {
-            try
-            {
-                await AckSourceMessageAsync(view);
-            }
-            catch (Exception ackEx)
-            {
-                // Ack failure in finally must not mask the original exception.
-                // The message will reappear after the invisibility timeout — this is the safety net.
-                Log.ErrorAckingSourceMessage(s_logger, ackEx);
-                throw;
-            }
+            await AckSourceMessageSafeAsync(view);
         }
 
         return true;
@@ -186,9 +178,23 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default) =>
         Task.FromResult(Requeue(message, delay));
 
-    private async Task AckSourceMessageAsync(MessageView view)
+    /// <summary>
+    /// Acknowledges the source message, returning <c>false</c> on failure so that an ACK
+    /// exception in a <c>finally</c> block cannot mask the DLQ send result.
+    /// On failure the message will reappear after the invisibility timeout as a safety net.
+    /// </summary>
+    private async Task<bool> AckSourceMessageSafeAsync(MessageView view)
     {
-        await consumer.Ack(view);
+        try
+        {
+            await consumer.Ack(view);
+            return true;
+        }
+        catch (Exception ackEx)
+        {
+            Log.ErrorAckingSourceMessage(s_logger, ackEx);
+            return false;
+        }
     }
 
     private async Task<RocketMqMessageProducer?> GetProducerForRouteAsync(RoutingKey routingKey)

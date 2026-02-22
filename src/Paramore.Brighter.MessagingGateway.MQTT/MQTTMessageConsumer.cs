@@ -200,22 +200,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <returns>True if the rejection was handled successfully.</returns>
         public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
-            var producer = ResolveRejectionProducer(message, reason);
-            if (producer == null) return true;
-
-            var routingKey = GetProducerRoutingKey(producer);
+            var (producer, routingKey) = ResolveRejectionProducer(message, reason);
+            if (producer == null || routingKey == null) return true;
 
             try
             {
                 producer.Send(message);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id, routingKey);
+                Log.MessageSentToRejectionChannel(s_logger, message.Id, routingKey.Value);
             }
             catch (Exception ex)
             {
                 // DLQ send failed — MQTT fire-and-forget model means the source message
                 // only exists in memory and cannot be requeued. Return true to prevent
                 // requeue loops (per ADR 0034).
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, routingKey);
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, routingKey.Value);
                 return true;
             }
 
@@ -231,34 +229,32 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <returns>True if the rejection was handled successfully.</returns>
         public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
         {
-            var producer = ResolveRejectionProducer(message, reason);
-            if (producer == null) return true;
-
-            var routingKey = GetProducerRoutingKey(producer);
+            var (producer, routingKey) = ResolveRejectionProducer(message, reason);
+            if (producer == null || routingKey == null) return true;
 
             try
             {
                 await producer.SendAsync(message, cancellationToken);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id, routingKey);
+                Log.MessageSentToRejectionChannel(s_logger, message.Id, routingKey.Value);
             }
             catch (Exception ex)
             {
                 // DLQ send failed — MQTT fire-and-forget model means the source message
                 // only exists in memory and cannot be requeued. Return true to prevent
                 // requeue loops (per ADR 0034).
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, routingKey);
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, routingKey.Value);
                 return true;
             }
 
             return true;
         }
 
-        private MqttMessageProducer? ResolveRejectionProducer(Message message, MessageRejectionReason? reason)
+        private (MqttMessageProducer? producer, RoutingKey? routingKey) ResolveRejectionProducer(Message message, MessageRejectionReason? reason)
         {
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 Log.NoChannelsConfiguredForRejection(s_logger, message.Id);
-                return null;
+                return (null, null);
             }
 
             RefreshMetadata(message, reason);
@@ -271,24 +267,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             if (!hasProducer)
             {
                 Log.NoChannelsConfiguredForRejection(s_logger, message.Id);
-                return null;
+                return (null, null);
             }
 
             var producer = routingKey == _invalidMessageRoutingKey
                 ? _invalidMessageProducer?.Value
                 : _deadLetterProducer?.Value;
 
-            if (producer == null)
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id);
-
-            return producer;
-        }
-
-        private string GetProducerRoutingKey(MqttMessageProducer producer)
-        {
-            return producer == _invalidMessageProducer?.Value
-                ? _invalidMessageRoutingKey!.Value
-                : _deadLetterRoutingKey!.Value;
+            return (producer, routingKey);
         }
 
         /// <summary>
@@ -350,6 +336,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     Username = _configuration.Username,
                     Password = _configuration.Password,
                     CleanSession = _configuration.CleanSession,
+                    ClientID = string.IsNullOrEmpty(_configuration.ClientID) ? null : $"{_configuration.ClientID}-dlq",
                     TopicPrefix = _deadLetterRoutingKey.Value
                 };
                 var publisher = new MqttMessagePublisher(config);
@@ -375,6 +362,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     Username = _configuration.Username,
                     Password = _configuration.Password,
                     CleanSession = _configuration.CleanSession,
+                    ClientID = string.IsNullOrEmpty(_configuration.ClientID) ? null : $"{_configuration.ClientID}-invalid",
                     TopicPrefix = _invalidMessageRoutingKey.Value
                 };
                 var publisher = new MqttMessagePublisher(config);

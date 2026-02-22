@@ -128,6 +128,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </remarks> 
         public void Dispose()
         {
+            if (_deadLetterProducer?.IsValueCreated == true)
+                (_deadLetterProducer.Value as IDisposable)?.Dispose();
+            if (_invalidMessageProducer?.IsValueCreated == true)
+                (_invalidMessageProducer.Value as IDisposable)?.Dispose();
+
             DisposePool();
             GC.SuppressFinalize(this);
         }
@@ -135,8 +140,18 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <inheritdoc cref="IAsyncDisposable"/> 
         public async ValueTask DisposeAsync()
         {
+            if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value is IAsyncDisposable deadLetterAsync)
+                await deadLetterAsync.DisposeAsync();
+            else if (_deadLetterProducer?.IsValueCreated == true)
+                (_deadLetterProducer.Value as IDisposable)?.Dispose();
+
+            if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value is IAsyncDisposable invalidAsync)
+                await invalidAsync.DisposeAsync();
+            else if (_invalidMessageProducer?.IsValueCreated == true)
+                (_invalidMessageProducer.Value as IDisposable)?.Dispose();
+
             await DisposePoolAsync().ConfigureAwait(false);
-            GC.SuppressFinalize(this); 
+            GC.SuppressFinalize(this);
         }
         
         /// <summary>

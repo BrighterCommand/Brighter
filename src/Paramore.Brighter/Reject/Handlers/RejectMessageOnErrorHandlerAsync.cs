@@ -25,7 +25,9 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Actions;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Reject.Handlers;
 
@@ -39,9 +41,11 @@ namespace Paramore.Brighter.Reject.Handlers;
 /// This handler should be positioned at the outermost layer of the pipeline (lowest step number)
 /// to act as a backstop for any exceptions that escape inner handlers.
 /// </remarks>
-public class RejectMessageOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>
+public partial class RejectMessageOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>
     where TRequest : class, IRequest
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RejectMessageOnErrorHandlerAsync<TRequest>>();
+
     /// <summary>
     /// Handles the request asynchronously by passing it to the next handler in the pipeline.
     /// If any exception occurs in the pipeline, it is caught and converted to a <see cref="RejectMessageAction"/>.
@@ -60,7 +64,14 @@ public class RejectMessageOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TR
         }
         catch (Exception ex)
         {
+            Log.UnhandledExceptionRejectingMessage(s_logger, ex, typeof(TRequest).Name, ex.Message);
             throw new RejectMessageAction(ex.Message, ex);
         }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(EventId = 0, Level = LogLevel.Error, Message = "Unhandled exception caught by backstop error handler, rejecting message for request {RequestType}: {ExceptionMessage}")]
+        public static partial void UnhandledExceptionRejectingMessage(ILogger logger, Exception ex, string requestType, string exceptionMessage);
     }
 }
