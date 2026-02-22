@@ -366,16 +366,19 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         GC.SuppressFinalize(this);
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        if (_deadLetterProducer?.IsValueCreated == true)
+        if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value is IAsyncDisposable deadLetterAsync)
+            await deadLetterAsync.DisposeAsync();
+        else if (_deadLetterProducer?.IsValueCreated == true)
             _deadLetterProducer.Value?.Dispose();
 
-        if (_invalidMessageProducer?.IsValueCreated == true)
+        if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value is IAsyncDisposable invalidAsync)
+            await invalidAsync.DisposeAsync();
+        else if (_invalidMessageProducer?.IsValueCreated == true)
             _invalidMessageProducer.Value?.Dispose();
 
         GC.SuppressFinalize(this);
-        return new ValueTask(Task.CompletedTask);
     }
 
     private SqsMessageProducer? CreateDeadLetterProducer()
