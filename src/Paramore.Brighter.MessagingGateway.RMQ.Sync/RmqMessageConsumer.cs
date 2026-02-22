@@ -322,6 +322,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
                 // Step 1: Publish the message back to the queue first.
                 // This ordering ensures at-least-once delivery: if publish fails, the original remains unacked.
+                // timeout is guaranteed non-null here due to the ??= TimeSpan.Zero coalescing at the top of this method
                 if (DelaySupported || timeout <= TimeSpan.Zero)
                 {
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection);
