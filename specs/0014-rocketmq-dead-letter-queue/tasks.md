@@ -25,7 +25,7 @@ RocketMQ is a **broker-based** transport (not relational). Producer creation is 
 
 ## Tasks
 
-- [ ] **TEST + IMPLEMENT: RocketSubscription exposes DLQ and invalid message routing keys**
+- [x] **TEST + IMPLEMENT: RocketSubscription exposes DLQ and invalid message routing keys**
   - **USE COMMAND**: `/test-first when creating RocketMQ subscription with dead letter and invalid message routing keys should expose properties`
   - Test location: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/`
   - Test file: `When_creating_rocket_subscription_with_dlq_routing_keys_should_expose_properties.cs`
@@ -41,7 +41,7 @@ RocketMQ is a **broker-based** transport (not relational). Producer creation is 
     - Add `RoutingKey? DeadLetterRoutingKey { get; set; }` and `RoutingKey? InvalidMessageRoutingKey { get; set; }` properties
     - Add optional constructor parameters `deadLetterRoutingKey` and `invalidMessageRoutingKey` to both `RocketSubscription` and `RocketMqSubscription<T>`
 
-- [ ] **TEST + IMPLEMENT: Consumer factory passes DLQ routing keys and connection from subscription to consumer**
+- [x] **TEST + IMPLEMENT: Consumer factory passes DLQ routing keys and connection from subscription to consumer**
   - **USE COMMAND**: `/test-first when creating RocketMQ consumer from subscription with DLQ routing keys should pass them to consumer`
   - Test location: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/`
   - Test file: `When_creating_rocket_consumer_with_dlq_subscription_should_pass_routing_keys.cs`
@@ -55,7 +55,7 @@ RocketMQ is a **broker-based** transport (not relational). Producer creation is 
     - Pass extracted keys and the `RocketMessagingGatewayConnection` to `RocketMessageConsumer` constructor
     - Add new constructor parameters to `RocketMessageConsumer`: `RocketMessagingGatewayConnection? connection = null`, `RoutingKey? deadLetterRoutingKey = null`, `RoutingKey? invalidMessageRoutingKey = null`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends it to the DLQ channel and Acks the source**
+- [x] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends it to the DLQ channel and Acks the source**
   - **USE COMMAND**: `/test-first when rejecting RocketMQ message with delivery error should send to dead letter queue`
   - Test location: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/`
   - Test file: `When_rejecting_message_with_delivery_error_should_send_to_dlq.cs`
@@ -79,7 +79,7 @@ RocketMQ is a **broker-based** transport (not relational). Producer creation is 
     - In `Reject()`: extract `MessageView` first, enrich metadata, get lazy producer, send to DLQ, then `Ack` source in `finally` block, return `true`
     - In `RejectAsync()`: fully async path using `SendAsync` and `AckSourceMessageAsync`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with Unacceptable reason sends it to the invalid message channel**
+- [x] **TEST + IMPLEMENT: Rejecting a message with Unacceptable reason sends it to the invalid message channel**
   - **USE COMMAND**: `/test-first when rejecting RocketMQ message with unacceptable reason should send to invalid message channel`
   - Test location: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/`
   - Test file: `When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel.cs`
@@ -93,7 +93,7 @@ RocketMQ is a **broker-based** transport (not relational). Producer creation is 
   - Implementation should:
     - In `DetermineRejectionRoute()`, route `Unacceptable` to `_invalidMessageProducer` when available (per ADR 0036)
 
-- [ ] **TEST + IMPLEMENT: Rejecting with Unacceptable reason falls back to DLQ when no invalid message channel configured**
+- [x] **TEST + IMPLEMENT: Rejecting with Unacceptable reason falls back to DLQ when no invalid message channel configured**
   - **USE COMMAND**: `/test-first when rejecting RocketMQ message with unacceptable reason and no invalid channel should fallback to dlq`
   - Test location: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/`
   - Test file: `When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq.cs`
@@ -106,7 +106,7 @@ RocketMQ is a **broker-based** transport (not relational). Producer creation is 
   - Implementation should:
     - In `DetermineRejectionRoute()`, when reason is `Unacceptable` and `_invalidMessageProducer` is null, fall back to `_deadLetterProducer`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with no DLQ or invalid message channel configured Acks source and logs warning**
+- [x] **TEST + IMPLEMENT: Rejecting a message with no DLQ or invalid message channel configured Acks source and logs warning**
   - **USE COMMAND**: `/test-first when rejecting RocketMQ message with no channels configured should ack source and log warning`
   - Test location: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/`
   - Test file: `When_rejecting_message_with_no_channels_configured_should_ack_and_log_warning.cs`
@@ -120,7 +120,7 @@ RocketMQ is a **broker-based** transport (not relational). Producer creation is 
   - Implementation should:
     - In `Reject()`/`RejectAsync()`, when both producers are null, log warning, Ack source message, return `true`
 
-- [ ] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends to DLQ (async/Proactor)**
+- [x] **TEST + IMPLEMENT: Rejecting a message with DeliveryError sends to DLQ (async/Proactor)**
   - **USE COMMAND**: `/test-first when rejecting RocketMQ message async with delivery error should send to dead letter queue`
   - Test location: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/`
   - Test file: `When_rejecting_message_with_delivery_error_should_send_to_dlq_async.cs`
