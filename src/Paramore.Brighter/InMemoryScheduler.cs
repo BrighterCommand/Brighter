@@ -69,35 +69,8 @@ public class InMemoryScheduler(
         }
 
         var id = getOrCreateMessageSchedulerId(message);
-
-        if (onConflict == OnSchedulerConflict.Throw)
-        {
-            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
-            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
-            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
-            var timer = timeProvider.CreateTimer(Execute,
-                (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
-            if (!_timers.TryAdd(id, timer))
-            {
-                timer.Dispose();
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
-        }
-        else
-        {
-            _timers.AddOrUpdate(
-                id,
-                _ => timeProvider.CreateTimer(Execute,
-                    (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero),
-                (_, existingTimer) =>
-                {
-                    existingTimer.Dispose();
-                    return timeProvider.CreateTimer(Execute,
-                        (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
-                });
-        }
-
-        return id;
+        var state = (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message });
+        return ScheduleTimer(id, state, delay);
     }
 
     /// <inheritdoc />
@@ -122,59 +95,16 @@ public class InMemoryScheduler(
         }
 
         var id = getOrCreateRequestSchedulerId(request);
-
-        if (onConflict == OnSchedulerConflict.Throw)
-        {
-            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
-            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
-            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
-            var timer = timeProvider.CreateTimer(Execute,
-                (processor,
-                    new FireSchedulerRequest
-                    {
-                        Id = id,
-                        Async = false,
-                        SchedulerType = type,
-                        RequestType = typeof(TRequest).FullName!,
-                        RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                    }), delay, TimeSpan.Zero);
-            if (!_timers.TryAdd(id, timer))
+        var state = (processor,
+            new FireSchedulerRequest
             {
-                timer.Dispose();
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
-        }
-        else
-        {
-            _timers.AddOrUpdate(
-                id,
-                _ => timeProvider.CreateTimer(Execute,
-                    (processor,
-                        new FireSchedulerRequest
-                        {
-                            Id = id,
-                            Async = false,
-                            SchedulerType = type,
-                            RequestType = typeof(TRequest).FullName!,
-                            RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                        }), delay, TimeSpan.Zero),
-                (_, existingTimer) =>
-                {
-                    existingTimer.Dispose();
-                    return timeProvider.CreateTimer(Execute,
-                        (processor,
-                            new FireSchedulerRequest
-                            {
-                                Id = id,
-                                Async = false,
-                                SchedulerType = type,
-                                RequestType = typeof(TRequest).FullName!,
-                                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                            }), delay, TimeSpan.Zero);
-                });
-        }
-
-        return id;
+                Id = id,
+                Async = false,
+                SchedulerType = type,
+                RequestType = typeof(TRequest).FullName!,
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+            });
+        return ScheduleTimer(id, state, delay);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
@@ -236,35 +166,8 @@ public class InMemoryScheduler(
         }
 
         var id = getOrCreateMessageSchedulerId(message);
-
-        if (onConflict == OnSchedulerConflict.Throw)
-        {
-            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
-            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
-            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
-            var timer = timeProvider.CreateTimer(Execute,
-                (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
-            if (!_timers.TryAdd(id, timer))
-            {
-                timer.Dispose();
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
-        }
-        else
-        {
-            _timers.AddOrUpdate(
-                id,
-                _ => timeProvider.CreateTimer(Execute,
-                    (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero),
-                (_, existingTimer) =>
-                {
-                    existingTimer.Dispose();
-                    return timeProvider.CreateTimer(Execute,
-                        (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
-                });
-        }
-
-        return Task.FromResult(id);
+        var state = (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message });
+        return Task.FromResult(ScheduleTimer(id, state, delay));
     }
 
     /// <inheritdoc />
@@ -290,59 +193,16 @@ public class InMemoryScheduler(
         }
 
         var id = getOrCreateRequestSchedulerId(request);
-
-        if (onConflict == OnSchedulerConflict.Throw)
-        {
-            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
-            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
-            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
-            var timer = timeProvider.CreateTimer(Execute,
-                (processor,
-                    new FireSchedulerRequest
-                    {
-                        Id = id,
-                        Async = true,
-                        SchedulerType = type,
-                        RequestType = typeof(TRequest).FullName!,
-                        RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                    }), delay, TimeSpan.Zero);
-            if (!_timers.TryAdd(id, timer))
+        var state = (processor,
+            new FireSchedulerRequest
             {
-                timer.Dispose();
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
-        }
-        else
-        {
-            _timers.AddOrUpdate(
-                id,
-                _ => timeProvider.CreateTimer(Execute,
-                    (processor,
-                        new FireSchedulerRequest
-                        {
-                            Id = id,
-                            Async = true,
-                            SchedulerType = type,
-                            RequestType = typeof(TRequest).FullName!,
-                            RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                        }), delay, TimeSpan.Zero),
-                (_, existingTimer) =>
-                {
-                    existingTimer.Dispose();
-                    return timeProvider.CreateTimer(Execute,
-                        (processor,
-                            new FireSchedulerRequest
-                            {
-                                Id = id,
-                                Async = true,
-                                SchedulerType = type,
-                                RequestType = typeof(TRequest).FullName!,
-                                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
-                            }), delay, TimeSpan.Zero);
-                });
-        }
-
-        return Task.FromResult(id);
+                Id = id,
+                Async = true,
+                SchedulerType = type,
+                RequestType = typeof(TRequest).FullName!,
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+            });
+        return Task.FromResult(ScheduleTimer(id, state, delay));
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)" />
@@ -362,6 +222,35 @@ public class InMemoryScheduler(
         {
             await timer.DisposeAsync();
         }
+    }
+
+    private string ScheduleTimer(string id, object state, TimeSpan delay)
+    {
+        if (onConflict == OnSchedulerConflict.Throw)
+        {
+            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
+            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
+            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
+            var timer = timeProvider.CreateTimer(Execute, state, delay, TimeSpan.Zero);
+            if (!_timers.TryAdd(id, timer))
+            {
+                timer.Dispose();
+                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+            }
+        }
+        else
+        {
+            _timers.AddOrUpdate(
+                id,
+                _ => timeProvider.CreateTimer(Execute, state, delay, TimeSpan.Zero),
+                (_, existingTimer) =>
+                {
+                    existingTimer.Dispose();
+                    return timeProvider.CreateTimer(Execute, state, delay, TimeSpan.Zero);
+                });
+        }
+
+        return id;
     }
 
     private void Execute(object? state)

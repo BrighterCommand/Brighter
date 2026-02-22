@@ -355,11 +355,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void EnsureProducer()
         {
+#pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
             LazyInitializer.EnsureInitialized(ref _producer, ref _producerInitialized,
                 ref _producerLock, () => new RmqMessageProducer(Connection)
                 {
                     Scheduler = _scheduler
                 });
+#pragma warning restore CS0420
         }
 
         protected virtual void EnsureChannel()

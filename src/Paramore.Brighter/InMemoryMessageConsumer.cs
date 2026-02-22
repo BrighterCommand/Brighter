@@ -357,11 +357,13 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
 
     private void EnsureProducer(RoutingKey topic)
     {
+#pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
         LazyInitializer.EnsureInitialized(ref _producer, ref _producerInitialized,
             ref _producerLock, () => new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
             {
                 Scheduler = _scheduler
             });
+#pragma warning restore CS0420
     }
     
     private bool RequeueNoDelay(Message message)
