@@ -100,7 +100,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// </summary>
     ~InMemoryMessageConsumer()
     {
-        DisposeCore();
+        _lockTimer.Dispose();
     }
 
 
