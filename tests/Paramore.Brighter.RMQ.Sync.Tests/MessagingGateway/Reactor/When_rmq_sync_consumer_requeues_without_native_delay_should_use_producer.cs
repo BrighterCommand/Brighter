@@ -37,7 +37,6 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 /// with Task.Delay().Wait(). This also verifies lazy producer creation and disposal.
 /// </summary>
 [Trait("Category", "RMQ")]
-[Trait("Fragile", "CI")]
 [Collection("RMQ")]
 public class RmqSyncConsumerDelayTests : IDisposable
 {
@@ -109,6 +108,10 @@ public class RmqSyncConsumerDelayTests : IDisposable
         _sendProducer.Send(_message);
         var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        
+        //delay before requeue for test connection pool conflicts
+        Thread.Sleep(TimeSpan.FromSeconds(2));
+        
         _channel.Requeue(received, TimeSpan.FromSeconds(5));
 
         // Act & Assert - disposing channel (and its consumer) should not throw
