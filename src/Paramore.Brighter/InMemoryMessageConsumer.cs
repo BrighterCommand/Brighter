@@ -47,9 +47,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private readonly TimeSpan _ackTimeout;
     private readonly ITimer _lockTimer;
     private readonly IAmAMessageScheduler? _scheduler;
-    private InMemoryMessageProducer? _producer;
-    private volatile bool _producerInitialized;
-    private object? _producerLock;
+    private InMemoryMessageProducer? _requeueProducer;
+    private volatile bool _requeueProducerInitialized;
+    private object? _requeueProducerLock;
 
     /// <summary>
     /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
@@ -262,7 +262,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             {
                 _lockedMessages.TryRemove(message.Id, out _);
                 EnsureProducer(message.Header.Topic);
-                _producer!.SendWithDelay(message, timeOut);
+                _requeueProducer!.SendWithDelay(message, timeOut);
                 return true;
             }
             catch
@@ -303,7 +303,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             {
                 _lockedMessages.TryRemove(message.Id, out _);
                 EnsureProducer(message.Header.Topic);
-                await _producer!.SendWithDelayAsync(message, timeOut, cancellationToken);
+                await _requeueProducer!.SendWithDelayAsync(message, timeOut, cancellationToken);
                 return true;
             }
             catch
@@ -346,20 +346,20 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private void DisposeCore()
     {
         _lockTimer.Dispose();
-        _producer?.Dispose();
+        _requeueProducer?.Dispose();
     }
 
     private async ValueTask DisposeAsyncCore()
     {
         await _lockTimer.DisposeAsync().ConfigureAwait(false);
-        if (_producer != null) await _producer.DisposeAsync().ConfigureAwait(false);
+        if (_requeueProducer != null) await _requeueProducer.DisposeAsync().ConfigureAwait(false);
     }
 
     private void EnsureProducer(RoutingKey topic)
     {
 #pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
-        LazyInitializer.EnsureInitialized(ref _producer, ref _producerInitialized,
-            ref _producerLock, () => new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
+        LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+            ref _requeueProducerLock, () => new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
             {
                 Scheduler = _scheduler
             });

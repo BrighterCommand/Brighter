@@ -52,9 +52,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
         private PullConsumer? _consumer;
-        private RmqMessageProducer? _producer;
-        private volatile bool _producerInitialized;
-        private object? _producerLock;
+        private RmqMessageProducer? _requeueProducer;
+        private volatile bool _requeueProducerInitialized;
+        private object? _requeueProducerLock;
         private readonly IAmAMessageScheduler? _scheduler;
         private readonly ChannelName _queueName;
         private readonly RoutingKeys _routingKeys;
@@ -330,7 +330,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 else
                 {
                     EnsureProducer();
-                    _producer!.SendWithDelay(message, timeout);
+                    _requeueProducer!.SendWithDelay(message, timeout);
                 }
 
                 // Step 2: Ack the original message to remove it from the queue.
@@ -356,8 +356,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private void EnsureProducer()
         {
 #pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
-            LazyInitializer.EnsureInitialized(ref _producer, ref _producerInitialized,
-                ref _producerLock, () => new RmqMessageProducer(Connection)
+            LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+                ref _requeueProducerLock, () => new RmqMessageProducer(Connection)
                 {
                     Scheduler = _scheduler
                 });
@@ -531,7 +531,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         public override void Dispose()
         {
             CancelConsumer();
-            _producer?.Dispose();
+            _requeueProducer?.Dispose();
             Dispose(true);
             GC.SuppressFinalize(this);
         }

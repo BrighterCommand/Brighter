@@ -50,9 +50,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
     private PullConsumer? _consumer;
-    private RmqMessageProducer? _producer;
-    private volatile bool _producerInitialized;
-    private object? _producerLock;
+    private RmqMessageProducer? _requeueProducer;
+    private volatile bool _requeueProducerInitialized;
+    private object? _requeueProducerLock;
     private readonly IAmAMessageScheduler? _scheduler;
     private readonly ChannelName _queueName;
     private readonly RoutingKeys _routingKeys;
@@ -408,7 +408,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             else
             {
                 EnsureProducer();
-                await _producer!.SendWithDelayAsync(message, timeout, cancellationToken);
+                await _requeueProducer!.SendWithDelayAsync(message, timeout, cancellationToken);
             }
 
             // Step 2: Ack the original message to remove it from the queue.
@@ -610,8 +610,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private void EnsureProducer()
     {
 #pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
-        LazyInitializer.EnsureInitialized(ref _producer, ref _producerInitialized,
-            ref _producerLock, () => new RmqMessageProducer(Connection)
+        LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+            ref _requeueProducerLock, () => new RmqMessageProducer(Connection)
             {
                 Scheduler = _scheduler
             });
@@ -633,7 +633,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     public override void Dispose()
     {
         BrighterAsyncContext.Run(() => CancelConsumerAsync(CancellationToken.None));
-        _producer?.Dispose();
+        _requeueProducer?.Dispose();
         Dispose(true);
         GC.SuppressFinalize(this);
     }
@@ -641,7 +641,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     public override async ValueTask DisposeAsync()
     {
         await CancelConsumerAsync(CancellationToken.None);
-        if (_producer != null) await _producer.DisposeAsync();
+        if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
         Dispose(true);
         GC.SuppressFinalize(this);
     }
