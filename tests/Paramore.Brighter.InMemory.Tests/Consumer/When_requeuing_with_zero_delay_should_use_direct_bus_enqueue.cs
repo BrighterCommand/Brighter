@@ -33,7 +33,7 @@ namespace Paramore.Brighter.InMemory.Tests.Consumer;
 /// Tests that InMemoryMessageConsumer.Requeue with zero or null delay uses direct bus enqueue
 /// (existing behavior) rather than delegating to producer.
 /// </summary>
-public class When_requeuing_with_zero_delay_should_use_direct_bus_enqueue
+public class InMemoryConsumerRequeueWithZeroDelayTests
 {
     private readonly InternalBus _bus;
     private readonly FakeTimeProvider _timeProvider;
@@ -42,7 +42,7 @@ public class When_requeuing_with_zero_delay_should_use_direct_bus_enqueue
     private readonly RoutingKey _routingKey;
     private readonly Message _message;
 
-    public When_requeuing_with_zero_delay_should_use_direct_bus_enqueue()
+    public InMemoryConsumerRequeueWithZeroDelayTests()
     {
         // Arrange
         _bus = new InternalBus();

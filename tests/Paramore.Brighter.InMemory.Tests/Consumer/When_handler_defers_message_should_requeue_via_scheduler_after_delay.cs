@@ -37,7 +37,7 @@ namespace Paramore.Brighter.InMemory.Tests.Consumer;
 /// 3. The message can be received again by the consumer
 /// 4. The HandledCount is incremented on requeue
 /// </summary>
-public class When_handler_defers_message_should_requeue_via_scheduler_after_delay
+public class InMemoryConsumerRequeueWithDelayTests
 {
     private readonly InternalBus _bus;
     private readonly FakeTimeProvider _timeProvider;
@@ -47,7 +47,7 @@ public class When_handler_defers_message_should_requeue_via_scheduler_after_dela
     private readonly TimeSpan _delay;
     private readonly SpyScheduler _scheduler;
 
-    public When_handler_defers_message_should_requeue_via_scheduler_after_delay()
+    public InMemoryConsumerRequeueWithDelayTests()
     {
         // Arrange
         _bus = new InternalBus();

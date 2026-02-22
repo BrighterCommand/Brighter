@@ -70,6 +70,9 @@ namespace GreetingsServer
                         ];
                         options.DefaultChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
                     })
+                    // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+                    // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+                    .UseScheduler(new InMemorySchedulerFactory())
                     .AddProducers((configure) =>
                     {
                         configure.ProducerRegistry = new RmqProducerRegistryFactory(

@@ -30,14 +30,29 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     public class MqttMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
+        private IAmAMessageScheduler? _scheduler;
+
+        /// <summary>
+        /// Gets or sets the message scheduler for delayed requeue support.
+        /// Can be set after construction to allow channel factories to forward the scheduler from DI.
+        /// </summary>
+        public IAmAMessageScheduler? Scheduler
+        {
+            get => _scheduler;
+            set => _scheduler = value;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttMessageConsumerFactory"/> class.
         /// </summary>
         /// <param name="configuration">The MQTT consumer configuration containing broker connection details.</param>
-        public MqttMessageConsumerFactory(MqttMessagingGatewayConsumerConfiguration configuration)
+        /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
+        public MqttMessageConsumerFactory(
+            MqttMessagingGatewayConsumerConfiguration configuration,
+            IAmAMessageScheduler? scheduler = null)
         {
             _configuration = configuration;
+            _scheduler = scheduler;
         }
 
         /// <summary>
@@ -50,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
-            return new MqttMessageConsumer(_configuration, deadLetterRoutingKey, invalidMessageRoutingKey);
+            return new MqttMessageConsumer(_configuration, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
         }
 
         /// <summary>
@@ -63,7 +78,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
-            return new MqttMessageConsumer(_configuration, deadLetterRoutingKey, invalidMessageRoutingKey);
+            return new MqttMessageConsumer(_configuration, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
         }
     }
 }

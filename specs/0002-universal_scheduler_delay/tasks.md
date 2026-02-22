@@ -224,7 +224,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
 
 ### RMQ Async Consumer
 
-- [ ] **TEST + IMPLEMENT: RMQ async consumer uses producer SendWithDelayAsync when native delay not supported**
+- [x] **TEST + IMPLEMENT: RMQ async consumer uses producer SendWithDelayAsync when native delay not supported**
   - **USE COMMAND**: `/test-first when rmq async consumer requeues without native delay should use producer`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_async_consumer_requeues_without_native_delay_should_use_producer.cs`
@@ -240,7 +240,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
     - Replace `Task.Delay(timeout.Value, cancellationToken)` block with producer call
     - Producer needs scheduler injected (add to constructor or property)
 
-- [ ] **TEST + IMPLEMENT: RMQ async consumer creates producer lazily with correct configuration**
+- [x] **TEST + IMPLEMENT: RMQ async consumer creates producer lazily with correct configuration**
   - **USE COMMAND**: `/test-first when rmq async consumer creates producer should use message topic and scheduler`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_async_consumer_creates_producer_should_use_message_topic_and_scheduler.cs`
@@ -254,7 +254,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
     - Create producer with message topic
     - Set scheduler on producer
 
-- [ ] **TEST + IMPLEMENT: RMQ async consumer disposes lazily created producer**
+- [x] **TEST + IMPLEMENT: RMQ async consumer disposes lazily created producer**
   - **USE COMMAND**: `/test-first when rmq async consumer disposes should dispose producer`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_async_consumer_disposes_should_dispose_producer.cs`
@@ -267,7 +267,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
 
 ### RMQ Sync Consumer
 
-- [ ] **TEST + IMPLEMENT: RMQ sync consumer uses producer SendWithDelay when native delay not supported**
+- [x] **TEST + IMPLEMENT: RMQ sync consumer uses producer SendWithDelay when native delay not supported**
   - **USE COMMAND**: `/test-first when rmq sync consumer requeues without native delay should use producer`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_sync_consumer_requeues_without_native_delay_should_use_producer.cs`
@@ -281,7 +281,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
     - Add lazy `RmqMessageProducer?` field
     - Replace `Task.Delay(timeout.Value).Wait()` block with producer call
 
-- [ ] **TEST + IMPLEMENT: RMQ sync consumer creates producer lazily and disposes it**
+- [x] **TEST + IMPLEMENT: RMQ sync consumer creates producer lazily and disposes it**
   - **USE COMMAND**: `/test-first when rmq sync consumer creates and disposes producer correctly`
   - Test location: `tests/Paramore.Brighter.RMQ.Tests/MessagingGateway`
   - Test file: `When_rmq_sync_consumer_creates_and_disposes_producer_correctly.cs`
@@ -299,7 +299,7 @@ RabbitMQ currently uses `Task.Delay()` when native delay is not supported, which
 
 Kafka streams are immutable so traditional requeue is not possible. However, for delayed retry we can use the producer to send a new message.
 
-- [ ] **TEST + IMPLEMENT: Kafka consumer uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: Kafka consumer uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when kafka consumer requeues with delay should use producer`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway`
   - Test file: `When_kafka_consumer_requeues_with_delay_should_use_producer.cs`
@@ -315,7 +315,7 @@ Kafka streams are immutable so traditional requeue is not possible. However, for
     - When delay > 0, create producer and call `SendWithDelay()`
     - Keep no-op behavior when delay is null or zero
 
-- [ ] **TEST + IMPLEMENT: Kafka consumer RequeueAsync uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: Kafka consumer RequeueAsync uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when kafka consumer requeues async with delay should use producer`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway`
   - Test file: `When_kafka_consumer_requeues_async_with_delay_should_use_producer.cs`
@@ -328,7 +328,7 @@ Kafka streams are immutable so traditional requeue is not possible. However, for
     - Use same lazy producer
     - Call `SendWithDelayAsync()` when delay > 0
 
-- [ ] **TEST + IMPLEMENT: Kafka consumer creates producer with correct configuration**
+- [x] **TEST + IMPLEMENT: Kafka consumer creates producer with correct configuration**
   - **USE COMMAND**: `/test-first when kafka consumer creates producer should configure correctly`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway`
   - Test file: `When_kafka_consumer_creates_producer_should_configure_correctly.cs`
@@ -348,7 +348,7 @@ Kafka streams are immutable so traditional requeue is not possible. However, for
 
 MQTT currently returns false for requeue. Implement using producer for delayed retry.
 
-- [ ] **TEST + IMPLEMENT: MQTT consumer uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: MQTT consumer uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when mqtt consumer requeues with delay should use producer`
   - Test location: `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway`
   - Test file: `When_mqtt_consumer_requeues_with_delay_should_use_producer.cs`
@@ -363,7 +363,7 @@ MQTT currently returns false for requeue. Implement using producer for delayed r
     - When delay > 0, create producer and call `SendWithDelay()`
     - Return true on success
 
-- [ ] **TEST + IMPLEMENT: MQTT consumer RequeueAsync uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: MQTT consumer RequeueAsync uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when mqtt consumer requeues async with delay should use producer`
   - Test location: `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway`
   - Test file: `When_mqtt_consumer_requeues_async_with_delay_should_use_producer.cs`
@@ -376,7 +376,7 @@ MQTT currently returns false for requeue. Implement using producer for delayed r
     - Use same lazy producer
     - Call `SendWithDelayAsync()` when delay > 0
 
-- [ ] **TEST + IMPLEMENT: MQTT consumer creates producer with correct configuration and disposes it**
+- [x] **TEST + IMPLEMENT: MQTT consumer creates producer with correct configuration and disposes it**
   - **USE COMMAND**: `/test-first when mqtt consumer creates producer should configure and dispose correctly`
   - Test location: `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway`
   - Test file: `When_mqtt_consumer_creates_producer_should_configure_and_dispose_correctly.cs`
@@ -396,7 +396,7 @@ MQTT currently returns false for requeue. Implement using producer for delayed r
 
 MsSql currently ignores the delay parameter. Implement using producer for delayed retry.
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: MsSql consumer uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when mssql consumer requeues with delay should use producer`
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_requeues_with_delay_should_use_producer.cs`
@@ -410,7 +410,7 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
     - Add lazy producer field
     - When delay > 0, use producer's `SendWithDelay()` instead of `_sqlMessageQueue.Send()`
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer RequeueAsync uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: MsSql consumer RequeueAsync uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when mssql consumer requeues async with delay should use producer`
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_requeues_async_with_delay_should_use_producer.cs`
@@ -423,7 +423,7 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
     - Use same lazy producer
     - Call `SendWithDelayAsync()` when delay > 0
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer preserves immediate requeue behavior**
+- [x] **TEST + IMPLEMENT: MsSql consumer preserves immediate requeue behavior**
   - **USE COMMAND**: `/test-first when mssql consumer requeues with zero delay should use direct queue`
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_requeues_with_zero_delay_should_use_direct_queue.cs`
@@ -435,19 +435,23 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
     - Preserve existing direct queue behavior for zero/null delay
     - Only use producer when delay > 0
 
-- [ ] **TEST + IMPLEMENT: MsSql consumer creates producer with correct configuration and disposes it**
+- [x] **TEST + IMPLEMENT: MsSql consumer creates producer with correct configuration and disposes it**
   - **USE COMMAND**: `/test-first when mssql consumer creates producer should configure and dispose correctly`
   - Test location: `tests/Paramore.Brighter.MsSql.Tests/MessagingGateway`
   - Test file: `When_mssql_consumer_creates_producer_should_configure_and_dispose_correctly.cs`
   - Test should verify:
-    - Producer uses message topic
-    - Producer has scheduler configured
-    - Producer is disposed with consumer
+    - Create consumer directly (not via factory) with a `SpySchedulerSync` injected
+    - Requeue with a **non-zero delay** (e.g. `TimeSpan.FromSeconds(5)`) to exercise the scheduler path
+    - Assert the spy scheduler's `Schedule()` was called with the correct delay — this proves the scheduler was wired through to the lazily-created producer
+    - Producer is disposed with consumer (dispose after requeue should not throw)
+    - Dispose without requeue should also not throw
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Add scheduler parameter to consumer constructor
-    - Add `EnsureProducer()` method
+    - Store in `_scheduler` field
+    - Set `Scheduler = _scheduler` on producer in `EnsureProducer()`
     - Add producer disposal
+  - **Lesson from Kafka/MQTT**: Tests that only requeue with null/zero delay never hit the scheduler cast in `SendWithDelay` — a spy with non-zero delay is required to catch missing wiring
 
 ---
 
@@ -455,7 +459,7 @@ MsSql currently ignores the delay parameter. Implement using producer for delaye
 
 Redis previously had delay support but it was removed because it blocked the pump. Re-implement using producer.
 
-- [ ] **TEST + IMPLEMENT: Redis consumer uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: Redis consumer uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when redis consumer requeues with delay should use producer`
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_requeues_with_delay_should_use_producer.cs`
@@ -470,7 +474,7 @@ Redis previously had delay support but it was removed because it blocked the pum
     - Add lazy `RedisMessageProducer?` field
     - When delay > 0, use producer's `SendWithDelay()` instead of direct list add
 
-- [ ] **TEST + IMPLEMENT: Redis consumer RequeueAsync uses producer for delayed requeue**
+- [x] **TEST + IMPLEMENT: Redis consumer RequeueAsync uses producer for delayed requeue**
   - **USE COMMAND**: `/test-first when redis consumer requeues async with delay should use producer`
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_requeues_async_with_delay_should_use_producer.cs`
@@ -483,7 +487,7 @@ Redis previously had delay support but it was removed because it blocked the pum
     - Use same lazy producer
     - Call `SendWithDelayAsync()` when delay > 0
 
-- [ ] **TEST + IMPLEMENT: Redis consumer preserves immediate requeue behavior**
+- [x] **TEST + IMPLEMENT: Redis consumer preserves immediate requeue behavior**
   - **USE COMMAND**: `/test-first when redis consumer requeues with zero delay should use direct list`
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_requeues_with_zero_delay_should_use_direct_list.cs`
@@ -496,19 +500,23 @@ Redis previously had delay support but it was removed because it blocked the pum
     - Preserve existing direct list behavior for zero/null delay
     - Only use producer when delay > 0
 
-- [ ] **TEST + IMPLEMENT: Redis consumer creates producer with correct configuration and disposes it**
+- [x] **TEST + IMPLEMENT: Redis consumer creates producer with correct configuration and disposes it**
   - **USE COMMAND**: `/test-first when redis consumer creates producer should configure and dispose correctly`
   - Test location: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway`
   - Test file: `When_redis_consumer_creates_producer_should_configure_and_dispose_correctly.cs`
   - Test should verify:
-    - Producer uses message topic
-    - Producer has scheduler configured
-    - Producer is disposed with consumer
+    - Create consumer directly (not via factory) with a `SpySchedulerSync` injected
+    - Requeue with a **non-zero delay** (e.g. `TimeSpan.FromSeconds(5)`) to exercise the scheduler path
+    - Assert the spy scheduler's `Schedule()` was called with the correct delay — this proves the scheduler was wired through to the lazily-created producer
+    - Producer is disposed with consumer (dispose after requeue should not throw)
+    - Dispose without requeue should also not throw
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Add scheduler parameter to consumer constructor
-    - Add `EnsureProducer()` method
+    - Store in `_scheduler` field
+    - Set `Scheduler = _scheduler` on producer in `EnsureProducer()`
     - Add producer disposal
+  - **Lesson from Kafka/MQTT**: Tests that only requeue with null/zero delay never hit the scheduler cast in `SendWithDelay` — a spy with non-zero delay is required to catch missing wiring
 
 ---
 
@@ -516,7 +524,7 @@ Redis previously had delay support but it was removed because it blocked the pum
 
 Postgres has native delay support via SQL UPDATE with `visible_timeout`. Verify it works correctly.
 
-- [ ] **TEST: Verify Postgres consumer delay works correctly with native SQL**
+- [x] **TEST: Verify Postgres consumer delay works correctly with native SQL**
   - **USE COMMAND**: `/test-first when postgres consumer requeues with delay should use native sql`
   - Test location: `tests/Paramore.Brighter.Postgres.Tests/MessagingGateway`
   - Test file: `When_postgres_consumer_requeues_with_delay_should_use_native_sql.cs`

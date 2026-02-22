@@ -13,6 +13,7 @@ using Baggage = OpenTelemetry.Baggage;
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor
 {
     [Trait("Category", "RMQ")]
+    [Collection("RMQ")]
     public class RmqMessageProducerPropagateContextTests : IDisposable
     {
         private readonly IAmAMessageProducerSync _messageProducer;

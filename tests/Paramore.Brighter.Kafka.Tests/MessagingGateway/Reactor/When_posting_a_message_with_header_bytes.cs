@@ -30,7 +30,7 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
 
     public KafkaMessageProducerHeaderBytesSendTests (ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Header Bytes Send Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
@@ -156,9 +156,10 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
 
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
             
         if (messages[0].Header.MessageType == MessageType.MT_NONE)
             throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");

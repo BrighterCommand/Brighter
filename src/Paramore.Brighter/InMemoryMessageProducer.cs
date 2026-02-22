@@ -78,13 +78,11 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Dispose of the producer
-        /// Clears the associated timer 
         /// </summary>
         public void Dispose() {}
         
         /// <summary>
         /// Dispose of the producer
-        /// Clears the associated timer 
         /// </summary> 
         public ValueTask DisposeAsync() {return new ValueTask();}
 
@@ -151,7 +149,7 @@ namespace Paramore.Brighter
         /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
         /// When delay is zero or null, the message is sent immediately.
         /// When a scheduler is configured and delay is greater than zero, the scheduler is used.
-        /// Otherwise, the delay is simulated by the <see cref="TimeProvider"/>.
+        /// Otherwise, a <see cref="ConfigurationException"/> is thrown.
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
@@ -172,7 +170,7 @@ namespace Paramore.Brighter
                 return;
             }
             
-            throw new ConfigurationException("No scheduler available, cannot send message without delay");
+            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
  
         }
   
@@ -180,7 +178,7 @@ namespace Paramore.Brighter
         /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
         /// When delay is zero or null, the message is sent immediately.
         /// When an async scheduler is configured and delay is greater than zero, the scheduler is used.
-        /// Otherwise, the delay is simulated by the <see cref="TimeProvider"/>.
+        /// Otherwise, a <see cref="ConfigurationException"/> is thrown.
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
@@ -202,7 +200,7 @@ namespace Paramore.Brighter
                 return;
             }
 
-            throw new ConfigurationException("No scheduler available, cannot send message with delay"); 
+            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
         }
     }
 }

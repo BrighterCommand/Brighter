@@ -33,8 +33,14 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             outbox.Add(new MessageTestDataBuilder(), context);
 
-            await Task.Delay(500); //Allow time for compaction to run
-            
+            //Poll for compaction to complete - can be slow in CI environments
+            int retries = 0;
+            while (outbox.EntryCount > 3 && retries < 20)
+            {
+                await Task.Delay(100);
+                retries++;
+            }
+
             //should clear compaction percentage from the outbox, and then add  the  new one
             Assert.Equal(3, outbox.EntryCount);
         }
@@ -67,8 +73,14 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             await outbox.AddAsync(new MessageTestDataBuilder(), context);
 
-            await Task.Delay(100); //Allow time for compaction to run
-            
+            //Poll for compaction to complete - can be slow in CI environments
+            int retries = 0;
+            while (outbox.EntryCount > 3 && retries < 20)
+            {
+                await Task.Delay(100);
+                retries++;
+            }
+
             //should clear compaction percentage from the outbox, and then add  the  new one
             Assert.True((await outbox.GetAsync(messageIds[0], context)).IsEmpty);
             Assert.True((await outbox.GetAsync(messageIds[1], context)).IsEmpty);

@@ -14,10 +14,9 @@ public class RedisMessageProducerSendTestsAsync : IClassFixture<RedisFixture>
 
     public RedisMessageProducerSendTestsAsync(RedisFixture redisFixture)
     {
-        const string topic = "test";
         _redisFixture = redisFixture;
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(topic), MessageType.MT_COMMAND),
+            new MessageHeader(Guid.NewGuid().ToString(), redisFixture.Topic, MessageType.MT_COMMAND),
             new MessageBody("test content")
         );
     }

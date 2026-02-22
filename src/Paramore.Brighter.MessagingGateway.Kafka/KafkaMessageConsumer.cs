@@ -54,7 +54,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = [];
         private readonly long _maxBatchSize;
         private readonly TimeSpan _readCommittedOffsetsTimeout;
-        private DateTime _lastFlushAt = DateTime.UtcNow;
+        private DateTime _lastFlushAt;
+        private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new(1, 1);
         private readonly ITimer _sweeperTimer;
@@ -62,10 +63,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _isClosed;
         private readonly RoutingKey? _deadLetterRoutingKey;
         private readonly RoutingKey? _invalidMessageRoutingKey;
-        private readonly Lazy<IAmAMessageProducerSync?>? _deadLetterProducer;
-        private readonly Lazy<IAmAMessageProducerSync?>? _invalidMessageProducer;
-        private readonly Lazy<IAmAMessageProducerAsync?>? _deadLetterProducerAsync;
-        private readonly Lazy<IAmAMessageProducerAsync?>? _invalidMessageProducerAsync;
+        private readonly Lazy<KafkaMessageProducer?>? _deadLetterProducer;
+        private readonly Lazy<KafkaMessageProducer?>? _invalidMessageProducer;
+        private readonly IAmAMessageScheduler? _scheduler;
+        private KafkaMessageProducer? _requeueProducer;
+        private bool _requeueProducerInitialized;
+        private object? _requeueProducerLock;
 
 
         /// <summary>
@@ -101,6 +104,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="timeProvider">The <see cref="TimeProvider"/> used to create the timer for sweeping uncommitted offsets. Defaults to <see cref="TimeProvider.System"/> if not specified. Can be overridden for testing purposes.</param>
         /// <param name="deadLetterRoutingKey">If we support a dead letter topic what is the <see cref="RoutingKey"/></param>
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
+        /// <param name="scheduler">Optional scheduler for delayed requeue operations. When provided, the lazily-created
+        /// requeue producer will use this scheduler for delayed sends.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -121,7 +126,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Action<ConsumerConfig>? configHook = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
-            TimeProvider? timeProvider = null
+            TimeProvider? timeProvider = null,
+            IAmAMessageScheduler? scheduler = null
             )
         {
             if (groupId is null)
@@ -130,19 +136,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Topic = routingKey ?? throw new ConfigurationException("You must set a RoutingKey as the Topic for the consumer");
             
             _configuration = configuration ?? throw new ConfigurationException("You must set a KafkaMessagingGatewayConfiguration to connect to a broker");
-            
+            _scheduler = scheduler;
+
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
             if (_deadLetterRoutingKey != null)
             {
-                _deadLetterProducer = new Lazy<IAmAMessageProducerSync?>(CreateDeadLetterProducer);
-                _deadLetterProducerAsync = new Lazy<IAmAMessageProducerAsync?>(CreateDeadLetterProducerAsync);
+                _deadLetterProducer = new Lazy<KafkaMessageProducer?>(
+                    () => CreateProducer(_deadLetterRoutingKey, Log.ErrorCreatingDLQ));
             }
 
             if (_invalidMessageRoutingKey != null)
             {
-                _invalidMessageProducer = new Lazy<IAmAMessageProducerSync?>(CreateInvalidMessageProducer);
-                _invalidMessageProducerAsync = new Lazy<IAmAMessageProducerAsync?>(CreateInvalidMessageProducerAsync);
+                _invalidMessageProducer = new Lazy<KafkaMessageProducer?>(
+                    () => CreateProducer(_invalidMessageRoutingKey, Log.ErrorCreatingInvalidMessage));
             }
             
             sessionTimeout ??= TimeSpan.FromSeconds(10);
@@ -198,6 +205,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _readCommittedOffsetsTimeout = readCommittedOffsetsTimeout.Value;
 
             timeProvider ??= TimeProvider.System;
+            _timeProvider = timeProvider;
+            _lastFlushAt = _timeProvider.GetUtcNow().UtcDateTime;
             _sweeperTimer = timeProvider.CreateTimer(_ =>
             {
                 if (_isClosed)
@@ -347,7 +356,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 _flushToken.Wait(TimeSpan.Zero);
                 //this will release the semaphore
-               CommitAllOffsets(DateTime.UtcNow); 
+               CommitAllOffsets(_timeProvider.GetUtcNow().UtcDateTime);
             }
             catch (Exception ex)
             {
@@ -535,7 +544,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   return true;
               }
 
-              var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;                
+              var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+              var partitionOffset = ExtractPartitionOffset(message);
 
               try
               {
@@ -553,10 +563,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                           Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
 
                       // Get the appropriate producer based on routing
-                      if (routingKey == _invalidMessageRoutingKey)
-                          producer = _invalidMessageProducer?.Value;
-                      else if (routingKey == _deadLetterRoutingKey)
-                          producer = _deadLetterProducer?.Value;
+                      producer = GetRejectionProducer(routingKey);
                   }
 
                   if (producer != null)
@@ -575,7 +582,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
               }
 
-              Acknowledge(message);
+              AcknowledgeOffset(partitionOffset);
               return true;
         }
 
@@ -592,7 +599,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
         {
             // If no reason provided or no channels configured, just acknowledge
-            if (_deadLetterProducerAsync == null && _invalidMessageProducerAsync == null)
+            if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
                 {
@@ -601,8 +608,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
             }
-            
-            var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;      
+
+            var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+            var partitionOffset = ExtractPartitionOffset(message);
 
             try
             {
@@ -610,7 +618,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 // Determine routing based on rejection reason
                 var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
-                    rejectionReason, _invalidMessageProducerAsync != null, _deadLetterProducerAsync != null);
+                    rejectionReason, _invalidMessageProducer != null, _deadLetterProducer != null);
 
                 IAmAMessageProducerAsync? producer = null;
                 if (shouldRoute)
@@ -620,10 +628,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
 
                     // Get the appropriate producer based on routing
-                    if (routingKey == _invalidMessageRoutingKey)
-                        producer = _invalidMessageProducerAsync?.Value;
-                    else if (routingKey == _deadLetterRoutingKey)
-                        producer = _deadLetterProducerAsync?.Value;
+                    producer = GetRejectionProducer(routingKey);
                 }
 
                 if (producer != null)
@@ -642,31 +647,73 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
             }
 
-            await AcknowledgeAsync(message, cancellationToken);
+            AcknowledgeOffset(partitionOffset);
             return true;
         }
 
         /// <summary>
-        /// Requeues the specified message. A no-op on Kafka as the stream is immutable
+        /// Requeues the specified message. Kafka streams are immutable, so requeue publishes a new
+        /// message to the same topic via a lazily-created producer. When a delay is specified and a
+        /// scheduler is configured, the producer delegates to the scheduler for delayed redelivery.
+        /// For immediate requeue (zero or null delay) the message is produced directly and flushed.
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="delay">Number of seconds to delay delivery of the message.</param>
-        /// <returns>False as no requeue support on Kafka</returns>
+        /// <param name="message">The message to requeue.</param>
+        /// <param name="delay">Delay before the message should be redelivered.</param>
+        /// <returns>True if the message was successfully requeued.</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
+            delay ??= TimeSpan.Zero;
+            var partitionOffset = ExtractPartitionOffset(message);
+            CleanBagForResend(message);
+
+            if (delay > TimeSpan.Zero)
+            {
+                EnsureRequeueProducer();
+                _requeueProducer!.SendWithDelay(message, delay);
+            }
+            else
+            {
+                // Kafka streams are immutable — immediate requeue must produce a new message
+                EnsureRequeueProducer();
+                _requeueProducer!.Send(message);
+                _requeueProducer.Flush();
+            }
+
+            AcknowledgeOffset(partitionOffset);
             return true;
         }
 
         /// <summary>
-        /// Requeues the specified message. A no-op on Kafka as the stream is immutable
+        /// Requeues the specified message. Kafka streams are immutable, so requeue publishes a new
+        /// message to the same topic via a lazily-created producer. When a delay is specified and a
+        /// scheduler is configured, the producer delegates to the scheduler for delayed redelivery.
+        /// For immediate requeue (zero or null delay) the message is produced directly and flushed.
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="delay">Number of seconds to delay delivery of the message.</param>
-        /// <param name="cancellationToken">Cancellation token - not used as not implemented for Kafka</param>
-        /// <returns>False as no requeue support on Kafka</returns>
-        public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
+        /// <param name="message">The message to requeue.</param>
+        /// <param name="delay">Delay before the message should be redelivered.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>True if the message was successfully requeued.</returns>
+        public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.FromResult(true);
+            delay ??= TimeSpan.Zero;
+            var partitionOffset = ExtractPartitionOffset(message);
+            CleanBagForResend(message);
+
+            if (delay > TimeSpan.Zero)
+            {
+                EnsureRequeueProducer();
+                await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
+            }
+            else
+            {
+                // Kafka streams are immutable — immediate requeue must produce a new message
+                EnsureRequeueProducer();
+                await _requeueProducer!.SendAsync(message, cancellationToken);
+                _requeueProducer.Flush(cancellationToken);
+            }
+
+            AcknowledgeOffset(partitionOffset);
+            return true;
         }
         
         private void CheckHasPartitions()
@@ -833,11 +880,27 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
         
-        private IAmAMessageProducerSync? CreateDeadLetterProducer()
+        private void EnsureRequeueProducer()
+        {
+            LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+                ref _requeueProducerLock, () =>
+                {
+                    if (Topic is null)
+                        throw new ConfigurationException("Cannot create requeue producer: Topic is not configured.");
+
+                    var producer = CreateProducer(Topic)
+                        ?? throw new ConfigurationException(
+                            $"Failed to create requeue producer for topic {Topic}. Check broker connectivity and configuration.");
+                    producer.Scheduler = _scheduler;
+                    return producer;
+                });
+        }
+
+        private KafkaMessageProducer? CreateProducer(RoutingKey topic, Action<ILogger, Exception>? logError = null)
         {
             var publication = new KafkaPublication
             {
-                Topic = _deadLetterRoutingKey,
+                Topic = topic,
                 NumPartitions = NumPartitions,
                 ReplicationFactor = ReplicationFactor,
                 MessageTimeoutMs = 2000,
@@ -853,94 +916,49 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (Exception e)
             {
-                Log.ErrorCreatingDLQ(s_logger, e); 
+                logError?.Invoke(s_logger, e);
                 return null;
             }
         }
 
-        private IAmAMessageProducerSync? CreateInvalidMessageProducer()
+        private KafkaMessageProducer? GetRejectionProducer(RoutingKey? routingKey)
         {
-            var publication = new KafkaPublication
-            {
-                Topic = _invalidMessageRoutingKey,
-                NumPartitions = NumPartitions,
-                ReplicationFactor = ReplicationFactor,
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = MakeChannels
-            };
-
-            try
-            {
-                var producer = new KafkaMessageProducer(_configuration, publication);
-                producer.Init();
-                return producer;
-            }
-            catch (Exception e)
-            {
-                Log.ErrorCreatingInvalidMessage(s_logger, e); 
-                return null;
-            }
-        }
-
-        // KafkaMessageProducer implements both IAmAMessageProducerSync and IAmAMessageProducerAsync
-        private IAmAMessageProducerAsync? CreateDeadLetterProducerAsync()
-        {
-            var publication = new KafkaPublication
-            {
-                Topic = _deadLetterRoutingKey,
-                NumPartitions = NumPartitions,
-                ReplicationFactor = ReplicationFactor,
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = MakeChannels
-            };
-
-            try
-            {
-                var producer = new KafkaMessageProducer(_configuration, publication);
-                producer.Init();
-                return producer;
-            }
-            catch (Exception e)
-            {
-                Log.ErrorCreatingDLQ(s_logger, e); 
-                return null;
-            }
-        }
-
-        private IAmAMessageProducerAsync? CreateInvalidMessageProducerAsync()
-        {
-            var publication = new KafkaPublication
-            {
-                Topic = _invalidMessageRoutingKey,
-                NumPartitions = NumPartitions,
-                ReplicationFactor = ReplicationFactor,
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = MakeChannels
-            };
-
-            try
-            {
-                var producer = new KafkaMessageProducer(_configuration, publication);
-                producer.Init();
-                return producer;
-            }
-            catch (Exception e)
-            {
-                Log.ErrorCreatingInvalidMessage(s_logger, e); 
-                return null;
-            }
+            if (routingKey == _invalidMessageRoutingKey)
+                return _invalidMessageProducer?.Value;
+            if (routingKey == _deadLetterRoutingKey)
+                return _deadLetterProducer?.Value;
+            return null;
         }
         
-        private void RefreshMetadata(Message message, MessageRejectionReason? reason)
+        /// <summary>
+        /// Extracts the <see cref="TopicPartitionOffset"/> from the message bag before it is cleaned for resend.
+        /// </summary>
+        private static TopicPartitionOffset? ExtractPartitionOffset(Message message)
         {
-            // Add rejection metadata
-            message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = message.Header.Topic.Value;
-            message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = DateTimeOffset.UtcNow.ToString("o");
-            message.Header.Bag[HeaderNames.ORIGINAL_TYPE] = message.Header.MessageType.ToString();
+            if (message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
+                return bagData as TopicPartitionOffset;
+            return null;
+        }
 
+        /// <summary>
+        /// Commits a previously extracted partition offset. Use this after <see cref="CleanBagForResend"/>
+        /// has removed the offset from the message bag.
+        /// </summary>
+        private void AcknowledgeOffset(TopicPartitionOffset? partitionOffset)
+        {
+            if (partitionOffset == null) return;
+
+            var offset = new TopicPartitionOffset(partitionOffset.TopicPartition, new Offset(partitionOffset.Offset + 1));
+
+            Log.StoringOffset(s_logger, new Offset(partitionOffset.Offset + 1).Value, partitionOffset.TopicPartition.Topic, partitionOffset.TopicPartition.Partition.Value);
+            _offsetStorage.Add(offset);
+
+            if (_offsetStorage.Count % _maxBatchSize == 0)
+                FlushOffsets();
+        }
+
+        private static void CleanBagForResend(Message message)
+        {
             //remove headers that will be reset by send as set from message properties
             message.Header.Bag.Remove(HeaderNames.PARTITION_OFFSET);
             message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_ID);
@@ -954,6 +972,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_TRACE_STATE);
             message.Header.Bag.Remove(HeaderNames.W3C_BAGGAGE);
             message.Header.Bag.Remove(HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE);
+        }
+
+        private void RefreshMetadata(Message message, MessageRejectionReason? reason)
+        {
+            // Add rejection metadata
+            message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = message.Header.Topic.Value;
+            message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = _timeProvider.GetUtcNow().ToString("o");
+            message.Header.Bag[HeaderNames.ORIGINAL_TYPE] = message.Header.MessageType.ToString();
+
+            CleanBagForResend(message);
 
             if (reason == null) return;
 
@@ -1000,7 +1028,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         // The batch size has been exceeded, so flush our offsets
         private void FlushOffsets()
         {
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             if (_flushToken.Wait(TimeSpan.Zero))
             {
                 //This is expensive, so use a background thread
@@ -1020,7 +1048,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         //If it is has been too long since we flushed, flush now to prevent offsets accumulating 
         private void SweepOffsets()
         {
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             if (now - _lastFlushAt < _sweepUncommittedInterval)
             {
@@ -1037,7 +1065,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 
                 //This is expensive, so use a background thread
                 Task.Factory.StartNew(
-                    action: state => CommitAllOffsets(state is not null ? (DateTime) state : DateTime.UtcNow),
+                    action: state => CommitAllOffsets(state is not null ? (DateTime) state : _timeProvider.GetUtcNow().UtcDateTime),
                     state: now,
                     cancellationToken: CancellationToken.None,
                     creationOptions: TaskCreationOptions.DenyChildAttach,
@@ -1065,11 +1093,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (_invalidMessageProducer?.IsValueCreated == true)
                 _invalidMessageProducer.Value?.Dispose();
 
-            if (_deadLetterProducerAsync?.IsValueCreated == true)
-                (_deadLetterProducerAsync.Value as IDisposable)?.Dispose();
-
-            if (_invalidMessageProducerAsync?.IsValueCreated == true)
-                (_invalidMessageProducerAsync.Value as IDisposable)?.Dispose();
+            _requeueProducer?.Dispose();
         }
 
         /// <summary>
@@ -1085,11 +1109,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Disposes of the consumer, async
         /// </summary>
         /// <returns>A value task that manages the disposal</returns>
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            Dispose(true);
+            await _sweeperTimer.DisposeAsync();
+
+            Close();
+            _consumer?.Dispose();
+            _flushToken?.Dispose();
+
+            if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value != null)
+                await _deadLetterProducer.Value.DisposeAsync();
+
+            if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value != null)
+                await _invalidMessageProducer.Value.DisposeAsync();
+
+            if (_requeueProducer != null)
+                await _requeueProducer.DisposeAsync();
+
             GC.SuppressFinalize(this);
-            return new ValueTask(Task.CompletedTask);
         }
         
         private static partial class Log

@@ -250,7 +250,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             assemblies = assemblies.Concat([assembly]);
             var subscribers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
-                where ti is { IsClass: true, IsAbstract: false, IsInterface: false }
+                where ti is { IsClass: true, IsAbstract: false, IsInterface: false } && (ti.IsPublic || ti.IsNestedPublic)
                 from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };

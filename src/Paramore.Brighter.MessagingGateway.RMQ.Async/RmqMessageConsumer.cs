@@ -1,4 +1,4 @@
-﻿#region Licence
+﻿﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -50,6 +50,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
     private PullConsumer? _consumer;
+    private RmqMessageProducer? _requeueProducer;
+    private volatile bool _requeueProducerInitialized;
+    private object? _requeueProducerLock;
+    private readonly IAmAMessageScheduler? _scheduler;
     private readonly ChannelName _queueName;
     private readonly RoutingKeys _routingKeys;
     private readonly bool _isDurable;
@@ -80,6 +84,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="maxQueueLength">How lare can the buffer grow before we stop accepting new work?</param>
     /// <param name="makeChannels">Should we validate, or create missing channels</param>
     /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
+    /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
@@ -92,9 +97,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         TimeSpan? ttl = null,
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
-        QueueType queueType = QueueType.Classic)
+        QueueType queueType = QueueType.Classic,
+        IAmAMessageScheduler? scheduler = null)
         : this(connection, queueName, new RoutingKeys(routingKey), isDurable, highAvailability,
-            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType)
+            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType, scheduler)
     {
     }
 
@@ -113,6 +119,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="maxQueueLength">The maximum number of messages on the queue before we begin to reject publication of messages</param>
     /// <param name="makeChannels">Should we validate or create missing channels</param>
     /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
+    /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
@@ -125,7 +132,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         TimeSpan? ttl = null,
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
-        QueueType queueType = QueueType.Classic)
+        QueueType queueType = QueueType.Classic,
+        IAmAMessageScheduler? scheduler = null)
         : base(connection)
     {
         _queueName = queueName;
@@ -141,7 +149,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         _ttl = ttl;
         _maxQueueLength = maxQueueLength;
         _queueType = queueType;
-        
+        _scheduler = scheduler;
+
         // Validate quorum queue requirements
         if (_queueType == QueueType.Quorum)
         {
@@ -332,11 +341,50 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <summary>
     /// Requeues the specified message.
     /// </summary>
-    /// <param name="message"></param>
+    /// <param name="message">The message to requeue.</param>
     /// <param name="timeout">Time to delay delivery of the message.</param>
-    /// <returns>True if message deleted, false otherwise</returns>
+    /// <returns>True if the message was successfully requeued and the original acknowledged, false otherwise.</returns>
+    /// <remarks>
+    /// <para>
+    /// This operation is not atomic. The message is first published back to the queue, and only then 
+    /// is the original message acknowledged (removed from the queue). This ordering is intentional to 
+    /// minimize message loss risk:
+    /// </para>
+    /// <list type="bullet">
+    ///   <item>
+    ///     <description>If the publish fails, the original message remains on the queue (at-least-once delivery).</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>If the ack fails after a successful publish, the message may be delivered twice 
+    ///     (duplicate risk, not loss). Consumers should be idempotent to handle this scenario.</description>
+    ///   </item>
+    /// </list>
+    /// </remarks>
     public bool Requeue(Message message, TimeSpan? timeout = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, timeout));
 
+    /// <summary>
+    /// Requeues the specified message asynchronously.
+    /// </summary>
+    /// <param name="message">The message to requeue.</param>
+    /// <param name="timeout">Time to delay delivery of the message.</param>
+    /// <param name="cancellationToken">Allows the asynchronous operation to be canceled.</param>
+    /// <returns>True if the message was successfully requeued and the original acknowledged, false otherwise.</returns>
+    /// <remarks>
+    /// <para>
+    /// This operation is not atomic. The message is first published back to the queue, and only then 
+    /// is the original message acknowledged (removed from the queue). This ordering is intentional to 
+    /// minimize message loss risk:
+    /// </para>
+    /// <list type="bullet">
+    ///   <item>
+    ///     <description>If the publish fails, the original message remains on the queue (at-least-once delivery).</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>If the ack fails after a successful publish, the message may be delivered twice 
+    ///     (duplicate risk, not loss). Consumers should be idempotent to handle this scenario.</description>
+    ///   </item>
+    /// </list>
+    /// </remarks>
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
@@ -345,27 +393,28 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         try
         {
             Log.RequeueingMessage(s_logger, message.Id, timeout.Value.TotalMilliseconds);
-            
+
             await EnsureChannelAsync(cancellationToken);
-            
+
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
-            var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
-            if (DelaySupported)
+            // Step 1: Publish the message back to the queue first.
+            // This ordering ensures at-least-once delivery: if publish fails, the original remains unacked.
+            // timeout is guaranteed non-null here due to the ??= TimeSpan.Zero coalescing at the top of this method
+            if (DelaySupported || timeout <= TimeSpan.Zero)
             {
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
                 await rmqMessagePublisher.RequeueMessageAsync(message, _queueName, timeout.Value, cancellationToken);
             }
             else
             {
-                if (timeout > TimeSpan.Zero)
-                {
-                    await Task.Delay(timeout.Value, cancellationToken);
-                }
-
-                await rmqMessagePublisher.RequeueMessageAsync(message, _queueName, TimeSpan.Zero, cancellationToken);
+                EnsureProducer();
+                await _requeueProducer!.SendWithDelayAsync(message, timeout, cancellationToken);
             }
 
-            //ack the original message to remove it from the queue
+            // Step 2: Ack the original message to remove it from the queue.
+            // If this fails after a successful publish, the message may be duplicated (not lost).
+            // Consumers should be idempotent to handle potential duplicates.
             var deliveryTag = message.DeliveryTag;
             Log.DeletingMessage(s_logger, message.Id, deliveryTag);
             await Channel.BasicAckAsync(deliveryTag, false, cancellationToken);
@@ -559,6 +608,17 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         return arguments;
     }
 
+    private void EnsureProducer()
+    {
+#pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
+        LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+            ref _requeueProducerLock, () => new RmqMessageProducer(Connection)
+            {
+                Scheduler = _scheduler
+            });
+#pragma warning restore CS0420
+    }
+
     private string GetDeadletterExchangeName()
     {
         //never likely to happen as caller will generally have asserted this
@@ -574,13 +634,15 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     public override void Dispose()
     {
         BrighterAsyncContext.Run(() => CancelConsumerAsync(CancellationToken.None));
+        _requeueProducer?.Dispose();
         Dispose(true);
         GC.SuppressFinalize(this);
     }
-    
+
     public override async ValueTask DisposeAsync()
     {
         await CancelConsumerAsync(CancellationToken.None);
+        if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
         Dispose(true);
         GC.SuppressFinalize(this);
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -44,24 +45,26 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
     public async Task When_a_message_is_acknowledged_update_offset()
     {
         //Let topic propagate in the broker
-        await Task.Delay(10000);
+        await Task.Delay(500);
 
         var groupId = Guid.NewGuid().ToString();
-        var sentMessages = new Dictionary<string, bool>();
+        var sentMessages = new ConcurrentDictionary<string, bool>();
 
         var routingKey = new RoutingKey(_topic);
         var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey));
         var producerConfirm = producerAsync as ISupportPublishConfirmation;
         producerConfirm.OnMessagePublished += delegate(bool success, string id)
         {
-            if (success && sentMessages.ContainsKey(id)) sentMessages[id] = true;
+            if (success) sentMessages.TryUpdate(id, true, false);
         };
 
         //send x messages to Kafka
+        var sentMessageIds = new string[10];
         for (int i = 0; i < 10; i++)
         {
             var msgId = Guid.NewGuid().ToString();
-            sentMessages.Add(msgId, false);
+            sentMessages.TryAdd(msgId, false);
+            sentMessageIds[i] = msgId;
             await producerAsync.SendAsync(
                 new Message(
                     new MessageHeader(msgId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
@@ -73,56 +76,47 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
-        //let messages propgate to the broker
-        await Task.Delay(10000);
-
         //check we sent everything
         Assert.DoesNotContain(sentMessages, dr => dr.Value == false);
 
-        var consumerOne = CreateConsumer(groupId);
-        Message[] messages = await ConsumeMessagesAsync(consumerOne, groupId: groupId, batchLimit: 5);
+        //This will create, then dispose the consumer (flushing offsets)
+        Message[] messages = await ConsumeMessagesAsync(groupId, batchLimit: 5);
 
         //check we read the first 5 messages
         Assert.Equal(5, messages.Length);
         for (int i = 0; i < 5; i++)
         {
-            Assert.True(sentMessages.ContainsKey(messages[i].Id));
+            Assert.Equal(sentMessageIds[i], messages[i].Id);
         }
 
-        //yield to let offsets propogate
-        await Task.Delay(2500);
+        //allow time for committed offsets to propagate in the broker
+        await Task.Delay(TimeSpan.FromMilliseconds(5000));
 
-        //kill this consumer - but flushes offsets
-        ((KafkaMessageConsumer)consumerOne).Close();
+        //This will create a new consumer for the same group
+        Message[] newMessages = await ConsumeMessagesAsync(groupId, batchLimit: 5);
 
-        //This will create a new consumer
-        var consumerTwo = CreateConsumer(groupId);
-
-        Message[] newMessages = await ConsumeMessagesAsync(consumerTwo, groupId, batchLimit: 5);
-
-        //check we read the first 5 messages
+        //check we read the next 5 messages
         Assert.Equal(5, newMessages.Length);
         for (int i = 0; i < 5; i++)
         {
-            Assert.True(sentMessages.ContainsKey(messages[i].Id));
+            Assert.Equal(sentMessageIds[i + 5], newMessages[i].Id);
         }
-
-        //yield to let offsets propogate
-        await Task.Delay(2500);
-
-        //kill this consumer - but flushes offsets
-        ((KafkaMessageConsumer)consumerTwo).Close();
-
-        //kill this consumer
-        await consumerTwo.DisposeAsync();
     }
 
-    private async Task<Message[]> ConsumeMessagesAsync(IAmAMessageConsumerAsync consumer, string groupId, int batchLimit)
+    private async Task<Message[]> ConsumeMessagesAsync(string groupId, int batchLimit)
     {
         var consumedMessages = new List<Message>();
-        for (int i = 0; i < batchLimit; i++)
+        await using (IAmAMessageConsumerAsync consumer = CreateConsumer(groupId))
         {
-            consumedMessages.Add(await ConsumeMessageAsync(consumer));
+            for (int i = 0; i < batchLimit; i++)
+            {
+                consumedMessages.Add(await ConsumeMessageAsync(consumer));
+            }
+
+            //yield to allow the background CommitOffsets task to complete;
+            //ReceiveAsync uses Task.Run for each receive, increasing thread pool pressure,
+            //so the background commit may be delayed in the thread pool queue
+            await Task.Delay(TimeSpan.FromMilliseconds(5000));
         }
 
         return consumedMessages.ToArray();
@@ -151,8 +145,9 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                 {
                     //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                    await Task.Delay(1000);
                 }
-            } while (maxTries <= 3);
+            } while (maxTries <= 10);
 
             return messages[0];
         }

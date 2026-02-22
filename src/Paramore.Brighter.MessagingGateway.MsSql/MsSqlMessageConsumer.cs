@@ -18,17 +18,23 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private readonly RoutingKey? _invalidMessageRoutingKey;
         private readonly Lazy<MsSqlMessageProducer?>? _deadLetterProducer;
         private readonly Lazy<MsSqlMessageProducer?>? _invalidMessageProducer;
+        private readonly IAmAMessageScheduler? _scheduler;
+        private MsSqlMessageProducer? _requeueProducer;
+        private bool _requeueProducerInitialized;
+        private object? _requeueProducerLock;
 
         public MsSqlMessageConsumer(
             RelationalDatabaseConfiguration msSqlConfiguration,
             string topic,
             RelationalDbConnectionProvider connectionProvider,
+            IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null)
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
             _msSqlConfiguration = msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             _sqlMessageQueue = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
+            _scheduler = scheduler;
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
 
@@ -41,9 +47,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public MsSqlMessageConsumer(
             RelationalDatabaseConfiguration msSqlConfiguration,
             string topic,
+            IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null)
-            : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration), deadLetterRoutingKey, invalidMessageRoutingKey)
+            : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration), scheduler, deadLetterRoutingKey, invalidMessageRoutingKey)
         {}
 
         /// <summary>
@@ -103,11 +110,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var ct = new CancellationTokenSource();
-            ct.CancelAfter(timeOut ?? TimeSpan.FromMilliseconds(300) );
-            var operationCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct.Token).Token;
+            using var ct = new CancellationTokenSource(timeOut ?? TimeSpan.FromMilliseconds(300));
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ct.Token);
 
-            var rc = await _sqlMessageQueue.TryReceiveAsync(_topic, operationCancellationToken);
+            var rc = await _sqlMessageQueue.TryReceiveAsync(_topic, linked.Token);
             var message = !rc.IsDataValid ? new Message() : rc.Message;
             return [message!];
         }
@@ -243,16 +249,21 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
+        /// <param name="delay">When greater than zero, uses a producer with scheduler for delayed requeue</param>
         /// <returns>True when message is requeued</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
             delay ??= TimeSpan.Zero;
 
-            // delay is not natively supported - don't block with Task.Delay
             var topic = message.Header.Topic;
-
             Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
+
+            if (delay > TimeSpan.Zero)
+            {
+                EnsureRequeueProducer();
+                _requeueProducer!.SendWithDelay(message, delay);
+                return true;
+            }
 
             _sqlMessageQueue.Send(message, topic);
             return true;
@@ -262,16 +273,22 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
+        /// <param name="delay">When greater than zero, uses a producer with scheduler for delayed requeue</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the operation</param>
         /// <returns>True when message is requeued</returns>
         public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             delay ??= TimeSpan.Zero;
 
-            // delay is not natively supported - don't block with Task.Delay
             var topic = message.Header.Topic;
-
             Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
+
+            if (delay > TimeSpan.Zero)
+            {
+                EnsureRequeueProducer();
+                await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
+                return true;
+            }
 
             await _sqlMessageQueue.SendAsync(message, topic, null, cancellationToken: cancellationToken);
             return true;
@@ -280,18 +297,25 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <summary>
         /// Dispose of the consumer
         /// </summary>
-        /// <remarks>
-        /// Nothing to do here
-        /// </remarks>
         public void Dispose()
         {
+            _requeueProducer?.Dispose();
             GC.SuppressFinalize(this);
         }
 
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
+            if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
             GC.SuppressFinalize(this);
-            return new ValueTask(Task.CompletedTask);
+        }
+
+        private void EnsureRequeueProducer()
+        {
+            LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+                ref _requeueProducerLock, () => new MsSqlMessageProducer(_msSqlConfiguration)
+                {
+                    Scheduler = _scheduler
+                });
         }
 
         private MsSqlMessageProducer? CreateDeadLetterProducer()

@@ -86,12 +86,37 @@ This inconsistency creates several problems:
 
 - Within each transport - file pattern: Paramore.Messaging.Gateway.*
   - Each producer MUST use the configured scheduler for `SendWithDelay`/`SendWithDelayAsync`
-  - Each consumer that does not have native delay support should lazily create an instance of its native producer (i.e. `KafkaMessageConsumer` creates a `KafkaMessageProducer`), when first asked to requeue a message with delay (i.e `Requeue` or `RequeueAsync` has a `timeOut` > TimeSpan.Zero)
-    - If using a producer, we create lazily in case delay is never used 
-    - Use the topic from the message when creating the producer. Use sensible defaults over forcing configuration 
-    - The consumer should then use the producer's `SendWithDelay` or `SendWithDelayAsync` to send the message with the required delay.
-  - Delay is `TimeSpan.Zero`: send immediately without using producer
-    - Transports with native delay support MUST use native delay over producer (configurable)
+  - Each consumer's `Requeue`/`RequeueAsync` MUST separate immediate and delayed paths:
+    - **Delayed requeue** (`delay > TimeSpan.Zero`): The consumer lazily creates an instance of its native producer (i.e. `KafkaMessageConsumer` creates a `KafkaMessageProducer`) on first delayed requeue. The producer's `Scheduler` property is set so that `SendWithDelay`/`SendWithDelayAsync` delegates to the scheduler.
+      - If using a producer, we create lazily in case delay is never used
+      - Use the topic from the message when creating the producer. Use sensible defaults over forcing configuration
+    - **Immediate requeue** (`delay` is null or `TimeSpan.Zero`): Send immediately, preferring native transport mechanisms over the scheduler-aware producer. The producer SHOULD NOT be created solely for an immediate requeue.
+  - Transports with native delay support MUST use native delay over producer (configurable)
+
+#### Immediate Requeue by Transport Category
+
+Transports fall into two categories for immediate requeue:
+
+**Category 1 — Transports with native immediate requeue**: These transports can requeue without creating a producer, using native operations directly on the underlying transport connection.
+
+| Transport | Immediate Requeue Mechanism |
+|-----------|---------------------------|
+| Redis | `AddItemToList` on the Redis queue |
+| MSSQL | `_sqlMessageQueue.Send` direct SQL insert |
+| RabbitMQ | `RmqMessagePublisher.RequeueMessage` on the existing channel |
+| InMemory | Direct `_bus.Enqueue` |
+
+**Category 2 — Transports where requeue requires producing**: Kafka streams are immutable and MQTT is pub/sub — neither has a native "put the message back" operation. Immediate requeue MUST produce a new copy of the message to the topic, which requires a producer. For these transports:
+- The producer is still lazily created via `EnsureRequeueProducer`
+- Immediate requeue calls `Send`/`SendAsync` directly (bypassing the scheduler), followed by `Flush` where required (Kafka)
+- Delayed requeue calls `SendWithDelay`/`SendWithDelayAsync` which delegates to the scheduler
+
+| Transport | Immediate Requeue Mechanism | Notes |
+|-----------|---------------------------|-------|
+| Kafka | `_requeueProducer.Send` + `Flush` | Must produce new message; original offset is acknowledged |
+| MQTT | `_requeueProducer.Send` | Must publish back to topic |
+
+The code structure for Category 2 transports mirrors Category 1 — the `if (delay > TimeSpan.Zero)` guard is present and the two paths are explicit — even though both paths use the lazily-created producer.
 
 ### Notes
 
@@ -293,6 +318,7 @@ else
 | Producer per consumer | Simpler than sharing; low overhead for in-memory |
 | Use message topic | Respects routing; avoids configuration burden |
 | Preserve direct timer fallback | Backward compatibility for tests without scheduler |
+| Separate immediate/delayed paths | Immediate requeue uses native mechanism or `Send` directly; delayed requeue uses `SendWithDelay` with scheduler. Avoids scheduler overhead for zero-delay requeue and keeps code paths explicit. |
 
 ### Implementation Approach
 

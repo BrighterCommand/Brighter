@@ -29,7 +29,6 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Fragile", "CI")]
 [Trait("Category", "RMQ")]
 [Collection("RMQ")]
 public class RmqMessageProducerDLQTests : IDisposable

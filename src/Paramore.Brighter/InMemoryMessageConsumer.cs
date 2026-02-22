@@ -47,7 +47,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private readonly TimeSpan _ackTimeout;
     private readonly ITimer _lockTimer;
     private readonly IAmAMessageScheduler? _scheduler;
-    private InMemoryMessageProducer? _producer;
+    private InMemoryMessageProducer? _requeueProducer;
+    private volatile bool _requeueProducerInitialized;
+    private object? _requeueProducerLock;
 
     /// <summary>
     /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="InMemoryMessageProducer"/>
@@ -57,7 +59,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// and requeues them if they have been locked for longer than the timeout.
     /// </summary>
     /// <remarks>
-    /// If an <see cref="invalidMessageTopic"/> is not provided but a <see cref="deadLetterTopic"/> is, tnen we will treat
+    /// If an <see cref="invalidMessageTopic"/> is not provided but a <see cref="deadLetterTopic"/> is, then we will treat
     /// the <see cref="deadLetterTopic"/> as the topic for invalid messages
     /// </remarks>
     /// <param name="topic">The <see cref="Paramore.Brighter.RoutingKey"/> that we want to consume from</param>
@@ -98,7 +100,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// </summary>
     ~InMemoryMessageConsumer()
     {
-        DisposeCore();
+        _lockTimer.Dispose();
     }
 
 
@@ -226,7 +228,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// Rejects the specified message.
     /// </summary>
     /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
-    /// message channel, the message should be forwardedn to it
+    /// message channel, the message should be forwarded to it
     /// <param name="message">The <see cref="Message"/> to reject</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">Cancels the rejection</param>
@@ -244,6 +246,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="message">The message to requeue</param>
     /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
+    /// <exception cref="ConfigurationException">Thrown when a delay is requested but no scheduler is configured.</exception>
     /// <remarks>The requeue method will use the topic of the first message that it receives to create a producer, and use that to requeue</remarks>
     public bool Requeue(Message message, TimeSpan? timeOut = null)
     {
@@ -255,13 +258,21 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         // Use producer delegation when scheduler is configured
         if (_scheduler != null)
         {
-            _lockedMessages.TryRemove(message.Id, out _);
-            EnsureProducer(message.Header.Topic);
-            _producer!.SendWithDelay(message, timeOut);
-            return true;
+            try
+            {
+                _lockedMessages.TryRemove(message.Id, out _);
+                EnsureProducer(message.Header.Topic);
+                _requeueProducer!.SendWithDelay(message, timeOut);
+                return true;
+            }
+            catch
+            {
+                _lockedMessages.TryAdd(message.Id, new LockedMessage(message, _timeProvider.GetUtcNow()));
+                throw;
+            }
         }
 
-        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
+        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration.");
 
     }
 
@@ -274,11 +285,12 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
     /// <param name="cancellationToken">Allows the asynchronous operation to be cancelled</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
+    /// <exception cref="ConfigurationException">Thrown when a delay is requested but no scheduler is configured.</exception>
     /// <remarks>The requeue method will use the topic of the first message that it receives to create a producer, and use that to requeue</remarks>
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        
+
         timeOut ??= TimeSpan.Zero;
 
         if (timeOut <= TimeSpan.Zero)
@@ -287,10 +299,18 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         // Use producer delegation when scheduler is configured
         if (_scheduler != null)
         {
-            _lockedMessages.TryRemove(message.Id, out _);
-            EnsureProducer(message.Header.Topic);
-            await _producer!.SendWithDelayAsync(message, timeOut, cancellationToken);
-            return true;
+            try
+            {
+                _lockedMessages.TryRemove(message.Id, out _);
+                EnsureProducer(message.Header.Topic);
+                await _requeueProducer!.SendWithDelayAsync(message, timeOut, cancellationToken);
+                return true;
+            }
+            catch
+            {
+                _lockedMessages.TryAdd(message.Id, new LockedMessage(message, _timeProvider.GetUtcNow()));
+                throw;
+            }
         }
 
         throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
@@ -326,30 +346,24 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private void DisposeCore()
     {
         _lockTimer.Dispose();
-        _producer?.Dispose();
+        _requeueProducer?.Dispose();
     }
 
     private async ValueTask DisposeAsyncCore()
     {
         await _lockTimer.DisposeAsync().ConfigureAwait(false);
-        if (_producer != null) await _producer.DisposeAsync().ConfigureAwait(false);
+        if (_requeueProducer != null) await _requeueProducer.DisposeAsync().ConfigureAwait(false);
     }
 
     private void EnsureProducer(RoutingKey topic)
     {
-        if (_producer != null) return;
-
-        var newProducer = new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
-        {
-            Scheduler = _scheduler
-        };
-        // Thread-safe lazy initialization
-        var original = Interlocked.CompareExchange(ref _producer, newProducer, null);
-        if (original != null)
-        {
-            // Another thread set _producer, dispose the one we created
-            newProducer.Dispose();
-        }
+#pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
+        LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
+            ref _requeueProducerLock, () => new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
+            {
+                Scheduler = _scheduler
+            });
+#pragma warning restore CS0420
     }
     
     private bool RequeueNoDelay(Message message)

@@ -65,7 +65,7 @@ public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage : IDispos
         var outbox = _outboxProvider.CreateOutbox();
         outbox.Add([earliest, dispatched, undispatched], context);
         outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        outbox.MarkDispatched(dispatched.Id, context);
+        outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
         
         // Act
         var message = outbox.Get(dispatched.Id, context);
@@ -77,7 +77,7 @@ public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage : IDispos
         //should read the header from the sql outbox
         Assert.Equal(message.Header.Topic, dispatched.Header.Topic);
         Assert.Equal(message.Header.MessageType, dispatched.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), dispatched.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
+        Assert.Equal(message.Header.TimeStamp, dispatched.Header.TimeStamp, TimeSpan.FromSeconds(1));
         Assert.Equal(0, dispatched.Header.HandledCount); // -- should be zero when read from outbox
         // Assert.Equal(TimeSpan.Zero, dispatched.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, dispatched.Header.CorrelationId);
