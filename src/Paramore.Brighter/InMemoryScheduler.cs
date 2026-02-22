@@ -58,7 +58,14 @@ public class InMemoryScheduler(
 
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
-        => Schedule(message, at - timeProvider.GetUtcNow());
+    {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ArgumentOutOfRangeException(nameof(at), at, "invalid datetime, it should be in the future");
+        }
+
+        return Schedule(message, at - timeProvider.GetUtcNow());
+    }
 
     /// <inheritdoc />
     public string Schedule(Message message, TimeSpan delay)
