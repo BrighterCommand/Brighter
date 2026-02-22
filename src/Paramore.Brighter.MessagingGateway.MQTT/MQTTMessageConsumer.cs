@@ -26,26 +26,37 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private readonly Message _noopMessage = new();
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
+        private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
+        private readonly RoutingKey? _deadLetterRoutingKey;
+        private readonly RoutingKey? _invalidMessageRoutingKey;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttMessageConsumer"/> class.
         /// </summary>
         /// <param name="configuration">
-        /// The configuration settings for the MQTT message consumer, including connection details, 
+        /// The configuration settings for the MQTT message consumer, including connection details,
         /// topic prefix, client credentials, and other options.
         /// </param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ.</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling.</param>
         /// <exception cref="ArgumentNullException">
         /// Thrown when the <paramref name="configuration.TopicPrefix"/> is null.
         /// </exception>
         /// <remarks>
-        /// This constructor sets up the MQTT client with the provided configuration, establishes 
+        /// This constructor sets up the MQTT client with the provided configuration, establishes
         /// the connection to the broker, and subscribes to the specified topic.
         ///
         /// 04/03/2025:
         ///     - Removed support for user properties as they are not supported in v3.1.1 of the MQTT protocol.
         /// </remarks>
-        public MqttMessageConsumer(MqttMessagingGatewayConsumerConfiguration configuration)
+        public MqttMessageConsumer(
+            MqttMessagingGatewayConsumerConfiguration configuration,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
         {
+            _configuration = configuration;
+            _deadLetterRoutingKey = deadLetterRoutingKey;
+            _invalidMessageRoutingKey = invalidMessageRoutingKey;
             _topic = $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
