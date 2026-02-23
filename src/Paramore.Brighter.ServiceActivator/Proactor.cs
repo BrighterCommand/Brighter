@@ -234,7 +234,7 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (AggregateException aggregateException)
                 {
                     var stop = false;
-                    var defer = false;
+                    DeferMessageAction? deferAction = null;
                     DontAckAction? dontAck = null;
                     var reject = false;
                     var invalidMessage = false;
@@ -250,9 +250,9 @@ namespace Paramore.Brighter.ServiceActivator
                             break;
                         }
 
-                        if (exception is DeferMessageAction)
+                        if (exception is DeferMessageAction da)
                         {
-                            defer = true;
+                            deferAction = da;
                             continue;
                         }
 
@@ -279,11 +279,11 @@ namespace Paramore.Brighter.ServiceActivator
                         Log.FailedToDispatchMessage(s_logger, exception, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     }
 
-                    if (defer)
+                    if (deferAction != null)
                     {
                         Log.DeferringMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                         span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
-                        if (await RequeueMessage(message))
+                        if (await RequeueMessage(message, deferAction.Delay))
                             continue;
                     }
 
@@ -334,13 +334,13 @@ namespace Paramore.Brighter.ServiceActivator
                     Status = MessagePumpStatus.MP_ERROR;
                     break;
                 }
-                catch (DeferMessageAction)
+                catch (DeferMessageAction deferAction)
                 {
                     Log.DeferringMessage2(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
 
                     span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
 
-                    if (await RequeueMessage(message)) continue;
+                    if (await RequeueMessage(message, deferAction.Delay)) continue;
                 }
                 catch (DontAckAction dontAckAction)
                 {
@@ -477,7 +477,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Channel.RejectAsync(message, reason);
         }
 
-        private Task<bool> RequeueMessage(Message message)
+        private Task<bool> RequeueMessage(Message message, TimeSpan? delay = null)
         {
             message.Header.UpdateHandledCount();
 
@@ -491,9 +491,9 @@ namespace Paramore.Brighter.ServiceActivator
                             ? string.Empty
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
-                    IncrementUnacceptableMessageCount(); 
+                    IncrementUnacceptableMessageCount();
                     return RejectMessage(message, new MessageRejectionReason(
-                        RejectionReason.DeliveryError, 
+                        RejectionReason.DeliveryError,
                         $"Handle Count Exceeded for message {originalMessageId}")
                     );
                 }
@@ -501,7 +501,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             Log.ReQueueingMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name, Channel.RoutingKey);
 
-            return Channel.RequeueAsync(message, RequeueDelay);
+            return Channel.RequeueAsync(message, delay ?? RequeueDelay);
         }
         
         private async Task<IRequest> TranslateMessage(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
