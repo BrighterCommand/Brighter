@@ -40,6 +40,16 @@
     <Project Path="samples/TaskQueue/AWSTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
     <Project Path="samples/TaskQueue/AWSTaskQueue/GreetingsSender/GreetingsSender.csproj" />
   </Folder>
+  <Folder Name="/samples/TaskQueue/KafkaDeferOnError/">
+    <Project Path="samples/TaskQueue/KafkaDeferOnError/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/KafkaDeferOnError/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/KafkaDeferOnError/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/KafkaDontAckOnError/">
+    <Project Path="samples/TaskQueue/KafkaDontAckOnError/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/KafkaDontAckOnError/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/KafkaDontAckOnError/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
   <Folder Name="/samples/TaskQueue/KafkaDynamicEventStreams/">
     <Project Path="samples/TaskQueue/KafkaDynamicEventStream/TaskReceiverConsole/TaskReceiverConsole.csproj" />
     <Project Path="samples/TaskQueue/KafkaDynamicEventStream/TaskStatus/TaskStatus.csproj" />
@@ -54,6 +64,12 @@
     <Project Path="samples/TaskQueue/KafkaTaskQueue/Greetings/Greetings.csproj" />
     <Project Path="samples/TaskQueue/KafkaTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
     <Project Path="samples/TaskQueue/KafkaTaskQueue/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/KafkaTaskQueueWithDLQ/">
+    <Project Path="samples/TaskQueue/KafkaTaskQueueWithDLQ/DlqConsole/DlqConsole.csproj" />
+    <Project Path="samples/TaskQueue/KafkaTaskQueueWithDLQ/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/KafkaTaskQueueWithDLQ/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/KafkaTaskQueueWithDLQ/GreetingsSender/GreetingsSender.csproj" />
   </Folder>
   <Folder Name="/samples/TaskQueue/MsSqlMessagingGateway/">
     <File Path="samples/TaskQueue/MsSqlMessagingGateway/BrighterSqlQueue.sql" />
@@ -78,6 +94,11 @@
     <Project Path="samples/TaskQueue/RedisTaskQueue/GreetingsReceiver/GreetingsReceiver.csproj" />
     <Project Path="samples/TaskQueue/RedisTaskQueue/GreetingsSender/GreetingsSender.csproj" />
   </Folder>
+  <Folder Name="/samples/TaskQueue/RMQDeferOnError/">
+    <Project Path="samples/TaskQueue/RMQDeferOnError/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/RMQDeferOnError/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/RMQDeferOnError/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
   <Folder Name="/samples/TaskQueue/RMQRequestReply/">
     <Project Path="samples/TaskQueue/RMQRequestReply/Greetings/Greetings.csproj" />
     <Project Path="samples/TaskQueue/RMQRequestReply/GreetingsClient/GreetingsClient.csproj" />
@@ -87,6 +108,12 @@
     <Project Path="samples/TaskQueue/RMQTaskQueue/Greetings/Greetings.csproj" />
     <Project Path="samples/TaskQueue/RMQTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
     <Project Path="samples/TaskQueue/RMQTaskQueue/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/TaskQueue/RMQTaskQueueWithDLQ/">
+    <Project Path="samples/TaskQueue/RMQTaskQueueWithDLQ/DlqConsole/DlqConsole.csproj" />
+    <Project Path="samples/TaskQueue/RMQTaskQueueWithDLQ/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/RMQTaskQueueWithDLQ/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
+    <Project Path="samples/TaskQueue/RMQTaskQueueWithDLQ/GreetingsSender/GreetingsSender.csproj" />
   </Folder>
   <Folder Name="/samples/Transforms/" />
   <Folder Name="/samples/Transforms/ClaimCheck/">
@@ -184,9 +211,7 @@
     <Project Path="tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj" />
-    <Project Path="tests/Paramore.Brighter.Testing.Tests/Paramore.Brighter.Testing.Tests.csproj">
-      <Build Solution="Debug|*" Project="false" />
-    </Project>
+    <Project Path="tests/Paramore.Brighter.Testing.Tests/Paramore.Brighter.Testing.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj" />
     <Project Path="tests/Paramore.Test.Helpers/Paramore.Test.Helpers.csproj" />
