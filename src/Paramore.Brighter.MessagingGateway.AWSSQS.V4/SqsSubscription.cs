@@ -115,6 +115,7 @@ public class SqsSubscription : Subscription, IUseBrighterDeadLetterSupport, IUse
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null,
         TimeSpan? emptyChannelDelay = null,
@@ -128,7 +129,7 @@ public class SqsSubscription : Subscription, IUseBrighterDeadLetterSupport, IUse
         OnMissingChannel makeChannels = OnMissingChannel.Create)
         : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize, noOfPerformers,
             timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
-            makeChannels, emptyChannelDelay, channelFailureDelay)
+            makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
     {
         if (channelType == ChannelType.PubSub && routingKey is null)
             throw new ArgumentNullException(nameof(routingKey), "Routing Key is required for PubSub channels");
@@ -196,6 +197,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Proactor,
         IAmAChannelFactory? channelFactory = null,
         TimeSpan? emptyChannelDelay = null,
@@ -220,6 +222,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
             requeueCount,
             requeueDelay,
             unacceptableMessageLimit,
+            unacceptableMessageLimitWindow,
             messagePumpType,
             channelFactory,
             emptyChannelDelay,

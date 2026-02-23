@@ -86,6 +86,7 @@ public class RocketSubscription : Subscription, IUseBrighterDeadLetterSupport, I
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -97,7 +98,7 @@ public class RocketSubscription : Subscription, IUseBrighterDeadLetterSupport, I
         RoutingKey? deadLetterRoutingKey = null,
         RoutingKey? invalidMessageRoutingKey = null) : base(subscriptionName, channelName, routingKey, requestType, getRequestType,
         bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory,
-        makeChannels, emptyChannelDelay, channelFailureDelay)
+        makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
     {
         ConsumerGroup = consumerGroup ?? string.Empty;
         ReceiveMessageTimeout = receiveMessageTimeout ?? TimeSpan.FromMinutes(1);
@@ -143,7 +144,8 @@ public class RocketMqSubscription<T> : RocketSubscription
     public RocketMqSubscription(SubscriptionName subscriptionName, ChannelName channelName, RoutingKey routingKey,
         Func<Message, Type>? getRequestType = null, string? consumerGroup = null, int bufferSize = 1, int noOfPerformers = 1,
         TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
-        int unacceptableMessageLimit = 0, MessagePumpType messagePumpType = MessagePumpType.Unknown,
+        int unacceptableMessageLimit = 0, TimeSpan? unacceptableMessageLimitWindow = null,
+        MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null, OnMissingChannel makeChannels = OnMissingChannel.Create,
         FilterExpression? filter = null, TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null, TimeSpan? receiveMessageTimeout = null,
@@ -151,7 +153,7 @@ public class RocketMqSubscription<T> : RocketSubscription
         RoutingKey? deadLetterRoutingKey = null,
         RoutingKey? invalidMessageRoutingKey = null) : base(subscriptionName, channelName, routingKey, typeof(T),  getRequestType,
         consumerGroup, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit,
-        messagePumpType, channelFactory, makeChannels, filter, emptyChannelDelay, channelFailureDelay, receiveMessageTimeout,
+        unacceptableMessageLimitWindow, messagePumpType, channelFactory, makeChannels, filter, emptyChannelDelay, channelFailureDelay, receiveMessageTimeout,
         invisibilityTimeout, deadLetterRoutingKey, invalidMessageRoutingKey)
     {
     }

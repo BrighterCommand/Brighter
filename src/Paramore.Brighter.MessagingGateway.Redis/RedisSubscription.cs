@@ -73,6 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
+            TimeSpan? unacceptableMessageLimitWindow = null,
             MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -81,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null)
             : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
-                noOfPerformers, timeOut ?? TimeSpan.FromSeconds(1), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                noOfPerformers, timeOut ?? TimeSpan.FromSeconds(1), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
             InvalidMessageRoutingKey = invalidMessageRoutingKey;
@@ -120,6 +121,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
+            TimeSpan? unacceptableMessageLimitWindow = null,
             MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -139,6 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 requeueCount,
                 requeueDelay,
                 unacceptableMessageLimit,
+                unacceptableMessageLimitWindow,
                 messagePumpType,
                 channelFactory,
                 makeChannels,
