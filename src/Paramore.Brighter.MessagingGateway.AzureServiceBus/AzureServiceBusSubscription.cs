@@ -70,15 +70,16 @@ public class AzureServiceBusSubscription : Subscription
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null)
-        : base(subscriptionName, channelName, routingKey,  requestType, getRequestType, bufferSize, 
-            noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, 
-            channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+        : base(subscriptionName, channelName, routingKey,  requestType, getRequestType, bufferSize,
+            noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
+            channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
     {
         Configuration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
     }
@@ -120,6 +121,7 @@ public class AzureServiceBusSubscription<T> : AzureServiceBusSubscription where 
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Proactor,
         IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -128,21 +130,22 @@ public class AzureServiceBusSubscription<T> : AzureServiceBusSubscription where 
         TimeSpan? channelFailureDelay = null)
         : base(
             subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
-            channelName ?? new ChannelName(typeof(T).FullName!), 
-            routingKey ?? new RoutingKey(typeof(T).FullName!), 
-            typeof(T), 
+            channelName ?? new ChannelName(typeof(T).FullName!),
+            routingKey ?? new RoutingKey(typeof(T).FullName!),
+            typeof(T),
             getRequestType,
-            bufferSize, 
-            noOfPerformers, 
-            timeOut ?? TimeSpan.FromMilliseconds(400), 
-            requeueCount, 
-            requeueDelay, 
-            unacceptableMessageLimit, 
-            messagePumpType, 
-            channelFactory, 
-            makeChannels, 
-            subscriptionConfiguration, 
-            emptyChannelDelay, 
+            bufferSize,
+            noOfPerformers,
+            timeOut ?? TimeSpan.FromMilliseconds(400),
+            requeueCount,
+            requeueDelay,
+            unacceptableMessageLimit,
+            unacceptableMessageLimitWindow,
+            messagePumpType,
+            channelFactory,
+            makeChannels,
+            subscriptionConfiguration,
+            emptyChannelDelay,
             channelFailureDelay)
     {
     }

@@ -114,6 +114,7 @@ public class GcpPubSubSubscription : Subscription
         Type? requestType = null, Func<Message, Type>? getRequestType = null, int bufferSize = 1,
         int noOfPerformers = 1, TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null,
@@ -128,7 +129,7 @@ public class GcpPubSubSubscription : Subscription
         string? subscriberMember = null)
         : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
-            channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
     {
         Labels = labels ?? new MapField<string, string>();
         MaxRequeueDelay = maxRequeueDelay ?? TimeSpan.FromSeconds(600); // Default to 10 minutes
@@ -164,6 +165,7 @@ public class GcpPubSubSubscription<T> : GcpPubSubSubscription
         Func<Message, Type>? getRequestType = null, int bufferSize = 1, int noOfPerformers = 1,
         TimeSpan? timeOut = null,
         int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null, string? projectId = null, TopicAttributes? topicAttributes = null,
@@ -176,7 +178,8 @@ public class GcpPubSubSubscription<T> : GcpPubSubSubscription
         TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream,
         string? subscriberMember = null)
         : base(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize,
-            noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
+            noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit,
+            unacceptableMessageLimitWindow, messagePumpType,
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, projectId, topicAttributes,
             ackDeadlineSeconds, retainAckedMessages, messageRetentionDuration, labels, enableMessageOrdering,
             enableExactlyOnceDelivery, storage, expirationPolicy, deadLetter, maxRequeueDelay, timeProvider,

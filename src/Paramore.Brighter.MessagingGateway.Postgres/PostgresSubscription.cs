@@ -46,6 +46,7 @@ public class PostgresSubscription : Subscription, IUseBrighterDeadLetterSupport,
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -58,7 +59,7 @@ public class PostgresSubscription : Subscription, IUseBrighterDeadLetterSupport,
         bool? binaryMessagePayload = null,
         RoutingKey? deadLetterRoutingKey = null,
         RoutingKey? invalidMessageRoutingKey = null)
-        : base(subscriptionName, channelName, routingKey, dataType, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+        : base(subscriptionName, channelName, routingKey, dataType, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
     {
         SchemaName = schemaName;
         QueueStoreTable = queueStoreTable;
@@ -153,6 +154,7 @@ public class PostgresSubscription<T> : PostgresSubscription
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
+        TimeSpan? unacceptableMessageLimitWindow = null,
         MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -177,6 +179,7 @@ public class PostgresSubscription<T> : PostgresSubscription
             requeueCount,
             requeueDelay,
             unacceptableMessageLimit,
+            unacceptableMessageLimitWindow,
             messagePumpType,
             channelFactory,
             makeChannels,

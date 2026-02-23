@@ -12,7 +12,7 @@ Wire `UnacceptableMessageLimitWindow` through the configuration pipeline so it f
 
 ### Task 1: Wire ConsumerFactory → Reactor
 
-- [ ] **TEST + IMPLEMENT: ConsumerFactory passes UnacceptableMessageLimitWindow to Reactor**
+- [x] **TEST + IMPLEMENT: ConsumerFactory passes UnacceptableMessageLimitWindow to Reactor**
   - **USE COMMAND**: `/test-first when consumer factory creates reactor with unacceptable message limit window it should be set on the pump`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor`
   - Test file: `When_consumer_factory_creates_reactor_with_unacceptable_message_limit_window.cs`
@@ -27,7 +27,7 @@ Wire `UnacceptableMessageLimitWindow` through the configuration pipeline so it f
 
 ### Task 2: Wire ConsumerFactory → Proactor
 
-- [ ] **TEST + IMPLEMENT: ConsumerFactory passes UnacceptableMessageLimitWindow to Proactor**
+- [x] **TEST + IMPLEMENT: ConsumerFactory passes UnacceptableMessageLimitWindow to Proactor**
   - **USE COMMAND**: `/test-first when consumer factory creates proactor with unacceptable message limit window it should be set on the pump`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor`
   - Test file: `When_consumer_factory_creates_proactor_with_unacceptable_message_limit_window.cs`
@@ -42,7 +42,7 @@ Wire `UnacceptableMessageLimitWindow` through the configuration pipeline so it f
 
 ### Task 3: Add parameter to transport-specific subscriptions
 
-- [ ] **IMPLEMENT: Add `unacceptableMessageLimitWindow` constructor parameter to all transport subscription types**
+- [x] **IMPLEMENT: Add `unacceptableMessageLimitWindow` constructor parameter to all transport subscription types**
   - No separate test needed — this is pure constructor parameter pass-through to the base `Subscription` class, which already stores the value. Tasks 1 and 2 verify end-to-end wiring.
   - For each type below, add `TimeSpan? unacceptableMessageLimitWindow = null` as a constructor parameter immediately after `unacceptableMessageLimit`, and pass it through in the base constructor call.
   - Follow the exact pattern used by `unacceptableMessageLimit` in each file.
@@ -63,7 +63,7 @@ Wire `UnacceptableMessageLimitWindow` through the configuration pipeline so it f
 
 ### Task 4: Regression
 
-- [ ] **VERIFY: All existing core tests pass**
+- [x] **VERIFY: All existing core tests pass** (533 passed, 0 failed, 7 skipped — net9.0 + net10.0)
   - Run: `dotnet test tests/Paramore.Brighter.Core.Tests/ --no-restore`
   - All existing tests must continue to pass (no breaking changes)
 
