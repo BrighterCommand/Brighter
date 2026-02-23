@@ -51,6 +51,9 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((_, services) =>
     {
+        // This sample intentionally throws on every 5th message to demonstrate RejectMessageOnError.
+        // Setting unacceptableMessageLimitWindow to zero resets the unacceptable message count on every
+        // pump cycle, preventing the pump from shutting down due to accumulated error counts.
         var subscriptions = new KafkaSubscription[]
         {
             new KafkaSubscription<GreetingEvent>(
@@ -65,7 +68,8 @@ var host = Host.CreateDefaultBuilder(args)
                 sweepUncommittedOffsetsInterval: TimeSpan.FromMilliseconds(10000),
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create,
-                deadLetterRoutingKey: new RoutingKey("greeting.event.dlq"))
+                deadLetterRoutingKey: new RoutingKey("greeting.event.dlq"),
+                unacceptableMessageLimitWindow: TimeSpan.Zero)
         };
 
         //create the gateway
