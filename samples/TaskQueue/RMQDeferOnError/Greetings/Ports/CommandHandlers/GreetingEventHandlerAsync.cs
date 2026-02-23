@@ -24,56 +24,38 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
-using Paramore.Brighter.Actions;
+using Paramore.Brighter.Defer.Attributes;
 
 namespace Greetings.Ports.CommandHandlers;
 
 /// <summary>
-/// Demonstrates DeferMessageAction by throwing it directly from the handler.
-/// A DeferMessageOnErrorAttribute does not exist yet, so we throw DeferMessageAction
-/// manually to trigger the requeue behavior. Every 3rd message is deferred on its first
-/// two attempts and succeeds on the 3rd attempt, showing eventual success after retry.
+/// Demonstrates DeferMessageOnError by using the [DeferMessageOnErrorAsync] attribute.
+/// When an exception occurs, the attribute converts it to a DeferMessageAction, which
+/// causes the message to be requeued with a delay. On the next delivery, the handler
+/// retries the message. The message pump applies the configured requeue delay.
 /// </summary>
 public class GreetingEventHandlerAsync : RequestHandlerAsync<GreetingEvent>
 {
     private static int _messageCount = 0;
-    private static readonly ConcurrentDictionary<string, int> s_retryTracker = new();
 
-    private const int DEFER_EVERY_NTH = 3;
-    private const int MAX_DEFERRALS = 2;
-
+    [DeferMessageOnErrorAsync(step: 0)]
     public override async Task<GreetingEvent> HandleAsync(GreetingEvent @event, CancellationToken cancellationToken = default)
     {
         var count = Interlocked.Increment(ref _messageCount);
-        var messageId = @event.Id.ToString();
-        var retryCount = s_retryTracker.AddOrUpdate(messageId, 0, (_, existing) => existing + 1);
+        Console.WriteLine($"Received message #{count}: {@event.Greeting}");
 
-        Console.WriteLine($"Received message #{count}: {@event.Greeting} (message ID: {messageId}, attempt: {retryCount + 1})");
-
-        // Every 3rd message is a "fail" message that gets deferred
-        if (count % DEFER_EVERY_NTH == 0 && retryCount < MAX_DEFERRALS)
+        // Throw on every 5th message to demonstrate Defer behavior
+        if (count % 5 == 0)
         {
-            Console.WriteLine($"  -> Deferring message #{count} (attempt {retryCount + 1} of {MAX_DEFERRALS + 1})");
-            throw new DeferMessageAction();
+            Console.WriteLine($"  -> Simulating failure for message #{count} (message will be requeued with delay)");
+            throw new InvalidOperationException($"Simulated failure for message #{count}");
         }
 
-        // Clean up retry tracker for completed messages
-        s_retryTracker.TryRemove(messageId, out _);
-
-        if (retryCount >= MAX_DEFERRALS)
-        {
-            Console.WriteLine($"  -> Message #{count} succeeded after {retryCount + 1} attempts");
-        }
-        else
-        {
-            Console.WriteLine($"  -> Successfully processed message #{count}");
-        }
-
+        Console.WriteLine($"  -> Successfully processed message #{count}");
         return await base.HandleAsync(@event, cancellationToken);
     }
 }

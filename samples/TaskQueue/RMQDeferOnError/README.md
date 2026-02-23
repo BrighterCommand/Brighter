@@ -1,22 +1,20 @@
 # RabbitMQ Defer On Error Sample
 
-This sample demonstrates how to use `DeferMessageAction` with Brighter to requeue messages with a delay on RabbitMQ, showing how transient failures can be retried until the message eventually succeeds.
+This sample demonstrates how to use `[DeferMessageOnErrorAsync]` with Brighter to requeue messages with a delay on RabbitMQ, showing how transient failures can be retried automatically.
 
 ## What This Demonstrates
 
-- Throwing `DeferMessageAction` directly from a handler to trigger message requeue with delay
-- Tracking retry attempts per message ID using a `ConcurrentDictionary`
-- Messages that are deferred eventually succeed after a configurable number of retries
-
-> **Note**: A `DeferMessageOnErrorAttribute` is planned for a future Brighter release. Once available, it will provide the same declarative pattern as `[RejectMessageOnErrorAsync]` and `[DontAckOnErrorAsync]`. Until then, handlers throw `DeferMessageAction` directly.
+- Using the `[DeferMessageOnErrorAsync]` attribute to declaratively convert unhandled exceptions into deferred messages
+- The attribute catches exceptions and throws `DeferMessageAction`, which causes the message pump to requeue the message with a delay
+- This is the same declarative pattern as `[RejectMessageOnErrorAsync]` and `[DontAckOnErrorAsync]`
 
 ## How It Works
 
-1. **GreetingEventHandlerAsync** receives messages and tracks attempts per message ID
-2. Every 3rd message is designated as a "fail" message
-3. On the first two attempts, the handler throws `DeferMessageAction` to requeue the message
-4. On the 3rd attempt, the message succeeds — demonstrating eventual success after transient failures
-5. Non-"fail" messages are processed successfully on the first attempt
+1. **GreetingEventHandlerAsync** is decorated with `[DeferMessageOnErrorAsync(step: 0)]`
+2. Every 5th message throws an `InvalidOperationException` to simulate a transient failure
+3. The `DeferMessageOnErrorHandler` catches the exception and converts it to a `DeferMessageAction`
+4. The message pump requeues the message with the configured delay (from the subscription's `RequeueDelay`)
+5. On the next delivery, the message is retried
 
 On RabbitMQ, deferred messages are requeued using the scheduler (by default `InMemorySchedulerFactory`), which delays re-delivery.
 
@@ -56,21 +54,18 @@ dotnet run
 ### GreetingsReceiverConsole
 
 ```
-Received message #1: Hello # 1 (message ID: abc123, attempt: 1)
+Received message #1: Hello # 1
   -> Successfully processed message #1
-Received message #2: Hello # 2 (message ID: def456, attempt: 1)
-  -> Successfully processed message #2
-Received message #3: Hello # 3 (message ID: ghi789, attempt: 1)
-  -> Deferring message #3 (attempt 1 of 3)
-Received message #3: Hello # 3 (message ID: ghi789, attempt: 2)
-  -> Deferring message #3 (attempt 2 of 3)
-Received message #3: Hello # 3 (message ID: ghi789, attempt: 3)
-  -> Message #3 succeeded after 3 attempts
+...
+Received message #5: Hello # 5
+  -> Simulating failure for message #5 (message will be requeued with delay)
+Received message #5: Hello # 5
+  -> Successfully processed message #5
 ```
 
 ## Key Code
 
-- **Handler**: `Greetings/Ports/CommandHandlers/GreetingEventHandlerAsync.cs` — throws `DeferMessageAction` directly with retry tracking via `ConcurrentDictionary<string, int>`
+- **Handler**: `Greetings/Ports/CommandHandlers/GreetingEventHandlerAsync.cs` — uses `[DeferMessageOnErrorAsync(step: 0)]` to convert exceptions to deferred messages
 - **Receiver subscription**: `GreetingsReceiverConsole/Program.cs` — `RmqSubscription` with `InMemorySchedulerFactory` for requeue delay support
 
 ## Cleanup
