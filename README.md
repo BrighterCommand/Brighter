@@ -295,10 +295,11 @@ Latest stable releases are available on [NuGet](https://www.nuget.org/profiles/B
 
 **Transport Packages:**
 - `Paramore.Brighter.MessagingGateway.RMQ` - RabbitMQ
-- `Paramore.Brighter.MessagingGateway.AWSSQS` - AWS SQS+SNS
+- `Paramore.Brighter.MessagingGateway.AWSSQS.V4` - AWS SQS+SNS
 - `Paramore.Brighter.MessagingGateway.Kafka` - Apache Kafka
 - `Paramore.Brighter.MessagingGateway.AzureServiceBus` - Azure Service Bus
 - `Paramore.Brighter.MessagingGateway.Redis` - Redis Streams
+-  And more...
 
 **Outbox/Inbox Packages:**
 - `Paramore.Brighter.Outbox.PostgreSql` - PostgreSQL outbox
