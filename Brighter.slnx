@@ -6,6 +6,9 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/samples/" />
+  <Folder Name="/samples/AsyncAPI/">
+    <Project Path="samples/AsyncAPI/RMQAsyncAPI/RMQAsyncAPI.csproj" />
+  </Folder>
   <Folder Name="/samples/Analyzer/">
     <Project Path="samples/Analyzer/AnalyzerSamples/AnalyzerSamples.csproj" />
   </Folder>
