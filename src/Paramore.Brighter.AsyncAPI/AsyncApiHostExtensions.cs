@@ -60,11 +60,7 @@ namespace Paramore.Brighter.AsyncAPI
                 Directory.CreateDirectory(directory);
             }
 
-#if NET8_0_OR_GREATER
             await File.WriteAllTextAsync(outputPath, json, ct).ConfigureAwait(false);
-#else
-            File.WriteAllText(outputPath, json);
-#endif
 
             return document;
         }
