@@ -11,8 +11,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessageDispatch;
 
-[Collection("CommandProcessor")]
-public class DispatchBuilderWithNamedGatewayAsync : IDisposable
+public class DispatchBuilderWithNamedGatewayAsync
 {
     private readonly IAmADispatchBuilder _builder;
     private Dispatcher _dispatcher;
@@ -90,10 +89,5 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
         _dispatcher = _builder.Build();
 
         Assert.NotNull(_dispatcher);
-    }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
     }
 }

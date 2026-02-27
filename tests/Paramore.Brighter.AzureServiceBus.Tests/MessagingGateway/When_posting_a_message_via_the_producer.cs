@@ -13,7 +13,6 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
     [Trait("Category", "ASB")]
-    [Trait("Fragile", "CI")]
     public class ASBProducerTests : IDisposable
     {
         private readonly IAmAChannelSync _topicChannel;

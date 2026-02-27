@@ -44,12 +44,18 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
+        private readonly AWSMessagingGatewayConnection _connection;
         private readonly AWSClientFactory _clientFactory;
         private readonly string _queueName;
         private readonly int _batchSize;
-        private readonly bool _hasDlq;
+        private readonly RoutingKey? _deadLetterRoutingKey;
+        private readonly RoutingKey? _invalidMessageRoutingKey;
+        private readonly OnMissingChannel _makeChannels;
         private readonly bool _rawMessageDelivery;
+        private readonly SqsAttributes _queueAttributes;
         private readonly Message _noopMessage = new Message();
+        private readonly Lazy<SqsMessageProducer?>? _deadLetterProducer;
+        private readonly Lazy<SqsMessageProducer?>? _invalidMessageProducer;
         private string? _channelUrl;
 
         /// <summary>
@@ -58,27 +64,50 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="awsConnection">The awsConnection details used to connect to the SQS queue.</param>
         /// <param name="queueName">The name of the SQS Queue</param>
         /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
-        /// <param name="hasDlq">Do we have a DLQ attached to this queue?</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if configured</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if configured</param>
+        /// <param name="makeChannels">Should we create channels if they are missing?</param>
         /// <param name="isQueueUrl">Is the queue name a queue url?</param>
         /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
+        /// <param name="queueAttributes">The <see cref="SqsAttributes"/> for the queue (used by DLQ producers for FIFO support)</param>
         public SqsMessageConsumer(
             AWSMessagingGatewayConnection awsConnection,
             string? queueName,
             int batchSize = 1,
-            bool hasDlq = false,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null,
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool isQueueUrl = false,
-            bool rawMessageDelivery = true)
+            bool rawMessageDelivery = true,
+            SqsAttributes? queueAttributes = null)
         {
             if (string.IsNullOrEmpty(queueName))
                 throw new ConfigurationException("QueueName is mandatory");
 
+            _connection = awsConnection;
             _clientFactory = new AWSClientFactory(awsConnection);
             _queueName = queueName!;
             if (isQueueUrl)
                 _channelUrl = queueName;
             _batchSize = batchSize;
-            _hasDlq = hasDlq;
+            _deadLetterRoutingKey = deadLetterRoutingKey;
+            _invalidMessageRoutingKey = invalidMessageRoutingKey;
+            _makeChannels = makeChannels;
             _rawMessageDelivery = rawMessageDelivery;
+            _queueAttributes = queueAttributes ?? SqsAttributes.Empty;
+
+            // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
+            // thread-safety mode is needed. None does not cache exceptions, allowing the factory
+            // to retry on the next .Value access after a transient failure.
+            if (_deadLetterRoutingKey != null)
+            {
+                _deadLetterProducer = new Lazy<SqsMessageProducer?>(CreateDeadLetterProducer, LazyThreadSafetyMode.None);
+            }
+
+            if (_invalidMessageRoutingKey != null)
+            {
+                _invalidMessageProducer = new Lazy<SqsMessageProducer?>(CreateInvalidMessageProducer, LazyThreadSafetyMode.None);
+            }
         }
 
         /// <summary>
@@ -99,21 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 return;
 
             var receiptHandle = value.ToString();
-
-            try
-            {
-                using var client = _clientFactory.CreateSqsClient();
-                await EnsureChannelUrl(client, cancellationToken);
-                await client.DeleteMessageAsync(new DeleteMessageRequest(_channelUrl, receiptHandle),
-                    cancellationToken);
-
-                Log.DeletedMessage(s_logger, message.Id, receiptHandle, _channelUrl!);
-            }
-            catch (Exception exception)
-            {
-                Log.ErrorDeletingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
-                throw;
-            }
+            await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
         }
 
          /// <summary>
@@ -240,39 +255,111 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 return false;
 
             var receiptHandle = value.ToString();
+            var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
+            var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+
+            Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName, reasonString, description);
+
+            // If no channels configured, just delete the original message
+            if (_deadLetterProducer == null && _invalidMessageProducer == null)
+            {
+                if (reason != null)
+                {
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+                }
+
+                await AcknowledgeAsync(message, cancellationToken);
+                return true;
+            }
+
+            var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
 
             try
             {
-                var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
-                var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+                RefreshMetadata(message, reason);
 
-                Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName, reasonString, description);
+                var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
+                    rejectionReason, _invalidMessageProducer != null, _deadLetterProducer != null);
 
-                using var client = _clientFactory.CreateSqsClient();
-                await EnsureChannelUrl(client, cancellationToken);
-                if (_hasDlq)
+                SqsMessageProducer? producer = null;
+                if (shouldRoute)
                 {
-                    await client.ChangeMessageVisibilityAsync(
-                        new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, 0),
-                        cancellationToken
-                    );
+                    message.Header.Topic = routingKey!;
+                    if (isFallingBackToDlq)
+                        Log.FallingBackToDlq(s_logger, message.Id);
+
+                    if (routingKey == _invalidMessageRoutingKey)
+                        producer = _invalidMessageProducer?.Value;
+                    else if (routingKey == _deadLetterRoutingKey)
+                        producer = _deadLetterProducer?.Value;
+                }
+
+                if (producer != null)
+                {
+                    await producer.SendAsync(message, cancellationToken);
+                    Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
                 }
                 else
                 {
-                    await client.DeleteMessageAsync(_channelUrl, receiptHandle, cancellationToken);
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
                 }
             }
-            catch (Exception exception)
+            catch (Exception ex)
             {
-                Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
-                throw;
+                // Sending to DLQ failed — delete the original to prevent infinite
+                // reprocessing. The message is lost rather than stuck in a retry loop.
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+                await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
+                return true;
             }
 
+            await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
             return true;
         }
         
         /// <summary>
-        /// Re-queues the specified message. 
+        /// Nacks the specified message, setting its visibility timeout to zero so it is immediately
+        /// available for redelivery.
+        /// Sync over async
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Nack(Message message) => BrighterAsyncContext.Run(() => NackAsync(message));
+
+        /// <summary>
+        /// Nacks the specified message, setting its visibility timeout to zero so it is immediately
+        /// available for redelivery.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Cancel the nack operation</param>
+        public async Task NackAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
+                return;
+
+            var receiptHandle = value.ToString();
+
+            try
+            {
+                Log.NackingMessage(s_logger, message.Id, receiptHandle, _queueName);
+
+                using var client = _clientFactory.CreateSqsClient();
+                await EnsureChannelUrl(client, cancellationToken);
+                await client.ChangeMessageVisibilityAsync(
+                    new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, 0),
+                    cancellationToken
+                );
+
+                Log.NackedMessage(s_logger, message.Id, receiptHandle, _channelUrl!);
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorNackingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Re-queues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Time to delay delivery of the message. AWS uses seconds. 0s is immediate requeue. Default is 0ms</param>
@@ -325,15 +412,131 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         public void Dispose()
         {
+            if (_deadLetterProducer?.IsValueCreated == true)
+                _deadLetterProducer.Value?.Dispose();
+
+            if (_invalidMessageProducer?.IsValueCreated == true)
+                _invalidMessageProducer.Value?.Dispose();
+
             GC.SuppressFinalize(this);
         }
 
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
+            if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value is IAsyncDisposable deadLetterAsync)
+                await deadLetterAsync.DisposeAsync();
+            else if (_deadLetterProducer?.IsValueCreated == true)
+                _deadLetterProducer.Value?.Dispose();
+
+            if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value is IAsyncDisposable invalidAsync)
+                await invalidAsync.DisposeAsync();
+            else if (_invalidMessageProducer?.IsValueCreated == true)
+                _invalidMessageProducer.Value?.Dispose();
+
             GC.SuppressFinalize(this);
-            return new ValueTask(Task.CompletedTask);
         }
         
+        private SqsMessageProducer? CreateDeadLetterProducer()
+        {
+            var publication = new SqsPublication(
+                channelName: new ChannelName(_deadLetterRoutingKey!.Value),
+                queueAttributes: _queueAttributes,
+                makeChannels: _makeChannels);
+
+            try
+            {
+                // Queue existence is confirmed on first SendAsync via ConfirmQueueExistsAsync.
+                // We must NOT call the sync ConfirmQueueExists here because the lazy is resolved
+                // inside RejectAsync, which may already be running inside BrighterAsyncContext.Run
+                // from the sync Reject path — nesting would deadlock.
+                return new SqsMessageProducer(_connection, publication);
+            }
+            catch (Exception e)
+            {
+                Log.ErrorCreatingDlqProducerException(s_logger, e, _deadLetterRoutingKey.Value);
+                return null;
+            }
+        }
+
+        private SqsMessageProducer? CreateInvalidMessageProducer()
+        {
+            var publication = new SqsPublication(
+                channelName: new ChannelName(_invalidMessageRoutingKey!.Value),
+                queueAttributes: _queueAttributes,
+                makeChannels: _makeChannels);
+
+            try
+            {
+                // Queue existence is confirmed on first SendAsync via ConfirmQueueExistsAsync.
+                return new SqsMessageProducer(_connection, publication);
+            }
+            catch (Exception e)
+            {
+                Log.ErrorCreatingInvalidMessageProducerException(s_logger, e, _invalidMessageRoutingKey.Value);
+                return null;
+            }
+        }
+
+        private static void RefreshMetadata(Message message, MessageRejectionReason? reason)
+        {
+            // Keys use camelCase because the bag is JSON-serialized with CamelCase naming policy
+            message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
+            message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+            message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+
+            // Remove SQS-specific headers that will be reset when sent to the DLQ
+            message.Header.Bag.Remove("ReceiptHandle");
+
+            if (reason == null) return;
+
+            message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
+            if (!string.IsNullOrEmpty(reason.Description))
+            {
+                message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
+            }
+        }
+
+        private async Task DeleteSourceMessageAsync(string receiptHandle, string messageId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                using var client = _clientFactory.CreateSqsClient();
+                await EnsureChannelUrl(client, cancellationToken);
+                await client.DeleteMessageAsync(new DeleteMessageRequest(_channelUrl, receiptHandle),
+                    cancellationToken);
+
+                Log.DeletedMessage(s_logger, messageId, receiptHandle, _channelUrl!);
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorDeletingMessage(s_logger, exception, messageId, receiptHandle, _queueName);
+                throw;
+            }
+        }
+
+        private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(
+            RejectionReason rejectionReason,
+            bool hasInvalidProducer,
+            bool hasDeadLetterProducer)
+        {
+            switch (rejectionReason)
+            {
+                case RejectionReason.Unacceptable:
+                    if (hasInvalidProducer)
+                        return (_invalidMessageRoutingKey, true, false);
+                    if (hasDeadLetterProducer)
+                        return (_deadLetterRoutingKey, true, true);
+                    return (null, false, false);
+
+                case RejectionReason.DeliveryError:
+                case RejectionReason.None:
+                default:
+                    if (hasDeadLetterProducer)
+                        return (_deadLetterRoutingKey, true, false);
+                    return (null, false, false);
+            }
+        }
+
         private async Task EnsureChannelUrl(AmazonSQSClient client, CancellationToken cancellationToken)
         {
             //only grab the queue url once
@@ -382,6 +585,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Received message from queue {ChannelName}, message: {NewLine}{Request}")]
             public static partial void ReceivedMessageFromQueue(ILogger logger, string channelName, string newLine, string request);
 
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Nacking message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} for redelivery")]
+            public static partial void NackingMessage(ILogger logger, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Nacked message {Id} with receipt handle {ReceiptHandle} on queue {Url}")]
+            public static partial void NackedMessage(ILogger logger, string id, string? receiptHandle, string url);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error nacking message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName}")]
+            public static partial void ErrorNackingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
             [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: re-queueing the message {Id}")]
             public static partial void RequeueingMessage(ILogger logger, string id);
 
@@ -390,6 +602,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
             public static partial void ErrorRequeueingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Warning, "SqsMessageConsumer: No DLQ or invalid message channels configured for message {Id} with rejection reason {Reason}")]
+            public static partial void NoChannelsConfiguredForRejection(ILogger logger, string id, string reason);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Message {Id} sent to rejection channel for reason {Reason}")]
+            public static partial void MessageSentToRejectionChannel(ILogger logger, string id, string reason);
+
+            [LoggerMessage(LogLevel.Warning, "SqsMessageConsumer: No invalid message channel configured for message {Id}, falling back to DLQ")]
+            public static partial void FallingBackToDlq(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error sending message {Id} to rejection channel for reason {Reason}")]
+            public static partial void ErrorSendingToRejectionChannel(ILogger logger, Exception exception, string id, string reason);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Exception creating DLQ producer for queue {QueueName}")]
+            public static partial void ErrorCreatingDlqProducerException(ILogger logger, Exception exception, string queueName);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Exception creating invalid message producer for queue {QueueName}")]
+            public static partial void ErrorCreatingInvalidMessageProducerException(ILogger logger, Exception exception, string queueName);
 
         }
     }

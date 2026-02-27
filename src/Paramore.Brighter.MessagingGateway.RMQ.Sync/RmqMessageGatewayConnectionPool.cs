@@ -60,24 +60,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             var connectionId = GetConnectionId(connectionFactory);
 
-            var connectionFound = s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection);
-
-            //nestandard20 issue, if connectionfound is true, pooledConnection is not null
-            if (connectionFound && pooledConnection!.Connection!.IsOpen)
-                return pooledConnection.Connection;
-
             lock (s_lock)
             {
-                connectionFound = s_connectionPool.TryGetValue(connectionId, out pooledConnection);
+                var connectionFound = s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection);
 
-                //netstandard20 issue, if connectionfound is true, pooledConnection is not null
                 if (connectionFound == false || pooledConnection!.Connection!.IsOpen == false)
                 {
                     pooledConnection = CreateConnection(connectionFactory);
                 }
-            }
 
-            return pooledConnection.Connection;
+                return pooledConnection.Connection;
+            }
         }
 
         public void ResetConnection(ConnectionFactory connectionFactory)

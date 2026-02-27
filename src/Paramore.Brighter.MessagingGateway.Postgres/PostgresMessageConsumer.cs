@@ -20,16 +20,28 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// </summary>
 public partial class PostgresMessageConsumer(
     RelationalDatabaseConfiguration configuration,
-    PostgresSubscription subscription 
+    PostgresSubscription subscription,
+    RoutingKey? deadLetterRoutingKey = null,
+    RoutingKey? invalidMessageRoutingKey = null
     ) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageConsumer>();
+    private readonly RelationalDatabaseConfiguration _configuration = configuration;
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
+    private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
+    private readonly RoutingKey? _invalidMessageRoutingKey = invalidMessageRoutingKey;
+    // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
+    // thread-safety mode is needed. None does not cache exceptions, allowing the factory
+    // to retry on the next .Value access after a transient failure.
+    private readonly Lazy<PostgresMessageProducer?>? _deadLetterProducer =
+        deadLetterRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, deadLetterRoutingKey), LazyThreadSafetyMode.None) : null;
+    private readonly Lazy<PostgresMessageProducer?>? _invalidMessageProducer =
+        invalidMessageRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, invalidMessageRoutingKey), LazyThreadSafetyMode.None) : null;
 
-    private string SchemaName => subscription.SchemaName ?? configuration.SchemaName ?? "public";
-    private string TableName => subscription.QueueStoreTable ?? configuration.QueueStoreTable;
+    private string SchemaName => subscription.SchemaName ?? _configuration.SchemaName ?? "public";
+    private string TableName => subscription.QueueStoreTable ?? _configuration.QueueStoreTable;
     private string QueueName => subscription.ChannelName.Value;
-    private bool BinaryMessagePayload => subscription.BinaryMessagePayload ?? configuration.BinaryMessagePayload;
+    private bool BinaryMessagePayload => subscription.BinaryMessagePayload ?? _configuration.BinaryMessagePayload;
     private int BufferSize => subscription.BufferSize;
     private TimeSpan VisibleTimeout => subscription.VisibleTimeout;
     private bool HasLargeMessage => subscription.TableWithLargeMessage;
@@ -165,6 +177,19 @@ public partial class PostgresMessageConsumer(
     }
     
     /// <inheritdoc />
+    public void Nack(Message message)
+    {
+        // No-op: visibility timeout will expire and message will become available for redelivery
+    }
+
+    /// <inheritdoc />
+    public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        // No-op: visibility timeout will expire and message will become available for redelivery
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle))
@@ -172,22 +197,62 @@ public partial class PostgresMessageConsumer(
             return false;
         }
 
-        try
-        {
-            Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
+        Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
 
-            using var connection = _connectionProvider.GetConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
-            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
-            command.ExecuteNonQuery();
+        if (_deadLetterProducer == null && _invalidMessageProducer == null)
+        {
+            if (reason != null)
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+
+            DeleteSourceMessage(receiptHandle);
             return true;
         }
-        catch (Exception exception)
+
+        var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+
+        try
         {
-            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
-            throw;
-        }       
+            RefreshMetadata(message, reason);
+
+            var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
+                rejectionReason, _invalidMessageProducer != null, _deadLetterProducer != null);
+
+            PostgresMessageProducer? producer = null;
+            if (shouldRoute)
+            {
+                message.Header.Topic = routingKey!;
+                if (isFallingBackToDlq)
+                    Log.FallingBackToDlq(s_logger, message.Id);
+
+                if (routingKey == _invalidMessageRoutingKey)
+                    producer = _invalidMessageProducer?.Value;
+                else if (routingKey == _deadLetterRoutingKey)
+                    producer = _deadLetterProducer?.Value;
+            }
+
+            if (producer != null)
+            {
+                producer.Send(message);
+                Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+            }
+            else
+            {
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+            }
+        }
+        catch (Exception ex)
+        {
+            // DLQ send failed — delete the source message (in finally) and return true
+            // to prevent the message pump from retrying endlessly.
+            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+            return true;
+        }
+        finally
+        {
+            DeleteSourceMessage(receiptHandle);
+        }
+
+        return true;
     }
     
     /// <inheritdoc />
@@ -198,20 +263,62 @@ public partial class PostgresMessageConsumer(
             return false;
         }
 
-        try
+        Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
+
+        if (_deadLetterProducer == null && _invalidMessageProducer == null)
         {
-            Log.RejectingMessage(s_logger, message.Id, receiptHandle, QueueName);
-            await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
-            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
+            if (reason != null)
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+
+            await DeleteSourceMessageAsync(receiptHandle, cancellationToken);
             return true;
         }
-        catch (Exception exception)
+
+        var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+
+        try
         {
-            Log.ErrorRejectingMessage(s_logger, exception, message.Id, receiptHandle, QueueName);
-            throw;
+            RefreshMetadata(message, reason);
+
+            var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(
+                rejectionReason, _invalidMessageProducer != null, _deadLetterProducer != null);
+
+            PostgresMessageProducer? producer = null;
+            if (shouldRoute)
+            {
+                message.Header.Topic = routingKey!;
+                if (isFallingBackToDlq)
+                    Log.FallingBackToDlq(s_logger, message.Id);
+
+                if (routingKey == _invalidMessageRoutingKey)
+                    producer = _invalidMessageProducer?.Value;
+                else if (routingKey == _deadLetterRoutingKey)
+                    producer = _deadLetterProducer?.Value;
+            }
+
+            if (producer != null)
+            {
+                await producer.SendAsync(message, cancellationToken);
+                Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+            }
+            else
+            {
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+            }
         }
+        catch (Exception ex)
+        {
+            // DLQ send failed — delete the source message and return true
+            // to prevent the message pump from retrying endlessly.
+            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+            return true;
+        }
+        finally
+        {
+            await DeleteSourceMessageAsync(receiptHandle, cancellationToken);
+        }
+
+        return true;
     }
 
     
@@ -410,7 +517,92 @@ public partial class PostgresMessageConsumer(
         return message;
     }
     
-    private static partial class Log 
+    private static PostgresMessageProducer? CreateProducer(RelationalDatabaseConfiguration config, RoutingKey routingKey)
+    {
+        try
+        {
+            return new PostgresMessageProducer(config, new PostgresPublication { Topic = routingKey });
+        }
+        catch (Exception e)
+        {
+            Log.ErrorCreatingProducer(s_logger, e, routingKey.Value);
+            return null;
+        }
+    }
+
+    private static void RefreshMetadata(Message message, MessageRejectionReason? reason)
+    {
+        message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
+        message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+        message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+
+        if (reason == null) return;
+
+        message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
+        if (!string.IsNullOrEmpty(reason.Description))
+            message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
+    }
+
+    private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(
+        RejectionReason rejectionReason,
+        bool hasInvalidProducer,
+        bool hasDeadLetterProducer)
+    {
+        switch (rejectionReason)
+        {
+            case RejectionReason.Unacceptable:
+                if (hasInvalidProducer)
+                    return (_invalidMessageRoutingKey, true, false);
+                if (hasDeadLetterProducer)
+                    return (_deadLetterRoutingKey, true, true);
+                return (null, false, false);
+
+            case RejectionReason.DeliveryError:
+            case RejectionReason.None:
+            default:
+                if (hasDeadLetterProducer)
+                    return (_deadLetterRoutingKey, true, false);
+                return (null, false, false);
+        }
+    }
+
+    private void DeleteSourceMessage(object receiptHandle)
+    {
+        try
+        {
+            using var connection = _connectionProvider.GetConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
+            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
+            command.ExecuteNonQuery();
+            Log.DeletedMessage(s_logger, "source", receiptHandle, QueueName);
+        }
+        catch (Exception exception)
+        {
+            Log.ErrorDeletingMessage(s_logger, exception, "source", receiptHandle, QueueName);
+            throw;
+        }
+    }
+
+    private async Task DeleteSourceMessageAsync(object receiptHandle, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
+            command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
+            await command.ExecuteNonQueryAsync(cancellationToken);
+            Log.DeletedMessage(s_logger, "source", receiptHandle, QueueName);
+        }
+        catch (Exception exception)
+        {
+            Log.ErrorDeletingMessage(s_logger, exception, "source", receiptHandle, QueueName);
+            throw;
+        }
+    }
+
+    private static partial class Log
     {
         [LoggerMessage(LogLevel.Information, "PostgresPullMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {QueueName}")]
         public static partial void DeletedMessage(ILogger logger, string id, object receiptHandle, string queueName);
@@ -448,5 +640,19 @@ public partial class PostgresMessageConsumer(
         [LoggerMessage(LogLevel.Error, "PostgresPullMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
         public static partial void ErrorRequeueingMessage(ILogger logger, Exception exception, string id, object? receiptHandle, string channelName);
 
+        [LoggerMessage(LogLevel.Warning, "PostgresPullMessageConsumer: No DLQ or invalid message channels configured for message {MessageId}, rejection reason: {RejectionReason}")]
+        public static partial void NoChannelsConfiguredForRejection(ILogger logger, string messageId, string rejectionReason);
+
+        [LoggerMessage(LogLevel.Information, "PostgresPullMessageConsumer: Message {MessageId} sent to rejection channel, reason: {RejectionReason}")]
+        public static partial void MessageSentToRejectionChannel(ILogger logger, string messageId, string rejectionReason);
+
+        [LoggerMessage(LogLevel.Warning, "PostgresPullMessageConsumer: Falling back to DLQ for message {MessageId}")]
+        public static partial void FallingBackToDlq(ILogger logger, string messageId);
+
+        [LoggerMessage(LogLevel.Error, "PostgresPullMessageConsumer: Error sending message {MessageId} to rejection channel, reason: {RejectionReason}")]
+        public static partial void ErrorSendingToRejectionChannel(ILogger logger, Exception ex, string messageId, string rejectionReason);
+
+        [LoggerMessage(LogLevel.Error, "PostgresPullMessageConsumer: Error creating producer for routing key {RoutingKey}")]
+        public static partial void ErrorCreatingProducer(ILogger logger, Exception ex, string routingKey);
     }
 }

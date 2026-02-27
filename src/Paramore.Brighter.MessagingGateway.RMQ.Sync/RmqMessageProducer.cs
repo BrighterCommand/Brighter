@@ -194,7 +194,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
-            await Task.Run(() => SendWithDelay(message), cancellationToken);
+            await Task.Run(() => SendWithDelay(message, delay), cancellationToken);
         }
 
         public sealed override void Dispose()

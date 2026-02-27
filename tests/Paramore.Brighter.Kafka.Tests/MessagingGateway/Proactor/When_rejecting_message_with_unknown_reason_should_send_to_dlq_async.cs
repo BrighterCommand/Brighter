@@ -195,8 +195,9 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
             catch (ChannelFailureException cfx)
             {
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");
     }

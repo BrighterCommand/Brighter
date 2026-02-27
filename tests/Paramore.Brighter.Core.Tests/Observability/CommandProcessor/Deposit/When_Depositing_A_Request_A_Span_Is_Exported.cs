@@ -41,7 +41,6 @@ public class CommandProcessorDepositObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
         
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
 
@@ -65,7 +64,7 @@ public class CommandProcessorDepositObservabilityTests
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             {
-                routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
+                routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
             }
         });
         

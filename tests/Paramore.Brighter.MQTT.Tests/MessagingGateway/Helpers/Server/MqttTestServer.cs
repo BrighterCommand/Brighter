@@ -91,7 +91,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
         }
 
 
-        public static int GetRandomServerPort() => new Random().Next(20000, 30000);
+        public static int GetRandomServerPort()
+        {
+            var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
+        }
 
         public static ILogger CreateLogger(string categoryName)
         {

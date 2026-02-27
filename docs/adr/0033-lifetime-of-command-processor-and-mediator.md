@@ -8,7 +8,7 @@ Draft
 
 ## Context
 
-See also [ADR #25](0025-use-reactive-programming-for-mediator.md) for context.
+See also [ADR #42](0042-use-reactive-programming-for-mediator.md) for context.
 
 The responsibilities for outbox, producer, and transaction provider have shifted from being managed directly in the `CommandProcessor` to being managed via the `OutboxProducerMediator` (formerly `ExternalServiceBus`). The `CommandProcessor` now delegates `IAmAnOutbox` and `IAmAMessageProducer` operations to the `OutboxProducerMediator`, which acts as a singleton for the application. 
 

@@ -74,7 +74,6 @@ namespace Paramore.Brighter
         /// <value>The <see cref="TimeSpan"/> of the channel delay</value>
         public TimeSpan EmptyChannelDelay { get; set; }
         
-        
         /// <summary>
         /// Determines the type of the message on the channel.
         /// For a <see href = "https://www.enterpriseintegrationpatterns.com/patterns/messaging/DatatypeChannel.html">Datatype Channel</see>, <see cref="RequestType"/> is the type of the <see cref="IRequest"/> that the channel will read and we just return that.

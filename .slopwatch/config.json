@@ -1,0 +1,25 @@
+{
+  "suppressions": [
+    {
+      "ruleId": "SW004",
+      "pattern": "**/tests/**",
+      "justification": "Message Oriented Middleware integration tests often require delays to wait for messages to reach the queue or stream"
+    },
+    {
+      "ruleId": "SW003",
+      "pattern": "**/tests/**",
+      "justification": "Test dispose methods use catch-all for double-dispose safety and cleanup resilience"
+    },
+    {
+      "ruleId": "SW003",
+      "pattern": "**/MQTTMessagePublisher.cs",
+      "justification": "Connection retry loop intentionally catches and logs failures before retrying"
+    },
+    {
+      "ruleId": "SW003",
+      "pattern": "**/KafkaMessageConsumer.cs",
+      "justification": "DLQ rejection catch blocks intentionally log and acknowledge offset to prevent reprocessing loops (ADR 0034)"
+    }
+  ],
+  "globalSuppressions": []
+}

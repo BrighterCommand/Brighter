@@ -18,7 +18,7 @@ using Xunit;
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
     [Collection("CommandProcess")]
-    public class SweeperTestsWithCircuitBreaker : IDisposable
+    public class SweeperTestsWithCircuitBreaker
     {
         private readonly Message _messageOne;
         private readonly RoutingKey _routingKeyOne = new RoutingKey("routingKey1.MyEvent1");
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             // message 1
             var myEvent = new MyEvent() { Value = "MyEvent1" };
-            InMemoryMessageProducer messageProducer = new(_internalBus, _timeProvider, new Publication { Topic = _routingKeyOne, RequestType = typeof(MyEvent) });
+            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKeyOne, RequestType = typeof(MyEvent) });
             
             _messageOne = new Message(
                 new MessageHeader(myEvent.Id, _routingKeyOne, MessageType.MT_EVENT),
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             // message 2
             var myEvent2 = new MyEvent() { Value = "MyEvent2" };
-            InMemoryMessageProducer messageProducerTwo = new(_internalBus, _timeProvider, new Publication { Topic = _routingKeyTwo, RequestType = typeof(MyEvent) });
+            InMemoryMessageProducer messageProducerTwo = new(_internalBus, new Publication { Topic = _routingKeyTwo, RequestType = typeof(MyEvent) });
             
             _messageTwo = new Message(
                 new MessageHeader(myEvent2.Id, _routingKeyTwo, MessageType.MT_COMMAND),
@@ -108,7 +108,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outboxCircuitBreaker: _circuitBreaker
             );
 
-            CommandProcessor.ClearServiceBus();
         }
 
 
@@ -185,11 +184,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             Assert.Equal(_messageTwo.Id, sentMessage2.Id);
             Assert.Equal(_messageTwo.Header.Topic, sentMessage2.Header.Topic);
             Assert.Equal(_messageTwo.Body.Value, sentMessage2.Body.Value);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

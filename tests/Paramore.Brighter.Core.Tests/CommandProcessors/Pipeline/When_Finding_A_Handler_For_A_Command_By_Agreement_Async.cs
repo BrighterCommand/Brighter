@@ -6,8 +6,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class PipelineBuildForAgreementAsyncTests : IDisposable
+    public class PipelineBuildForAgreementAsyncTests
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequestsAsync<MyCommand>? _pipeline;
@@ -39,12 +38,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             Assert.IsType<MyCommandHandlerAsync>(_pipeline);
             Assert.Equal("MyCommandHandlerAsync|", TracePipeline().ToString());
         }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-
         private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();

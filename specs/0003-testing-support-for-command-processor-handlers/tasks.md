@@ -11,8 +11,8 @@
 This task list implements the `Paramore.Brighter.Testing` assembly with `SpyCommandProcessor` for testing handlers that depend on `IAmACommandProcessor`.
 
 **Key Artifacts:**
-- ADR 0037: Assembly structure
-- ADR 0038: SpyCommandProcessor API design
+- ADR 0049: Assembly structure
+- ADR 0050: SpyCommandProcessor API design
 
 ---
 

@@ -12,7 +12,7 @@ using Polly.Retry;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy;
 
-public class CommandProcessorWithExceptionResiliencePipelineNothingThrowTests : IDisposable
+public class CommandProcessorWithExceptionResiliencePipelineNothingThrowTests
 {
     private readonly CommandProcessor _commandProcessor;
     private readonly MyCommand _myCommand = new MyCommand();
@@ -58,10 +58,5 @@ public class CommandProcessorWithExceptionResiliencePipelineNothingThrowTests : 
         Assert.True(MyDoesNotFailResiliencePipelineHandler.Shouldreceive(_myCommand));
         // Should not retry
         Assert.Equal(0, _retryCount);
-    }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
     }
 }

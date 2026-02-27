@@ -65,9 +65,9 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
     - Verify existing implementation handles success path correctly
     - No new code needed if previous test implementation is correct
 
-### Phase 2: Asynchronous Handler
+### Phase 2: Asynchronous Handler ✅
 
-- [ ] **TEST + IMPLEMENT: RejectMessageOnErrorAsyncAttribute returns correct handler type**
+- [x] **TEST + IMPLEMENT: RejectMessageOnErrorAsyncAttribute returns correct handler type**
   - **USE COMMAND**: `/test-first when getting handler type from RejectMessageOnErrorAsyncAttribute should return RejectMessageOnErrorHandlerAsync`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_getting_handler_type_from_reject_message_on_error_async_attribute.cs`
@@ -82,7 +82,7 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
     - Constructor accepts `int step` and passes to base with `HandlerTiming.Before`
     - `GetHandlerType()` returns `typeof(RejectMessageOnErrorHandlerAsync<>)`
 
-- [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandlerAsync catches exception and throws RejectMessageAction**
+- [x] **TEST + IMPLEMENT: RejectMessageOnErrorHandlerAsync catches exception and throws RejectMessageAction**
   - **USE COMMAND**: `/test-first when async handler throws exception should catch and throw RejectMessageAction`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_async_handler_throws_exception_should_reject_message.cs`
@@ -100,7 +100,7 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
     - Override `HandleAsync()` with try/catch wrapping `await base.HandleAsync()`
     - Catch `Exception`, log it, throw `new RejectMessageAction(ex.Message, ex)`
 
-- [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandlerAsync passes through when no exception**
+- [x] **TEST + IMPLEMENT: RejectMessageOnErrorHandlerAsync passes through when no exception**
   - **USE COMMAND**: `/test-first when async handler succeeds should pass through without rejection`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_async_handler_succeeds_should_not_reject_message.cs`
@@ -115,9 +115,9 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
     - Verify existing implementation handles success path correctly
     - No new code needed if previous test implementation is correct
 
-### Phase 3: Pipeline Ordering Verification
+### Phase 3: Pipeline Ordering Verification ✅
 
-- [ ] **TEST + IMPLEMENT: RejectMessageOnErrorHandler at step 0 catches exceptions from inner handlers**
+- [x] **TEST + IMPLEMENT: RejectMessageOnErrorHandler at step 0 catches exceptions from inner handlers**
   - **USE COMMAND**: `/test-first when at step 0 should catch exceptions from higher step handlers`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Reject`
   - Test file: `When_reject_handler_at_step_zero_catches_inner_exceptions.cs`
@@ -131,16 +131,17 @@ Tests are written in `tests/Paramore.Brighter.Core.Tests/Reject/`.
     - This tests existing behavior - no new code needed
     - Verifies the step ordering works correctly
 
-### Phase 4: Regression Testing
+### Phase 4: Regression Testing ✅
 
-- [ ] **Run existing Brighter.Core test suite**
+- [x] **Run existing Brighter.Core test suite**
   - Execute: `dotnet test tests/Paramore.Brighter.Core.Tests/`
   - Verify all existing tests pass
   - Verify no breaking changes to existing behavior
+  - Result: 519 passed, 0 failed, 7 skipped (net9.0 + net10.0)
 
-### Phase 5: Documentation
+### Phase 5: Documentation ✅
 
-- [ ] **Add XML documentation to all new types**
+- [x] **Add XML documentation to all new types**
   - Add XML docs to `RejectMessageOnErrorAttribute`
   - Add XML docs to `RejectMessageOnErrorAsyncAttribute`
   - Add XML docs to `RejectMessageOnErrorHandler<T>`

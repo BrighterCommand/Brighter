@@ -103,4 +103,4 @@ By simulating DLQ behavior for Brighter, we provide:
 
 ## Related Work
 
-- ADR 0034: Provide DLQ where missing (docs/adr/0034-provide-dlq-where-missing.md)
+- ADR 0045: Provide DLQ where missing (docs/adr/0045-provide-dlq-where-missing.md)

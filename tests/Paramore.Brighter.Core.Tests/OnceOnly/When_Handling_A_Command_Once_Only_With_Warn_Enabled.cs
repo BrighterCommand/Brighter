@@ -34,8 +34,7 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
-    [Collection("CommandProcessor")]
-    public class OnceOnlyAttributeWithWarnExceptionTests : IDisposable
+    public class OnceOnlyAttributeWithWarnExceptionTests
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxSync _inbox;
@@ -69,11 +68,6 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command);
 
             Assert.Equal(1, MyStoredCommandToWarnHandler.ReceivedCount);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

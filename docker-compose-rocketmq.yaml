@@ -4,6 +4,7 @@ services:
   # RocketMQ Nameserver (Service Discovery)
   nameserver:
     image: apache/rocketmq
+    platform: linux/amd64
     container_name: rocketmq-nameserver
     ports:
       - "9876:9876"  # Nameserver port
@@ -14,11 +15,12 @@ services:
       timeout: 10s
       retries: 10
     environment:
-      - JAVA_OPT_EXT=-Xms512m -Xmx512m -Xmn256m -Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG # JVM memory settings
+      - JAVA_OPT_EXT=-Xms64m -Xmx64m -Xmn32m -XX:MaxDirectMemorySize=64m -XX:MaxMetaspaceSize=96m
 
   # RocketMQ Broker (Message Storage)
   broker:
     image: apache/rocketmq
+    platform: linux/amd64
     container_name: rocketmq-broker
     ports:
       - "10909:10909"  # Broker HA port
@@ -30,7 +32,7 @@ services:
       - BROKER_NAME=broker-a
       - BROKER_ID=0
       - AUTO_CREATE_TOPIC_ENABLE=true  # Auto-create topics
-      - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
+      - JAVA_OPT_EXT=-Xms128m -Xmx128m -Xmn64m -XX:MaxDirectMemorySize=128m -XX:MaxMetaspaceSize=128m
     command: sh mqbroker
     depends_on:
       - nameserver
@@ -42,6 +44,7 @@ services:
   
   proxy:
     image: apache/rocketmq
+    platform: linux/amd64
     container_name: rmqproxy
     depends_on:
       - broker
@@ -51,7 +54,7 @@ services:
       - "9877:9877"   # gRPC endpoint (for clients)
     environment:
       - NAMESRV_ADDR=nameserver:9876
-      - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
+      - JAVA_OPT_EXT=-Xms64m -Xmx64m -Xmn32m -XX:MaxDirectMemorySize=64m -XX:MaxMetaspaceSize=96m
     command: sh mqproxy
     healthcheck: 
       test: [ "CMD", "sh", "-c", "netstat -an | grep 8081" ]
@@ -62,6 +65,7 @@ services:
   # Service to create the RocketMQ topic
   create-topic:
     image: apache/rocketmq # Use the same RocketMQ image to get mqadmin tool
+    platform: linux/amd64
     command: > # Multi-line command to create the topic
       sh -c "
             echo 'Waiting for broker to be healthy...' &&
@@ -71,19 +75,22 @@ services:
             done;
             echo 'Broker is up. Creating multiple topics...' &&
 
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_building_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL && 
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_building_dispatch_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_named_gateway_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_cloudevents -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_cloudevents_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_rmm -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_rmm_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_post_via_gateway -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_post_via_gateway_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.3.3/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_building_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL && 
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_building_dispatch_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_named_gateway_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_cloudevents -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_cloudevents_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_rmm -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_rmm_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_post_via_gateway -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_post_via_gateway_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_source -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_target -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_invalid -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             echo 'done'
         "
     depends_on: # Ensure broker is healthy before attempting topic creation
@@ -94,6 +101,7 @@ services:
   # RocketMQ Dashboard (Web UI - Optional)
   dashboard:
     image: apacherocketmq/rocketmq-dashboard
+    platform: linux/amd64
     container_name: rocketmq-dashboard
     ports:
       - "8080:8080"  # Dashboard UI port

@@ -14,7 +14,6 @@ using Paramore.Brighter.Observability;
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
     [Trait("Category", "ASB")]
-    [Trait("Fragile", "CI")]
     public class ASBConsumerTests : IDisposable
     {
         private readonly Message _message;

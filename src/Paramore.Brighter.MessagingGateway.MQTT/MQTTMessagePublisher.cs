@@ -15,7 +15,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// <summary>
     /// Class MqttMessagePublisher .
     /// </summary>
-    public partial class MqttMessagePublisher
+    public partial class MqttMessagePublisher : IDisposable, IAsyncDisposable
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageProducer>();
         private readonly MqttMessagingGatewayConfiguration _config;
@@ -118,9 +118,29 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 }
                 catch (Exception)
                 {
-                    Log.ConnectedToHost(s_logger, _config.Hostname, _config.Port);
+                    Log.UnableToConnectToHost(s_logger, _config.Hostname!, _config.Port);
                 }
             }
+        }
+
+        /// <summary>
+        /// Disposes the underlying MQTT client connection.
+        /// </summary>
+        public void Dispose()
+        {
+            _mqttClient.Dispose();
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Asynchronously disposes the underlying MQTT client connection.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            if (_mqttClient.IsConnected)
+                await _mqttClient.DisconnectAsync();
+            _mqttClient.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         private static partial class Log

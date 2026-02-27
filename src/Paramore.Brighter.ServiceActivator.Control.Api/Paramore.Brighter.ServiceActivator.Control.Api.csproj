@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <Description>ASP.NET Core API extensions for Paramore.Brighter Service Activator Control module. Provides REST endpoints for querying service activator node status and health information.</Description>
@@ -14,10 +14,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.ServiceActivator.Control\Paramore.Brighter.ServiceActivator.Control.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Properties\" />
   </ItemGroup>
 
 </Project>

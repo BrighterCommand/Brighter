@@ -75,6 +75,9 @@ namespace GreetingsSender
             
             serviceCollection
                 .AddBrighter()
+                // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+                // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+                .UseScheduler(new InMemorySchedulerFactory())
                 .AddProducers((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;

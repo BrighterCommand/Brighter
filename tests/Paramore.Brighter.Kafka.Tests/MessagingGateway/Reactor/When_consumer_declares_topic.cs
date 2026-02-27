@@ -8,7 +8,6 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaConsumerDeclareTests : IDisposable
 {
@@ -21,7 +20,7 @@ public class KafkaConsumerDeclareTests : IDisposable
 
     public KafkaConsumerDeclareTests (ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Send Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
@@ -111,9 +110,10 @@ public class KafkaConsumerDeclareTests : IDisposable
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
 
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         return messages[0];
     }

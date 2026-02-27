@@ -1,6 +1,6 @@
 # Implementation Tasks
 
-This document outlines the tasks for implementing the Kafka Dead Letter Queue feature as specified in the requirements and ADRs (0034, 0035, 0036).
+This document outlines the tasks for implementing the Kafka Dead Letter Queue feature as specified in the requirements and ADRs (0045, 0046, 0047).
 
 ## TDD Workflow
 

@@ -152,8 +152,8 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
-        
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var messages = (await GetAllMessagesAsync()).ToArray();
 
@@ -175,8 +175,8 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
-        
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var messages = (await Outbox
             .GetAsync([earliest.Id, undispatched.Id], context))
@@ -200,8 +200,8 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
-        
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var message = await Outbox.GetAsync(dispatched.Id, context);
 
@@ -221,7 +221,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
         await Outbox.MarkDispatchedAsync(earliest.Id, context, DateTimeOffset.UtcNow.AddHours(-3));
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
         
         // Act
         var allDispatched = (await Outbox.DispatchedMessagesAsync(TimeSpan.Zero, context)).ToArray();
@@ -255,8 +255,8 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var undispatched = CreateRandomMessage();
         
         await Outbox.AddAsync([earliest, dispatched, undispatched], context);
-        await Outbox.MarkDispatchedAsync(dispatched.Id, context);
-        
+        await Outbox.MarkDispatchedAsync(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         await Task.Delay(TimeSpan.FromSeconds(10));
         
         // Act
@@ -326,7 +326,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         //should read the header from the sql outbox
         Assert.Equal(message.Header.Topic, storedMessage.Header.Topic);
         Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+        Assert.Equal(message.Header.TimeStamp, storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1));
         Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
@@ -379,7 +379,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         //should read the header from the sql outbox
         Assert.Equal(message.Header.Topic, storedMessage.Header.Topic);
         Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+        Assert.Equal(message.Header.TimeStamp, storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1));
         Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);

@@ -178,8 +178,34 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 null // PolicyRegistry resolved at runtime
             );
 
+            // Register InMemorySchedulerFactory as the default using TryAddSingleton.
+            // TryAddSingleton ensures these are only registered if no scheduler has been
+            // explicitly configured via UseScheduler/UseMessageScheduler (which use AddSingleton).
+            var defaultSchedulerFactory = new InMemorySchedulerFactory();
+            services.TryAddSingleton<IAmAMessageSchedulerFactory>(defaultSchedulerFactory);
+            services.TryAddSingleton<IAmARequestSchedulerFactory>(defaultSchedulerFactory);
+            services.TryAddSingleton(provider =>
+            {
+                var messageSchedulerFactory = provider.GetRequiredService<IAmAMessageSchedulerFactory>();
+                var processor = provider.GetRequiredService<IAmACommandProcessor>();
+                return messageSchedulerFactory.Create(processor);
+            });
+            services.TryAddSingleton(provider => (IAmAMessageSchedulerAsync)provider.GetRequiredService<IAmAMessageScheduler>());
+            services.TryAddSingleton(provider => (IAmAMessageSchedulerSync)provider.GetRequiredService<IAmAMessageScheduler>());
+            services.TryAddSingleton(provider =>
+            {
+                var command = provider.GetRequiredService<IAmACommandProcessor>();
+                var schedulerFactory = provider.GetRequiredService<IAmARequestSchedulerFactory>();
+                return schedulerFactory.CreateSync(command);
+            });
+            services.TryAddSingleton(provider =>
+            {
+                var command = provider.GetRequiredService<IAmACommandProcessor>();
+                var schedulerFactory = provider.GetRequiredService<IAmARequestSchedulerFactory>();
+                return schedulerFactory.CreateAsync(command);
+            });
+
             return builder
-                .UseScheduler(new InMemorySchedulerFactory())
                 .UseExternalLuggageStore<NullLuggageStore>();
         }
 

@@ -194,10 +194,11 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (AggregateException aggregateException)
                 {
                     var stop = false;
-                    var defer = false;
+                    DeferMessageAction? deferAction = null;
+                    DontAckAction? dontAck = null;
                     var reject = false;
                     var invalidMessage = false;
-                    string? rejectReason = null; 
+                    string? rejectReason = null;
 
                     foreach (var exception in aggregateException.InnerExceptions)
                     {
@@ -211,9 +212,15 @@ namespace Paramore.Brighter.ServiceActivator
                             break;
                         }
 
-                        if (exception is DeferMessageAction)
+                        if (exception is DeferMessageAction da)
                         {
-                            defer = true;
+                            deferAction = da;
+                            continue;
+                        }
+
+                        if (exception is DontAckAction dontAckAction)
+                        {
+                            dontAck = dontAckAction;
                             continue;
                         }
 
@@ -235,12 +242,24 @@ namespace Paramore.Brighter.ServiceActivator
                             Environment.CurrentManagedThreadId);
                     }
 
-                    if (defer)
+                    if (deferAction != null)
                     {
                         Log.DeferringMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey,Environment.CurrentManagedThreadId);
                         span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
-                        if (RequeueMessage(message))
+                        if (RequeueMessage(message, deferAction.Delay))
                             continue;
+                    }
+
+                    if (dontAck != null)
+                    {
+                        Log.NotAcknowledgingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                        if (dontAck.InnerException != null)
+                            Log.DontAckActionInnerException(s_logger, dontAck.InnerException, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                        span?.SetStatus(ActivityStatusCode.Error, $"Don't Ack Thrown. Not acknowledging message {message.Id}");
+                        Channel.Nack(message);
+                        IncrementUnacceptableMessageCount();
+                        Thread.Sleep(DontAckDelay);
+                        continue;
                     }
 
                     if (reject)
@@ -284,11 +303,22 @@ namespace Paramore.Brighter.ServiceActivator
                     Status = MessagePumpStatus.MP_ERROR;
                     break;
                 }
-                catch (DeferMessageAction)
+                catch (DeferMessageAction deferAction)
                 {
                     Log.DeferringMessage2(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
-                    if (RequeueMessage(message)) continue;
+                    if (RequeueMessage(message, deferAction.Delay)) continue;
+                }
+                catch (DontAckAction dontAckAction)
+                {
+                    Log.NotAcknowledgingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    if (dontAckAction.InnerException != null)
+                        Log.DontAckActionInnerException(s_logger, dontAckAction.InnerException, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    span?.SetStatus(ActivityStatusCode.Error, $"Don't Ack Thrown. Not acknowledging message {message.Id}");
+                    Channel.Nack(message);
+                    IncrementUnacceptableMessageCount();
+                    Thread.Sleep(DontAckDelay);
+                    continue;
                 }
                 catch (RejectMessageAction rejectMessageAction)
                 {
@@ -442,7 +472,7 @@ namespace Paramore.Brighter.ServiceActivator
             return pipeline;
         }
 
-        private bool RequeueMessage(Message message)
+        private bool RequeueMessage(Message message, TimeSpan? delay = null)
         {
             message.Header.UpdateHandledCount();
 
@@ -463,7 +493,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             Log.RequeueingMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name, Channel.RoutingKey);
 
-            return Channel.Requeue(message, RequeueDelay);
+            return Channel.Requeue(message, delay ?? RequeueDelay);
         }
         
         private IRequest TranslateMessage(Message message, RequestContext requestContext)
@@ -494,9 +524,14 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 // Unwrap exceptions thrown from reflected method invocation
                 var innerException = tie.InnerException;
-                if (innerException is InvalidMessageAction or RejectMessageAction or DeferMessageAction)
+                if (innerException is InvalidMessageAction or RejectMessageAction or DeferMessageAction or DontAckAction)
                     throw innerException;
                 throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", innerException ?? tie);
+            }
+            catch (Exception exception) when (exception is InvalidMessageAction or RejectMessageAction or DeferMessageAction)
+            {
+                // Re-throw action exceptions directly so they are handled by the message pump
+                throw;
             }
             catch (Exception exception)
             {
@@ -580,6 +615,12 @@ namespace Paramore.Brighter.ServiceActivator
             
             [LoggerMessage(LogLevel.Critical, "MessagePump: Unacceptable message limit of {UnacceptableMessageLimit} reached, stopping reading messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void UnacceptableMessageLimitReached(ILogger logger, int unacceptableMessageLimit, string? channelName, string routingKey, int managementThreadId);
+
+            [LoggerMessage(LogLevel.Warning, "MessagePump: Not acknowledging message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
+            internal static partial void NotAcknowledgingMessage(ILogger logger, string id, string? channelName, string routingKey, int managementThreadId);
+
+            [LoggerMessage(LogLevel.Error, "MessagePump: DontAckAction inner exception for message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
+            internal static partial void DontAckActionInnerException(ILogger logger, Exception ex, string id, string? channelName, string routingKey, int managementThreadId);
 
             [LoggerMessage(LogLevel.Information, "MessagePump0: Finished running message loop, no longer receiving messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void FinishedRunningMessageLoop(ILogger logger, string? channelName, string routingKey, int managementThreadId);

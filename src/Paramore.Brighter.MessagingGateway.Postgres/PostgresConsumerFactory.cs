@@ -21,9 +21,14 @@ public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connecti
         {
             throw new ConfigurationException("We expect an PostgresSubscription or PostgresSubscription<T> as a parameter");
         }
-        
+
+        var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
+        var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
+
         return new PostgresMessageConsumer(
             connection.Configuration,
-            postgresSubscription);
+            postgresSubscription,
+            deadLetterRoutingKey,
+            invalidMessageRoutingKey);
     }
 }

@@ -14,9 +14,8 @@ public class RedisMessageProducerMultipleSendTests : IClassFixture<RedisFixture>
 
     public RedisMessageProducerMultipleSendTests(RedisFixture redisFixture)
     {
-        const string topic = "test";
         _redisFixture = redisFixture;
-        var routingKey = new RoutingKey(topic);
+        var routingKey = redisFixture.Topic;
 
         _messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND),
