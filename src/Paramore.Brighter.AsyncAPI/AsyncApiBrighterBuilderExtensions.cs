@@ -36,6 +36,16 @@ namespace Paramore.Brighter.AsyncAPI
         private const string NJsonSchemaGeneratorTypeName =
             "Paramore.Brighter.AsyncAPI.NJsonSchema.NJsonSchemaGenerator, Paramore.Brighter.AsyncAPI.NJsonSchema";
 
+        /// <summary>
+        /// Registers the AsyncAPI document generator and its dependencies with the Brighter pipeline.
+        /// Subscriptions are sourced from <see cref="IAmConsumerOptions"/> (registered by AddConsumers or AddServiceActivator).
+        /// Publications are sourced from <see cref="IAmAProducerRegistry"/> (registered by UseExternalBus) and
+        /// optionally from <see cref="AsyncApiOptions.SupplementalPublications"/>.
+        /// Send-only applications that do not register consumers will produce documents with no receive operations.
+        /// </summary>
+        /// <param name="builder">The Brighter builder to extend.</param>
+        /// <param name="configure">Optional delegate to configure <see cref="AsyncApiOptions"/>.</param>
+        /// <returns>The builder for chaining.</returns>
         public static IBrighterBuilder UseAsyncApi(this IBrighterBuilder builder, Action<AsyncApiOptions>? configure = null)
         {
             var services = builder.Services;
