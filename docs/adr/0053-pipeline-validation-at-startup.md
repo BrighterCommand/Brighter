@@ -289,6 +289,22 @@ public class ValidationRule<T>
 }
 ```
 
+#### 7. Marker Interfaces for Handler Classification
+
+Validation rules need to distinguish backstop handlers from resilience handlers. Rather than hardcoding a list of known Brighter attribute types or using naming conventions, we follow the existing `IAmA*` pattern with marker interfaces on the handler types produced by `RequestHandlerAttribute.GetHandlerType()`:
+
+```csharp
+// In Paramore.Brighter — marker interfaces for handler classification
+public interface IAmABackstopHandler { }
+public interface IAmAResilienceHandler { }
+```
+
+Brighter's built-in handlers implement the appropriate interface:
+- `IAmABackstopHandler`: `RejectMessageOnErrorHandler<T>`, `DeferMessageOnErrorHandler<T>`, `DontAckOnErrorHandler<T>` (and their async counterparts)
+- `IAmAResilienceHandler`: `UseResiliencePipelineHandler<T>` (and async counterpart)
+
+Third-party handlers (e.g. custom Polly wrappers) can implement these interfaces to participate in validation. This is the standard Brighter extensibility pattern — role interfaces express what a type does, not what it is.
+
 **How rules are defined** — each rule is a `Specification<T>` expressing the *valid* condition, paired with the error to report when it fails:
 
 ```csharp
@@ -300,8 +316,10 @@ internal static class HandlerPipelineValidationRules
         yield return new ValidationRule<HandlerPipelineDescription>(
             specification: new Specification<HandlerPipelineDescription>(d =>
             {
-                var backstops = d.BeforeSteps.Where(s => IsBackstopAttribute(s.AttributeType));
-                var resilience = d.BeforeSteps.Where(s => IsResilienceAttribute(s.AttributeType));
+                var backstops = d.BeforeSteps.Where(s =>
+                    typeof(IAmABackstopHandler).IsAssignableFrom(s.HandlerType));
+                var resilience = d.BeforeSteps.Where(s =>
+                    typeof(IAmAResilienceHandler).IsAssignableFrom(s.HandlerType));
                 return !backstops.Any(b => resilience.Any(r => b.Step > r.Step));
             }),
             severity: PipelineValidationSeverity.Warning,
@@ -789,6 +807,8 @@ foreach (var description in pipelineBuilder.Describe())
 | `PipelineStepDescription` | `Paramore.Brighter` | One step in the handler chain |
 | `TransformPipelineDescription` | `Paramore.Brighter` | Dry-run output from TransformPipelineBuilder |
 | `TransformStepDescription` | `Paramore.Brighter` | One step in the transform chain |
+| `IAmABackstopHandler` | `Paramore.Brighter` | Marker interface for backstop handlers (Reject/Defer/DontAck) |
+| `IAmAResilienceHandler` | `Paramore.Brighter` | Marker interface for resilience pipeline handlers |
 | `HandlerMethodDiscovery` | `Paramore.Brighter` | Static utility for finding handler methods; existing instance methods delegate here (internal) |
 | `MapperMethodDiscovery` | `Paramore.Brighter` | Static utility for finding mapper methods (sync and async variants); existing instance methods on TransformPipelineBuilder and TransformPipelineBuilderAsync delegate here (internal) |
 | **Builder Extensions** | | |
@@ -827,8 +847,10 @@ Each rule is a `ValidationRule<T>` wrapping a `Specification<T>` that expresses 
 ```csharp
 new Specification<HandlerPipelineDescription>(d =>
 {
-    var backstops = d.BeforeSteps.Where(s => IsBackstopAttribute(s.AttributeType));
-    var resilience = d.BeforeSteps.Where(s => IsResilienceAttribute(s.AttributeType));
+    var backstops = d.BeforeSteps.Where(s =>
+        typeof(IAmABackstopHandler).IsAssignableFrom(s.HandlerType));
+    var resilience = d.BeforeSteps.Where(s =>
+        typeof(IAmAResilienceHandler).IsAssignableFrom(s.HandlerType));
     return !backstops.Any(b => resilience.Any(r => b.Step > r.Step));
 })
 // Severity: Warning
