@@ -703,27 +703,27 @@ This is a structural-only tidy (no behavioral change to existing callers) — `G
 `MessageMapperRegistry` maintains **separate** sync and async mapper dictionaries (`_messageMappers` and `_asyncMessageMappers`) with **separate** default mappers (`_defaultMessageMapper` and `_defaultMessageMapperAsync`). The existing `Get<T>()` and `GetAsync<T>()` methods each search their own registry and instantiate the mapper. For the dry run, we need to know which mapper type resolves without instantiation — and we need both sync and async variants:
 
 ```csharp
-// Additions to MessageMapperRegistry
-public (Type? mapperType, bool isDefault) ResolveMapperInfo<TRequest>()
-    where TRequest : class, IRequest
+// Additions to MessageMapperRegistry — non-generic, accept Type directly
+public (Type? mapperType, bool isDefault) ResolveMapperInfo(Type requestType)
 {
-    if (_messageMappers.TryGetValue(typeof(TRequest), out var mapperType))
+    if (_messageMappers.TryGetValue(requestType, out var mapperType))
         return (mapperType, false);  // explicit registration
     if (_defaultMessageMapper != null)
-        return (_defaultMessageMapper.MakeGenericType(typeof(TRequest)), true);
+        return (_defaultMessageMapper.MakeGenericType(requestType), true);
     return (null, false);
 }
 
-public (Type? mapperType, bool isDefault) ResolveAsyncMapperInfo<TRequest>()
-    where TRequest : class, IRequest
+public (Type? mapperType, bool isDefault) ResolveAsyncMapperInfo(Type requestType)
 {
-    if (_asyncMessageMappers.TryGetValue(typeof(TRequest), out var mapperType))
+    if (_asyncMessageMappers.TryGetValue(requestType, out var mapperType))
         return (mapperType, false);  // explicit registration
     if (_defaultMessageMapperAsync != null)
-        return (_defaultMessageMapperAsync.MakeGenericType(typeof(TRequest)), true);
+        return (_defaultMessageMapperAsync.MakeGenericType(requestType), true);
     return (null, false);
 }
 ```
+
+These methods accept `Type` directly rather than using a generic `<TRequest>` constraint. The underlying dictionaries (`_messageMappers`, `_asyncMessageMappers`) are already keyed by `Type`, so the generic parameter would add nothing — and would force the validator to use `MakeGenericMethod()` reflection to call them from runtime `Type` objects. The existing generic `Get<T>()` / `GetAsync<T>()` methods need generics only to cast the return value to `IAmAMessageMapper<TRequest>`, which `ResolveMapperInfo` does not need to do.
 
 The diagnostic report uses the appropriate variant based on context: `ResolveMapperInfo` for publications (outgoing, sync mappers) and `ResolveAsyncMapperInfo` for subscriptions using Proactor pumps.
 
