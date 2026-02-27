@@ -28,8 +28,17 @@ using Paramore.Brighter.AsyncAPI.Model;
 
 namespace Paramore.Brighter.AsyncAPI
 {
+    /// <summary>
+    /// Generates an AsyncAPI 3.0 document describing the messaging channels, operations, and message schemas
+    /// for a Brighter application based on its registered subscriptions, publications, and assembly-scanned types.
+    /// </summary>
     public interface IAmAnAsyncApiDocumentGenerator
     {
+        /// <summary>
+        /// Generates the AsyncAPI document from all configured sources (subscriptions, publications, assembly scanning).
+        /// </summary>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>The generated AsyncAPI document.</returns>
         Task<AsyncApiDocument> GenerateAsync(CancellationToken ct = default);
     }
 }
