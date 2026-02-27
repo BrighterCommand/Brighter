@@ -398,18 +398,40 @@ The extension methods register:
 - `IAmAPipelineValidator` and/or `IAmAPipelineDiagnosticWriter` in DI.
 - A dedicated `BrighterValidationHostedService` (an `IHostedService`) that runs validation at startup.
 
-When `AddConsumers()` is also used, the `ServiceActivatorHostedService` delegates to the same validator/writer before calling `_dispatcher.Receive()` — the separate hosted service detects this and becomes a no-op to avoid double-running.
+### Integration Points and Hosted Service Coordination
 
-### Integration Points
+When both `BrighterValidationHostedService` and `ServiceActivatorHostedService` are registered, validation must run exactly once. Rather than shared mutable state (flags, singletons), coordination is based on **DI registration presence** — which is deterministic and immutable after the service provider is built:
 
-**With ServiceActivator** (AddConsumers used):
-- `ServiceActivatorHostedService.StartAsync()` runs validation before `_dispatcher.Receive()`.
-- Consumer-specific rules (pump↔handler, MessageType↔IRequest) are included.
+- `ValidatePipelines()` always registers `IAmAPipelineValidator` in DI and always registers `BrighterValidationHostedService`.
+- `AddConsumers()` always registers `IDispatcher` in DI (via `ServiceCollectionExtensions`).
 
-**Without ServiceActivator** (pure CQRS or producers only):
-- `BrighterValidationHostedService.StartAsync()` runs validation at host startup.
-- Only handler pipeline and producer rules run — no consumer checks.
-- This hosted service is lightweight (no message processing).
+The two hosted services use optional DI resolution to decide who acts:
+
+**`BrighterValidationHostedService.StartAsync()`**: Resolves `IDispatcher?` (optional) from DI. If `IDispatcher` is present, `ServiceActivatorHostedService` will handle validation — this service becomes a no-op. If absent (pure CQRS or producers only), it runs validation and diagnostics.
+
+**`ServiceActivatorHostedService.StartAsync()`**: Resolves `IAmAPipelineValidator?` and `IAmAPipelineDiagnosticWriter?` (both optional) from DI. If present, calls them before `_dispatcher.Receive()`. If absent (validation not opted in), proceeds directly to `Receive()`.
+
+```
+Scenario 1: Pure CQRS / Producers Only
+  BrighterValidationHostedService:
+    IDispatcher? → null → RUN validation
+  (no ServiceActivatorHostedService)
+
+Scenario 2: Full Messaging, Validation Opted In
+  BrighterValidationHostedService:
+    IDispatcher? → present → NO-OP
+  ServiceActivatorHostedService:
+    IAmAPipelineValidator? → present → RUN validation
+    _dispatcher.Receive()
+
+Scenario 3: Full Messaging, Validation Not Opted In
+  (no BrighterValidationHostedService)
+  ServiceActivatorHostedService:
+    IAmAPipelineValidator? → null → SKIP
+    _dispatcher.Receive()
+```
+
+This requires no shared mutable state — each service makes a local decision based on what DI contains. `IHostedService` startup order is deterministic (registration order), but the design does not depend on ordering.
 
 ### Core Design: Pipeline Description Model (Dry Run)
 
@@ -912,7 +934,7 @@ new Specification<Subscription>(s =>
 - `PipelineBuilder` gains a new public method (`Describe`) which increases its surface area. However, this is a natural companion to `Build` — same inputs, different output.
 - `MessageMapperRegistry` and `IAmASubscriberRegistry` need minor extensions for inspection without instantiation.
 - Moving `ISpecification<T>` / `Specification<T>` from `Paramore.Brighter.Mediator` to `Paramore.Brighter` is a breaking namespace change for Mediator consumers — they must update `using` directives. However, the Mediator project depends on Brighter, so the types remain accessible.
-- Two potential integration points (dedicated `BrighterValidationHostedService` for non-consumer apps, `ServiceActivatorHostedService` for consumer apps) need to coordinate to avoid double-running.
+- Two potential integration points (dedicated `BrighterValidationHostedService` for non-consumer apps, `ServiceActivatorHostedService` for consumer apps) need to coordinate to avoid double-running. This is handled via optional DI resolution rather than shared mutable state.
 
 ### Risks and Mitigations
 
@@ -929,7 +951,7 @@ new Specification<Subscription>(s =>
   **Mitigation**: Add it as a default interface method that returns empty, or add it to a new `IAmASubscriberRegistryInspector` interface that `SubscriberRegistry` also implements.
 
 - **Risk**: Coordination between `BrighterValidationHostedService` and `ServiceActivatorHostedService`.
-  **Mitigation**: Use a shared `IAmAValidationState` singleton that tracks whether validation has already run. The second service to start skips validation if already done.
+  **Mitigation**: Each service resolves an optional DI dependency to decide whether to act: `BrighterValidationHostedService` checks for `IDispatcher?` (no-op if present), `ServiceActivatorHostedService` checks for `IAmAPipelineValidator?` (runs validation if present). No shared mutable state — decisions are based on immutable DI registrations. See "Hosted Service Coordination" section above for the full scenario matrix.
 
 ## Alternatives Considered
 
