@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Text.Json;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.AsyncAPI.NJsonSchema;
@@ -41,9 +42,9 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Return_Empty_Object_For_Null_Type()
+        public async Task It_Should_Return_Empty_Object_For_Null_Type()
         {
-            var result = _generator.Generate(null!);
+            var result = await _generator.GenerateAsync(null);
 
             Assert.NotNull(result);
             Assert.Equal(JsonValueKind.Object, result.Value.ValueKind);
@@ -51,9 +52,9 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Generate_Schema_For_Valid_Type()
+        public async Task It_Should_Generate_Schema_For_Valid_Type()
         {
-            var result = _generator.Generate(typeof(TestSchemaType));
+            var result = await _generator.GenerateAsync(typeof(TestSchemaType));
 
             Assert.NotNull(result);
             Assert.Equal(JsonValueKind.Object, result.Value.ValueKind);
@@ -62,7 +63,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             Assert.True(properties.TryGetProperty("Age", out _));
         }
 
-        private class TestSchemaType
+        private sealed class TestSchemaType
         {
             public string Name { get; set; } = string.Empty;
             public int Age { get; set; }

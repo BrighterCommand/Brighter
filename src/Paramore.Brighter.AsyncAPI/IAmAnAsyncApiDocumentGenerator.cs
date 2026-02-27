@@ -22,12 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.AsyncAPI.Model;
 
 namespace Paramore.Brighter.AsyncAPI
 {
     public interface IAmAnAsyncApiDocumentGenerator
     {
-        AsyncApiDocument Generate();
+        Task<AsyncApiDocument> GenerateAsync(CancellationToken ct = default);
     }
 }
