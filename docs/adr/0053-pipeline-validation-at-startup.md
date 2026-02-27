@@ -896,6 +896,9 @@ Note: these two could be composed via `And()` if evaluated together, but are kep
 **Rule: PumpHandlerMatch** (Error)
 
 ```csharp
+// Note: All() returns true on an empty collection, so this rule vacuously passes
+// when no handlers are registered. This is intentional — the HandlerRegistered rule
+// (below) catches the missing-handler case with a more specific error message.
 new Specification<Subscription>(s =>
 {
     var handlerTypes = subscriberRegistry.GetHandlerTypes(s.DataType);
