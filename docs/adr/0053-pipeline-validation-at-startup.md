@@ -482,7 +482,12 @@ public class PipelineBuilder<TRequest> where TRequest : class, IRequest
 }
 ```
 
-**Describe-only construction**: `Describe()` only does Phase 1 (pure reflection) — it never calls the handler factory. A new `internal` constructor accepts just the subscriber registry and inbox configuration, omitting the factory. The validator constructs a single describe-only instance and calls `Describe(type)` for each registered request type. Although `PipelineBuilder<TRequest>` is generic, `Describe(Type requestType)` ignores `TRequest` — it uses the `Type` parameter for all reflection. The same approach applies to `TransformPipelineBuilder` and `TransformPipelineBuilderAsync`.
+**Describe-only construction**: `Describe()` only does Phase 1 (pure reflection) — it never calls the handler factory. A new `internal` constructor accepts just the subscriber registry and inbox configuration, omitting the factory. The validator constructs a single describe-only instance and calls `Describe(type)` for each registered request type. The same approach applies to `TransformPipelineBuilder` and `TransformPipelineBuilderAsync`.
+
+**Why `Describe(Type)` stays on `PipelineBuilder<TRequest>`**: `Describe(Type requestType)` is a non-generic method that accepts `Type` and ignores the class's `TRequest` parameter. This is a deliberate trade-off — the two reasons for keeping it co-located rather than extracting to a separate class:
+
+1. **Drift prevention** — the describe path and the build path share the same code (`HandlerMethodDiscovery`, `GetOtherHandlersInPipeline()`, static attribute caches), guaranteeing they stay in sync as the pipeline evolves. Co-location on the same class makes this relationship explicit to future maintainers.
+2. **No runtime instance** — the validator operates on `Type` objects at registration time, not on request instances, so a generic constraint buys nothing here. The `Type requestType` parameter is the natural API for startup-time inspection.
 
 `Describe()` executes phase 1 only:
 
