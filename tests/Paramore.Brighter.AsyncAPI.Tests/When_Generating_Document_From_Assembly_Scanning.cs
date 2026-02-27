@@ -113,6 +113,45 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             Assert.Single(result.Operations);
         }
 
+        [Fact]
+        public async Task It_Should_Skip_Assembly_Scanned_Type_When_DI_Has_Uniqueified_Operation_Id()
+        {
+            var options = new AsyncApiOptions
+            {
+                Title = "Test API",
+                Version = "1.0.0",
+                AssembliesToScan = new[] { typeof(ScannableEvent).Assembly }
+            };
+
+            // Two DI publications on the same topic as the [PublicationTopic]-decorated ScannableEvent.
+            // The first gets send_scannable_topic, the second gets send_scannable_topic_2.
+            // Assembly scanning must still detect that a send operation for scannable_topic
+            // already exists from DI and skip the scanned type.
+            var publications = new[]
+            {
+                new Publication
+                {
+                    Topic = new RoutingKey("scannable.topic"),
+                    RequestType = typeof(ScannableEvent)
+                },
+                new Publication
+                {
+                    Topic = new RoutingKey("scannable.topic"),
+                    RequestType = typeof(ScannableEvent)
+                }
+            };
+
+            var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, publications);
+            var result = await generator.GenerateAsync();
+
+            Assert.NotNull(result.Operations);
+            // Only the two DI publications should produce operations (send_scannable_topic and send_scannable_topic_2)
+            // The assembly-scanned type must NOT add a third operation
+            Assert.Equal(2, result.Operations.Count);
+            Assert.True(result.Operations.ContainsKey("send_scannable_topic"));
+            Assert.True(result.Operations.ContainsKey("send_scannable_topic_2"));
+        }
+
         [PublicationTopic("scannable.topic")]
         public class ScannableEvent : Event
         {
