@@ -77,7 +77,7 @@ namespace Paramore.Brighter.AsyncAPI
                     Version = _options.Version,
                     Description = _options.Description
                 },
-                Servers = _options.Servers,
+                Servers = _options.Servers != null ? new Dictionary<string, AsyncApiServer>(_options.Servers) : null,
                 Channels = _channels.Count > 0 ? _channels : null,
                 Operations = _operations.Count > 0 ? _operations : null,
                 Components = _messages.Count > 0 ? new AsyncApiComponents { Messages = _messages } : null
