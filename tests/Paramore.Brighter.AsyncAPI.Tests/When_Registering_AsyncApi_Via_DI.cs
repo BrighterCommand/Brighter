@@ -22,7 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AsyncAPI.NJsonSchema;
@@ -131,7 +134,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Generate_Document_With_Default_Options()
+        public async Task It_Should_Generate_Document_With_Default_Options()
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -141,19 +144,19 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var provider = services.BuildServiceProvider();
             var generator = provider.GetRequiredService<IAmAnAsyncApiDocumentGenerator>();
-            var doc = generator.Generate();
+            var doc = await generator.GenerateAsync();
 
             Assert.Equal("3.0.0", doc.AsyncApi);
             Assert.Equal("Brighter Application", doc.Info.Title);
             Assert.Equal("1.0.0", doc.Info.Version);
         }
 
-        private class FakeSchemaGenerator : IAmASchemaGenerator
+        private sealed class FakeSchemaGenerator : IAmASchemaGenerator
         {
-            public JsonElement? Generate(System.Type requestType)
+            public Task<JsonElement?> GenerateAsync(Type? requestType, CancellationToken ct = default)
             {
                 using var doc = JsonDocument.Parse("{}");
-                return doc.RootElement.Clone();
+                return Task.FromResult<JsonElement?>(doc.RootElement.Clone());
             }
         }
     }
