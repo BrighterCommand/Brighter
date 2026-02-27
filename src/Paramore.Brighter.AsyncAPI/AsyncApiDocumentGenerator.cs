@@ -44,6 +44,7 @@ namespace Paramore.Brighter.AsyncAPI
         private readonly Dictionary<string, AsyncApiChannel> _channels = new();
         private readonly Dictionary<string, AsyncApiOperation> _operations = new();
         private readonly Dictionary<string, AsyncApiMessage> _messages = new();
+        private readonly HashSet<(string channelId, string action)> _coveredChannelActions = new();
 
         public AsyncApiDocumentGenerator(
             AsyncApiOptions options,
@@ -62,6 +63,7 @@ namespace Paramore.Brighter.AsyncAPI
             _channels.Clear();
             _operations.Clear();
             _messages.Clear();
+            _coveredChannelActions.Clear();
 
             await AddSubscriptionsAsync(ct).ConfigureAwait(false);
             await AddPublicationsAsync(ct).ConfigureAwait(false);
@@ -112,6 +114,8 @@ namespace Paramore.Brighter.AsyncAPI
 
                 AddChannelMessageRef(channelId, messageName);
 
+                _coveredChannelActions.Add((channelId, "receive"));
+
                 var operationId = GetUniqueOperationId("receive", channelId);
                 _operations[operationId] = new AsyncApiOperation
                 {
@@ -152,6 +156,8 @@ namespace Paramore.Brighter.AsyncAPI
                 }
 
                 AddChannelMessageRef(channelId, messageName);
+
+                _coveredChannelActions.Add((channelId, "send"));
 
                 var operationId = GetUniqueOperationId("send", channelId);
                 _operations[operationId] = new AsyncApiOperation
@@ -202,10 +208,11 @@ namespace Paramore.Brighter.AsyncAPI
                     if (string.IsNullOrEmpty(topic)) continue;
 
                     var channelId = SanitizeChannelId(topic);
-                    var sendOpId = $"send_{channelId}";
 
                     // DI sources win deduplication
-                    if (_operations.ContainsKey(sendOpId)) continue;
+                    if (_coveredChannelActions.Contains((channelId, "send"))) continue;
+
+                    var sendOpId = $"send_{channelId}";
 
                     EnsureChannel(channelId, topic);
 
