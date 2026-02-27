@@ -668,7 +668,7 @@ IEnumerable<Type> GetHandlerTypes(Type requestType);
 
 **Implementation detail**: Today `SubscriberRegistry._observers` stores routing functions (`Func<IRequest?, IRequestContext?, List<Type>>`), not handler types directly. For simple registrations via `Register<TRequest, TImplementation>()`, the handler type is captured in a lambda. For routing registrations via `Register<TRequest>(Func<...> router, IEnumerable<Type> handlerTypes)`, the `handlerTypes` parameter represents the set of all possible types the routing function may return — these are passed through to the DI container (`ServiceCollectionSubscriberRegistry`) for registration, but `SubscriberRegistry` itself does not currently store them.
 
-To support `GetHandlerTypes(Type)`, `SubscriberRegistry` gains a parallel `Dictionary<Type, HashSet<Type>> _allHandlerTypes` that both `Add` overloads populate:
+To support `GetHandlerTypes(Type)`, `SubscriberRegistry` gains a parallel `Dictionary<Type, HashSet<Type>> _allHandlerTypes` that both `Add` overloads populate. This is a plain `Dictionary`, not a `ConcurrentDictionary` — matching the existing `_observers` field. Both are written during the single-threaded DI registration phase and only read after the service provider is built. The static caches in `PipelineBuilder` (`s_preAttributesMemento`, `s_postAttributesMemento`) use `ConcurrentDictionary` because they are lazily populated during concurrent message dispatch; `_allHandlerTypes` does not have this concern.
 
 ```csharp
 // In SubscriberRegistry
