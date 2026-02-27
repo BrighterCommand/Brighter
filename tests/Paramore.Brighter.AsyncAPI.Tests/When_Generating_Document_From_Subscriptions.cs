@@ -153,6 +153,35 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             Assert.Equal("rabbitmq:5672", result.Servers["production"].Host);
         }
 
+        [Fact]
+        public async Task It_Should_Isolate_Servers_From_Options_Mutations()
+        {
+            _options.Servers = new Dictionary<string, AsyncApiServer>
+            {
+                ["production"] = new AsyncApiServer
+                {
+                    Host = "rabbitmq:5672",
+                    Protocol = "amqp"
+                }
+            };
+
+            var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
+            var result = await generator.GenerateAsync();
+
+            // Mutate options after generation
+            _options.Servers["staging"] = new AsyncApiServer
+            {
+                Host = "staging-rabbitmq:5672",
+                Protocol = "amqp"
+            };
+
+            // The previously generated document must NOT contain the new key
+            Assert.NotNull(result.Servers);
+            Assert.Single(result.Servers);
+            Assert.True(result.Servers.ContainsKey("production"));
+            Assert.False(result.Servers.ContainsKey("staging"));
+        }
+
         public class TestEvent : Event
         {
             public TestEvent() : base(Guid.NewGuid()) { }
