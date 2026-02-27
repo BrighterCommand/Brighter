@@ -312,7 +312,7 @@ internal static class HandlerPipelineValidationRules
 
         yield return new ValidationRule<HandlerPipelineDescription>(
             specification: new Specification<HandlerPipelineDescription>(d =>
-                d.BeforeSteps.All(step =>
+                d.BeforeSteps.Concat(d.AfterSteps).All(step =>
                 {
                     var stepIsAsync = typeof(IHandleRequestsAsync)
                         .IsAssignableFrom(step.HandlerType);
