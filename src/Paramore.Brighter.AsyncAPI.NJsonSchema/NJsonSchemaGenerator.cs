@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NJsonSchema;
 
@@ -45,22 +47,22 @@ namespace Paramore.Brighter.AsyncAPI.NJsonSchema
             _logger = logger;
         }
 
-        public JsonElement? Generate(Type requestType)
+        public Task<JsonElement?> GenerateAsync(Type? requestType, CancellationToken ct = default)
         {
             if (requestType == null)
-                return s_emptyObject;
+                return Task.FromResult<JsonElement?>(s_emptyObject);
 
             try
             {
                 var schema = JsonSchema.FromType(requestType);
                 var json = schema.ToJson();
                 using var doc = JsonDocument.Parse(json);
-                return doc.RootElement.Clone();
+                return Task.FromResult<JsonElement?>(doc.RootElement.Clone());
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to generate JSON schema for type {TypeName}, returning empty object", requestType.FullName);
-                return s_emptyObject;
+                return Task.FromResult<JsonElement?>(s_emptyObject);
             }
         }
     }
