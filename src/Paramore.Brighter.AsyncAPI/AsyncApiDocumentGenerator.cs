@@ -294,9 +294,8 @@ namespace Paramore.Brighter.AsyncAPI
             return $"{baseId}_{counter}";
         }
 
-        private static string SanitizeChannelId(string value)
-        {
-            return Regex.Replace(value, "[^a-zA-Z0-9]", "_");
-        }
+        private static readonly Regex s_sanitizeRegex = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
+
+        private static string SanitizeChannelId(string value) => s_sanitizeRegex.Replace(value, "_");
     }
 }
