@@ -29,8 +29,19 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.AsyncAPI
 {
+    /// <summary>
+    /// Generates JSON Schema representations for message payload types used in AsyncAPI document generation.
+    /// Implementations should return an empty object schema ({}) when the request type is null or when an error occurs,
+    /// rather than propagating exceptions.
+    /// </summary>
     public interface IAmASchemaGenerator
     {
+        /// <summary>
+        /// Generates a JSON Schema for the specified request type.
+        /// </summary>
+        /// <param name="requestType">The type to generate a schema for, or null to produce an empty object schema.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>A <see cref="JsonElement"/> representing the JSON Schema, or an empty object schema on null/error.</returns>
         Task<JsonElement?> GenerateAsync(Type? requestType, CancellationToken ct = default);
     }
 }
