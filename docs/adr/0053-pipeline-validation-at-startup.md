@@ -845,6 +845,10 @@ Each rule is a `ValidationRule<T>` wrapping a `Specification<T>` that expresses 
 **Rule: BackstopAttributeOrdering** (Warning)
 
 ```csharp
+// Warning, not Error: a resilience pipeline placed before a backstop could
+// intentionally catch and act on the exception before passing it on. This is
+// unusual and probably not what the developer intended, but it is not provably
+// wrong — so we warn rather than block startup.
 new Specification<HandlerPipelineDescription>(d =>
 {
     var backstops = d.BeforeSteps.Where(s =>
