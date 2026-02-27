@@ -16,11 +16,11 @@ public class WhenGeneratingWithoutOutboxConfigurationShouldLogAndComplete : IDis
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), $"OutboxGeneratorTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testDirectory);
-        
+
         var factory = LoggerFactory.Create(builder => builder.AddConsole());
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
-    
+
     [Fact]
     public async Task When_generating_without_outbox_configuration_should_log_and_complete()
     {
@@ -29,7 +29,7 @@ public class WhenGeneratingWithoutOutboxConfigurationShouldLogAndComplete : IDis
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,
-            MessageFactory = "TestMessageFactory"
+            MessageBuilder = "TestMessageBuilder",
         };
         var generator = new Generators.OutboxGenerator(_logger);
 
@@ -45,4 +45,3 @@ public class WhenGeneratingWithoutOutboxConfigurationShouldLogAndComplete : IDis
         }
     }
 }
-

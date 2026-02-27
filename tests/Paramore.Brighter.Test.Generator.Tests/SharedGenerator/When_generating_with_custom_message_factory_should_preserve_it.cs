@@ -16,7 +16,7 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), $"SharedGeneratorTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testDirectory);
-        
+
         var factory = LoggerFactory.Create(builder => builder.AddConsole());
         _logger = factory.CreateLogger<Generators.SharedGenerator>();
     }
@@ -29,7 +29,7 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,
-            MessageFactory = "CustomMessageFactory"
+            MessageBuilder = "TestMessageBuilder",
         };
         var generator = new Generators.SharedGenerator(_logger);
 
@@ -37,9 +37,9 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
         await generator.GenerateAsync(configuration);
 
         // Assert
-        Assert.Equal("CustomMessageFactory", configuration.MessageFactory);
+        Assert.Equal("TestMessageBuilder", configuration.MessageBuilder);
     }
-    
+
     public void Dispose()
     {
         if (Directory.Exists(_testDirectory))

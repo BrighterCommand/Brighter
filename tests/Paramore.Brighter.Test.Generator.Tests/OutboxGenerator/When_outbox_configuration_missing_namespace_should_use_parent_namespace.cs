@@ -29,13 +29,13 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,
-            MessageFactory = "TestMessageFactory",
+            MessageBuilder = "TestMessageBuilder",
             Outbox = new OutboxConfiguration
             {
                 Prefix = "SqlServer",
                 Transaction = "SqlTransaction",
-                OutboxProvider = "MsSqlOutbox"
-            }
+                OutboxProvider = "MsSqlOutbox",
+            },
         };
         var generator = new Generators.OutboxGenerator(_logger);
 
@@ -45,7 +45,7 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
         // Assert - namespace should be inherited from parent configuration
         Assert.Equal("MyApp.Tests", configuration.Outbox.Namespace);
     }
-    
+
     public void Dispose()
     {
         if (Directory.Exists(_testDirectory))
