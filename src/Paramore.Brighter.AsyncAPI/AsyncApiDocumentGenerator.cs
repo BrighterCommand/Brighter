@@ -59,6 +59,10 @@ namespace Paramore.Brighter.AsyncAPI
 
         public async Task<AsyncApiDocument> GenerateAsync(CancellationToken ct = default)
         {
+            _channels.Clear();
+            _operations.Clear();
+            _messages.Clear();
+
             await AddSubscriptionsAsync(ct).ConfigureAwait(false);
             await AddPublicationsAsync(ct).ConfigureAwait(false);
             await AddFromAssemblyScanningAsync(ct).ConfigureAwait(false);
