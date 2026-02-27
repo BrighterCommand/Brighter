@@ -26,6 +26,8 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.AsyncAPI.Model;
@@ -40,7 +42,7 @@ namespace Paramore.Brighter.AsyncAPI
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        public static AsyncApiDocument GenerateAsyncApiDocument(this IHost host, string outputPath)
+        public static async Task<AsyncApiDocument> GenerateAsyncApiDocumentAsync(this IHost host, string outputPath, CancellationToken ct = default)
         {
             var generator = host.Services.GetService<IAmAnAsyncApiDocumentGenerator>();
             if (generator == null)
@@ -49,7 +51,7 @@ namespace Paramore.Brighter.AsyncAPI
                     "IAmAnAsyncApiDocumentGenerator is not registered. Call UseAsyncApi() on IBrighterBuilder during service configuration.");
             }
 
-            var document = generator.Generate();
+            var document = await generator.GenerateAsync(ct).ConfigureAwait(false);
             var json = JsonSerializer.Serialize(document, s_serializerOptions);
 
             var directory = Path.GetDirectoryName(outputPath);
@@ -58,9 +60,18 @@ namespace Paramore.Brighter.AsyncAPI
                 Directory.CreateDirectory(directory);
             }
 
+#if NET8_0_OR_GREATER
+            await File.WriteAllTextAsync(outputPath, json, ct).ConfigureAwait(false);
+#else
             File.WriteAllText(outputPath, json);
+#endif
 
             return document;
+        }
+
+        public static AsyncApiDocument GenerateAsyncApiDocument(this IHost host, string outputPath)
+        {
+            return host.GenerateAsyncApiDocumentAsync(outputPath).GetAwaiter().GetResult();
         }
     }
 }

@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Xunit;
 
@@ -39,7 +41,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         {
             _schemaGenerator = A.Fake<IAmASchemaGenerator>();
             using var doc = JsonDocument.Parse("{\"type\":\"object\"}");
-            A.CallTo(() => _schemaGenerator.Generate(A<Type>.Ignored)).Returns(doc.RootElement.Clone());
+            A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
+                .Returns(Task.FromResult<JsonElement?>(doc.RootElement.Clone()));
 
             _options = new AsyncApiOptions
             {
@@ -50,7 +53,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Produce_One_Channel_And_Two_Operations_For_Duplicate_Subscriptions()
+        public async Task It_Should_Produce_One_Channel_And_Two_Operations_For_Duplicate_Subscriptions()
         {
             var subscriptions = new[]
             {
@@ -69,7 +72,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             // One channel for the shared topic
             Assert.NotNull(result.Channels);
@@ -89,7 +92,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Produce_One_Channel_With_Receive_And_Send_For_Same_Topic()
+        public async Task It_Should_Produce_One_Channel_With_Receive_And_Send_For_Same_Topic()
         {
             var subscriptions = new[]
             {
@@ -107,7 +110,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, publications);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Channels);
             Assert.Single(result.Channels);
@@ -119,7 +122,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Produce_One_Message_Component_For_Same_Type_Across_Multiple_Subscriptions()
+        public async Task It_Should_Produce_One_Message_Component_For_Same_Type_Across_Multiple_Subscriptions()
         {
             var subscriptions = new[]
             {
@@ -138,14 +141,14 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Components?.Messages);
             Assert.Single(result.Components.Messages);
         }
 
         [Fact]
-        public void It_Should_Dedup_Producer_Registry_Over_Supplemental_Publications()
+        public async Task It_Should_Dedup_Producer_Registry_Over_Supplemental_Publications()
         {
             // Both producer registry and supplemental have the same topic
             var producerPubs = new[]
@@ -162,7 +165,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var allPubs = producerPubs.Concat(supplementalPubs).ToArray();
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, allPubs);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Operations);
             // Should have send_dedup_topic and send_dedup_topic_2 since both get added

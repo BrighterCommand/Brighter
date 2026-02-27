@@ -28,6 +28,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.AsyncAPI.Model;
 
 namespace Paramore.Brighter.AsyncAPI
@@ -55,11 +57,11 @@ namespace Paramore.Brighter.AsyncAPI
             _publications = publications;
         }
 
-        public AsyncApiDocument Generate()
+        public async Task<AsyncApiDocument> GenerateAsync(CancellationToken ct = default)
         {
-            AddSubscriptions();
-            AddPublications();
-            AddFromAssemblyScanning();
+            await AddSubscriptionsAsync(ct).ConfigureAwait(false);
+            await AddPublicationsAsync(ct).ConfigureAwait(false);
+            await AddFromAssemblyScanningAsync(ct).ConfigureAwait(false);
 
             var doc = new AsyncApiDocument
             {
@@ -78,7 +80,7 @@ namespace Paramore.Brighter.AsyncAPI
             return doc;
         }
 
-        private void AddSubscriptions()
+        private async Task AddSubscriptionsAsync(CancellationToken ct)
         {
             if (_subscriptions == null) return;
 
@@ -96,7 +98,7 @@ namespace Paramore.Brighter.AsyncAPI
                 if (subscription.RequestType != null)
                 {
                     messageName = subscription.RequestType.Name;
-                    EnsureMessage(messageName, subscription.RequestType);
+                    await EnsureMessageAsync(messageName, subscription.RequestType, ct).ConfigureAwait(false);
                 }
                 else
                 {
@@ -119,7 +121,7 @@ namespace Paramore.Brighter.AsyncAPI
             }
         }
 
-        private void AddPublications()
+        private async Task AddPublicationsAsync(CancellationToken ct)
         {
             if (_publications == null) return;
 
@@ -137,7 +139,7 @@ namespace Paramore.Brighter.AsyncAPI
                 if (publication.RequestType != null)
                 {
                     messageName = publication.RequestType.Name;
-                    EnsureMessage(messageName, publication.RequestType);
+                    await EnsureMessageAsync(messageName, publication.RequestType, ct).ConfigureAwait(false);
                 }
                 else
                 {
@@ -160,7 +162,7 @@ namespace Paramore.Brighter.AsyncAPI
             }
         }
 
-        private void AddFromAssemblyScanning()
+        private async Task AddFromAssemblyScanningAsync(CancellationToken ct)
         {
             if (_options.DisableAssemblyScanning) return;
 
@@ -204,7 +206,7 @@ namespace Paramore.Brighter.AsyncAPI
                     EnsureChannel(channelId, topic);
 
                     var messageName = type.Name;
-                    EnsureMessage(messageName, type);
+                    await EnsureMessageAsync(messageName, type, ct).ConfigureAwait(false);
                     AddChannelMessageRef(channelId, messageName);
 
                     _operations[sendOpId] = new AsyncApiOperation
@@ -232,7 +234,7 @@ namespace Paramore.Brighter.AsyncAPI
             }
         }
 
-        private void EnsureMessage(string messageName, Type requestType)
+        private async Task EnsureMessageAsync(string messageName, Type requestType, CancellationToken ct)
         {
             if (!_messages.ContainsKey(messageName))
             {
@@ -240,7 +242,7 @@ namespace Paramore.Brighter.AsyncAPI
                 {
                     Name = messageName,
                     ContentType = "application/json",
-                    Payload = _schemaGenerator.Generate(requestType)
+                    Payload = await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false)
                 };
             }
         }

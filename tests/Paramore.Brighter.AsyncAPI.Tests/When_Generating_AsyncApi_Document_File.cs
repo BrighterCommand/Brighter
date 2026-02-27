@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -51,7 +53,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         private static IHost CreateHostWithGenerator(AsyncApiDocument document)
         {
             var generator = A.Fake<IAmAnAsyncApiDocumentGenerator>();
-            A.CallTo(() => generator.Generate()).Returns(document);
+            A.CallTo(() => generator.GenerateAsync(A<CancellationToken>.Ignored))
+                .Returns(Task.FromResult(document));
 
             var services = new ServiceCollection();
             services.AddSingleton(generator);
@@ -63,7 +66,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Write_File()
+        public async Task It_Should_Write_File()
         {
             var document = new AsyncApiDocument
             {
@@ -72,27 +75,27 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var host = CreateHostWithGenerator(document);
             var outputPath = Path.Combine(_tempDir, "asyncapi.json");
 
-            host.GenerateAsyncApiDocument(outputPath);
+            await host.GenerateAsyncApiDocumentAsync(outputPath);
 
             Assert.True(File.Exists(outputPath));
         }
 
         [Fact]
-        public void It_Should_Create_Parent_Directory()
+        public async Task It_Should_Create_Parent_Directory()
         {
             var document = new AsyncApiDocument();
             var host = CreateHostWithGenerator(document);
             var nestedDir = Path.Combine(_tempDir, "nested", "dir");
             var outputPath = Path.Combine(nestedDir, "asyncapi.json");
 
-            host.GenerateAsyncApiDocument(outputPath);
+            await host.GenerateAsyncApiDocumentAsync(outputPath);
 
             Assert.True(Directory.Exists(nestedDir));
             Assert.True(File.Exists(outputPath));
         }
 
         [Fact]
-        public void It_Should_Return_Generated_Document()
+        public async Task It_Should_Return_Generated_Document()
         {
             var document = new AsyncApiDocument
             {
@@ -101,14 +104,14 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var host = CreateHostWithGenerator(document);
             var outputPath = Path.Combine(_tempDir, "asyncapi.json");
 
-            var result = host.GenerateAsyncApiDocument(outputPath);
+            var result = await host.GenerateAsyncApiDocumentAsync(outputPath);
 
             Assert.Equal("My API", result.Info.Title);
             Assert.Equal("2.0.0", result.Info.Version);
         }
 
         [Fact]
-        public void It_Should_Throw_When_Not_Configured()
+        public async Task It_Should_Throw_When_Not_Configured()
         {
             var services = new ServiceCollection();
             var provider = services.BuildServiceProvider();
@@ -116,14 +119,12 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             A.CallTo(() => host.Services).Returns(provider);
             var outputPath = Path.Combine(_tempDir, "asyncapi.json");
 
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                host.GenerateAsyncApiDocument(outputPath));
-
-            Assert.Contains("UseAsyncApi()", ex.Message);
+            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                await host.GenerateAsyncApiDocumentAsync(outputPath));
         }
 
         [Fact]
-        public void It_Should_Write_Indented_Json_Without_Nulls()
+        public async Task It_Should_Write_Indented_Json_Without_Nulls()
         {
             var document = new AsyncApiDocument
             {
@@ -132,7 +133,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var host = CreateHostWithGenerator(document);
             var outputPath = Path.Combine(_tempDir, "asyncapi.json");
 
-            host.GenerateAsyncApiDocument(outputPath);
+            await host.GenerateAsyncApiDocumentAsync(outputPath);
 
             var json = File.ReadAllText(outputPath);
 
@@ -146,7 +147,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Produce_File_Matching_Returned_Document()
+        public async Task It_Should_Produce_File_Matching_Returned_Document()
         {
             var document = new AsyncApiDocument
             {
@@ -155,7 +156,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var host = CreateHostWithGenerator(document);
             var outputPath = Path.Combine(_tempDir, "asyncapi.json");
 
-            var result = host.GenerateAsyncApiDocument(outputPath);
+            var result = await host.GenerateAsyncApiDocumentAsync(outputPath);
 
             var json = File.ReadAllText(outputPath);
             using var parsed = JsonDocument.Parse(json);

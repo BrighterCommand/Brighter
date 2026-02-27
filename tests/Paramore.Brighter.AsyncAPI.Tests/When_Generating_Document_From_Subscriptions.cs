@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Paramore.Brighter.AsyncAPI.Model;
 using Xunit;
@@ -40,7 +42,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         {
             _schemaGenerator = A.Fake<IAmASchemaGenerator>();
             using var doc = JsonDocument.Parse("{\"type\":\"object\"}");
-            A.CallTo(() => _schemaGenerator.Generate(A<Type>.Ignored)).Returns(doc.RootElement.Clone());
+            A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
+                .Returns(Task.FromResult<JsonElement?>(doc.RootElement.Clone()));
 
             _options = new AsyncApiOptions
             {
@@ -51,7 +54,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Generate_Receive_Operation_For_Subscription_With_RequestType()
+        public async Task It_Should_Generate_Receive_Operation_For_Subscription_With_RequestType()
         {
             var subscriptions = new[]
             {
@@ -64,7 +67,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Channels);
             Assert.True(result.Channels.ContainsKey("order_created"));
@@ -80,7 +83,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Generate_Placeholder_Message_When_RequestType_Uses_MapRequestType()
+        public async Task It_Should_Generate_Placeholder_Message_When_RequestType_Uses_MapRequestType()
         {
             var subscriptions = new[]
             {
@@ -94,14 +97,14 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Components?.Messages);
             Assert.True(result.Components.Messages.ContainsKey("order_createdMessage"));
         }
 
         [Fact]
-        public void It_Should_Skip_Subscription_With_Empty_RoutingKey()
+        public async Task It_Should_Skip_Subscription_With_Empty_RoutingKey()
         {
             var subscriptions = new[]
             {
@@ -114,24 +117,24 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.Null(result.Channels);
             Assert.Null(result.Operations);
         }
 
         [Fact]
-        public void It_Should_Handle_Null_Subscriptions()
+        public async Task It_Should_Handle_Null_Subscriptions()
         {
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.Null(result.Channels);
             Assert.Null(result.Operations);
         }
 
         [Fact]
-        public void It_Should_Include_Servers_When_Configured()
+        public async Task It_Should_Include_Servers_When_Configured()
         {
             _options.Servers = new Dictionary<string, AsyncApiServer>
             {
@@ -143,7 +146,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Servers);
             Assert.True(result.Servers.ContainsKey("production"));

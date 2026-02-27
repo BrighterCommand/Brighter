@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Xunit;
 
@@ -37,11 +39,12 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         {
             _schemaGenerator = A.Fake<IAmASchemaGenerator>();
             using var doc = JsonDocument.Parse("{\"type\":\"object\"}");
-            A.CallTo(() => _schemaGenerator.Generate(A<Type>.Ignored)).Returns(doc.RootElement.Clone());
+            A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
+                .Returns(Task.FromResult<JsonElement?>(doc.RootElement.Clone()));
         }
 
         [Fact]
-        public void It_Should_Discover_Types_With_PublicationTopic_Attribute()
+        public async Task It_Should_Discover_Types_With_PublicationTopic_Attribute()
         {
             var options = new AsyncApiOptions
             {
@@ -51,7 +54,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Channels);
             Assert.True(result.Channels.ContainsKey("scannable_topic"));
@@ -66,7 +69,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Not_Scan_When_Disabled()
+        public async Task It_Should_Not_Scan_When_Disabled()
         {
             var options = new AsyncApiOptions
             {
@@ -77,13 +80,13 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.Null(result.Operations);
         }
 
         [Fact]
-        public void It_Should_Let_DI_Source_Win_Dedup()
+        public async Task It_Should_Let_DI_Source_Win_Dedup()
         {
             var options = new AsyncApiOptions
             {
@@ -102,7 +105,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, publications);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Operations);
             // Should have exactly one send operation for this topic (from publications, not duplicated by scanning)

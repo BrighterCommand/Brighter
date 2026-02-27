@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Xunit;
 
@@ -38,7 +40,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         {
             _schemaGenerator = A.Fake<IAmASchemaGenerator>();
             using var doc = JsonDocument.Parse("{\"type\":\"object\"}");
-            A.CallTo(() => _schemaGenerator.Generate(A<Type>.Ignored)).Returns(doc.RootElement.Clone());
+            A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
+                .Returns(Task.FromResult<JsonElement?>(doc.RootElement.Clone()));
 
             _options = new AsyncApiOptions
             {
@@ -49,7 +52,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Generate_Send_Operation_For_Publication_With_RequestType()
+        public async Task It_Should_Generate_Send_Operation_For_Publication_With_RequestType()
         {
             var publications = new[]
             {
@@ -57,7 +60,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Channels);
             Assert.True(result.Channels.ContainsKey("order_created"));
@@ -73,7 +76,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public void It_Should_Generate_Placeholder_Message_When_RequestType_Is_Null()
+        public async Task It_Should_Generate_Placeholder_Message_When_RequestType_Is_Null()
         {
             var publications = new[]
             {
@@ -81,14 +84,14 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Components?.Messages);
             Assert.True(result.Components.Messages.ContainsKey("order_createdMessage"));
         }
 
         [Fact]
-        public void It_Should_Skip_Publication_With_Null_Topic()
+        public async Task It_Should_Skip_Publication_With_Null_Topic()
         {
             var publications = new[]
             {
@@ -96,14 +99,14 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.Null(result.Channels);
             Assert.Null(result.Operations);
         }
 
         [Fact]
-        public void It_Should_Skip_Publication_With_Empty_Topic()
+        public async Task It_Should_Skip_Publication_With_Empty_Topic()
         {
             var publications = new[]
             {
@@ -111,17 +114,17 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.Null(result.Channels);
             Assert.Null(result.Operations);
         }
 
         [Fact]
-        public void It_Should_Handle_Null_Publications()
+        public async Task It_Should_Handle_Null_Publications()
         {
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
-            var result = generator.Generate();
+            var result = await generator.GenerateAsync();
 
             Assert.Null(result.Channels);
             Assert.Null(result.Operations);

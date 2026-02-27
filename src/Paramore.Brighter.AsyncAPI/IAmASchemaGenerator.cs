@@ -24,11 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.AsyncAPI
 {
     public interface IAmASchemaGenerator
     {
-        JsonElement? Generate(Type requestType);
+        Task<JsonElement?> GenerateAsync(Type? requestType, CancellationToken ct = default);
     }
 }
