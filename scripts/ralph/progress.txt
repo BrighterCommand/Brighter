@@ -22,3 +22,14 @@ Started: Wed 25 Feb 2026 12:39:50 GMT
   - NJsonSchema generates schemas with `#/definitions/SubType` internal refs that need rewriting when embedded in AsyncAPI documents
   - Publication class can be instantiated directly with `new Publication { Topic = new RoutingKey("..."), RequestType = typeof(T) }`
 ---
+
+## 2026-02-28 - US-023
+- What was implemented: Refactored AsyncApiDocumentGenerator to reduce duplication and complexity
+- Files changed:
+  - src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs (refactored, net -2 lines)
+- **Learnings for future iterations:**
+  - Extracted `ProcessSourceAsync` to consolidate the shared channel+operation creation logic between AddSubscriptionsAsync and AddPublicationsAsync — reduced ~80 lines of duplicated code to a single parametrized method
+  - Extracted `GetPublicationTopicTypes(Assembly)` as a static iterator method to separate type filtering/attribute checking from the async processing loop in AddFromAssemblyScanningAsync
+  - Extracted `RewriteRefProperty(JsonObject, ...)` to isolate the `$ref` property rewriting logic from the recursive tree traversal in RewriteRefs
+  - All 51 tests pass unchanged — purely structural refactoring with no behavioral changes
+---
