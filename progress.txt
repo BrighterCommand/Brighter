@@ -1,0 +1,525 @@
+# Ralph Progress Log
+Started: Sun 22 Feb 2026
+
+## Codebase Patterns
+- **CORRECTED**: Solution file is `Brighter.slnx` (modern XML format, NOT legacy .sln) - add projects as `<Project Path="..." />`
+- **CORRECTED**: Repo DOES use central package management (`Directory.Packages.props` with `ManagePackageVersionsCentrally=true`) - do NOT put version attributes in csproj files
+- **CORRECTED**: Source projects use `$(BrighterTargetFrameworks)` = `netstandard2.0;net8.0;net9.0;net10.0` (variable from `src/Directory.Build.props`)
+- **CORRECTED**: Test projects use `$(BrighterTestTargetFrameworks)` = `net9.0;net10.0` (variable from `tests/Directory.Build.props`)
+- **CORRECTED**: LangVersion is `latest` and Nullable is `enable` from Directory.Build.props
+- **CORRECTED**: Version is 10.0.0.0 (not 9.0.0.0), MinVer 7.0.0 and SourceLink 10.0.103 via GlobalPackageReference
+- `IAmA*` naming convention for role-based interfaces
+- DI extensions follow `Use*` pattern on `IBrighterBuilder` with `Action<Options>` parameter; use `TryAddSingleton` for defaults
+- `IServiceActivatorOptions.Subscriptions` provides registered subscriptions when `AddServiceActivator` has been called
+- `IAmAProducerRegistry` is registered by `UseExternalBus` but only exposes `IAmAMessageProducer` instances (not `Publication` objects or topic keys)
+- `Publication` class has NO `DataType` property - only Topic, MakeChannels, MaxOutStandingMessages, etc.
+- All .cs files in the repo have the standard MIT licence header - new files MUST include it with 2025 copyright
+- BDD test naming: `When_<action>_<subject>` for test class names, `It_Should_<expected>` for test methods
+- NJsonSchema `JsonSchema.FromType()` generates PascalCase property names by default - match C# property casing in assertions
+- `Subscription.DataType` is read-only `{ get; }` - to test null DataType, pass null with explicit name/channelName/routingKey to avoid NRE
+- When testing subscription/publication generation in isolation, set `DisableAssemblyScanning = true` on options to prevent test types with `[PublicationTopic]` from being picked up
+- `ReflectionTypeLoadException.Types` can contain null entries - always filter with `.Where(t => t != null)` before processing
+- To test DI extensions on `IBrighterBuilder`, fake it with FakeItEasy: `A.CallTo(() => builder.Services).Returns(new ServiceCollection())` - no need for full `AddBrighter()` setup
+- `dotnet build/test/restore` requires `dangerouslyDisableSandbox: true` due to sandbox file write restrictions
+- This machine does NOT have net9.0 runtime - test runs on net9.0 will abort; net10.0 works
+- `IAmConsumerOptions` (core Brighter) provides `Subscriptions` - use this instead of depending on ServiceActivator for subscription access
+- In AsyncAPI generator code, prefer `TryAdd`/`TryGetValue` over `ContainsKey` + indexer to avoid double dictionary lookups and keep dedup logic idiomatic
+- Strong-name signed assemblies make `InternalsVisibleTo` via csproj `<InternalsVisibleTo>` items fail without full public key - avoid where possible
+- `PublicationTopicAttribute` exists in BOTH `Paramore.Brighter` and `Paramore.Brighter.AsyncAPI` - use fully qualified `Paramore.Brighter.AsyncAPI.PublicationTopic` in attribute usage to avoid CS0104 ambiguity
+- All async APIs use `Task<T>` return types with `CancellationToken ct = default` parameter; FakeItEasy mocks need `A<CancellationToken>.Ignored` in call setups
+- `#if NET8_0_OR_GREATER` conditional for `File.WriteAllTextAsync` since it's not available on netstandard2.0
+---
+
+## Previous Iteration Review (reset)
+The first implementation attempt (11 commits) was reviewed and reset due to critical issues:
+1. .sln file trashed with 2200-line diff from adding x64 platform configs
+2. Test project targeted net10.0 (doesn't exist) - tests never actually ran
+3. PublicationTopicAttribute added to core package (acceptable, but needs licence header)
+4. Publication has no DataType - publications always got empty {} payloads (known limitation)
+5. Bare catch block swallowing all exceptions silently in NJsonSchemaGenerator
+6. Sync-over-async wrapper (.GetAwaiter().GetResult()) is a deadlock risk
+7. No MIT licence headers on any new file
+8. Operation IDs had no separator (sendorder_created instead of send_order_created)
+---
+
+## 2026-02-22 - US-001
+- Created three project files:
+  - `src/Paramore.Brighter.AsyncAPI/Paramore.Brighter.AsyncAPI.csproj` (netstandard2.0;net6.0;net7.0;net8.0) - refs Brighter, DI Extensions, ServiceActivator DI Extensions, Microsoft.Extensions.Hosting.Abstractions
+  - `src/Paramore.Brighter.AsyncAPI.NJsonSchema/Paramore.Brighter.AsyncAPI.NJsonSchema.csproj` (netstandard2.0;net6.0;net7.0;net8.0) - refs AsyncAPI + NJsonSchema 11.1.0
+  - `tests/Paramore.Brighter.AsyncAPI.Tests/Paramore.Brighter.AsyncAPI.Tests.csproj` (net8.0) - xunit, FluentAssertions, FakeItEasy
+- Added placeholder .cs files with MIT licence headers to each project
+- Manually edited Brighter.sln to add all 3 projects with only the 6 existing platform configs (no x64)
+- Files changed: Brighter.sln, 3 csproj files, 3 Placeholder.cs files
+- **Learnings for future iterations:**
+  - `dotnet sln add` introduces Debug|x64 and Release|x64 solution-level platform configs (.NET 10 SDK bug/behavior) - always manually edit the .sln file instead
+  - Tests require `-p:RollForward=LatestMajor` to run on this machine (.NET 10 only, no net8.0 runtime)
+  - Source projects use `Update` (not `Include`) for MinVer and SourceLink because Directory.Build.props provides the initial Include
+  - The test project nesting GUID for the "tests" solution folder is `{329736D2-BF92-4D06-A7BF-19F4B6B64EDD}`
+---
+
+## 2026-02-22 - US-002
+- Created 8 AsyncAPI 3.0 model POCO classes in `src/Paramore.Brighter.AsyncAPI/Model/`:
+  - `AsyncApiDocument` - root document with AsyncApi version, Info, Servers, Channels, Operations, Components
+  - `AsyncApiInfo` - title, version, description
+  - `AsyncApiServer` - host, protocol, description
+  - `AsyncApiChannel` - address, messages dictionary
+  - `AsyncApiOperation` - action (send/receive), channel ref, messages list
+  - `AsyncApiComponents` - messages dictionary
+  - `AsyncApiMessage` - name, contentType, payload (JsonElement), description
+  - `AsyncApiRef` - $ref string (serialized via JsonPropertyName)
+- All classes use System.Text.Json attributes (JsonPropertyName, JsonIgnoreCondition.WhenWritingNull)
+- All files include the standard MIT licence header
+- Created 7 unit tests for round-trip serialization in `tests/Paramore.Brighter.AsyncAPI.Tests/Model/When_Serializing_AsyncApi_Document.cs`
+- Removed placeholder .cs files from AsyncAPI and test projects
+- Files changed: 8 new Model/*.cs files, 1 new test file, 2 placeholder files removed
+- **Learnings for future iterations:**
+  - System.Text.Json is available transitively from Paramore.Brighter (version 8.0.0) - no need to add a separate package reference
+  - Test files need explicit `using System.Text.Json.Serialization` for `JsonIgnoreCondition` - it's not pulled in by `using System.Text.Json` alone
+  - `dotnet build` and `dotnet test` commands require `dangerouslyDisableSandbox: true` due to sandbox file write restrictions
+  - JsonElement? (nullable) with JsonIgnoreCondition.WhenWritingNull correctly omits the payload when null
+---
+
+## 2026-02-22 - US-003
+- Created `AsyncApiOptions` class in `src/Paramore.Brighter.AsyncAPI/AsyncApiOptions.cs`
+- Properties: Title ("Brighter Application"), Version ("1.0.0"), Description (null), Servers (null), AssembliesToScan (null), DisableAssemblyScanning (false), Publications (null)
+- Created unit test verifying all default values
+- Files changed: 1 new source file, 1 new test file
+- **Learnings for future iterations:**
+  - `Publication` type is available from the Paramore.Brighter project reference - no additional reference needed
+  - `System.Reflection.Assembly` is available in netstandard2.0 without additional packages
+---
+
+## 2026-02-22 - US-004
+- Created `IAmASchemaGenerator` interface in `src/Paramore.Brighter.AsyncAPI/IAmASchemaGenerator.cs` with synchronous `JsonElement? Generate(Type requestType)` method
+- Created `NJsonSchemaGenerator` in `src/Paramore.Brighter.AsyncAPI.NJsonSchema/NJsonSchemaGenerator.cs`:
+  - Uses `JsonSchema.FromType()` from NJsonSchema
+  - Returns empty object `{}` for null types
+  - Catches exceptions, logs warning via ILogger, returns empty object as fallback
+  - Returns `JsonElement` (cloned) for inline embedding
+- Removed NJsonSchema project Placeholder.cs
+- Created 2 unit tests: null type returns empty object, valid type generates schema with properties
+- Files changed: 2 new source files, 1 new test file, 1 placeholder removed
+- **Learnings for future iterations:**
+  - NJsonSchema `JsonSchema.FromType()` uses PascalCase property names by default (not camelCase) - test assertions must match
+  - `JsonDocument.Parse(json).RootElement.Clone()` is needed to detach the JsonElement from the disposable JsonDocument
+  - The NJsonSchema project already had `Microsoft.Extensions.Logging.Abstractions` in its csproj from US-001
+---
+
+## 2026-02-22 - US-005
+- Created `IAmAnAsyncApiDocumentGenerator` interface with synchronous `AsyncApiDocument Generate()` method
+- Created `AsyncApiDocumentGenerator` class:
+  - Takes `AsyncApiOptions`, `IAmASchemaGenerator`, and `IEnumerable<Subscription>` (nullable) in constructor
+  - Generates channels with sanitized IDs (non-alphanumeric -> underscores)
+  - Creates receive operations with separator: `receive_channelId`
+  - Uses DataType.Name for message names, or `{channelId}Message` placeholder when DataType is null
+  - Includes servers section when `AsyncApiOptions.Servers` is configured
+  - Handles null subscriptions gracefully
+- Created 7 unit tests covering: subscription with DataType, null DataType, empty routing key, null subscriptions, servers, sanitization, operation ID format
+- Files changed: 2 new source files, 1 new test file
+- **Learnings for future iterations:**
+  - `Subscription.DataType` is read-only `{ get; }` (not virtual) - cannot be faked with FakeItEasy
+  - `Subscription` constructor dereferences `dataType.FullName` for defaults - must provide explicit `name`, `channelName`, `routingKey` when passing null dataType
+  - `RoutingKey` does NOT have `IsNullOrEmpty` - check `Value` with `string.IsNullOrEmpty(routingKey.Value)`
+  - `internal` members in the AsyncAPI project are not visible to the test project unless InternalsVisibleTo is added
+  - `GetUniqueOperationId` supports dedup by appending `_2`, `_3` etc. for duplicate action+channel pairs
+---
+
+## 2026-02-22 - US-006
+- Added `IEnumerable<Publication>` parameter to `AsyncApiDocumentGenerator` constructor (optional, defaults to null)
+- Added `AddPublications` method that generates send operations for each publication with a non-empty Topic
+- Publication payloads are always empty `{}` with a TODO comment (Publication has no DataType property)
+- Message names for publications use `{channelId}Message` format
+- Created 4 unit tests: publication with topic, null topic, empty topic, null publications collection
+- Files changed: 1 modified source file, 1 new test file
+- **Learnings for future iterations:**
+  - `Publication.Topic` is a `RoutingKey` (same type as `Subscription.RoutingKey`) - same null/empty checking pattern applies
+  - The optional `publications` parameter on the constructor maintains backward compatibility with existing US-005 tests
+---
+
+## 2026-02-23 - US-007
+- Created `PublicationTopicAttribute` in `src/Paramore.Brighter/PublicationTopicAttribute.cs`:
+  - `[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]`
+  - String `Topic` property set via constructor
+- Added `AddFromAssemblyScanning` method to `AsyncApiDocumentGenerator`:
+  - Scans `AssembliesToScan` (or `AppDomain.CurrentDomain.GetAssemblies()` as fallback) for concrete non-abstract types implementing `IRequest` with `[PublicationTopic]`
+  - Creates send operations with channel address = attr.Topic and typed schema from the type
+  - Catches `ReflectionTypeLoadException` and processes types that did load
+  - DI sources win deduplication: if `send_{channelId}` already exists, the assembly-scanned entry is skipped
+  - Skipped when `DisableAssemblyScanning = true`
+- Updated existing subscription/publication test fixtures to set `DisableAssemblyScanning = true` to prevent test types with `[PublicationTopic]` from interfering
+- Created 3 unit tests: type with attribute produces send operation + typed schema, disabled scanning produces nothing, DI source wins dedup
+- Files changed: 1 new source file, 1 modified source file, 1 new test file, 2 modified test files
+- **Learnings for future iterations:**
+  - Adding `[PublicationTopic]` to test types means they're visible to assembly scanning via `AppDomain.CurrentDomain.GetAssemblies()` - always set `DisableAssemblyScanning = true` in tests that don't exercise scanning
+  - `ReflectionTypeLoadException.Types` can contain null entries for types that failed to load - filter with `.Where(t => t != null)`
+  - `type.GetCustomAttribute<T>()` requires `System.Reflection` namespace import
+  - The dedup check looks for exact `send_{channelId}` operation key - this means it only catches the first send operation for a channel. Suffixed keys (e.g. `send_topic_2`) from `GetUniqueOperationId` won't be caught by the simple check
+---
+
+## 2026-02-23 - US-009
+- Created `AsyncApiBrighterBuilderExtensions` in `src/Paramore.Brighter.AsyncAPI/AsyncApiBrighterBuilderExtensions.cs`:
+  - `UseAsyncApi(this IBrighterBuilder, Action<AsyncApiOptions>)` extension method
+  - Registers `AsyncApiOptions` as singleton (applying configure delegate)
+  - Registers `IAmASchemaGenerator` as `NJsonSchemaGenerator` via `TryAddSingleton` using reflection (so core AsyncAPI package doesn't depend on NJsonSchema package)
+  - Registers `IAmAnAsyncApiDocumentGenerator` as singleton factory that resolves `IServiceActivatorOptions` via `GetService` (nullable)
+  - Logs debug message when `IServiceActivatorOptions` is not registered
+  - Returns `IBrighterBuilder` for fluent chaining
+- Added `Microsoft.Extensions.DependencyInjection` and `Microsoft.Extensions.Logging` packages to test project for DI integration tests
+- Created 6 unit tests: options registered, generator registered, default schema generator, custom schema generator not overridden, configure delegate applied, builder returned for chaining
+- Files changed: 1 new source file, 1 new test file, 1 modified test csproj
+- **Learnings for future iterations:**
+  - `IBrighterBuilder.Services` provides direct access to `IServiceCollection` for registration
+  - Core AsyncAPI project can't reference NJsonSchema project (inverted dependency) - use `Type.GetType()` with assembly-qualified name to register NJsonSchemaGenerator via reflection
+  - `TryAddSingleton(Type, Type)` respects previously registered services - custom schema generators registered before `UseAsyncApi()` are preserved
+  - `IServiceActivatorOptions` is resolved via `sp.GetService<>()` (not `GetRequiredService`) since it's only available when `AddServiceActivator()` has been called
+  - FakeItEasy can mock `IBrighterBuilder` with `A.CallTo(() => builder.Services).Returns(services)` for clean DI tests without needing full Brighter setup
+---
+
+## 2026-02-23 - US-010
+- Created `AsyncApiHostExtensions` in `src/Paramore.Brighter.AsyncAPI/AsyncApiHostExtensions.cs`:
+  - `IHost.GenerateAsyncApiDocument(string outputPath)` synchronous extension method
+  - Resolves `IAmAnAsyncApiDocumentGenerator` from DI and calls `Generate()`
+  - Serializes with `WriteIndented = true` and `JsonIgnoreCondition.WhenWritingNull`
+  - Creates parent directory if it doesn't exist
+  - Returns the generated `AsyncApiDocument`
+  - Throws `InvalidOperationException` with clear message if `UseAsyncApi()` was not called
+- Created 6 unit tests covering: file written, parent directory created, returned document, returned document matches file content, exception when not configured, null omission and indentation
+- Files changed: 1 new source file, 1 new test file
+- **Learnings for future iterations:**
+  - `Microsoft.Extensions.Hosting.Abstractions` (containing `IHost`) is already a package reference of the AsyncAPI project - no need to add it to the test project separately
+  - FakeItEasy can mock `IHost` with `A.CallTo(() => host.Services).Returns(serviceProvider)` for clean extension method tests
+  - Use `Path.GetTempPath()` + `Guid.NewGuid()` for isolated temp directories in file I/O tests, with `IDisposable` cleanup
+  - `JsonSerializerOptions` can be made `static readonly` for the extension class since it's thread-safe and reusable
+---
+
+## 2026-02-23 - US-011
+- Created RabbitMQ sample project at `samples/AsyncAPI/RMQAsyncAPI/`:
+  - `RMQAsyncAPI.csproj` - console app targeting net8.0, references Brighter core, DI extensions, ServiceActivator, RMQ gateway, AsyncAPI, and AsyncAPI.NJsonSchema
+  - `Events/OrderCreatedEvent.cs` - event with `[PublicationTopic("order.created")]` for assembly scanning
+  - `Events/PaymentReceivedEvent.cs` - event for subscription (receive)
+  - `Handlers/PaymentReceivedEventHandler.cs` - handler for PaymentReceivedEvent
+  - `Mappers/OrderCreatedEventMessageMapper.cs` - JSON mapper using `IAmAMessageMapper<T>` pattern
+  - `Mappers/PaymentReceivedEventMessageMapper.cs` - JSON mapper for received events
+  - `Program.cs` - configures AddServiceActivator with RMQ subscription, UseExternalBus with RMQ producer, UseAsyncApi with server entry, and `--generate-asyncapi` CLI argument
+- Added project to Brighter.sln manually with AsyncAPI solution folder (no x64 platform configs)
+- All .cs files include standard MIT licence header
+- `dotnet build` succeeds, all 39 existing tests pass
+- Files changed: 7 new files, Brighter.sln modified
+- **Learnings for future iterations:**
+  - Sample projects follow `samples/{Category}/{ProjectName}/` folder structure with a solution folder for each category
+  - RMQ samples need `RmqMessagingGatewayConnection`, `RmqMessageConsumerFactory`, `ChannelFactory`, `RmqSubscription<T>`, `RmqProducerRegistryFactory`, and `RmqPublication`
+  - `UseExternalBus` and `AddServiceActivator` can be chained with `UseAsyncApi` on the same `IBrighterBuilder`
+  - Message mappers use `JsonSerialisationOptions.Options` (note British spelling) for JSON serialization
+  - The `.AutoFromAssemblies()` call handles handler/mapper discovery automatically
+---
+
+## 2026-02-24 - US-001 (Re-implementation)
+- Created three project files following ACTUAL current codebase conventions:
+  - `src/Paramore.Brighter.AsyncAPI/Paramore.Brighter.AsyncAPI.csproj` - uses $(BrighterTargetFrameworks), refs Brighter + DI Extensions + Microsoft.Extensions.Hosting.Abstractions only (NO ServiceActivator dependency)
+  - `src/Paramore.Brighter.AsyncAPI.NJsonSchema/Paramore.Brighter.AsyncAPI.NJsonSchema.csproj` - refs AsyncAPI + NJsonSchema
+  - `tests/Paramore.Brighter.AsyncAPI.Tests/Paramore.Brighter.AsyncAPI.Tests.csproj` - uses $(BrighterTestTargetFrameworks), xUnit + FakeItEasy + FluentAssertions
+- Added FluentAssertions 6.12.2 to Directory.Packages.props (central package management)
+- Added placeholder .cs files with MIT licence headers (2025 copyright)
+- Added all 3 projects to Brighter.slnx (modern XML format)
+- All projects build successfully, test project runs (no tests yet)
+- Files changed: Brighter.slnx, Directory.Packages.props, 3 csproj files, 3 Placeholder.cs files
+- **Learnings for future iterations:**
+  - Previous codebase patterns in progress.txt were WRONG - corrected above
+  - Solution is .slnx (not .sln), uses central package management, LangVersion=latest
+  - Source TFMs: netstandard2.0;net8.0;net9.0;net10.0 via $(BrighterTargetFrameworks)
+  - Test TFMs: net9.0;net10.0 via $(BrighterTestTargetFrameworks)
+  - NuGet restore/build/test require dangerouslyDisableSandbox: true
+  - net9.0 runtime not available on this machine - tests only run on net10.0
+---
+
+## 2026-02-25 - US-009 (Re-implementation)
+- Created `AsyncApiBrighterBuilderExtensions` in `src/Paramore.Brighter.AsyncAPI/AsyncApiBrighterBuilderExtensions.cs`:
+  - `UseAsyncApi(this IBrighterBuilder, Action<AsyncApiOptions>?)` extension method
+  - Registers `AsyncApiOptions` as singleton (applying configure delegate)
+  - Registers `IAmASchemaGenerator` as `NJsonSchemaGenerator` via `Type.GetType()` reflection with `TryAddSingleton` (no hard dependency on NJsonSchema project)
+  - Validates at registration time that an `IAmASchemaGenerator` is available; throws `InvalidOperationException` if not
+  - Registers `IAmAnAsyncApiDocumentGenerator` as singleton factory that resolves `IAmConsumerOptions` from core `Paramore.Brighter` (NO ServiceActivator dependency)
+  - Logs debug message when `IAmConsumerOptions` is not registered (no subscriptions available)
+  - Returns `IBrighterBuilder` for fluent chaining
+- Added `Microsoft.Extensions.DependencyInjection` and `Microsoft.Extensions.Logging` packages to test project
+- Created 7 unit tests: options registered, generator registered, default schema generator, custom schema generator preserved, configure delegate applied, builder returned for chaining, schema generator validation
+- All 35 tests pass on net10.0
+- Files changed: 1 new source file, 1 new test file, 1 modified test csproj
+- **Learnings for future iterations:**
+  - `IAmConsumerOptions` is in core `Paramore.Brighter` (not in ServiceActivator) - provides `Subscriptions` without ServiceActivator dependency
+  - Strong-name signed assemblies require full public key for `InternalsVisibleTo` via `<InternalsVisibleTo>` csproj item - avoid if possible
+  - `TryAddSingleton(Type serviceType, Type implementationType)` works for reflection-discovered types
+  - The error path (no NJsonSchema loaded) can't be easily unit-tested when the test project references NJsonSchema
+---
+
+## 2026-02-25 - US-010 (Re-implementation)
+- Created `AsyncApiHostExtensions` in `src/Paramore.Brighter.AsyncAPI/AsyncApiHostExtensions.cs`:
+  - `IHost.GenerateAsyncApiDocument(string outputPath)` synchronous extension method
+  - Resolves `IAmAnAsyncApiDocumentGenerator` from DI and calls `Generate()`
+  - Serializes with `WriteIndented = true` and `JsonIgnoreCondition.WhenWritingNull` via static readonly `JsonSerializerOptions`
+  - Creates parent directory if it doesn't exist using `Directory.CreateDirectory()`
+  - Returns the generated `AsyncApiDocument`
+  - Throws `InvalidOperationException` with clear message mentioning `UseAsyncApi()` if generator is not registered
+- Created 6 unit tests in `When_Generating_AsyncApi_Document_File.cs`:
+  - File written, parent directory created, returned document, file matches returned document, exception when not configured, indented JSON with null omission
+  - Uses `IDisposable` pattern for temp directory cleanup
+  - Uses FakeItEasy to mock `IHost` and `IAmAnAsyncApiDocumentGenerator`
+- All 41 tests pass on net10.0
+- Files changed: 1 new source file, 1 new test file
+- **Learnings for future iterations:**
+  - `Microsoft.Extensions.Hosting.Abstractions` (containing `IHost`) is already a package reference - no need for additional packages
+  - FakeItEasy can mock `IHost` with `A.CallTo(() => host.Services).Returns(serviceProvider)`
+  - Use `Path.GetTempPath()` + `Guid.NewGuid()` for isolated temp directories in file I/O tests
+  - `JsonSerializerOptions` is thread-safe and can be `static readonly` for reuse
+---
+
+## 2026-02-25 - US-011 (Re-implementation)
+- Created RabbitMQ sample project at `samples/AsyncAPI/RMQAsyncAPI/`:
+  - `RMQAsyncAPI.csproj` - console app targeting net9.0 (matching other samples), references Brighter core, DI extensions, ServiceActivator + Hosting, RMQ.Async gateway, AsyncAPI, and AsyncAPI.NJsonSchema
+  - `Events/OrderCreatedEvent.cs` - event with `[Paramore.Brighter.AsyncAPI.PublicationTopic("order.created")]` for assembly scanning
+  - `Events/PaymentReceivedEvent.cs` - event for subscription (receive)
+  - `Handlers/PaymentReceivedEventHandler.cs` - handler for PaymentReceivedEvent using string interpolation
+  - `Mappers/OrderCreatedEventMessageMapper.cs` - JSON mapper using `IAmAMessageMapper<T>` pattern with `JsonSerialisationOptions.Options`
+  - `Mappers/PaymentReceivedEventMessageMapper.cs` - JSON mapper for received events
+  - `Program.cs` - configures AddConsumers with RmqSubscription, UseAsyncApi with server entry + explicit publication, `--generate-asyncapi` CLI argument support
+- Added project to Brighter.slnx under `/samples/AsyncAPI/` folder
+- All .cs files include standard MIT licence header with 2025 copyright
+- String formatting uses pure string interpolation ($"...{variable}...") - no mixed positional placeholders
+- `dotnet build` succeeds, all 41 AsyncAPI tests pass
+- Files changed: 7 new files, Brighter.slnx modified
+- **Learnings for future iterations:**
+  - `PublicationTopicAttribute` exists in BOTH `Paramore.Brighter` (core) and `Paramore.Brighter.AsyncAPI` - use fully qualified `Paramore.Brighter.AsyncAPI.PublicationTopic` in attribute usage to avoid CS0104 ambiguous reference
+  - `IAmAMessageMapper<T>.Context` is `IRequestContext?` (nullable) - implementations must use `IRequestContext? Context { get; set; }` to avoid CS8767 warning
+  - Sample projects use net9.0 (not net8.0 as PRD suggested) - match actual codebase conventions
+  - `AddConsumers()` returns `IBrighterBuilder` which allows chaining `.UseAsyncApi()` and `.AutoFromAssemblies()`
+  - Event properties with parameterless constructors should initialize strings to `string.Empty` to avoid CS8618 nullable warnings
+  - Serilog packages (Serilog, Serilog.Extensions.Hosting, Serilog.Sinks.Console) are already in Directory.Packages.props
+---
+
+## 2026-02-25 - US-001 (Re-implementation v3)
+- Created three project files matching current codebase conventions:
+  - `src/Paramore.Brighter.AsyncAPI/Paramore.Brighter.AsyncAPI.csproj` - $(BrighterTargetFrameworks), refs Brighter + DI Extensions + Hosting Abstractions + Logging Abstractions + System.Text.Json
+  - `src/Paramore.Brighter.AsyncAPI.NJsonSchema/Paramore.Brighter.AsyncAPI.NJsonSchema.csproj` - $(BrighterTargetFrameworks), refs AsyncAPI + NJsonSchema + Logging Abstractions
+  - `tests/Paramore.Brighter.AsyncAPI.Tests/Paramore.Brighter.AsyncAPI.Tests.csproj` - $(BrighterTestTargetFrameworks), xUnit + FakeItEasy only (NO FluentAssertions)
+- Added placeholder .cs files with MIT licence headers (2025 copyright)
+- Added all 3 projects to Brighter.slnx
+- All projects build successfully, test project runs on net10.0
+- Files changed: Brighter.slnx, 3 csproj files, 3 Placeholder.cs files
+- **Learnings for future iterations:**
+  - No new learnings vs existing codebase patterns
+---
+
+## 2026-02-25 - US-002 (Re-implementation v3)
+- Created 8 AsyncAPI 3.0 model POCO classes in `src/Paramore.Brighter.AsyncAPI/Model/`
+- All use System.Text.Json attributes (JsonPropertyName, JsonIgnoreCondition.WhenWritingNull)
+- Created 7 unit tests for round-trip serialization using xUnit Assert.* (no FluentAssertions)
+- Removed AsyncAPI placeholder.cs
+- All 7 tests pass on net10.0
+- Files changed: 8 new Model/*.cs files, 1 new test file, 1 placeholder removed
+- **Learnings for future iterations:**
+  - No new learnings
+---
+
+## 2026-02-25 - US-003 (Re-implementation v3)
+- Created `AsyncApiOptions` class with correct properties including SupplementalPublications
+- Created unit test verifying all default values using Assert.*
+- All 8 tests pass on net10.0
+- Files changed: 1 new source file, 1 new test file
+- **Learnings for future iterations:**
+  - No new learnings
+---
+
+## 2026-02-25 - US-004 (Re-implementation v3)
+- Created `IAmASchemaGenerator` interface and `NJsonSchemaGenerator` implementation
+- Null type returns `{}`, exceptions logged as warning with `{}` fallback
+- All JsonDocument instances disposed via `using`
+- Created 2 unit tests, all 10 tests pass on net10.0
+- Files changed: 2 new source files, 1 new test file, 1 placeholder removed
+- **Learnings for future iterations:**
+  - No new learnings
+---
+
+## 2026-02-25 - US-005 (Re-implementation v3)
+- Created `IAmAnAsyncApiDocumentGenerator` interface and `AsyncApiDocumentGenerator`
+- Handles subscriptions, publications, and assembly scanning in one generator
+- Uses `Subscription.RequestType` correctly (not DataType)
+- Created 5 tests for subscription scenarios, all 15 tests pass on net10.0
+- Files changed: 2 new source files, 1 new test file
+- **Learnings for future iterations:**
+  - `Subscription` constructor requires non-Unknown `MessagePumpType` and either `requestType` or `getRequestType`
+  - To test null RequestType, pass `getRequestType: _ => typeof(SomeType)` instead
+---
+
+## 2026-02-25 - US-006 through US-008 (Re-implementation v3)
+- US-006: Publication tests (5 new tests)
+- US-007: Assembly scanning tests (3 new tests)
+- US-008: Deduplication tests (4 new tests)
+- All behavior already implemented in US-005's AsyncApiDocumentGenerator
+- Total: 27 tests pass on net10.0
+- **Learnings:** No new learnings
+---
+
+## 2026-02-25 - US-009 (Re-implementation v3)
+- Created `AsyncApiBrighterBuilderExtensions` with `UseAsyncApi()` extension
+- Resolves subscriptions from `IAmConsumerOptions`, publications from `IAmAProducerRegistry.Producers`
+- Merges producer registry pubs with `SupplementalPublications`
+- NJsonSchemaGenerator via reflection with TryAddSingleton
+- Created 7 DI tests, all 34 pass on net10.0
+- **Learnings:** `IAmAMessageProducer.Publication` property provides full Publication objects from the producer registry
+---
+
+## 2026-02-25 - US-010 (Re-implementation v3)
+- Created `AsyncApiHostExtensions.GenerateAsyncApiDocument()` on `IHost`
+- Created 6 file I/O tests, all 40 pass on net10.0
+- **Learnings:** No new learnings
+---
+
+## 2026-02-25 - US-011 (Re-implementation v3)
+- Created RMQ sample at `samples/AsyncAPI/RMQAsyncAPI/`
+- Demonstrates all 3 discovery: subscription (PaymentReceivedEvent), publication via Publication<T> (OrderCreatedEvent), assembly scanning via [PublicationTopic] (OrderCreatedEvent)
+- Correct namespaces: `Paramore.Brighter.MessagingGateway.RMQ.Async`, `Paramore.Brighter.Extensions`, `Paramore.Brighter.JsonConverters`
+- Added to Brighter.slnx under `/samples/AsyncAPI/` folder
+- Build succeeds with 0 warnings, all 40 tests pass
+- **Learnings:**
+  - RMQ types are in `Paramore.Brighter.MessagingGateway.RMQ.Async` (not `.RMQ`)
+  - `RequestToMessageType()` is in `Paramore.Brighter.Extensions` namespace
+  - `JsonSerialisationOptions` is in `Paramore.Brighter.JsonConverters` namespace
+  - `Publication.Topic` is nullable (`RoutingKey?`) - use null-forgiving `\!` in mappers
+---
+
+## 2026-02-27 - US-004 (Async API conversion)
+- Converted all APIs from sync to async per PRD acceptance criteria:
+  - `IAmASchemaGenerator.Generate(Type)` → `Task<JsonElement?> GenerateAsync(Type?, CancellationToken)`
+  - `IAmAnAsyncApiDocumentGenerator.Generate()` → `Task<AsyncApiDocument> GenerateAsync(CancellationToken)`
+  - Added `IHost.GenerateAsyncApiDocumentAsync(string, CancellationToken)` async extension
+  - Kept `IHost.GenerateAsyncApiDocument(string)` sync overload (delegates to async)
+- Updated `NJsonSchemaGenerator` to implement async interface (uses `Task.FromResult` since NJsonSchema is inherently sync)
+- Updated `AsyncApiDocumentGenerator` with async methods (`AddSubscriptionsAsync`, `AddPublicationsAsync`, `AddFromAssemblyScanningAsync`, `EnsureMessageAsync`)
+- Updated all 40 tests to use async/await patterns
+- Updated RMQ sample to call `GenerateAsyncApiDocumentAsync`
+- Used `#if NET8_0_OR_GREATER` for `File.WriteAllTextAsync` in host extension
+- All 40 tests pass on net10.0, all projects build with 0 errors
+- Marked US-001 through US-011 as `passes: true` in prd.json
+- Files changed: 13 files (6 source, 7 test/sample)
+- **Learnings for future iterations:**
+  - FakeItEasy async mock setup: `A.CallTo(() => mock.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored)).Returns(Task.FromResult<T>(value))`
+  - `Task.FromResult<JsonElement?>()` requires explicit generic type parameter for nullable value types
+  - `ConfigureAwait(false)` on all awaits in library code per .NET best practices
+  - `sealed` modifier on test helper classes resolves CA1852 analyzer warnings
+---
+
+## 2026-02-27 - US-012
+- Fixed stateful singleton bug in AsyncApiDocumentGenerator
+- Added `_channels.Clear()`, `_operations.Clear()`, `_messages.Clear()` at the start of `GenerateAsync()`
+- Created 2 new tests in `When_Generating_Document_Multiple_Times.cs`:
+  - `It_Should_Produce_Identical_Documents_On_Repeated_Calls` - verifies same channel/operation/message counts and keys
+  - `It_Should_Not_Produce_Suffixed_Operation_Ids_On_Second_Call` - verifies no `_2` suffixed IDs on second call
+- All 42 tests pass on net10.0
+- Files changed: `src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs`, `tests/Paramore.Brighter.AsyncAPI.Tests/When_Generating_Document_Multiple_Times.cs`
+- **Learnings for future iterations:**
+  - Singleton generators with mutable dictionary state must clear state at the start of each generation call
+  - `GetUniqueOperationId` counter-based dedup is correct for within a single call (e.g. two subscriptions on same topic), but becomes a bug if state persists across calls
+---
+
+## 2026-02-27 - US-013
+- Fixed incomplete assembly scanning deduplication in AsyncApiDocumentGenerator
+- Added `HashSet<(string channelId, string action)> _coveredChannelActions` field to track all (channelId, action) pairs from DI sources
+- Populated the set in `AddSubscriptionsAsync` and `AddPublicationsAsync`
+- Changed `AddFromAssemblyScanningAsync` to check `_coveredChannelActions.Contains((channelId, "send"))` instead of `_operations.ContainsKey($"send_{channelId}")`
+- Cleared the set in `GenerateAsync()` alongside other dictionaries
+- Added new test `It_Should_Skip_Assembly_Scanned_Type_When_DI_Has_Uniqueified_Operation_Id` verifying that two DI publications producing `send_topic` and `send_topic_2` correctly block the assembly-scanned duplicate
+- All 43 tests pass on net10.0
+- Files changed: `src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs`, `tests/Paramore.Brighter.AsyncAPI.Tests/When_Generating_Document_From_Assembly_Scanning.cs`
+- **Learnings for future iterations:**
+  - String-matching operation IDs for dedup is fragile because `GetUniqueOperationId` can produce suffixed IDs - always use a dedicated tracking set for semantic deduplication
+---
+
+## 2026-02-27 - US-014
+- Removed dead `#if NET8_0_OR_GREATER` / `#else` / `#endif` conditional in AsyncApiHostExtensions.cs
+- Only the async `File.WriteAllTextAsync` path remains since all TFMs (net8.0, net9.0, net10.0) satisfy NET8_0_OR_GREATER
+- All 43 tests pass on net10.0
+- Files changed: `src/Paramore.Brighter.AsyncAPI/AsyncApiHostExtensions.cs`
+- **Learnings for future iterations:**
+  - No new learnings - straightforward dead code removal
+---
+
+## 2026-02-27 - US-015
+- Added defensive shallow copy of `_options.Servers` dictionary when building AsyncApiDocument
+- Changed `Servers = _options.Servers` to `Servers = _options.Servers \!= null ? new Dictionary<string, AsyncApiServer>(_options.Servers) : null`
+- Added test `It_Should_Isolate_Servers_From_Options_Mutations` verifying post-generation mutations to options don't affect the document
+- All 44 tests pass on net10.0
+- Files changed: `src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs`, `tests/Paramore.Brighter.AsyncAPI.Tests/When_Generating_Document_From_Subscriptions.cs`
+- **Learnings for future iterations:**
+  - No new learnings
+---
+
+## 2026-02-27 - US-016
+- Replaced `Regex.Replace(value, "[^a-zA-Z0-9]", "_")` with a `private static readonly Regex` with `RegexOptions.Compiled`
+- Channel ID sanitization behavior unchanged (non-alphanumeric -> underscore)
+- All 44 tests pass on net10.0 (including tests checking sanitized IDs like `shared_topic`, `order_created`)
+- Files changed: `src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs`
+- **Learnings for future iterations:**
+  - No new learnings
+---
+
+## 2026-02-27 - US-017
+- Added XML documentation to three files:
+  - `AsyncApiBrighterBuilderExtensions.UseAsyncApi()` - explains subscription sourcing from IAmConsumerOptions, publication sourcing from IAmAProducerRegistry + SupplementalPublications, and send-only app behavior
+  - `IAmAnAsyncApiDocumentGenerator` interface - describes purpose and GenerateAsync method
+  - `IAmASchemaGenerator` interface - describes purpose, null/error contract, and GenerateAsync method
+- All 44 tests pass on net10.0
+- Files changed: `AsyncApiBrighterBuilderExtensions.cs`, `IAmAnAsyncApiDocumentGenerator.cs`, `IAmASchemaGenerator.cs`
+- **Learnings for future iterations:**
+  - No new learnings
+---
+
+## 2026-02-28 - US-018
+- Fixed thread-safety bug by eliminating shared mutable state in AsyncApiDocumentGenerator
+- Removed 4 instance-level mutable fields: `_channels`, `_operations`, `_messages`, `_coveredChannelActions`
+- Created all 4 collections as local variables inside `GenerateAsync()` — each concurrent call now gets independent state
+- Updated all 8 private helper methods (`AddSubscriptionsAsync`, `AddPublicationsAsync`, `AddFromAssemblyScanningAsync`, `EnsureChannel`, `EnsureMessageAsync`, `EnsurePlaceholderMessage`, `AddChannelMessageRef`, `GetUniqueOperationId`) to accept collections as parameters
+- Made `EnsureChannel`, `EnsurePlaceholderMessage`, `AddChannelMessageRef`, and `GetUniqueOperationId` static (they no longer access instance state)
+- Removed the `.Clear()` calls at the top of `GenerateAsync()` (no longer needed since state is local)
+- All 44 existing tests pass — sequential idempotency (When_Generating_Document_Multiple_Times) preserved
+- Files changed: `src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs`
+- **Learnings for future iterations:**
+  - The local-variable approach is cleaner than SemaphoreSlim or changing DI lifetime — eliminates the problem entirely rather than serializing access
+  - Helper methods that only operate on passed-in collections can be made `static`, which gives a slight performance benefit and makes the thread-safety guarantee self-evident in the code
+---
+
+## 2026-02-28 - US-019
+- Removed sync-over-async wrapper `GenerateAsyncApiDocument(this IHost host, string outputPath)` from `AsyncApiHostExtensions.cs`
+- The method used `.GetAwaiter().GetResult()` which is a known deadlock risk with SynchronizationContext (ASP.NET, WPF, etc.)
+- Only the async `GenerateAsyncApiDocumentAsync` remains
+- Verified no tests or sample code referenced the sync method (grep found zero matches in tests/ and samples/)
+- Sample project `samples/AsyncAPI/RMQAsyncAPI/` already uses the async path — builds with 0 errors
+- All 44 tests pass on net10.0, build succeeds with 0 warnings
+- Files changed: `src/Paramore.Brighter.AsyncAPI/AsyncApiHostExtensions.cs`
+- **Learnings for future iterations:**
+  - No new learnings — straightforward removal of a single method
+---
+
+## 2026-02-28 - US-020
+- Sealed all 10 concrete classes to follow codebase convention (PR #3552 precedent):
+  - `AsyncApiDocumentGenerator` (extensibility via `IAmAnAsyncApiDocumentGenerator` interface)
+  - `NJsonSchemaGenerator` (extensibility via `IAmASchemaGenerator` interface)
+  - 8 Model POCOs: `AsyncApiDocument`, `AsyncApiChannel`, `AsyncApiComponents`, `AsyncApiInfo`, `AsyncApiMessage`, `AsyncApiOperation`, `AsyncApiRef`, `AsyncApiServer`
+- All 44 tests pass on net10.0, build succeeds with 0 warnings/errors
+- Files changed: 10 source files (1 generator + 1 NJsonSchema + 8 model POCOs)
+- **Learnings for future iterations:**
+  - No new learnings — straightforward `sealed` modifier addition
+---
+## 2026-02-28 13:44 GMT - US-021
+- Replaced dictionary double-lookups in `AsyncApiDocumentGenerator` with single-lookup patterns:
+  - `EnsureChannel` now uses `TryAdd`
+  - `EnsureMessageAsync` and `EnsurePlaceholderMessage` now use `TryGetValue` guard + `TryAdd`
+  - `AddChannelMessageRef` now uses `TryGetValue` for channel lookup and `TryAdd` for message refs
+  - `GetUniqueOperationId` now uses `TryGetValue` checks instead of `ContainsKey`
+- Files changed:
+  - src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs
+  - scripts/ralph/prd.json
+  - progress.txt
+- **Learnings for future iterations:**
+  - For async value construction (like schema generation), `TryGetValue` guard followed by `TryAdd` keeps behavior correct without extra dictionary lookups.
+  - `TryGetValue` in helper methods also avoids relying on indexer access assumptions and keeps dictionary access defensive.
+---
