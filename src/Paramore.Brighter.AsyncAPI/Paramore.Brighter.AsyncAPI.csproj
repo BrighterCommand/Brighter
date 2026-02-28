@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>AsyncAPI 3.0 document generation for Paramore.Brighter. Auto-generates AsyncAPI specifications from registered subscriptions, publications, and assembly-scanned message types.</Description>
-    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
