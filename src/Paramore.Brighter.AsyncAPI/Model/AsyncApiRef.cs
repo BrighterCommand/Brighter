@@ -26,7 +26,7 @@ using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter.AsyncAPI.Model
 {
-    public class AsyncApiRef
+    public sealed class AsyncApiRef
     {
         [JsonPropertyName("$ref")]
         public string Ref { get; set; } = string.Empty;

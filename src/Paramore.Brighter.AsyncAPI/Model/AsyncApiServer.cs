@@ -26,7 +26,7 @@ using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter.AsyncAPI.Model
 {
-    public class AsyncApiServer
+    public sealed class AsyncApiServer
     {
         [JsonPropertyName("host")]
         public string Host { get; set; } = string.Empty;

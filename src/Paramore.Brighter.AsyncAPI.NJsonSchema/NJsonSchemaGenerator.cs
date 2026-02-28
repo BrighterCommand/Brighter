@@ -31,7 +31,7 @@ using NJsonSchema;
 
 namespace Paramore.Brighter.AsyncAPI.NJsonSchema
 {
-    public class NJsonSchemaGenerator : IAmASchemaGenerator
+    public sealed class NJsonSchemaGenerator : IAmASchemaGenerator
     {
         private static readonly JsonElement s_emptyObject;
         private readonly ILogger<NJsonSchemaGenerator> _logger;

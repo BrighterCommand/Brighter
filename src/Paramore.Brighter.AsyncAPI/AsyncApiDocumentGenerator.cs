@@ -34,7 +34,7 @@ using Paramore.Brighter.AsyncAPI.Model;
 
 namespace Paramore.Brighter.AsyncAPI
 {
-    public class AsyncApiDocumentGenerator : IAmAnAsyncApiDocumentGenerator
+    public sealed class AsyncApiDocumentGenerator : IAmAnAsyncApiDocumentGenerator
     {
         private readonly AsyncApiOptions _options;
         private readonly IAmASchemaGenerator _schemaGenerator;
