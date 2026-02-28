@@ -384,6 +384,41 @@
       "priority": 23,
       "passes": true,
       "notes": "Advisory but recommended to improve mergeability. PR #4034 review flagged CodeScene complexity warnings.\n\nSuggested extractions:\n1. ProcessChannelAndOperation() - shared logic for creating channel + operation from a routing key, action, and request type\n2. ScanAssemblyTypes() - extract the inner type-processing loop from AddFromAssemblyScanningAsync\n3. RewriteRefNode() - extract single-node ref rewriting from the recursive RewriteRefs\n\nKeep changes purely structural (refactoring) with no behavioral changes. All existing tests must pass unchanged."
+    },
+    {
+      "id": "US-024",
+      "title": "Address Primitive Obsession in method signatures",
+      "description": "As a maintainer, I want method signatures to use a context object instead of passing 4-5 collection parameters individually, addressing the CodeScene Primitive Obsession finding.",
+      "acceptanceCriteria": [
+        "A private GenerationContext record/class is introduced bundling the four collections: channels (Dictionary<string, AsyncApiChannel>), operations (Dictionary<string, AsyncApiOperation>), messages (Dictionary<string, AsyncApiMessage>), coveredChannelActions (HashSet<(string, string)>)",
+        "ProcessSourceAsync accepts GenerationContext instead of 4 separate collection parameters",
+        "AddSubscriptionsAsync accepts GenerationContext instead of 4 separate collection parameters",
+        "AddPublicationsAsync accepts GenerationContext instead of 4 separate collection parameters",
+        "AddFromAssemblyScanningAsync accepts GenerationContext instead of 4 separate collection parameters",
+        "EnsureChannel, EnsureMessageAsync, EnsurePlaceholderMessage, AddChannelMessageRef, GetUniqueOperationId updated to use context or remain as-is if they only take 1-2 collections",
+        "No behavioral changes - all existing tests still pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": "CodeScene flagged Primitive Obsession on ProcessSourceAsync (8 params), AddSubscriptionsAsync (5 params), AddPublicationsAsync (5 params), and AddFromAssemblyScanningAsync (5 params). All four methods pass the same 4 collection locals created in GenerateAsync().\n\nFIX: Introduce a private record:\n  private record GenerationContext(\n      Dictionary<string, AsyncApiChannel> Channels,\n      Dictionary<string, AsyncApiOperation> Operations,\n      Dictionary<string, AsyncApiMessage> Messages,\n      HashSet<(string ChannelId, string Action)> CoveredChannelActions);\n\nInstantiate in GenerateAsync() and pass through. ProcessSourceAsync drops from 8 params to 5 (context, address, action, requestType, ct). The Add*Async methods drop from 5 params to 2 (context, ct).\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs\nKeep changes purely structural with no behavioral changes."
+    },
+    {
+      "id": "US-025",
+      "title": "Verify CodeScene gate passes or suppress with rationale",
+      "description": "As a maintainer, I need the CodeScene CI gate on PR #4034 to pass so the PR can be merged.",
+      "acceptanceCriteria": [
+        "All CodeScene findings in AsyncApiDocumentGenerator.cs are either resolved by prior stories (US-023, US-024) or explicitly suppressed",
+        "If suppression is needed: add a codescene-suppress comment or .codescene/config entry with a rationale explaining why the finding is acceptable",
+        "Document any remaining suppressions in the PR description or as inline code comments with justification",
+        "No behavioral changes - all existing tests still pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": "This is a gate-check story. After US-023 (refactoring) and US-024 (Primitive Obsession fix), re-evaluate whether the CodeScene gate would pass.\n\nCodeScene findings from PR #4034:\n1. Complexity in AddSubscriptionsAsync / AddPublicationsAsync - addressed by US-023 (consolidated into ProcessSourceAsync)\n2. Complexity in AddFromAssemblyScanningAsync - addressed by US-023 (extracted GetPublicationTopicTypes)\n3. Complexity in RewriteRefs - addressed by US-023 (extracted RewriteRefProperty)\n4. Argument count hotspots - addressed by US-024 (GenerationContext record)\n5. Primitive Obsession - addressed by US-024 (GenerationContext record)\n\nIf any findings remain after those fixes, suppress with rationale. CodeScene suppression options:\n- Inline: // codescene:ignore\n- Config: .codescene/project.json exclusion\n- PR comment explaining why the finding is a false positive or acceptable\n\nPrefer completing the refactors over suppression. Only suppress if the finding is genuinely a false positive."
     }
   ]
 }

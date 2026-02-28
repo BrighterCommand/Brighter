@@ -33,3 +33,15 @@ Started: Wed 25 Feb 2026 12:39:50 GMT
   - Extracted `RewriteRefProperty(JsonObject, ...)` to isolate the `$ref` property rewriting logic from the recursive tree traversal in RewriteRefs
   - All 51 tests pass unchanged — purely structural refactoring with no behavioral changes
 ---
+
+## 2026-02-28 20:52:57 GMT - US-024
+- What was implemented: Introduced a private `GenerationContext` record in `AsyncApiDocumentGenerator` and refactored `GenerateAsync`, `AddSubscriptionsAsync`, `AddPublicationsAsync`, `AddFromAssemblyScanningAsync`, and `ProcessSourceAsync` to pass that context instead of four separate collection parameters.
+- Files changed:
+  - src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs
+  - scripts/ralph/prd.json
+  - scripts/ralph/progress.txt
+- **Learnings for future iterations:**
+  - `GenerationContext` is now the expected way to thread generation state through AsyncAPI generator helpers; avoid reintroducing separate collection parameter lists.
+  - Helper methods `EnsureChannel`, `EnsureMessageAsync`, `EnsurePlaceholderMessage`, `AddChannelMessageRef`, and `GetUniqueOperationId` remain intentionally focused on 1-2 collections and are used with `context.*` members.
+  - Structural refactors in this area should preserve behavior by keeping operation/message/channel creation logic unchanged and validating with AsyncAPI tests.
+---
