@@ -130,6 +130,39 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             Assert.Null(result.Operations);
         }
 
+        [Fact]
+        public async Task It_Should_Rewrite_Embedded_Schema_Refs_To_Message_Payload_Path()
+        {
+            using var schema = JsonDocument.Parse("""
+                {
+                  "definitions": {
+                    "Event": {
+                      "type": "object"
+                    }
+                  },
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/Event"
+                    }
+                  ]
+                }
+                """);
+            A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
+                .Returns(Task.FromResult<JsonElement?>(schema.RootElement.Clone()));
+
+            var publications = new[]
+            {
+                new Publication { Topic = new RoutingKey("order.created"), RequestType = typeof(TestOrderEvent) }
+            };
+
+            var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
+            var result = await generator.GenerateAsync();
+
+            var payload = result.Components!.Messages!["TestOrderEvent"].Payload!.Value;
+            var rewrittenRef = payload.GetProperty("allOf")[0].GetProperty("$ref").GetString();
+            Assert.Equal("#/components/messages/TestOrderEvent/payload/definitions/Event", rewrittenRef);
+        }
+
         public class TestOrderEvent : Event
         {
             public TestOrderEvent() : base(Guid.NewGuid()) { }
