@@ -27,7 +27,7 @@ using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter.AsyncAPI.Model
 {
-    public class AsyncApiComponents
+    public sealed class AsyncApiComponents
     {
         [JsonPropertyName("messages")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
