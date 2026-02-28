@@ -96,37 +96,9 @@ namespace Paramore.Brighter.AsyncAPI
                 if (subscription.RoutingKey == null || string.IsNullOrEmpty(subscription.RoutingKey.Value))
                     continue;
 
-                var channelId = SanitizeChannelId(subscription.RoutingKey.Value);
-                var address = subscription.RoutingKey.Value;
-
-                EnsureChannel(channels, channelId, address);
-
-                string messageName;
-                if (subscription.RequestType != null)
-                {
-                    messageName = subscription.RequestType.Name;
-                    await EnsureMessageAsync(messages, messageName, subscription.RequestType, ct).ConfigureAwait(false);
-                }
-                else
-                {
-                    messageName = $"{channelId}Message";
-                    EnsurePlaceholderMessage(messages, messageName);
-                }
-
-                AddChannelMessageRef(channels, channelId, messageName);
-
-                coveredChannelActions.Add((channelId, "receive"));
-
-                var operationId = GetUniqueOperationId(operations, "receive", channelId);
-                operations[operationId] = new AsyncApiOperation
-                {
-                    Action = "receive",
-                    Channel = new AsyncApiRef { Ref = $"#/channels/{channelId}" },
-                    Messages = new List<AsyncApiRef>
-                    {
-                        new AsyncApiRef { Ref = $"#/channels/{channelId}/messages/{messageName}" }
-                    }
-                };
+                await ProcessSourceAsync(
+                    subscription.RoutingKey.Value, "receive", subscription.RequestType,
+                    channels, operations, messages, coveredChannelActions, ct).ConfigureAwait(false);
             }
         }
 
@@ -144,38 +116,52 @@ namespace Paramore.Brighter.AsyncAPI
                 if (publication.Topic == null || string.IsNullOrEmpty(publication.Topic.Value))
                     continue;
 
-                var channelId = SanitizeChannelId(publication.Topic.Value);
-                var address = publication.Topic.Value;
-
-                EnsureChannel(channels, channelId, address);
-
-                string messageName;
-                if (publication.RequestType != null)
-                {
-                    messageName = publication.RequestType.Name;
-                    await EnsureMessageAsync(messages, messageName, publication.RequestType, ct).ConfigureAwait(false);
-                }
-                else
-                {
-                    messageName = $"{channelId}Message";
-                    EnsurePlaceholderMessage(messages, messageName);
-                }
-
-                AddChannelMessageRef(channels, channelId, messageName);
-
-                coveredChannelActions.Add((channelId, "send"));
-
-                var operationId = GetUniqueOperationId(operations, "send", channelId);
-                operations[operationId] = new AsyncApiOperation
-                {
-                    Action = "send",
-                    Channel = new AsyncApiRef { Ref = $"#/channels/{channelId}" },
-                    Messages = new List<AsyncApiRef>
-                    {
-                        new AsyncApiRef { Ref = $"#/channels/{channelId}/messages/{messageName}" }
-                    }
-                };
+                await ProcessSourceAsync(
+                    publication.Topic.Value, "send", publication.RequestType,
+                    channels, operations, messages, coveredChannelActions, ct).ConfigureAwait(false);
             }
+        }
+
+        private async Task ProcessSourceAsync(
+            string address,
+            string action,
+            Type? requestType,
+            Dictionary<string, AsyncApiChannel> channels,
+            Dictionary<string, AsyncApiOperation> operations,
+            Dictionary<string, AsyncApiMessage> messages,
+            HashSet<(string channelId, string action)> coveredChannelActions,
+            CancellationToken ct)
+        {
+            var channelId = SanitizeChannelId(address);
+
+            EnsureChannel(channels, channelId, address);
+
+            string messageName;
+            if (requestType != null)
+            {
+                messageName = requestType.Name;
+                await EnsureMessageAsync(messages, messageName, requestType, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                messageName = $"{channelId}Message";
+                EnsurePlaceholderMessage(messages, messageName);
+            }
+
+            AddChannelMessageRef(channels, channelId, messageName);
+
+            coveredChannelActions.Add((channelId, action));
+
+            var operationId = GetUniqueOperationId(operations, action, channelId);
+            operations[operationId] = new AsyncApiOperation
+            {
+                Action = action,
+                Channel = new AsyncApiRef { Ref = $"#/channels/{channelId}" },
+                Messages = new List<AsyncApiRef>
+                {
+                    new AsyncApiRef { Ref = $"#/channels/{channelId}/messages/{messageName}" }
+                }
+            };
         }
 
         private async Task AddFromAssemblyScanningAsync(
@@ -197,33 +183,11 @@ namespace Paramore.Brighter.AsyncAPI
 
             foreach (var assembly in assemblies)
             {
-                Type[] types;
-                try
+                foreach (var (type, topic) in GetPublicationTopicTypes(assembly))
                 {
-                    types = assembly.GetTypes();
-                }
-                catch (ReflectionTypeLoadException ex)
-                {
-                    types = ex.Types.Where(t => t != null).ToArray()!;
-                }
-
-                foreach (var type in types)
-                {
-                    if (type.IsAbstract || type.IsInterface) continue;
-                    if (!typeof(IRequest).IsAssignableFrom(type)) continue;
-
-                    var attr = type.GetCustomAttribute<PublicationTopicAttribute>();
-                    if (attr == null) continue;
-
-                    var topic = attr.Destination?.RoutingKey?.Value;
-                    if (string.IsNullOrEmpty(topic)) continue;
-
                     var channelId = SanitizeChannelId(topic);
 
-                    // DI sources win deduplication
                     if (coveredChannelActions.Contains((channelId, "send"))) continue;
-
-                    var sendOpId = $"send_{channelId}";
 
                     EnsureChannel(channels, channelId, topic);
 
@@ -231,6 +195,7 @@ namespace Paramore.Brighter.AsyncAPI
                     await EnsureMessageAsync(messages, messageName, type, ct).ConfigureAwait(false);
                     AddChannelMessageRef(channels, channelId, messageName);
 
+                    var sendOpId = $"send_{channelId}";
                     operations[sendOpId] = new AsyncApiOperation
                     {
                         Action = "send",
@@ -241,6 +206,33 @@ namespace Paramore.Brighter.AsyncAPI
                         }
                     };
                 }
+            }
+        }
+
+        private static IEnumerable<(Type type, string topic)> GetPublicationTopicTypes(Assembly assembly)
+        {
+            Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                types = ex.Types.Where(t => t != null).ToArray()!;
+            }
+
+            foreach (var type in types)
+            {
+                if (type.IsAbstract || type.IsInterface) continue;
+                if (!typeof(IRequest).IsAssignableFrom(type)) continue;
+
+                var attr = type.GetCustomAttribute<PublicationTopicAttribute>();
+                if (attr == null) continue;
+
+                var topic = attr.Destination?.RoutingKey?.Value;
+                if (string.IsNullOrEmpty(topic)) continue;
+
+                yield return (type, topic);
             }
         }
 
@@ -345,26 +337,13 @@ namespace Paramore.Brighter.AsyncAPI
         {
             if (node is JsonObject obj)
             {
-                if (obj.TryGetPropertyValue("$ref", out var refNode) &&
-                    refNode is JsonValue refValue &&
-                    refValue.TryGetValue<string>(out var refString))
-                {
-                    if (refString.StartsWith("#/definitions/"))
-                    {
-                        obj["$ref"] = $"{definitionsPrefix}{refString.Substring("#/definitions/".Length)}";
-                    }
-                    else if (refString.StartsWith("#/$defs/"))
-                    {
-                        obj["$ref"] = $"{defsPrefix}{refString.Substring("#/$defs/".Length)}";
-                    }
-                }
+                RewriteRefProperty(obj, definitionsPrefix, defsPrefix);
 
                 foreach (var property in obj)
                 {
-                    var value = property.Value;
-                    if (value != null)
+                    if (property.Value != null)
                     {
-                        RewriteRefs(value, definitionsPrefix, defsPrefix);
+                        RewriteRefs(property.Value, definitionsPrefix, defsPrefix);
                     }
                 }
             }
@@ -377,6 +356,25 @@ namespace Paramore.Brighter.AsyncAPI
                         RewriteRefs(item, definitionsPrefix, defsPrefix);
                     }
                 }
+            }
+        }
+
+        private static void RewriteRefProperty(JsonObject obj, string definitionsPrefix, string defsPrefix)
+        {
+            if (!obj.TryGetPropertyValue("$ref", out var refNode) ||
+                refNode is not JsonValue refValue ||
+                !refValue.TryGetValue<string>(out var refString))
+            {
+                return;
+            }
+
+            if (refString.StartsWith("#/definitions/"))
+            {
+                obj["$ref"] = $"{definitionsPrefix}{refString.Substring("#/definitions/".Length)}";
+            }
+            else if (refString.StartsWith("#/$defs/"))
+            {
+                obj["$ref"] = $"{defsPrefix}{refString.Substring("#/$defs/".Length)}";
             }
         }
     }

@@ -382,7 +382,7 @@
         "Typecheck passes"
       ],
       "priority": 23,
-      "passes": false,
+      "passes": true,
       "notes": "Advisory but recommended to improve mergeability. PR #4034 review flagged CodeScene complexity warnings.\n\nSuggested extractions:\n1. ProcessChannelAndOperation() - shared logic for creating channel + operation from a routing key, action, and request type\n2. ScanAssemblyTypes() - extract the inner type-processing loop from AddFromAssemblyScanningAsync\n3. RewriteRefNode() - extract single-node ref rewriting from the recursive RewriteRefs\n\nKeep changes purely structural (refactoring) with no behavioral changes. All existing tests must pass unchanged."
     }
   ]
