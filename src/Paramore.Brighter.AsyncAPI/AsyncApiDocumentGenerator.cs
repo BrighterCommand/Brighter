@@ -245,60 +245,69 @@ namespace Paramore.Brighter.AsyncAPI
 
         private static void EnsureChannel(Dictionary<string, AsyncApiChannel> channels, string channelId, string address)
         {
-            if (!channels.ContainsKey(channelId))
-            {
-                channels[channelId] = new AsyncApiChannel
+            channels.TryAdd(
+                channelId,
+                new AsyncApiChannel
                 {
                     Address = address,
                     Messages = new Dictionary<string, AsyncApiRef>()
-                };
-            }
+                });
         }
 
         private async Task EnsureMessageAsync(Dictionary<string, AsyncApiMessage> messages, string messageName, Type requestType, CancellationToken ct)
         {
-            if (!messages.ContainsKey(messageName))
+            if (!messages.TryGetValue(messageName, out _))
             {
-                messages[messageName] = new AsyncApiMessage
+                var message = new AsyncApiMessage
                 {
                     Name = messageName,
                     ContentType = "application/json",
                     Payload = await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false)
                 };
+
+                messages.TryAdd(messageName, message);
             }
         }
 
         private static void EnsurePlaceholderMessage(Dictionary<string, AsyncApiMessage> messages, string messageName)
         {
-            if (!messages.ContainsKey(messageName))
+            if (!messages.TryGetValue(messageName, out _))
             {
                 using var emptyDoc = JsonDocument.Parse("{}");
-                messages[messageName] = new AsyncApiMessage
+                var message = new AsyncApiMessage
                 {
                     Name = messageName,
                     ContentType = "application/json",
                     Payload = emptyDoc.RootElement.Clone()
                 };
+
+                messages.TryAdd(messageName, message);
             }
         }
 
         private static void AddChannelMessageRef(Dictionary<string, AsyncApiChannel> channels, string channelId, string messageName)
         {
-            var channel = channels[channelId];
-            if (channel.Messages != null && !channel.Messages.ContainsKey(messageName))
+            if (!channels.TryGetValue(channelId, out var channel) || channel.Messages == null)
             {
-                channel.Messages[messageName] = new AsyncApiRef { Ref = $"#/components/messages/{messageName}" };
+                return;
             }
+
+            channel.Messages.TryAdd(
+                messageName,
+                new AsyncApiRef
+                {
+                    Ref = $"#/components/messages/{messageName}"
+                });
         }
 
         private static string GetUniqueOperationId(Dictionary<string, AsyncApiOperation> operations, string action, string channelId)
         {
             var baseId = $"{action}_{channelId}";
-            if (!operations.ContainsKey(baseId))
+            if (!operations.TryGetValue(baseId, out _))
                 return baseId;
 
             var counter = 2;
-            while (operations.ContainsKey($"{baseId}_{counter}"))
+            while (operations.TryGetValue($"{baseId}_{counter}", out _))
                 counter++;
 
             return $"{baseId}_{counter}";
