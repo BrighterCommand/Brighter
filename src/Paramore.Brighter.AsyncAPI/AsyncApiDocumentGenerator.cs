@@ -37,6 +37,12 @@ namespace Paramore.Brighter.AsyncAPI
 {
     public sealed class AsyncApiDocumentGenerator : IAmAnAsyncApiDocumentGenerator
     {
+        private sealed record GenerationContext(
+            Dictionary<string, AsyncApiChannel> Channels,
+            Dictionary<string, AsyncApiOperation> Operations,
+            Dictionary<string, AsyncApiMessage> Messages,
+            HashSet<(string ChannelId, string Action)> CoveredChannelActions);
+
         private readonly AsyncApiOptions _options;
         private readonly IAmASchemaGenerator _schemaGenerator;
         private readonly IEnumerable<Subscription>? _subscriptions;
@@ -56,14 +62,15 @@ namespace Paramore.Brighter.AsyncAPI
 
         public async Task<AsyncApiDocument> GenerateAsync(CancellationToken ct = default)
         {
-            var channels = new Dictionary<string, AsyncApiChannel>();
-            var operations = new Dictionary<string, AsyncApiOperation>();
-            var messages = new Dictionary<string, AsyncApiMessage>();
-            var coveredChannelActions = new HashSet<(string channelId, string action)>();
+            var context = new GenerationContext(
+                new Dictionary<string, AsyncApiChannel>(),
+                new Dictionary<string, AsyncApiOperation>(),
+                new Dictionary<string, AsyncApiMessage>(),
+                new HashSet<(string ChannelId, string Action)>());
 
-            await AddSubscriptionsAsync(channels, operations, messages, coveredChannelActions, ct).ConfigureAwait(false);
-            await AddPublicationsAsync(channels, operations, messages, coveredChannelActions, ct).ConfigureAwait(false);
-            await AddFromAssemblyScanningAsync(channels, operations, messages, coveredChannelActions, ct).ConfigureAwait(false);
+            await AddSubscriptionsAsync(context, ct).ConfigureAwait(false);
+            await AddPublicationsAsync(context, ct).ConfigureAwait(false);
+            await AddFromAssemblyScanningAsync(context, ct).ConfigureAwait(false);
 
             var doc = new AsyncApiDocument
             {
@@ -74,19 +81,16 @@ namespace Paramore.Brighter.AsyncAPI
                     Description = _options.Description
                 },
                 Servers = _options.Servers != null ? new Dictionary<string, AsyncApiServer>(_options.Servers) : null,
-                Channels = channels.Count > 0 ? channels : null,
-                Operations = operations.Count > 0 ? operations : null,
-                Components = messages.Count > 0 ? new AsyncApiComponents { Messages = messages } : null
+                Channels = context.Channels.Count > 0 ? context.Channels : null,
+                Operations = context.Operations.Count > 0 ? context.Operations : null,
+                Components = context.Messages.Count > 0 ? new AsyncApiComponents { Messages = context.Messages } : null
             };
 
             return doc;
         }
 
         private async Task AddSubscriptionsAsync(
-            Dictionary<string, AsyncApiChannel> channels,
-            Dictionary<string, AsyncApiOperation> operations,
-            Dictionary<string, AsyncApiMessage> messages,
-            HashSet<(string channelId, string action)> coveredChannelActions,
+            GenerationContext context,
             CancellationToken ct)
         {
             if (_subscriptions == null) return;
@@ -98,15 +102,12 @@ namespace Paramore.Brighter.AsyncAPI
 
                 await ProcessSourceAsync(
                     subscription.RoutingKey.Value, "receive", subscription.RequestType,
-                    channels, operations, messages, coveredChannelActions, ct).ConfigureAwait(false);
+                    context, ct).ConfigureAwait(false);
             }
         }
 
         private async Task AddPublicationsAsync(
-            Dictionary<string, AsyncApiChannel> channels,
-            Dictionary<string, AsyncApiOperation> operations,
-            Dictionary<string, AsyncApiMessage> messages,
-            HashSet<(string channelId, string action)> coveredChannelActions,
+            GenerationContext context,
             CancellationToken ct)
         {
             if (_publications == null) return;
@@ -118,7 +119,7 @@ namespace Paramore.Brighter.AsyncAPI
 
                 await ProcessSourceAsync(
                     publication.Topic.Value, "send", publication.RequestType,
-                    channels, operations, messages, coveredChannelActions, ct).ConfigureAwait(false);
+                    context, ct).ConfigureAwait(false);
             }
         }
 
@@ -126,34 +127,31 @@ namespace Paramore.Brighter.AsyncAPI
             string address,
             string action,
             Type? requestType,
-            Dictionary<string, AsyncApiChannel> channels,
-            Dictionary<string, AsyncApiOperation> operations,
-            Dictionary<string, AsyncApiMessage> messages,
-            HashSet<(string channelId, string action)> coveredChannelActions,
+            GenerationContext context,
             CancellationToken ct)
         {
             var channelId = SanitizeChannelId(address);
 
-            EnsureChannel(channels, channelId, address);
+            EnsureChannel(context.Channels, channelId, address);
 
             string messageName;
             if (requestType != null)
             {
                 messageName = requestType.Name;
-                await EnsureMessageAsync(messages, messageName, requestType, ct).ConfigureAwait(false);
+                await EnsureMessageAsync(context.Messages, messageName, requestType, ct).ConfigureAwait(false);
             }
             else
             {
                 messageName = $"{channelId}Message";
-                EnsurePlaceholderMessage(messages, messageName);
+                EnsurePlaceholderMessage(context.Messages, messageName);
             }
 
-            AddChannelMessageRef(channels, channelId, messageName);
+            AddChannelMessageRef(context.Channels, channelId, messageName);
 
-            coveredChannelActions.Add((channelId, action));
+            context.CoveredChannelActions.Add((channelId, action));
 
-            var operationId = GetUniqueOperationId(operations, action, channelId);
-            operations[operationId] = new AsyncApiOperation
+            var operationId = GetUniqueOperationId(context.Operations, action, channelId);
+            context.Operations[operationId] = new AsyncApiOperation
             {
                 Action = action,
                 Channel = new AsyncApiRef { Ref = $"#/channels/{channelId}" },
@@ -165,10 +163,7 @@ namespace Paramore.Brighter.AsyncAPI
         }
 
         private async Task AddFromAssemblyScanningAsync(
-            Dictionary<string, AsyncApiChannel> channels,
-            Dictionary<string, AsyncApiOperation> operations,
-            Dictionary<string, AsyncApiMessage> messages,
-            HashSet<(string channelId, string action)> coveredChannelActions,
+            GenerationContext context,
             CancellationToken ct)
         {
             if (_options.DisableAssemblyScanning) return;
@@ -187,16 +182,16 @@ namespace Paramore.Brighter.AsyncAPI
                 {
                     var channelId = SanitizeChannelId(topic);
 
-                    if (coveredChannelActions.Contains((channelId, "send"))) continue;
+                    if (context.CoveredChannelActions.Contains((channelId, "send"))) continue;
 
-                    EnsureChannel(channels, channelId, topic);
+                    EnsureChannel(context.Channels, channelId, topic);
 
                     var messageName = type.Name;
-                    await EnsureMessageAsync(messages, messageName, type, ct).ConfigureAwait(false);
-                    AddChannelMessageRef(channels, channelId, messageName);
+                    await EnsureMessageAsync(context.Messages, messageName, type, ct).ConfigureAwait(false);
+                    AddChannelMessageRef(context.Channels, channelId, messageName);
 
                     var sendOpId = $"send_{channelId}";
-                    operations[sendOpId] = new AsyncApiOperation
+                    context.Operations[sendOpId] = new AsyncApiOperation
                     {
                         Action = "send",
                         Channel = new AsyncApiRef { Ref = $"#/channels/{channelId}" },
