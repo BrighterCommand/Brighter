@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -262,7 +263,9 @@ namespace Paramore.Brighter.AsyncAPI
                 {
                     Name = messageName,
                     ContentType = "application/json",
-                    Payload = await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false)
+                    Payload = RewriteEmbeddedSchemaRefs(
+                        await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false),
+                        messageName)
                 };
 
                 messages.TryAdd(messageName, message);
@@ -316,5 +319,65 @@ namespace Paramore.Brighter.AsyncAPI
         private static readonly Regex s_sanitizeRegex = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
 
         private static string SanitizeChannelId(string value) => s_sanitizeRegex.Replace(value, "_");
+
+        private static JsonElement? RewriteEmbeddedSchemaRefs(JsonElement? payload, string messageName)
+        {
+            if (payload is null)
+            {
+                return null;
+            }
+
+            var root = JsonNode.Parse(payload.Value.GetRawText());
+            if (root is null)
+            {
+                return payload;
+            }
+
+            var definitionsPrefix = $"#/components/messages/{messageName}/payload/definitions/";
+            var defsPrefix = $"#/components/messages/{messageName}/payload/$defs/";
+            RewriteRefs(root, definitionsPrefix, defsPrefix);
+
+            using var rewritten = JsonDocument.Parse(root.ToJsonString());
+            return rewritten.RootElement.Clone();
+        }
+
+        private static void RewriteRefs(JsonNode node, string definitionsPrefix, string defsPrefix)
+        {
+            if (node is JsonObject obj)
+            {
+                if (obj.TryGetPropertyValue("$ref", out var refNode) &&
+                    refNode is JsonValue refValue &&
+                    refValue.TryGetValue<string>(out var refString))
+                {
+                    if (refString.StartsWith("#/definitions/"))
+                    {
+                        obj["$ref"] = $"{definitionsPrefix}{refString.Substring("#/definitions/".Length)}";
+                    }
+                    else if (refString.StartsWith("#/$defs/"))
+                    {
+                        obj["$ref"] = $"{defsPrefix}{refString.Substring("#/$defs/".Length)}";
+                    }
+                }
+
+                foreach (var property in obj)
+                {
+                    var value = property.Value;
+                    if (value != null)
+                    {
+                        RewriteRefs(value, definitionsPrefix, defsPrefix);
+                    }
+                }
+            }
+            else if (node is JsonArray array)
+            {
+                foreach (var item in array)
+                {
+                    if (item != null)
+                    {
+                        RewriteRefs(item, definitionsPrefix, defsPrefix);
+                    }
+                }
+            }
+        }
     }
 }
