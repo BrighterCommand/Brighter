@@ -64,10 +64,5 @@ namespace Paramore.Brighter.AsyncAPI
 
             return document;
         }
-
-        public static AsyncApiDocument GenerateAsyncApiDocument(this IHost host, string outputPath)
-        {
-            return host.GenerateAsyncApiDocumentAsync(outputPath).GetAwaiter().GetResult();
-        }
     }
 }
