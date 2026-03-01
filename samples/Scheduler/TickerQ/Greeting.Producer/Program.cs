@@ -66,7 +66,6 @@ builder.Services.AddBrighter().AddProducers(c =>
     return new TickerQSchedulerFactory(timeTickerManager, persistenceProvider, timeprovider);
 });
 
-builder.Services.AddHostedService<ProducerHostedService>();
 
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
@@ -84,18 +83,22 @@ app.MapGet("/", () =>
     return "helloProducer";
 });
 
-app.Run();
-public class ProducerHostedService(IAmACommandProcessor commandProcessor, ILogger<ProducerHostedService> logger) : BackgroundService
+app.MapPost("/send-one", async (IAmACommandProcessor commandProcessor) =>
 {
+    var content = "Manual single message";
+    await commandProcessor.PostAsync(TimeSpan.FromSeconds(1), new GreetingEvent(content));
+    return Results.Ok($"Sent: {content}");
+});
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+app.MapPost("/send-multiple", async (IAmACommandProcessor commandProcessor) =>
+{
+    var iterations =  5;
+    for (int i = 1; i <= iterations; i++)
     {
-        for (int i = 0; i < 100; i++)
-        {
-            logger.LogInformation("Scheduling message #{Loop}", i);
-            await commandProcessor.PostAsync(TimeSpan.FromSeconds(2*(i+3)), new GreetingEvent($"Scheduler message  #{i}"));
-            logger.LogInformation("Pausing for breath..."); 
-            await Task.Delay(4000, stoppingToken);
-        }
+        var content = $"Manual multiple message #{i}";
+        await commandProcessor.PostAsync(TimeSpan.FromSeconds(2 * i), new GreetingEvent(content));
     }
-}
+    return Results.Ok($"Sent {iterations} messages");
+});
+
+app.Run();

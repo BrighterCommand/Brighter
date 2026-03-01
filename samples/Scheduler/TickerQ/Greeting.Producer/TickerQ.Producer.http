@@ -1,6 +1,9 @@
 @TickerQ.Producer_HostAddress = http://localhost:5211
 
-GET {{TickerQ.Producer_HostAddress}}/weatherforecast/
+POST   {{TickerQ.Producer_HostAddress}}/send-one/
+Accept: application/json
+###
+
+POST   {{TickerQ.Producer_HostAddress}}/send-multiple/
 Accept: application/json
 
-###
