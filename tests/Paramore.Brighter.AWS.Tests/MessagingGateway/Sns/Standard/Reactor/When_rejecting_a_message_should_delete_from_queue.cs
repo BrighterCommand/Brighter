@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Amazon.SimpleNotificationService.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;

@@ -38,10 +38,8 @@ public class SqsMessageConsumerRejectTests : IDisposable
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }),
-            topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]));
-            
+            topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]),
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
