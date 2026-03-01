@@ -39,7 +39,7 @@ Provide a set of NuGet libraries that allow developers to create and migrate Inb
 
 #### FR-3: Modular Package Structure
 - A core/abstractions package that defines the common interfaces and migration infrastructure.
-- Per-database-backend packages (e.g. `Paramore.Brighter.Extensions.Hosting.MsSql`) that implement the abstractions for each backend.
+- Per-database-backend packages (e.g. `Paramore.Brighter.BoxProvisioning.MsSql`) that implement the abstractions for each backend.
 - Adding a new database backend should only require implementing the backend-specific package — no changes to the core.
 
 #### FR-4: .NET Aspire Integration

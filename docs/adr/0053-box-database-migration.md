@@ -136,6 +136,11 @@ public interface IAmABoxProvisioner
     /// Provision the box table: create if it doesn't exist, then apply any
     /// outstanding migrations. Idempotent — safe to call on every startup.
     /// </summary>
+    /// <exception cref="Exception">
+    /// Throws if the database is unreachable, DDL execution fails, or migration
+    /// tracking cannot be updated. The hosted service catches this, logs diagnostics,
+    /// and re-throws as a <see cref="ConfigurationException"/> to fail-fast the host.
+    /// </exception>
     Task ProvisionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -187,7 +192,11 @@ public interface IAmABoxMigration
 
 The property is named `UpScript` rather than `UpSql` to avoid implying that only SQL databases are supported. While the current scope is relational backends only, the name leaves room for future extension to non-SQL backends (e.g. DynamoDB API calls serialized as scripts) without renaming a public interface member.
 
-The `BoxProvisioningHostedService` is an `IHostedService` that resolves all `IAmABoxProvisioner` instances from DI and calls `ProvisionAsync` on each:
+**Forward-only migrations (no `DownScript`)**: This is a deliberate design choice. Brighter's box migrations are exclusively additive — adding columns, widening types, adding indexes. DDL rollbacks (`DROP COLUMN`, `ALTER COLUMN` to a narrower type) risk data loss and are rarely safe in production. If a migration introduces a defect, the correct remediation is a new forward migration that fixes the schema, not a rollback. This keeps the migration interface simple and avoids giving operators a footgun. The `Up` prefix is retained for clarity and consistency with migration tooling conventions, not to imply a corresponding `Down`.
+
+The `BoxProvisioningHostedService` is an `IHostedService` that resolves all `IAmABoxProvisioner` instances from DI and calls `ProvisionAsync` on each.
+
+**Fail-fast behavior**: If any provisioner throws (database unreachable, migration DDL fails, etc.), the hosted service catches the exception, logs full diagnostic details at `Error` level, wraps it in Brighter's `ConfigurationException`, and re-throws. This is intentional — an application that cannot provision its inbox/outbox tables cannot function correctly and should not start. The `ConfigurationException` wrapper is consistent with how Brighter signals misconfiguration elsewhere (e.g. missing producers, invalid subscriptions) and gives operators a clear signal that the failure is infrastructure/configuration related, not a transient runtime error.
 
 ```csharp
 public class BoxProvisioningHostedService : IHostedService
@@ -205,11 +214,29 @@ public class BoxProvisioningHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        foreach (var provisioner in _provisioners)
+        // Outbox before inbox: the outbox is the critical path for message
+        // production; provision it first so failures surface early.
+        var ordered = _provisioners.OrderBy(p => p.BoxType == BoxType.Outbox ? 0 : 1);
+
+        foreach (var provisioner in ordered)
         {
             _logger.LogInformation("Provisioning {BoxType}...", provisioner.BoxType);
-            await provisioner.ProvisionAsync(cancellationToken);
-            _logger.LogInformation("Provisioned {BoxType}", provisioner.BoxType);
+            try
+            {
+                await provisioner.ProvisionAsync(cancellationToken);
+                _logger.LogInformation("Provisioned {BoxType} successfully", provisioner.BoxType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to provision {BoxType}. The application cannot start " +
+                    "without a valid {BoxType} table. Check the database connection " +
+                    "string and ensure the database is reachable.",
+                    provisioner.BoxType, provisioner.BoxType);
+                throw new ConfigurationException(
+                    $"Box provisioning failed for {provisioner.BoxType}. " +
+                    $"See inner exception for details.", ex);
+            }
         }
     }
 
@@ -243,12 +270,22 @@ public static class BrighterBuilderBoxProvisioningExtensions
 }
 ```
 
-`BoxProvisioningOptions` collects provisioner registrations without directly depending on any backend:
+`BoxProvisioningOptions` collects provisioner registrations without directly depending on any backend. The registration list is exposed via a public `Add` method so that backend packages in separate assemblies can register provisioners, while the list itself remains internal to the core package:
 
 ```csharp
 public class BoxProvisioningOptions
 {
-    internal List<Action<IServiceCollection>> Registrations { get; } = [];
+    private readonly List<Action<IServiceCollection>> _registrations = [];
+    internal IReadOnlyList<Action<IServiceCollection>> Registrations => _registrations;
+
+    /// <summary>
+    /// Timeout for acquiring a database-level migration lock. Used by backends
+    /// that require an explicit timeout (e.g. MySQL GET_LOCK). Default: 30 seconds.
+    /// </summary>
+    public TimeSpan MigrationLockTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    public void Add(Action<IServiceCollection> registration)
+        => _registrations.Add(registration);
 }
 ```
 
@@ -266,7 +303,7 @@ public static class MsSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
-        options.Registrations.Add(services =>
+        options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(
                 new MsSqlOutboxProvisioner(configuration));
@@ -287,7 +324,7 @@ public static class MsSqlBoxProvisioningExtensions
         string? schemaName = null,
         bool binaryMessagePayload = false)
     {
-        options.Registrations.Add(services =>
+        options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
@@ -310,7 +347,7 @@ public static class MsSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
-        options.Registrations.Add(services =>
+        options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(
                 new MsSqlInboxProvisioner(configuration));
@@ -355,15 +392,20 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
 The `RelationalBoxMigrationRunner` (one per database backend, since SQL dialect differs) tracks applied migrations in a `__BrighterMigrationHistory` table:
 
 ```sql
--- MSSQL variant
-CREATE TABLE IF NOT EXISTS [__BrighterMigrationHistory] (
-    [MigrationVersion] INT NOT NULL,
-    [BoxTableName] VARCHAR(256) NOT NULL,
-    [Description] NVARCHAR(512) NOT NULL,
-    [AppliedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    CONSTRAINT PK_BrighterMigrationHistory
-        PRIMARY KEY ([BoxTableName], [MigrationVersion])
-);
+-- MSSQL variant (MSSQL does not support IF NOT EXISTS on CREATE TABLE)
+IF NOT EXISTS (SELECT 1 FROM sys.tables
+    WHERE name = '__BrighterMigrationHistory'
+    AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE [__BrighterMigrationHistory] (
+        [MigrationVersion] INT NOT NULL,
+        [BoxTableName] VARCHAR(256) NOT NULL,
+        [Description] NVARCHAR(512) NOT NULL,
+        [AppliedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+        CONSTRAINT PK_BrighterMigrationHistory
+            PRIMARY KEY ([BoxTableName], [MigrationVersion])
+    );
+END
 ```
 
 The migration runner:
@@ -388,7 +430,7 @@ Each backend's migration runner acquires a database-level lock before running mi
 |---------|------------------|
 | MSSQL | `sp_getapplock @Resource='BrighterMigration', @LockMode='Exclusive'` within a transaction |
 | PostgreSQL | `pg_advisory_lock(hash)` where hash is derived from the table name |
-| MySQL | `GET_LOCK('BrighterMigration_{tableName}', timeout)` |
+| MySQL | `GET_LOCK('BrighterMigration_{tableName}', lockTimeout)` where `lockTimeout` defaults to 30 seconds, configurable via `BoxProvisioningOptions.MigrationLockTimeout` |
 | SQLite | SQLite's file-level locking provides implicit serialization |
 | Spanner | Spanner transactions provide serializable isolation by default |
 
