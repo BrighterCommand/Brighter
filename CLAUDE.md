@@ -55,5 +55,6 @@ For comprehensive guidance on working with this codebase, Claude should read the
 - [Code Style](.agent_instructions/code_style.md) - C# conventions and architectural patterns
 - [Design Principles](.agent_instructions/design_principles.md) - Responsibility-Driven Design and architectural guidance
 - [Testing](.agent_instructions/testing.md) - TDD practices, test structure, and testing guidelines
+- [Generated Tests](.agent_instructions/generated_tests.md) - Test generator templates, configuration, and regeneration workflow
 - [Documentation](.agent_instructions/documentation.md) - XML documentation standards and licensing requirements
 - [Dependency Management](.agent_instructions/dependency_management.md) - Package management with Directory.Packages.props

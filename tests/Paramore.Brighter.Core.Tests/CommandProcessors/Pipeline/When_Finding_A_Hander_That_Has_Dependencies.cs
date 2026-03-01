@@ -5,8 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class PipelineWithHandlerDependenciesTests : IDisposable
+    public class PipelineWithHandlerDependenciesTests
 
     {
     private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
@@ -31,12 +30,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         Assert.IsType<MyDependentCommandHandler>(_pipeline);
         Assert.Equal("MyDependentCommandHandler|", TracePipeline().ToString());
     }
-
-    public void Dispose()
-    {
-       CommandProcessor.ClearServiceBus(); 
-    }
-
     private PipelineTracer TracePipeline()
     {
         var pipelineTracer = new PipelineTracer();

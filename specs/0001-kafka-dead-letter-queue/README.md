@@ -32,9 +32,9 @@ This specification covers the implementation of dead letter queue functionality 
 
 The following ADRs were created for this feature:
 
-- [ADR 0034: Provide DLQ Where Missing](../../docs/adr/0034-provide-dlq-where-missing.md) - High-level DLQ strategy
-- [ADR 0035: Kafka DLQ Producer for Requeue](../../docs/adr/0035-kafka-dlq-producer-for-requeue.md) - Kafka-specific producer implementation
-- [ADR 0036: Message Rejection Routing Strategy](../../docs/adr/0036-message-rejection-routing-strategy.md) - Routing logic for rejected messages
+- [ADR 0045: Provide DLQ Where Missing](../../docs/adr/0045-provide-dlq-where-missing.md) - High-level DLQ strategy
+- [ADR 0046: Kafka DLQ Producer for Requeue](../../docs/adr/0046-kafka-dlq-producer-for-requeue.md) - Kafka-specific producer implementation
+- [ADR 0047: Message Rejection Routing Strategy](../../docs/adr/0047-message-rejection-routing-strategy.md) - Routing logic for rejected messages
 
 ## Documentation
 

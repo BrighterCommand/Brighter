@@ -48,7 +48,7 @@ Read the foundational ADR to understand the expected structure:
 - `docs/adr/0001-record-architecture-decisions.md` - Basic template
 
 And review a comprehensive example:
-- `docs/adr/0036-message-rejection-routing-strategy.md` - Full example with all sections
+- `docs/adr/0047-message-rejection-routing-strategy.md` - Full example with all sections
 
 ### Step 4: Gather Information from User
 

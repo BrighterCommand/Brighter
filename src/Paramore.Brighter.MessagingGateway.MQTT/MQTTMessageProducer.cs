@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
@@ -13,10 +12,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// The <see cref="MqttMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles subscription establishment, request sending and error handling
     /// </summary>
-    public partial class MqttMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync
+    public class MqttMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageProducer>();
-
         private readonly MqttMessagePublisher _mqttMessagePublisher;
 
         /// <summary>
@@ -68,15 +65,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <summary>
         /// Disposes of the producer
         /// </summary>
-        public void Dispose() { }
+        public void Dispose()
+        {
+            _mqttMessagePublisher.Dispose();
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         /// Disposes of the producer
         /// </summary>
         /// <returns></returns>
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            return new ValueTask(Task.CompletedTask);
+            await _mqttMessagePublisher.DisposeAsync();
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -109,12 +111,22 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
-                schedulerSync.Schedule(message, delay.Value);
-                return;
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    BrighterAsyncContext.Run(() => async.ScheduleAsync(message, delay.Value));
+                    return;
+                }
+
+                throw new ConfigurationException(
+                    $"MQTTMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
-            // delay is not natively supported
             ArgumentNullException.ThrowIfNull(message);
 
             _mqttMessagePublisher.PublishMessage(message);
@@ -131,9 +143,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
-                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
-                return;
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                throw new ConfigurationException(
+                    $"MQTTMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
             ArgumentNullException.ThrowIfNull(message);

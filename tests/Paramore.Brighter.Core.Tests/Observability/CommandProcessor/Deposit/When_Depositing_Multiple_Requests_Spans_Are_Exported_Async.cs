@@ -22,7 +22,7 @@ using MyEvent = Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyEve
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Deposit;
 
 [Collection("Observability")]
-public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposable
+public class AsyncCommandProcessorMultipleDepositObservabilityTests
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
@@ -41,7 +41,6 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
             .AddInMemoryExporter(_exportedActivities)
             .Build();
         
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
 
@@ -65,7 +64,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             {
-                routingKey, new InMemoryMessageProducer(new InternalBus(), new FakeTimeProvider(), new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
+                routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
             }
         });
         
@@ -138,10 +137,5 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         //TODO: When we deposit multiple we do a bulk write to the Outbox, so we should expect to see a bulk operation at the Db level
         // and not an individual operation
 
-    }
-
-    public void Dispose()
-    {
-        Brighter.CommandProcessor.ClearServiceBus();
     }
 }

@@ -9,8 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class PipelineGlobalInboxContextTests : IDisposable
+    public class PipelineGlobalInboxContextTests
     {
         private const string CONTEXT_KEY = "TestHandlerNameOverride";
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
@@ -58,11 +57,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             //assert
             var exists = _inbox.Exists<MyCommand>(myCommmand.Id, CONTEXT_KEY, null, 500);
             Assert.True(exists);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

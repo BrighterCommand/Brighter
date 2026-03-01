@@ -31,6 +31,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         Task DeadLetterAsync(string lockToken);
 
         /// <summary>
+        /// Abandons a message, releasing the lock so the message is available for redelivery.
+        /// </summary>
+        /// <param name="lockToken">The Lock Token the message was provided with.</param>
+        Task AbandonAsync(string lockToken);
+
+        /// <summary>
         /// Close the connection.
         /// </summary>
         void Close();

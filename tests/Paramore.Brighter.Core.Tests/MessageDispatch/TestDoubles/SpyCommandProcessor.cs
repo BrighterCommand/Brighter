@@ -90,6 +90,101 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
     }
 
+    internal sealed class SpyDontAckCommandProcessor : SpyCommandProcessor
+    {
+        private readonly SemaphoreSlim _handled = new(0);
+
+        public int SendCount { get; set; }
+        public int PublishCount { get; set; }
+
+        public SpyDontAckCommandProcessor()
+        {
+            SendCount = 0;
+            PublishCount = 0;
+        }
+
+        public bool WaitForHandle(int timeoutMs = 5000) => _handled.Wait(timeoutMs);
+
+        public override void Send<T>(T command, RequestContext? requestContext = null)
+        {
+            base.Send(command, requestContext);
+            SendCount++;
+            _handled.Release();
+            throw new DontAckAction();
+        }
+
+        public override void Publish<T>(T @event, RequestContext? requestContext = null)
+        {
+            base.Publish(@event, requestContext);
+            PublishCount++;
+            _handled.Release();
+
+            var exceptions = new List<Exception> { new DontAckAction() };
+
+            throw new AggregateException(
+                "Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+        }
+
+        public override async Task SendAsync<T>(
+            T command,
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default)
+        {
+            await base.SendAsync(command, requestContext, continueOnCapturedContext, cancellationToken);
+            SendCount++;
+            _handled.Release();
+            throw new DontAckAction();
+        }
+
+        public override async Task PublishAsync<T>(
+            T @event,
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default)
+        {
+            await base.PublishAsync(@event, requestContext, continueOnCapturedContext, cancellationToken);
+            PublishCount++;
+            _handled.Release();
+
+            var exceptions = new List<Exception> { new DontAckAction() };
+
+            throw new AggregateException(
+                "Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+        }
+    }
+
+    internal sealed class SpyRequeueWithDelayCommandProcessor : SpyCommandProcessor
+    {
+        private readonly int _delayMilliseconds;
+
+        public int SendCount { get; set; }
+
+        public SpyRequeueWithDelayCommandProcessor(int delayMilliseconds = 5000)
+        {
+            _delayMilliseconds = delayMilliseconds;
+            SendCount = 0;
+        }
+
+        public override void Send<T>(T command, RequestContext? requestContext = null)
+        {
+            base.Send(command, requestContext);
+            SendCount++;
+            throw new DeferMessageAction("defer with delay", null, _delayMilliseconds);
+        }
+
+        public override async Task SendAsync<T>(
+            T command,
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default)
+        {
+            await base.SendAsync(command, requestContext, continueOnCapturedContext, cancellationToken);
+            SendCount++;
+            throw new DeferMessageAction("defer with delay", null, _delayMilliseconds);
+        }
+    }
+
     internal sealed class SpyExceptionCommandProcessor : SpyCommandProcessor
     {
         public int SendCount { get; set; }

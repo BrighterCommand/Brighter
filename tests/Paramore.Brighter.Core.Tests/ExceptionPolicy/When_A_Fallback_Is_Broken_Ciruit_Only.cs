@@ -10,7 +10,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class FallbackHandlerBrokenCircuitTests : IDisposable
+    public class FallbackHandlerBrokenCircuitTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -45,11 +45,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyFailsWithUnsupportedExceptionForFallback.ShouldReceive(_myCommand);
             // Should bubble out the exception
             Assert.NotNull(_exception);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

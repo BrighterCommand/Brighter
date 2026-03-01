@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
 using Xunit;
@@ -89,10 +90,27 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
                 sentMessages.Add(message);
             }
 
-            Message[] receivedMessages = MessageConsumerSync.Receive(TimeSpan.FromMilliseconds(100));
+            //Collect messages, retrying if not all have arrived yet
+            List<Message> receivedMessages = [];
+            int retries = 0;
+            while (receivedMessages.Count < messageCount && retries < 50)
+            {
+                int countBefore = receivedMessages.Count;
+                Message[] batch = MessageConsumerSync.Receive(TimeSpan.FromMilliseconds(100));
+                foreach (var msg in batch)
+                {
+                    if (msg.Header.MessageType != MessageType.MT_NONE)
+                        receivedMessages.Add(msg);
+                }
+
+                if (receivedMessages.Count == countBefore)
+                    Thread.Sleep(100);
+
+                retries++;
+            }
 
             Assert.NotEmpty(receivedMessages);
-            Assert.Equal(messageCount, receivedMessages.Length);
+            Assert.Equal(messageCount, receivedMessages.Count);
             Assert.Equal(sentMessages, receivedMessages);
         }
     }

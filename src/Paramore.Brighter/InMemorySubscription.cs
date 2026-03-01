@@ -35,6 +35,7 @@ public class InMemorySubscription(
     int requeueCount = -1,
     TimeSpan? requeueDelay = null,
     int unacceptableMessageLimit = 0,
+    TimeSpan? unacceptableMessageLimitWindow = null,
     MessagePumpType messagePumpType = MessagePumpType.Unknown,
     IAmAChannelFactory? channelFactory = null,
     OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -42,7 +43,7 @@ public class InMemorySubscription(
     TimeSpan? channelFailureDelay = null)
     : Subscription(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize, noOfPerformers,
         timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels,
-        emptyChannelDelay, channelFailureDelay), IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
+        emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow), IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
     /// <summary>
     /// The <see cref="RoutingKey"/> for the Dead Letter Channel
@@ -75,22 +76,23 @@ public class InMemorySubscription(
 /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
 /// <typeparam name="T"></typeparam>
 public class InMemorySubscription<T>(
-    SubscriptionName subscriptionName, 
-    ChannelName channelName, 
-    RoutingKey routingKey, 
-    Func<Message, Type>? getRequestType = null, 
-    int bufferSize = 1, 
-    int noOfPerformers = 1, 
-    TimeSpan? timeOut = null, 
-    int requeueCount = -1, 
-    TimeSpan? requeueDelay = null, 
-    int unacceptableMessageLimit = 0, 
-    MessagePumpType messagePumpType = MessagePumpType.Unknown, 
-    IAmAChannelFactory? channelFactory = null, 
-    OnMissingChannel makeChannels = OnMissingChannel.Create, 
-    TimeSpan? emptyChannelDelay = null, TimeSpan? channelFailureDelay = null) 
-    : InMemorySubscription(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize, 
-        noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, 
+    SubscriptionName subscriptionName,
+    ChannelName channelName,
+    RoutingKey routingKey,
+    Func<Message, Type>? getRequestType = null,
+    int bufferSize = 1,
+    int noOfPerformers = 1,
+    TimeSpan? timeOut = null,
+    int requeueCount = -1,
+    TimeSpan? requeueDelay = null,
+    int unacceptableMessageLimit = 0,
+    TimeSpan? unacceptableMessageLimitWindow = null,
+    MessagePumpType messagePumpType = MessagePumpType.Unknown,
+    IAmAChannelFactory? channelFactory = null,
+    OnMissingChannel makeChannels = OnMissingChannel.Create,
+    TimeSpan? emptyChannelDelay = null, TimeSpan? channelFailureDelay = null)
+    : InMemorySubscription(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize,
+        noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, unacceptableMessageLimitWindow, messagePumpType,
         channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
     where T : class, IRequest
 {}

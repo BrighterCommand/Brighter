@@ -28,6 +28,7 @@ using Confluent.SchemaRegistry;
 using Paramore.Brighter;
 using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.MessagingGateway.Kafka;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using TaskStatus.Driving_Ports;
@@ -78,6 +79,9 @@ var host = Host.CreateDefaultBuilder(args)
                     }
                 ));
         })
+        // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+        // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+        .UseScheduler(new InMemorySchedulerFactory())
         //This is the default mapper type, but we are  explicit  for the sample anyway
         .AutoFromAssemblies([typeof(TaskCreated).Assembly], defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
 

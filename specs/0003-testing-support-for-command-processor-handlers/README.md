@@ -37,12 +37,12 @@ Two complementary approaches:
 
 | ADR | Title | Status |
 |-----|-------|--------|
-| [0037](../../Docs/adr/0037-testing-assembly-structure.md) | Testing Assembly Structure | Accepted |
-| [0038](../../Docs/adr/0038-spy-command-processor-api.md) | Spy Command Processor API | Proposed |
+| [0049](../../docs/adr/0049-testing-assembly-structure.md) | Testing Assembly Structure | Accepted |
+| [0050](../../docs/adr/0050-spy-command-processor-api.md) | Spy Command Processor API | Proposed |
 
 ## Next Steps
 
-1. Approve ADR 0038: `/spec:approve design 0038`
+1. Approve ADR 0050: `/spec:approve design 0050`
 2. Create tasks: `/spec:tasks`
 3. Begin implementation: `/spec:implement`
 

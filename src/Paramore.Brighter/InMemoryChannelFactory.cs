@@ -31,11 +31,15 @@ namespace Paramore.Brighter
     /// <summary>
     /// Factory class for creating in-memory channels.
     /// </summary>
-    public class InMemoryChannelFactory : IAmAChannelFactory
+    public class InMemoryChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
     {
         private readonly InternalBus _internalBus;
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan? _ackTimeout;
+        /// <summary>
+        /// Gets or sets the message scheduler for delayed requeue support.
+        /// </summary>
+        public IAmAMessageScheduler? Scheduler { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryChannelFactory"/> class.
@@ -43,11 +47,13 @@ namespace Paramore.Brighter
         /// <param name="internalBus">The internal bus for message routing.</param>
         /// <param name="timeProvider">The time provider for managing time-related operations.</param>
         /// <param name="ackTimeout">Optional acknowledgment timeout.</param>
-        public InMemoryChannelFactory(InternalBus internalBus, TimeProvider timeProvider, TimeSpan? ackTimeout = null)
+        /// <param name="scheduler">Optional scheduler for delayed requeue operations.</param>
+        public InMemoryChannelFactory(InternalBus internalBus, TimeProvider timeProvider, TimeSpan? ackTimeout = null, IAmAMessageScheduler? scheduler = null)
         {
             _internalBus = internalBus;
             _timeProvider = timeProvider;
             _ackTimeout = ackTimeout;
+            Scheduler = scheduler;
         }
 
         /// <summary>
@@ -72,7 +78,8 @@ namespace Paramore.Brighter
                     _timeProvider,
                     deadLetterKey,  
                     invalidMessageKey,
-                    ackTimeout: _ackTimeout),
+                    ackTimeout: _ackTimeout,
+                    scheduler: Scheduler),
                 subscription.BufferSize
             );
         }
@@ -85,17 +92,22 @@ namespace Paramore.Brighter
         public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
         {
             var deadLetterSupport = subscription as IUseBrighterDeadLetterSupport;
-            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey; 
-            
+            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey;
+
+            var invalidMessageSupport = subscription as IUseBrighterInvalidMessageSupport;
+            var invalidMessageKey = invalidMessageSupport?.InvalidMessageRoutingKey;
+
             return new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
                 new InMemoryMessageConsumer(
-                    subscription.RoutingKey, 
-                    _internalBus, 
-                    _timeProvider, 
+                    subscription.RoutingKey,
+                    _internalBus,
+                    _timeProvider,
                     deadLetterKey,
-                    ackTimeout: _ackTimeout),
+                    invalidMessageKey,
+                    ackTimeout: _ackTimeout,
+                    scheduler: Scheduler),
                 subscription.BufferSize
             );
         }
@@ -108,10 +120,23 @@ namespace Paramore.Brighter
         /// <returns>A task representing the asynchronous operation, with an asynchronous channel instance as the result.</returns>
         public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken cancellationToken = default)
         {
+            var deadLetterSupport = subscription as IUseBrighterDeadLetterSupport;
+            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey;
+
+            var invalidMessageSupport = subscription as IUseBrighterInvalidMessageSupport;
+            var invalidMessageKey = invalidMessageSupport?.InvalidMessageRoutingKey;
+
             IAmAChannelAsync channel = new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _internalBus, _timeProvider, ackTimeout: _ackTimeout),
+                new InMemoryMessageConsumer(
+                    subscription.RoutingKey,
+                    _internalBus,
+                    _timeProvider,
+                    deadLetterKey,
+                    invalidMessageKey,
+                    ackTimeout: _ackTimeout,
+                    scheduler: Scheduler),
                 subscription.BufferSize
             );
             return Task.FromResult(channel);

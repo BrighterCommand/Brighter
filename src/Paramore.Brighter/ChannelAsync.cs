@@ -96,6 +96,16 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Nacks the specified message, releasing it back to the transport for redelivery.
+        /// </summary>
+        /// <param name="message">The <see cref="Message"/> to nack</param>
+        /// <param name="cancellationToken">Cancel the nack operation</param>
+        public virtual async Task NackAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            await _messageConsumer.NackAsync(message, cancellationToken);
+        }
+
+        /// <summary>
         /// Inserts messages into the channel for consumption by the message pump.
         /// Note that there is an upperbound to what we can enqueue, although we always allow enqueueing a quit
         /// message. We will always try to clear the channel, when closing, as the stop message will get inserted

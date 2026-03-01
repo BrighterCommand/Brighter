@@ -33,7 +33,6 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsyncDisposable, IDisposable
 {
@@ -170,8 +169,9 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         return messages[0];
     }

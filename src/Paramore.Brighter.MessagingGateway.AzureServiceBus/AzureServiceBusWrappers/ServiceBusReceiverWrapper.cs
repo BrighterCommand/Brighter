@@ -103,6 +103,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         }
 
         /// <summary>
+        /// Abandons the message, releasing the lock so it is available for redelivery.
+        /// </summary>
+        /// <param name="lockToken">The lock token of the message to abandon.</param>
+        /// <returns>A task that represents the asynchronous abandon operation.</returns>
+        public Task AbandonAsync(string lockToken)
+        {
+            return _messageReceiver.AbandonMessageAsync(CreateMessageShiv(lockToken));
+        }
+
+        /// <summary>
         /// Gets a value indicating whether the message receiver is closed or closing.
         /// </summary>
         public bool IsClosedOrClosing => _messageReceiver.IsClosed;

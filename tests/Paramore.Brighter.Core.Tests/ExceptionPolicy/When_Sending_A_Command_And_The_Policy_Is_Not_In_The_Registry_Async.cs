@@ -12,7 +12,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorMissingPolicyFromRegistryAsyncTests : IDisposable
+    public class CommandProcessorMissingPolicyFromRegistryAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -46,11 +46,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var innerException = _exception.InnerException;
             Assert.NotNull(innerException);
             Assert.IsType<KeyNotFoundException>(innerException);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

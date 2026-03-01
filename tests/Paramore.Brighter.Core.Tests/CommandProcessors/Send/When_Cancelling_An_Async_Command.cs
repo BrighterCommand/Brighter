@@ -7,8 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
 {
-    [Collection("CommandProcessor")]
-    public class CancellingAsyncPipelineTests : IDisposable
+    public class CancellingAsyncPipelineTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
@@ -33,11 +32,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
             //Should send the command to the command handler
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyCommandHandlerAsync), _myCommand.Id), _receivedMessages);
 
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

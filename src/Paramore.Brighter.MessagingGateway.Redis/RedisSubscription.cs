@@ -26,10 +26,20 @@ using System;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    public class RedisSubscription : Subscription
+    public class RedisSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
     {
         /// <inheritdoc />
         public override Type ChannelFactoryType => typeof(ChannelFactory);
+
+        /// <summary>
+        /// The routing key used for the Dead Letter Channel
+        /// </summary>
+        public RoutingKey? DeadLetterRoutingKey { get; set; }
+
+        /// <summary>
+        /// The routing key used for the Invalid Message Channel
+        /// </summary>
+        public RoutingKey? InvalidMessageRoutingKey { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -50,6 +60,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling</param>
         public RedisSubscription(SubscriptionName subscriptionName,
             ChannelName channelName,
             RoutingKey routingKey,
@@ -61,14 +73,19 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
+            TimeSpan? unacceptableMessageLimitWindow = null,
             MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
-            TimeSpan? channelFailureDelay = null) 
+            TimeSpan? channelFailureDelay = null,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
             : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
-                noOfPerformers, timeOut ?? TimeSpan.FromSeconds(1), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                noOfPerformers, timeOut ?? TimeSpan.FromSeconds(1), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
         {
+            DeadLetterRoutingKey = deadLetterRoutingKey;
+            InvalidMessageRoutingKey = invalidMessageRoutingKey;
         }
     }
 
@@ -92,6 +109,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ</param>
+        /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling</param>
         public RedisSubscription(SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
@@ -102,28 +121,34 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
+            TimeSpan? unacceptableMessageLimitWindow = null,
             MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
-            TimeSpan? channelFailureDelay = null) 
+            TimeSpan? channelFailureDelay = null,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
             : base(
-                subscriptionName ?? new SubscriptionName(typeof(T).FullName!), 
-                channelName ?? new ChannelName(typeof(T).FullName!), 
-                routingKey ?? new RoutingKey(typeof(T).FullName!), 
-                typeof(T), 
-                getRequestType, 
-                bufferSize, 
-                noOfPerformers, 
-                timeOut, 
-                requeueCount, 
-                requeueDelay, 
-                unacceptableMessageLimit, 
-                messagePumpType, 
-                channelFactory, 
-                makeChannels, 
-                emptyChannelDelay, 
-                channelFailureDelay)
+                subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
+                channelName ?? new ChannelName(typeof(T).FullName!),
+                routingKey ?? new RoutingKey(typeof(T).FullName!),
+                typeof(T),
+                getRequestType,
+                bufferSize,
+                noOfPerformers,
+                timeOut,
+                requeueCount,
+                requeueDelay,
+                unacceptableMessageLimit,
+                unacceptableMessageLimitWindow,
+                messagePumpType,
+                channelFactory,
+                makeChannels,
+                emptyChannelDelay,
+                channelFailureDelay,
+                deadLetterRoutingKey,
+                invalidMessageRoutingKey)
         {
         }
     }

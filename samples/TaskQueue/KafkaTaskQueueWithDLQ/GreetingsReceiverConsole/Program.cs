@@ -33,6 +33,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
@@ -50,6 +51,9 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((_, services) =>
     {
+        // This sample intentionally throws on every 5th message to demonstrate RejectMessageOnError.
+        // Setting unacceptableMessageLimitWindow to zero resets the unacceptable message count on every
+        // pump cycle, preventing the pump from shutting down due to accumulated error counts.
         var subscriptions = new KafkaSubscription[]
         {
             new KafkaSubscription<GreetingEvent>(
@@ -64,7 +68,8 @@ var host = Host.CreateDefaultBuilder(args)
                 sweepUncommittedOffsetsInterval: TimeSpan.FromMilliseconds(10000),
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create,
-                deadLetterRoutingKey: new RoutingKey("greeting.event.dlq"))
+                deadLetterRoutingKey: new RoutingKey("greeting.event.dlq"),
+                unacceptableMessageLimitWindow: TimeSpan.Zero)
         };
 
         //create the gateway
@@ -79,7 +84,11 @@ var host = Host.CreateDefaultBuilder(args)
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(consumerFactory);
-        }).AutoFromAssemblies();
+        })
+        // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+        // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+        .UseScheduler(new InMemorySchedulerFactory())
+        .AutoFromAssemblies();
 
 
         services.AddHostedService<ServiceActivatorHostedService>();

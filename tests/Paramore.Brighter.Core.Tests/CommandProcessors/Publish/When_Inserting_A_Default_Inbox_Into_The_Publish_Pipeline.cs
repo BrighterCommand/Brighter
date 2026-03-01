@@ -12,8 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorBuildDefaultInboxPublishTests : IDisposable
+    public class CommandProcessorBuildDefaultInboxPublishTests
     {
         private readonly Brighter.CommandProcessor _commandProcessor;
         private readonly InMemoryInbox _inbox = new InMemoryInbox(new FakeTimeProvider());
@@ -73,11 +72,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             //assert we are in, and auto-context added us under our name
             var boxed = _inbox.Exists<MyEvent>(@event.Id, typeof(MyGlobalInboxEventHandler).FullName, null, 100);
             Assert.True(boxed);
-        }
-
-        public void Dispose()
-        {
-            Brighter.CommandProcessor.ClearServiceBus();
         }
     }
 }

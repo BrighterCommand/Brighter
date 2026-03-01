@@ -54,6 +54,27 @@ public partial class GcpPubSubStreamMessageConsumer(
     }
 
     /// <summary>
+    /// Nacks the specified message. For GCP Pub/Sub (stream-based), this is a no-op because not
+    /// acknowledging the message is sufficient to allow redelivery.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    public void Nack(Message message)
+    {
+        // No-op for GCP Pub/Sub: not acknowledging is sufficient for redelivery
+    }
+
+    /// <summary>
+    /// Nacks the specified message. For GCP Pub/Sub (stream-based), this is a no-op because not
+    /// acknowledging the message is sufficient to allow redelivery.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancel the nack operation</param>
+    public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Synchronously rejects a message. In this implementation, it calls <see cref="GcpStreamMessage.Accepted"/>
     /// to signal processing completion and prevents redelivery, while logging the rejection.
     /// </summary>

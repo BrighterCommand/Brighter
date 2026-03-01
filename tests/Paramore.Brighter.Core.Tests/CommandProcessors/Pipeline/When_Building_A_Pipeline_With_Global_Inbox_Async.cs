@@ -14,8 +14,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     //Respects different global choices i.e. throw, what to capture, context
     //allow a lambda for the context, to override, and pass in a default of typeof() ????
  
-    [Collection("CommandProcessor")]
-    public class PipelineGlobalInboxTestsAsync : IDisposable
+    public class PipelineGlobalInboxTestsAsync
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private AsyncPipelines<MyCommand> _chainOfResponsibility;
@@ -58,12 +57,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             Assert.Contains("UseInboxHandlerAsync", tracer.ToString());
 
         }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-
         private PipelineTracer TracePipeline(IHandleRequestsAsync<MyCommand> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();

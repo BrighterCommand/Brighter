@@ -15,8 +15,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPostCommandTests : IDisposable
+    public class CommandProcessorPostCommandTests
     {
         private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var cloudEventsType = new CloudEventsType("go.paramore.brighter.test");
             
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+            InMemoryMessageProducer messageProducer = new(_internalBus, 
                 new Publication()
                 {
                     DataSchema = new Uri("https://goparamore.io/schemas/MyCommand.json"),
@@ -93,7 +92,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -124,11 +122,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             Assert.NotNull(message);
             
             Assert.Equal(_expectedMessage, message);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

@@ -37,7 +37,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerTests : IDisposable
+    public class MonitorHandlerTests
     {
         private readonly MyCommand _command;
         private Exception _thrownException;
@@ -90,11 +90,6 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             Assert.Equal(typeof(MyMonitoredHandler).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
             //should_post_the_time_of_the_request_after
             Assert.True((_afterEvent.EventTime.ToUniversalTime()) > (_at.ToUniversalTime()));
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

@@ -40,7 +40,7 @@ Brighter has a number of options for handling failures:
       yourself to an error queue; you can write an attribute and pipeline handler for this,
       and throw a user defined exception to add to your error queue. N.B. This is only worth doing if logs are less
       valuable for diagnosis than an error queue.
-    * (Note that [#0034](./0034-provide-dlq-where-missing.md) modifies this to allow you to post to the DLQ using a `RejectMessageAction`)
+    * (Note that [#0045](./0045-provide-dlq-where-missing.md) modifies this to allow you to post to the DLQ using a `RejectMessageAction`)
 * If the failure comes from a badly configured CommandProcessor or ServiceActivator we throw a ConfigurationException
   * We expect you to fail fast in this case and resolve the error in the configuration of your app.
 

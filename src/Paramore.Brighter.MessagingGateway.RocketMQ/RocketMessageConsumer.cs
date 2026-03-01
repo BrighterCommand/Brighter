@@ -4,8 +4,10 @@ using System.Globalization;
 using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
@@ -15,11 +17,30 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// RocketMQ message consumer implementation for Brighter.
 /// Integrates RocketMQ's consumer group pattern and message filtering capabilities.
 /// </summary>
-public class RocketMessageConsumer(SimpleConsumer consumer, 
-    int bufferSize, 
-    TimeSpan invisibilityTimeout)
+/// <param name="consumer">The underlying RocketMQ simple consumer.</param>
+/// <param name="bufferSize">The number of messages to retrieve per receive call.</param>
+/// <param name="invisibilityTimeout">How long messages remain invisible after being received.</param>
+/// <param name="connection">The gateway connection configuration, used for lazy DLQ producer creation.</param>
+/// <param name="deadLetterRoutingKey">The routing key for the dead letter queue topic.</param>
+/// <param name="invalidMessageRoutingKey">The routing key for the invalid message topic.</param>
+public partial class RocketMessageConsumer(SimpleConsumer consumer,
+    int bufferSize,
+    TimeSpan invisibilityTimeout,
+    RocketMessagingGatewayConnection? connection = null,
+    RoutingKey? deadLetterRoutingKey = null,
+    RoutingKey? invalidMessageRoutingKey = null)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageConsumer>();
+
+    private readonly RocketMessagingGatewayConnection? _connection = connection;
+    private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
+    private readonly RoutingKey? _invalidMessageRoutingKey = invalidMessageRoutingKey;
+    // Thread-safe: message pumps are single-threaded per consumer, so null-coalescing
+    // assignment in GetProducerForRouteAsync() cannot race.
+    private RocketMqMessageProducer? _deadLetterProducer;
+    private RocketMqMessageProducer? _invalidMessageProducer;
+
     /// <inheritdoc />
     public void Acknowledge(Message message) 
         => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));
@@ -77,11 +98,82 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
     }
     
     /// <inheritdoc />
-    public bool Reject(Message message, MessageRejectionReason? reason) => Requeue(message);
-    
+    public void Nack(Message message)
+    {
+        // No-op for RocketMQ: invisibility timeout will expire and message will become available for redelivery
+    }
+
     /// <inheritdoc />
-    public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default) 
-        => Task.FromResult(Reject(message, reason));
+    public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        // No-op for RocketMQ: invisibility timeout will expire and message will become available for redelivery
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public bool Reject(Message message, MessageRejectionReason? reason)
+        => BrighterAsyncContext.Run(() => RejectAsync(message, reason));
+
+
+    /// <inheritdoc />
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
+    {
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
+        {
+            return false;
+        }
+
+        Log.RejectingMessage(s_logger, message.Id);
+
+        if (_deadLetterRoutingKey == null && _invalidMessageRoutingKey == null)
+        {
+            if (reason != null)
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+
+            await consumer.Ack(view);
+            return true;
+        }
+
+        var rejectionReason = reason?.RejectionReason ?? RejectionReason.None;
+
+        try
+        {
+            RefreshMetadata(message, reason);
+
+            var (routingKey, shouldRoute, isFallingBackToDlq) = DetermineRejectionRoute(rejectionReason);
+
+            RocketMqMessageProducer? producer = null;
+            if (shouldRoute)
+            {
+                message.Header.Topic = routingKey!;
+                if (isFallingBackToDlq)
+                    Log.FallingBackToDlq(s_logger, message.Id);
+
+                producer = await GetProducerForRouteAsync(routingKey!);
+            }
+
+            if (producer != null)
+            {
+                await producer.SendAsync(message, cancellationToken);
+                Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+            }
+            else
+            {
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+            return true;
+        }
+        finally
+        {
+            await AckSourceMessageSafeAsync(view);
+        }
+
+        return true;
+    }
     
     /// <inheritdoc />
     public bool Requeue(Message message, TimeSpan? delay = null)
@@ -99,6 +191,93 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
     /// <inheritdoc />
     public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default) =>
         Task.FromResult(Requeue(message, delay));
+
+    /// <summary>
+    /// Acknowledges the source message, returning <c>false</c> on failure so that an ACK
+    /// exception in a <c>finally</c> block cannot mask the DLQ send result.
+    /// On failure the message will reappear after the invisibility timeout as a safety net.
+    /// </summary>
+    private async Task<bool> AckSourceMessageSafeAsync(MessageView view)
+    {
+        try
+        {
+            await consumer.Ack(view);
+            return true;
+        }
+        catch (Exception ackEx)
+        {
+            Log.ErrorAckingSourceMessage(s_logger, ackEx);
+            return false;
+        }
+    }
+
+    private async Task<RocketMqMessageProducer?> GetProducerForRouteAsync(RoutingKey routingKey)
+    {
+        if (routingKey == _invalidMessageRoutingKey)
+            return _invalidMessageProducer ??= await CreateProducerAsync(_invalidMessageRoutingKey);
+        if (routingKey == _deadLetterRoutingKey)
+            return _deadLetterProducer ??= await CreateProducerAsync(_deadLetterRoutingKey);
+        return null;
+    }
+
+    private async Task<RocketMqMessageProducer?> CreateProducerAsync(RoutingKey? routingKey)
+    {
+        if (routingKey == null || _connection == null)
+            return null;
+
+        try
+        {
+            var rocketProducer = await new Producer.Builder()
+                .SetClientConfig(_connection.ClientConfig)
+                .SetMaxAttempts(_connection.MaxAttempts)
+                .SetTopics(routingKey.Value)
+                .Build();
+
+            return new RocketMqMessageProducer(
+                _connection,
+                rocketProducer,
+                new RocketMqPublication { Topic = routingKey });
+        }
+        catch (Exception ex)
+        {
+            Log.ErrorCreatingProducer(s_logger, ex, routingKey.Value);
+            return null;
+        }
+    }
+
+    private static void RefreshMetadata(Message message, MessageRejectionReason? reason)
+    {
+        message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
+        message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+        message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+
+        if (reason == null) return;
+
+        message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
+        if (!string.IsNullOrEmpty(reason.Description))
+            message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
+    }
+
+    private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(
+        RejectionReason rejectionReason)
+    {
+        switch (rejectionReason)
+        {
+            case RejectionReason.Unacceptable:
+                if (_invalidMessageRoutingKey != null)
+                    return (_invalidMessageRoutingKey, true, false);
+                if (_deadLetterRoutingKey != null)
+                    return (_deadLetterRoutingKey, true, true);
+                return (null, false, false);
+
+            case RejectionReason.DeliveryError:
+            case RejectionReason.None:
+            default:
+                if (_deadLetterRoutingKey != null)
+                    return (_deadLetterRoutingKey, true, false);
+                return (null, false, false);
+        }
+    }
 
     private static Message CreateMessage(MessageView message)
     {
@@ -360,7 +539,31 @@ public class RocketMessageConsumer(SimpleConsumer consumer,
 
     /// <inheritdoc />
     public void Dispose() => consumer.Dispose();
-    
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync() => await consumer.DisposeAsync();
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Information, "RocketMessageConsumer: Rejecting message {MessageId}")]
+        public static partial void RejectingMessage(ILogger logger, string messageId);
+
+        [LoggerMessage(LogLevel.Warning, "RocketMessageConsumer: No DLQ or invalid message channels configured for message {MessageId}, rejection reason: {RejectionReason}")]
+        public static partial void NoChannelsConfiguredForRejection(ILogger logger, string messageId, string rejectionReason);
+
+        [LoggerMessage(LogLevel.Information, "RocketMessageConsumer: Message {MessageId} sent to rejection channel, reason: {RejectionReason}")]
+        public static partial void MessageSentToRejectionChannel(ILogger logger, string messageId, string rejectionReason);
+
+        [LoggerMessage(LogLevel.Warning, "RocketMessageConsumer: Falling back to DLQ for message {MessageId}")]
+        public static partial void FallingBackToDlq(ILogger logger, string messageId);
+
+        [LoggerMessage(LogLevel.Error, "RocketMessageConsumer: Error sending message {MessageId} to rejection channel, reason: {RejectionReason}")]
+        public static partial void ErrorSendingToRejectionChannel(ILogger logger, Exception ex, string messageId, string rejectionReason);
+
+        [LoggerMessage(LogLevel.Error, "RocketMessageConsumer: Error acknowledging source message after rejection")]
+        public static partial void ErrorAckingSourceMessage(ILogger logger, Exception ex);
+
+        [LoggerMessage(LogLevel.Error, "RocketMessageConsumer: Error creating producer for routing key {RoutingKey}")]
+        public static partial void ErrorCreatingProducer(ILogger logger, Exception ex, string routingKey);
+    }
 }

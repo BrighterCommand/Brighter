@@ -1,12 +1,14 @@
 using System;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 
-public class MyInvalidMessageMapper : IAmAMessageMapper<MyRejectedEvent>
+public class MyInvalidMessageMapper : IAmAMessageMapper<MyRejectedEvent>, IAmAMessageMapperAsync<MyRejectedEvent>
 {
     public const string DeserializationFailureMessage = "Failed to deserialize message";
 
@@ -27,6 +29,19 @@ public class MyInvalidMessageMapper : IAmAMessageMapper<MyRejectedEvent>
     }
 
     public MyRejectedEvent MapToRequest(Message message)
+    {
+        // Simulate deserialization failure by throwing InvalidMessageAction
+        throw new InvalidMessageAction(DeserializationFailureMessage);
+    }
+
+    public Task<Message> MapToMessageAsync(MyRejectedEvent request, Publication publication,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(MapToMessage(request, publication));
+    }
+
+    public Task<MyRejectedEvent> MapToRequestAsync(Message message,
+        CancellationToken cancellationToken = default)
     {
         // Simulate deserialization failure by throwing InvalidMessageAction
         throw new InvalidMessageAction(DeserializationFailureMessage);

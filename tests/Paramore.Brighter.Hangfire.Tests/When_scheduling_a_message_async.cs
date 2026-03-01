@@ -54,7 +54,7 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, _timeProvider, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -90,7 +90,6 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
         });
         _scheduler = new HangfireMessageSchedulerFactory();
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

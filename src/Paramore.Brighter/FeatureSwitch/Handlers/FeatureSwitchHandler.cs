@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Actions;
 using Paramore.Brighter.FeatureSwitch.Attributes;
 
 namespace Paramore.Brighter.FeatureSwitch.Handlers
@@ -36,6 +37,7 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
     {
         private Type? _handler;
         private FeatureSwitchStatus _status;
+        private bool _dontAck;
 
         /// <summary>
         /// Initializes from attribute parameters.
@@ -45,26 +47,36 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
         {
             _handler = (Type?) initializerList[0];
             _status = (FeatureSwitchStatus?) initializerList[1] ?? FeatureSwitchStatus.Off;
+            _dontAck = initializerList.Length > 2 && initializerList[2] is true;
         }
 
         /// <summary>
         /// Checks the status of the feature switch and either stops passes the command on to the next handler
         /// or stops execution of the feature switched handler.
+        /// When dontAck is <c>true</c> and the feature is off, throws <see cref="DontAckAction"/> instead of
+        /// silently returning, causing the message pump to leave the message unacknowledged on the channel.
         /// </summary>
         /// <param name="request">The command.</param>
         /// <returns>TRequest.</returns>
+        /// <exception cref="DontAckAction">Thrown when the feature is off and dontAck is <c>true</c>.</exception>
         public override TRequest Handle(TRequest request)
         {
             var featureEnabled = _status;
 
             if (featureEnabled is FeatureSwitchStatus.Config)
-            {              
+            {
                 featureEnabled = Context?.FeatureSwitches?.StatusOf(_handler!) ?? FeatureSwitchStatus.On;
             }
 
-            return featureEnabled is FeatureSwitchStatus.Off 
-                        ? request 
-                        : base.Handle(request);
+            if (featureEnabled is FeatureSwitchStatus.Off)
+            {
+                if (_dontAck)
+                    throw new DontAckAction($"Feature switch off for {_handler?.Name}; message not acknowledged");
+
+                return request;
+            }
+
+            return base.Handle(request);
         }
     }
 }

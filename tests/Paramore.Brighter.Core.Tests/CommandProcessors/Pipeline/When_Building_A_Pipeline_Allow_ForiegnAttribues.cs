@@ -7,8 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class PipelineForeignAttributesTests : IDisposable
+    public class PipelineForeignAttributesTests
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
@@ -38,12 +37,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var trace = TraceFilters().ToString();
             Assert.Equal("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|", trace);
         }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-
         private PipelineTracer TraceFilters()
         {
             var pipelineTracer = new PipelineTracer();

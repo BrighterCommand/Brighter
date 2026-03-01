@@ -54,7 +54,7 @@ public class QuartzSchedulerMessageAsyncTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, _timeProvider, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) } )
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) } )
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -87,7 +87,6 @@ public class QuartzSchedulerMessageAsyncTests
 
         _scheduler = new QuartzSchedulerFactory(scheduler);
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

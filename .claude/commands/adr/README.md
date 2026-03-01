@@ -172,7 +172,7 @@ Brighter/
 ├── docs/
 │   └── adr/
 │       ├── 0001-record-architecture-decisions.md  # Template
-│       ├── 0036-message-rejection-routing-strategy.md
+│       ├── 0047-message-rejection-routing-strategy.md
 │       └── 0037-kafka-message-serialization-strategy.md
 └── specs/
     └── 0001-kafka-dead-letter-queue/
